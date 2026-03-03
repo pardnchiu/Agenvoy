@@ -27,7 +27,11 @@ func writeHistory(choice agentTypes.OutputChoices, configDir *utils.ConfigDirDat
 		filtered = append(filtered, m)
 	}
 
-	historyPath := filepath.Join(configDir.Home, session.ID, "history.json")
+	sessionDir := filepath.Join(configDir.Home, session.ID)
+	if err := os.MkdirAll(sessionDir, 0755); err != nil {
+		return fmt.Errorf("os.MkdirAll: %w", err)
+	}
+	historyPath := filepath.Join(sessionDir, "history.json")
 	historyData, err := json.Marshal(filtered)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)

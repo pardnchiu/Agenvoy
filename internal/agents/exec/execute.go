@@ -57,7 +57,7 @@ func Execute(ctx context.Context, agent agentTypes.Agent, workDir string, skill 
 
 	alreadyCall := make(map[string]string)
 	emptyCount := 0
-	const maxEmpty = 3
+	const maxEmpty = 8
 	for i := 0; i < limit; i++ {
 		resp, err := agent.Send(ctx, session.Messages, exec.Tools)
 		if err != nil {
@@ -115,7 +115,7 @@ func Execute(ctx context.Context, agent agentTypes.Agent, workDir string, skill 
 			now := time.Now()
 			date := now.Format("2006-01-02")
 			dateWithSec := now.Format("2006-01-02-15-04-05")
-			toolActionsDir := filepath.Join(configDir.Work, session.ID, date)
+			toolActionsDir := filepath.Join(configDir.Home, session.ID, "tool_calls", date)
 			if err := os.MkdirAll(toolActionsDir, 0755); err == nil {
 				filename := dateWithSec + ".json"
 				toolActionsPath := filepath.Join(toolActionsDir, filename)

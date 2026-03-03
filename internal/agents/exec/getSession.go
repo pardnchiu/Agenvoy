@@ -96,8 +96,8 @@ func getSession(prompt string, userInput string) (*agentTypes.AgentSession, erro
 			if err := json.Unmarshal(historyData, &oldHistory); err == nil {
 				session.Histories = oldHistory
 			}
-			if len(oldHistory) > 4 {
-				oldHistory = oldHistory[len(oldHistory)-4:]
+			if len(oldHistory) > 8 {
+				oldHistory = oldHistory[len(oldHistory)-8:]
 			}
 			session.Messages = append(session.Messages, oldHistory...)
 

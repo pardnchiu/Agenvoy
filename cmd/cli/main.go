@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"slices"
 	"sort"
+	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
@@ -19,7 +19,8 @@ func main() {
 		fmt.Println("Usage:")
 		fmt.Println("  go run cmd/cli/main.go add")
 		fmt.Println("  go run cmd/cli/main.go list")
-		fmt.Println("  go run cmd/cli/main.go run <skill_name> <input> [--allow]")
+		fmt.Println("  go run cmd/cli/main.go run <input...> [--allow]")
+		fmt.Println("  go run cmd/cli/main.go run-allow <input...>")
 		os.Exit(1)
 	}
 
@@ -55,19 +56,20 @@ func main() {
 		return
 	}
 
-	if os.Args[1] == "run" {
+	if os.Args[1] == "run" || os.Args[1] == "run-allow" {
 		if len(os.Args) < 3 {
-			fmt.Println("Usage: go run cmd/cli/main.go run <input> [--allow]")
-			fmt.Println("       go run cmd/cli/main.go run <skill_name> <input> [--allow]")
+			fmt.Println("Usage: go run cmd/cli/main.go run <input...> [--allow]")
+			fmt.Println("       go run cmd/cli/main.go run-allow <input...>")
 			os.Exit(1)
 		}
 
-		allowAll := slices.Contains(os.Args[3:], "--allow")
+		allowAll := os.Args[1] == "run-allow"
+
+		userInput := strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n")
 
 		agentRegistry := getAgentRegistry()
 		scanner := skill.NewScanner()
 
-		userInput := os.Args[2]
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 

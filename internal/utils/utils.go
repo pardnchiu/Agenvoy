@@ -165,10 +165,5 @@ func GetConfigDir(path ...string) (*ConfigDirData, error) {
 		return nil, fmt.Errorf("os.MkdirAll: %w", err)
 	}
 
-	err = os.MkdirAll(config.Work, 0755)
-	if err != nil {
-		return nil, fmt.Errorf("os.MkdirAll: %w", err)
-	}
-
 	return config, nil
 }

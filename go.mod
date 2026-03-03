@@ -12,6 +12,7 @@ require (
 require (
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/ysmood/fetchup v0.2.3 // indirect
 	github.com/ysmood/goob v0.4.0 // indirect
 	github.com/ysmood/got v0.40.0 // indirect
