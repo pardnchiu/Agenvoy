@@ -48,21 +48,21 @@ func GetAgentEntries() []agentTypes.AgentEntry {
 	return []agentTypes.AgentEntry{}
 }
 
-func selectAgent(ctx context.Context, bot agentTypes.Agent, agentEntries []agentTypes.AgentEntry, userInput string) string {
+func SelectAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string) agentTypes.Agent {
 	trimInput := strings.TrimSpace(userInput)
 
-	if len(agentEntries) == 0 {
-		return ""
+	if len(registry.Entries) == 0 {
+		return registry.Fallback
 	}
 
-	agentMap := make(map[string]struct{}, len(agentEntries))
-	for _, a := range agentEntries {
+	agentMap := make(map[string]struct{}, len(registry.Entries))
+	for _, a := range registry.Entries {
 		agentMap[a.Name] = struct{}{}
 	}
 
-	agentJson, err := json.Marshal(agentEntries)
+	agentJson, err := json.Marshal(registry.Entries)
 	if err != nil {
-		return ""
+		return registry.Fallback
 	}
 
 	messages := []agentTypes.Message{
@@ -82,7 +82,7 @@ func selectAgent(ctx context.Context, bot agentTypes.Agent, agentEntries []agent
 
 	resp, err := bot.Send(ctx, messages, nil)
 	if err != nil || len(resp.Choices) == 0 {
-		return ""
+		return registry.Fallback
 	}
 
 	answer := ""
@@ -91,12 +91,14 @@ func selectAgent(ctx context.Context, bot agentTypes.Agent, agentEntries []agent
 	}
 
 	if answer == "NONE" || answer == "" {
-		return ""
+		return registry.Fallback
 	}
 
 	if _, ok := agentMap[answer]; ok {
-		return answer
+		if a, ok := registry.Registry[answer]; ok {
+			return a
+		}
 	}
 
-	return ""
+	return registry.Fallback
 }

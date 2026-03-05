@@ -14,7 +14,7 @@ import (
 //go:embed prompt/skillSelector.md
 var skillSelectorPrompt string
 
-func selectSkill(ctx context.Context, bot agentTypes.Agent, scanner *skill.Scanner, userInput string) *skill.Skill {
+func SelectSkill(ctx context.Context, bot agentTypes.Agent, scanner *skill.Scanner, userInput string) *skill.Skill {
 	trimInput := strings.TrimSpace(userInput)
 
 	skills := scanner.List()

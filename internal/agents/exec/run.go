@@ -21,7 +21,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	events <- agentTypes.Event{
 		Type: agentTypes.EventSkillSelect,
 	}
-	matchedSkill := selectSkill(ctx, bot, scanner, trimInput)
+	matchedSkill := SelectSkill(ctx, bot, scanner, trimInput)
 	if matchedSkill != nil {
 		events <- agentTypes.Event{
 			Type: agentTypes.EventSkillResult,
@@ -37,28 +37,23 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	events <- agentTypes.Event{
 		Type: agentTypes.EventAgentSelect,
 	}
-	// * default is fallback
-	agent := registry.Fallback
-	if chosen := selectAgent(ctx, bot, registry.Entries, trimInput); chosen != "" {
-		if a, ok := registry.Registry[chosen]; ok {
-			agent = a
-		}
-		events <- agentTypes.Event{
-			Type: agentTypes.EventAgentResult,
-			Text: strings.TrimSpace(chosen),
-		}
-	} else {
-		events <- agentTypes.Event{
-			Type: agentTypes.EventAgentResult,
-			Text: "fallback",
-		}
+
+	agent := SelectAgent(ctx, bot, registry, trimInput)
+	events <- agentTypes.Event{
+		Type: agentTypes.EventAgentResult,
+		Text: strings.TrimSpace(agent.Name()),
 	}
 
-	return Execute(ctx, ExecData{
+	execData := ExecData{
 		Agent:   agent,
 		WorkDir: workDir,
 		Skill:   matchedSkill,
 		Input:   trimInput,
 		Images:  imagePaths,
-	}, events, allowAll)
+	}
+	session, err := GetSession(execData)
+	if err != nil {
+		return fmt.Errorf("GetSession: %w", err)
+	}
+	return Execute(ctx, execData, session, events, allowAll)
 }

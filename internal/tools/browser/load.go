@@ -164,6 +164,14 @@ func fetch(ctx context.Context, browser *rod.Browser, url string) (*rod.Page, er
 		_ = page.Close()
 		return nil, fmt.Errorf("WaitLoad: %w", err)
 	}
+
+	// * check HTTP status via navigation timing API
+	if status, err := page.Eval(`() => { const e = performance.getEntriesByType("navigation")[0]; return e ? e.responseStatus : 0 }`); err == nil {
+		if code := status.Value.Int(); code >= 400 {
+			_ = page.Close()
+			return nil, fmt.Errorf("HTTP %d: %s", code, url)
+		}
+	}
 	// page done
 	_ = page.WaitIdle(networkIdleTimeout)
 

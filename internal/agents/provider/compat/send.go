@@ -1,5 +1,4 @@
 package compat
-
 import (
 	"context"
 	"fmt"
@@ -12,12 +11,17 @@ import (
 )
 
 func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
-	return exec.Execute(ctx, exec.ExecData{
+	data := exec.ExecData{
 		Agent:   a,
 		WorkDir: a.workDir,
 		Skill:   skill,
 		Input:   userInput,
-	}, events, allowAll)
+	}
+	session, err := exec.GetSession(data)
+	if err != nil {
+		return fmt.Errorf("exec.GetSession: %w", err)
+	}
+	return exec.Execute(ctx, data, session, events, allowAll)
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {

@@ -51,7 +51,8 @@ func buildContent(text string, imagePaths []string) any {
 	return parts
 }
 
-func getSession(prompt string, execData ExecData) (*agentTypes.AgentSession, error) {
+func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
+	prompt := GetSystemPrompt(execData)
 	trimInput := strings.TrimSpace(execData.Input)
 
 	now := fmt.Sprintf("%d", time.Now().Unix())

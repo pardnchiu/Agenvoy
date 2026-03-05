@@ -37,7 +37,7 @@ type ExecData struct {
 	Images  []string
 }
 
-func Execute(ctx context.Context, data ExecData, events chan<- agentTypes.Event, allowAll bool) error {
+func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
 	// if skill is empty, then treat as no skill
 	if data.Skill != nil && data.Skill.Content == "" {
 		data.Skill = nil
@@ -46,12 +46,6 @@ func Execute(ctx context.Context, data ExecData, events chan<- agentTypes.Event,
 	configDir, err := utils.GetConfigDir("sessions")
 	if err != nil {
 		return fmt.Errorf("utils.ConfigDir: %w", err)
-	}
-
-	prompt := getSystemPrompt(data)
-	session, err := getSession(prompt, data)
-	if err != nil {
-		return fmt.Errorf("getSession: %w", err)
 	}
 
 	exec, err := tools.NewExecutor(data.WorkDir, session.ID)
@@ -157,8 +151,7 @@ func Execute(ctx context.Context, data ExecData, events chan<- agentTypes.Event,
 	return nil
 }
 
-// func getSystemPrompt(workDir string, skill *skill.Skill) string {
-func getSystemPrompt(data ExecData) string {
+func GetSystemPrompt(data ExecData) string {
 	if data.Skill == nil {
 		return strings.NewReplacer(
 			"{{.WorkPath}}", data.WorkDir,

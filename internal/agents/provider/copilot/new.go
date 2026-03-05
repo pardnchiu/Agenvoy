@@ -88,3 +88,7 @@ func New(model ...string) (*Agent, error) {
 
 	return agent, nil
 }
+
+func (a *Agent) Name() string {
+	return a.model
+}

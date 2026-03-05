@@ -43,3 +43,7 @@ func New(model ...string) (*Agent, error) {
 		workDir:    workDir,
 	}, nil
 }
+
+func (a *Agent) Name() string {
+	return a.model
+}
