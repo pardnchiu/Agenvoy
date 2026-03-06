@@ -36,13 +36,6 @@ go build -o agenvoy ./cmd/cli
 go get github.com/pardnchiu/agenvoy
 ```
 
-### Discord Bot Server
-
-```bash
-go build -o agenvoy-server ./cmd/server
-DISCORD_TOKEN=your_token ./agenvoy-server
-```
-
 ## Configuration
 
 ### Add a Provider (Interactive)
@@ -319,8 +312,8 @@ func main() {
 | `remove` | `agenvoy remove` | Interactively remove a configured provider |
 | `list` | `agenvoy list` | List configured models |
 | `list skills` | `agenvoy list skills` | List all discovered Skills |
-| `run` | `agenvoy run <input...> [--image <path>]...` | Execute a task (interactive mode, confirms before each tool call) |
-| `run-allow` | `agenvoy run-allow <input...> [--image <path>]...` | Execute a task (automatic mode, skips all confirmations) |
+| `run` | `agenvoy run <input...> [--image <path>]... [--file <path>]...` | Execute a task (interactive mode, confirms before each tool call) |
+| `run-allow` | `agenvoy run-allow <input...> [--image <path>]... [--file <path>]...` | Execute a task (automatic mode, skips all confirmations) |
 
 ### Image Input
 
@@ -332,6 +325,15 @@ agenvoy run-allow Compare these two screenshots --image /tmp/before.png --image 
 ```
 
 > **Note:** Image input is not supported by the `nvidia` provider.
+
+### File Input
+
+Inject local file content into the prompt with `--file <path>`. Multiple flags are supported. Each file is embedded as `---\npath: <filename>\n---\n<content>`:
+
+```bash
+agenvoy run Analyze this log --file ./app.log
+agenvoy run-allow Compare two configs --file ./config.a.yaml --file ./config.b.yaml
+```
 
 ### Supported Agent Providers
 
@@ -405,6 +407,7 @@ func Run(
     scanner  *skill.Scanner,  // Skill scanner
     input    string,          // User input
     images   []string,        // Image paths (optional)
+    files    []string,        // File paths (optional, content embedded in prompt)
     events   chan<- Event,    // Event output channel
     allowAll bool,            // true = skip all tool confirmations
 ) error

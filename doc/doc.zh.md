@@ -36,13 +36,6 @@ go build -o agenvoy ./cmd/cli
 go get github.com/pardnchiu/agenvoy
 ```
 
-### Discord Bot Server
-
-```bash
-go build -o agenvoy-server ./cmd/server
-DISCORD_TOKEN=your_token ./agenvoy-server
-```
-
 ## 設定
 
 ### 新增 Provider（互動式）
@@ -319,8 +312,8 @@ func main() {
 | `remove` | `agenvoy remove` | 互動式移除已設定的 Provider |
 | `list` | `agenvoy list` | 列出已設定的模型 |
 | `list skills` | `agenvoy list skills` | 列出所有已掃描的 Skill |
-| `run` | `agenvoy run <input...> [--image <path>]...` | 執行任務（互動模式，每次 Tool Call 前確認） |
-| `run-allow` | `agenvoy run-allow <input...> [--image <path>]...` | 執行任務（自動模式，跳過所有確認） |
+| `run` | `agenvoy run <input...> [--image <path>]... [--file <path>]...` | 執行任務（互動模式，每次 Tool Call 前確認） |
+| `run-allow` | `agenvoy run-allow <input...> [--image <path>]... [--file <path>]...` | 執行任務（自動模式，跳過所有確認） |
 
 ### 圖片輸入
 
@@ -332,6 +325,15 @@ agenvoy run-allow 比較這兩張截圖 --image /tmp/before.png --image /tmp/aft
 ```
 
 > **注意：** `nvidia` provider 不支援圖片輸入。
+
+### 檔案輸入
+
+以 `--file <path>` 將本機檔案內容嵌入 prompt，支援多個。檔案內容以 `---\npath: <filename>\n---\n<content>` 格式注入：
+
+```bash
+agenvoy run 分析這份 log --file ./app.log
+agenvoy run-allow 比較兩份設定檔 --file ./config.a.yaml --file ./config.b.yaml
+```
 
 ### 支援的 Agent Provider
 
@@ -405,6 +407,7 @@ func Run(
     scanner  *skill.Scanner,  // Skill 掃描器
     input    string,          // 使用者輸入
     images   []string,        // 圖片路徑（選用）
+    files    []string,        // 檔案路徑（選用，內容嵌入 prompt）
     events   chan<- Event,    // 事件輸出通道
     allowAll bool,            // true = 跳過所有工具確認
 ) error

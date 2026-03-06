@@ -12,7 +12,7 @@
 [![license](https://img.shields.io/github/license/pardnchiu/agenvoy)](LICENSE)
 [![version](https://img.shields.io/github/v/tag/pardnchiu/agenvoy?label=release)](https://github.com/pardnchiu/agenvoy/releases)
 
-> A Go-based agentic AI platform with intent-to-skill routing, multi-provider LLM dispatch, cross-turn memory, and zero-code REST API tool mounting.
+> A Go-based Agentic AI platform core with skill routing, multi-provider intelligent dispatch, cross-turn memory, and REST API tool mounting.
 
 ## Table of Contents
 
@@ -31,7 +31,7 @@
 
 Before each execution, a lightweight Selector Bot runs two concurrent LLM routing decisions: it matches the best Skill from markdown files scanned across 9 standard paths, and picks the most suitable backend from the Agent Registry. The execution loop runs up to 16 iterations (general mode) or 128 iterations (Skill mode), deduplicates cached tool calls, and automatically triggers a summarization pass when the iteration limit is reached — always returning a coherent final response.
 
-### Zero-Code REST API Tool Mounting
+### REST API Tool Mounting
 
 The framework ships 15 built-in tools covering file I/O, web search, JS-rendered browser fetching, financial data, weather, precision math, and shell commands. Beyond these, any REST API can be mounted as a new tool by dropping a single JSON config file into the standard paths — no framework code changes required. Authentication (Bearer Token, API Key, Basic Auth), request format, timeout, and response field mapping are all declared in the config.
 
@@ -44,7 +44,6 @@ API keys are stored in the OS-native keychain (macOS Keychain via `security`, Li
 ```mermaid
 graph TB
     CLI["CLI (cmd/cli)"] --> Run["exec.Run"]
-    Discord["Discord Bot (cmd/server)"] --> Run
     Run --> SelSkill["selectSkill\n(Selector Bot)"]
     Run --> SelAgent["selectAgent\n(Selector Bot)"]
     SelSkill --> Skills["Skill Scanner\n9 standard paths"]
@@ -62,20 +61,17 @@ graph TB
 ```
 agenvoy/
 ├── cmd/
-│   ├── cli/
-│   │   ├── main.go                  # CLI entry point
-│   │   ├── addProvider.go           # Interactive provider setup
-│   │   ├── getAgentRegistry.go      # Multi-provider Agent Registry init
-│   │   ├── printTool.go             # ANSI color output helpers
-│   │   └── runEvents.go             # Event loop and interactive confirm
-│   └── server/
-│       └── main.go                  # Discord bot entry point
+│   └── cli/
+│       ├── main.go                  # CLI entry point
+│       ├── addProvider.go           # Interactive provider setup
+│       ├── getAgentRegistry.go      # Multi-provider Agent Registry init
+│       ├── printTool.go             # ANSI color output helpers
+│       └── runEvents.go             # Event loop and interactive confirm
 ├── internal/
 │   ├── agents/
 │   │   ├── exec/                    # Execution core (routing, tool loop, session management)
-│   │   ├── provider/                # 6 AI backends (copilot/openai/claude/gemini/nvidia/compat)
+│   │   ├── provider/                # AI backends (copilot/openai/claude/gemini/nvidia/compat)
 │   │   └── types/                   # Shared interfaces (Agent, Message, Output)
-│   ├── discord/                     # Discord bot integration
 │   ├── keychain/                    # OS keychain credential storage
 │   ├── skill/                       # Concurrent skill scanning and parsing
 │   ├── tools/                       # Tool executor and 15 built-in tools

@@ -12,7 +12,7 @@
 [![license](https://img.shields.io/github/license/pardnchiu/agenvoy)](LICENSE)
 [![version](https://img.shields.io/github/v/tag/pardnchiu/agenvoy?label=release)](https://github.com/pardnchiu/agenvoy/releases)
 
-> 以 Go 語言打造的 Agentic AI 平台，具備意圖導向技能路由、多 Provider LLM 派發、跨回合記憶與零程式碼 REST API 工具掛載。
+> 以 Go 語言打造的 Agentic AI 平台核心，具備技能路由、多 Provider 智能調度、跨回合記憶與零程式碼 REST API 工具掛載。
 
 ## 目錄
 
@@ -31,7 +31,7 @@
 
 每次執行前，輕量級 Selector Bot 並發執行兩項 LLM 路由決策：從 9 個標準路徑掃描的 Markdown Skill 檔案中匹配最佳技能，並從 Agent Registry 選出最合適的後端 Provider。執行迴圈在一般模式下最多運行 16 次、Skill 模式下最多 128 次，對重複的 Tool Call 進行快取去重，並在達到迭代上限時自動觸發摘要流程，確保始終返回連貫的最終回應。
 
-### 零程式碼 REST API 工具掛載
+### REST API 工具掛載
 
 框架內建 15 個工具，涵蓋檔案 I/O、網路搜尋、JS 渲染瀏覽器擷取、金融資料、天氣、精確數學運算與 Shell 指令。超出內建範圍的需求，只需在標準路徑投入單一 JSON 設定檔即可將任意 REST API 掛載為新工具，無需修改框架程式碼。認證方式（Bearer Token、API Key、Basic Auth）、請求格式、逾時與回應欄位映射均在設定檔中宣告。
 
@@ -44,7 +44,6 @@ API 金鑰儲存於 OS 原生 Keychain（macOS 使用 `security`，Linux 使用 
 ```mermaid
 graph TB
     CLI["CLI (cmd/cli)"] --> Run["exec.Run"]
-    Discord["Discord Bot (cmd/server)"] --> Run
     Run --> SelSkill["selectSkill\n(Selector Bot)"]
     Run --> SelAgent["selectAgent\n(Selector Bot)"]
     SelSkill --> Skills["Skill Scanner\n9 個標準路徑"]
@@ -62,20 +61,17 @@ graph TB
 ```
 agenvoy/
 ├── cmd/
-│   ├── cli/
-│   │   ├── main.go                  # CLI 進入點
-│   │   ├── addProvider.go           # 互動式 Provider 設定
-│   │   ├── getAgentRegistry.go      # 多 Provider Agent Registry 初始化
-│   │   ├── printTool.go             # ANSI 色彩輸出工具
-│   │   └── runEvents.go             # 事件迴圈與互動確認
-│   └── server/
-│       └── main.go                  # Discord Bot 進入點
+│   └── cli/
+│       ├── main.go                  # CLI 進入點
+│       ├── addProvider.go           # 互動式 Provider 設定
+│       ├── getAgentRegistry.go      # 多 Provider Agent Registry 初始化
+│       ├── printTool.go             # ANSI 色彩輸出工具
+│       └── runEvents.go             # 事件迴圈與互動確認
 ├── internal/
 │   ├── agents/
 │   │   ├── exec/                    # 執行核心（路由、工具迴圈、Session 管理）
-│   │   ├── provider/                # 6 個 AI 後端（copilot/openai/claude/gemini/nvidia/compat）
+│   │   ├── provider/                # AI 後端（copilot/openai/claude/gemini/nvidia/compat）
 │   │   └── types/                   # 共用介面（Agent、Message、Output）
-│   ├── discord/                     # Discord Bot 整合
 │   ├── keychain/                    # OS Keychain 憑證儲存
 │   ├── skill/                       # 並發 Skill 掃描與解析
 │   ├── tools/                       # 工具執行器與 15 個內建工具
