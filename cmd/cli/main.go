@@ -98,11 +98,16 @@ func main() {
 
 		raw := strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n")
 		imagePattern := regexp.MustCompile(`--image\s+(\S+)`)
-		var imagePaths []string
-		for _, m := range imagePattern.FindAllStringSubmatch(raw, -1) {
-			imagePaths = append(imagePaths, m[1])
+		filePattern := regexp.MustCompile(`--file\s+(\S+)`)
+		var imageInputs []string
+		for _, path := range imagePattern.FindAllStringSubmatch(raw, -1) {
+			imageInputs = append(imageInputs, path[1])
 		}
-		userInput := strings.TrimSpace(imagePattern.ReplaceAllString(raw, ""))
+		var fileInputs []string
+		for _, path := range filePattern.FindAllStringSubmatch(raw, -1) {
+			fileInputs = append(fileInputs, path[1])
+		}
+		userInput := strings.TrimSpace(filePattern.ReplaceAllString(imagePattern.ReplaceAllString(raw, ""), ""))
 
 		agentRegistry := getAgentRegistry()
 		scanner := skill.NewScanner()
@@ -117,7 +122,7 @@ func main() {
 		}
 
 		if err := runEvents(ctx, cancel, func(ch chan<- agentTypes.Event) error {
-			return exec.Run(ctx, selectorBot, agentRegistry, scanner, userInput, imagePaths, ch, allowAll)
+			return exec.Run(ctx, selectorBot, agentRegistry, scanner, userInput, imageInputs, fileInputs, ch, allowAll)
 		}); err != nil && ctx.Err() == nil {
 			slog.Error("failed to execute", slog.String("error", err.Error()))
 			os.Exit(1)

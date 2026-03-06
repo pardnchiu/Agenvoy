@@ -30,11 +30,12 @@ const (
 )
 
 type ExecData struct {
-	Agent   agentTypes.Agent
-	WorkDir string
-	Skill   *skill.Skill
-	Input   string
-	Images  []string
+	Agent       agentTypes.Agent
+	WorkDir     string
+	Skill       *skill.Skill
+	Content     string
+	ImageInputs []string
+	FileInputs  []string
 }
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {

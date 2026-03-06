@@ -29,14 +29,27 @@ type IndexData struct {
 	SessionID string `json:"session_id"`
 }
 
-func buildContent(text string, imagePaths []string) any {
-	if len(imagePaths) == 0 {
-		return text
+func buildContent(content string, imageInputs []string, fileInputs []string) any {
+	if len(imageInputs) == 0 && len(fileInputs) == 0 {
+		return content
 	}
+
 	parts := []agentTypes.ContentPart{
-		{Type: "text", Text: text},
+		{Type: "text", Text: content},
 	}
-	for _, path := range imagePaths {
+
+	for _, path := range fileInputs {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		parts = append(parts, agentTypes.ContentPart{
+			Type: "text",
+			Text: fmt.Sprintf("---\npath: %s\n---\n%s", filepath.Base(path), string(data)),
+		})
+	}
+
+	for _, path := range imageInputs {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			continue
@@ -53,7 +66,7 @@ func buildContent(text string, imagePaths []string) any {
 
 func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	prompt := GetSystemPrompt(execData)
-	trimInput := strings.TrimSpace(execData.Input)
+	trimInput := strings.TrimSpace(execData.Content)
 
 	now := fmt.Sprintf("%d", time.Now().Unix())
 	session := agentTypes.AgentSession{
@@ -145,7 +158,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			})
 			session.Messages = append(session.Messages, agentTypes.Message{
 				Role:    "user",
-				Content: buildContent(userText, execData.Images),
+				Content: buildContent(userText, execData.ImageInputs, execData.FileInputs),
 			})
 		}
 
@@ -163,7 +176,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		})
 		session.Messages = append(session.Messages, agentTypes.Message{
 			Role:    "user",
-			Content: buildContent(userText, execData.Images),
+			Content: buildContent(userText, execData.ImageInputs, execData.FileInputs),
 		})
 
 		indexDataBytes, err := json.Marshal(IndexData{SessionID: sessionID})

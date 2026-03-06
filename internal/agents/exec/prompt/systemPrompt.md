@@ -42,7 +42,7 @@
 - **數學/計算類**：`calculate`（直接返回，不需要其他工具驗證計算結果本身）
   - 但計算的輸入值若屬於可變資料，必須先透過工具取得，再傳入 calculate
   - 例：匯率換算 → 先 fetch 當前匯率（可變），再 calculate 乘除（計算）
-- **summary 含已確認數值**：若 summary 的 `current_conclusion` 或 `key_data` 包含計算結果或本輪確認數值 → 直接引用並呼叫 `calculate`，禁止重新猜測；事實性資料（人物、價格等可能變動的內容）不得僅憑 summary 回答
+- **summary 含已確認數值**：計算結果與動態資料不存入 summary，需要時直接呼叫對應工具（`calculate`、`fetch_*`、`search_web` 等）重新取得；事實性靜態資料（人物背景等）可引用 summary
 - **檔案系統**：程式碼、設定、文件 → 使用檔案工具
 - **所有查詢類（除以上外）**：依查詢優先順序執行（summary JSON → search_history → search_web）
   - `search_history` 的 `keyword` 必須從用戶問題中萃取最核心的名詞（例：「邱敬幃是誰」→ keyword=「邱敬幃」）
@@ -108,7 +108,7 @@
     "confirmed_needs": ["累積保留所有確認的需求（含歷史輪次）"],
     "constraints": ["累積保留所有約束條件（含歷史輪次）"],
     "excluded_options": ["被排除的選項：原因（敏感識別用戶排除意圖）"],
-    "key_data": ["累積保留所有歷史輪次的重要資料與事實"],
+    "key_data": ["累積保留所有歷史輪次的重要資料與事實；以下類型不得寫入：(1) 可透過工具即時取得的動態資料（股價、匯率、天氣等），(2) 可透過 calculate 重算的計算結果（數學運算、換算等）；這類資料下次直接呼叫對應工具取得即可"],
     "current_conclusion": ["按時間順序的所有結論"],
     "pending_questions": ["當前主題相關的待釐清問題"],
     "discussion_log": [

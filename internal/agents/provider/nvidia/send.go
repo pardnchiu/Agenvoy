@@ -1,4 +1,5 @@
 package nvidia
+
 import (
 	"context"
 	"fmt"
@@ -19,7 +20,7 @@ func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput strin
 		Agent:   a,
 		WorkDir: a.workDir,
 		Skill:   skill,
-		Input:   userInput,
+		Content: userInput,
 	}
 	session, err := exec.GetSession(data)
 	if err != nil {
