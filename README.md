@@ -12,7 +12,7 @@
 [![license](https://img.shields.io/github/license/pardnchiu/agenvoy)](LICENSE)
 [![version](https://img.shields.io/github/v/tag/pardnchiu/agenvoy?label=release)](https://github.com/pardnchiu/agenvoy/releases)
 
-> A Go-based Agentic AI platform core with skill routing, multi-provider intelligent dispatch, cross-turn memory, and REST API tool mounting.
+> A Go agentic AI platform with skill routing, multi-provider intelligent dispatch, Discord bot integration, and security-first shared agent design
 
 ## Table of Contents
 
@@ -31,19 +31,20 @@
 
 Before each execution, a lightweight Selector Bot runs two concurrent LLM routing decisions: it matches the best Skill from markdown files scanned across 9 standard paths, and picks the most suitable backend from the Agent Registry. The execution loop runs up to 16 iterations (general mode) or 128 iterations (Skill mode), deduplicates cached tool calls, and automatically triggers a summarization pass when the iteration limit is reached — always returning a coherent final response.
 
-### REST API Tool Mounting
+### Discord Bot with Slash Commands and File Attachment
 
-The framework ships 15 built-in tools covering file I/O, web search, JS-rendered browser fetching, financial data, weather, precision math, and shell commands. Beyond these, any REST API can be mounted as a new tool by dropping a single JSON config file into the standard paths — no framework code changes required. Authentication (Bearer Token, API Key, Basic Auth), request format, timeout, and response field mapping are all declared in the config.
+The platform ships a standalone Discord server mode alongside the CLI. It handles both direct messages and mention-triggered channel messages, responds with an immediate acknowledgment before processing, and executes the same full agentic loop in the background. Agents can send local files back to Discord by embedding a `[SEND_FILE:/path]` marker in their reply — images, text files, and any binary are supported. Slash commands register instantly against a Guild ID during development and globally for production.
 
-### OS Keychain Credential Storage with Safe Command Execution
+### Security-First Shared Agent Design
 
-API keys are stored in the OS-native keychain (macOS Keychain via `security`, Linux via `secret-tool`) rather than environment variables, with a file-based fallback for other platforms. The `rm` command is intercepted and redirected to a `.Trash` directory instead of permanently deleting files, preventing accidental data loss during AI-driven file operations.
+A multi-layer access control system blocks sensitive path access at both the file tool and shell command layers using a single declarative `denied.json` config. It covers SSH keys, shell history and config files, cloud credential directories (`.aws`, `.gcloud`, `.docker`), private key extensions (`.pem`, `.key`, `.p12`), and `.env` files. The `rm` command is intercepted and redirected to `.Trash` instead of permanent deletion, and API credentials are stored in the OS-native keychain rather than environment variables.
 
 ## Architecture
 
 ```mermaid
 graph TB
     CLI["CLI (cmd/cli)"] --> Run["exec.Run"]
+    Discord["Discord Bot (cmd/server)"] --> Run
     Run --> SelSkill["selectSkill\n(Selector Bot)"]
     Run --> SelAgent["selectAgent\n(Selector Bot)"]
     SelSkill --> Skills["Skill Scanner\n9 standard paths"]
@@ -51,9 +52,10 @@ graph TB
     SelSkill -- "matched skill" --> Execute["exec.Execute"]
     SelAgent -- "chosen agent" --> Execute
     Execute --> Agent["Agent.Send"]
-    Execute --> ToolCall["toolCall\n(cache + user confirm)"]
-    ToolCall --> Tools["Tools Executor\n15 built-in + custom API"]
+    Execute --> ToolCall["toolCall\n(security check + confirm)"]
+    ToolCall --> Tools["Tools Executor\n16 built-in + custom API"]
     Execute --> Session["Session\nhistory.json / summary.json"]
+    Execute -- "result" --> Reply["Discord Reply\ntext / file attachment"]
 ```
 
 ## File Structure
@@ -61,26 +63,33 @@ graph TB
 ```
 agenvoy/
 ├── cmd/
-│   └── cli/
-│       ├── main.go                  # CLI entry point
-│       ├── addProvider.go           # Interactive provider setup
-│       ├── getAgentRegistry.go      # Multi-provider Agent Registry init
-│       ├── printTool.go             # ANSI color output helpers
-│       └── runEvents.go             # Event loop and interactive confirm
+│   ├── cli/
+│   │   ├── main.go                  # CLI entry point
+│   │   ├── addProvider.go           # Interactive provider setup
+│   │   ├── getAgentRegistry.go      # Multi-provider Agent Registry init
+│   │   └── runEvents.go             # Event loop and interactive confirm
+│   └── server/
+│       └── main.go                  # Discord bot server entry point
 ├── internal/
 │   ├── agents/
-│   │   ├── exec/                    # Execution core (routing, tool loop, session management)
+│   │   ├── exec/                    # Execution core (routing, tool loop, session)
 │   │   ├── provider/                # AI backends (copilot/openai/claude/gemini/nvidia/compat)
-│   │   └── types/                   # Shared interfaces (Agent, Message, Output)
+│   │   └── types/                   # Shared interfaces (Agent, Message, Event)
+│   ├── discord/
+│   │   ├── command/                 # Slash command definitions and handler
+│   │   ├── types/                   # Discord-specific types
+│   │   ├── run.go                   # Agentic loop for Discord messages
+│   │   ├── reply.go                 # Text and file attachment reply
+│   │   └── session.go               # Discord session and history management
 │   ├── keychain/                    # OS keychain credential storage
 │   ├── skill/                       # Concurrent skill scanning and parsing
-│   ├── tools/                       # Tool executor and 15 built-in tools
+│   ├── tools/
+│   │   ├── file/
+│   │   │   └── embed/denied.json    # Sensitive path access control config
+│   │   ├── browser/                 # JS-rendered page fetch and download
 │   │   ├── apiAdapter/              # JSON-config-driven custom API tools
-│   │   ├── apis/                    # Network APIs (Finance, RSS, Weather)
-│   │   ├── browser/                 # Chrome JS-rendered page extraction
-│   │   ├── calculator/              # Precision math
-│   │   └── file/                    # File read/write, search, history query
-│   └── utils/                       # Shared utilities
+│   │   └── apis/                    # Finance, RSS, Weather tools
+│   └── utils/
 ├── examples/apis/                   # Sample custom API configs
 ├── go.mod
 └── README.md

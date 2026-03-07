@@ -13,6 +13,7 @@
   - `NVIDIA_API_KEY` (NVIDIA NIM)
   - Local Ollama or any OpenAI-compatible service (compat provider, no API key required)
 - Chrome browser (the `fetch_page` tool uses go-rod; it downloads automatically on first use)
+- For Discord bot mode: a Discord Bot Token and (optionally) a Guild ID
 
 ## Installation
 
@@ -22,12 +23,20 @@
 go install github.com/pardnchiu/agenvoy/cmd/cli@latest
 ```
 
-### From Source
+### From Source (CLI)
 
 ```bash
 git clone https://github.com/pardnchiu/agenvoy.git
 cd agenvoy
 go build -o agenvoy ./cmd/cli
+```
+
+### From Source (Discord Bot Server)
+
+```bash
+git clone https://github.com/pardnchiu/agenvoy.git
+cd agenvoy
+go build -o agenvoy-server ./cmd/server
 ```
 
 ### As a Library
@@ -69,8 +78,6 @@ For each API key, the keychain package checks in order:
 2. Environment variable with the same key name
 3. `~/.config/agenvoy/.secrets` (file fallback for other platforms)
 
-Environment variables can still be used as an alternative to `agenvoy add`.
-
 ### Agent Config File
 
 Create an agent list at `~/.config/agenvoy/config.json` or `./.config/agenvoy/config.json`:
@@ -95,148 +102,75 @@ Create an agent list at `~/.config/agenvoy/config.json` or `./.config/agenvoy/co
 }
 ```
 
-The agent specified in `default_model` is moved to first position and used as the fallback.
-
 ### Skill Files
 
-Create `{skill-name}/SKILL.md` under any of the following paths:
+Skills are Markdown files discovered from 9 standard paths at startup:
 
-```
-./.claude/skills/
-./.skills/
-~/.claude/skills/           ← Recommended for personal skills
-~/.opencode/skills/
-~/.openai/skills/
-~/.codex/skills/
-/mnt/skills/public
-/mnt/skills/user
-/mnt/skills/examples
-```
+| Priority | Path |
+|----------|------|
+| 1 | `./skills/` |
+| 2 | `./.claude/skills/` |
+| 3 | `~/.skills/` |
+| 4 | `~/.claude/skills/` |
+| 5 | `~/.config/agenvoy/skills/` |
+| 6–9 | XDG / system-level paths |
 
-SKILL.md format:
+### Discord Bot Environment Variables
 
-```markdown
-# skill-name
+Copy `.env.example` and fill in values:
 
-Description: One sentence describing what this Skill does (used by the Selector Bot)
-
-## Detailed instructions
-...
+```bash
+cp .env.example .env
 ```
 
-### Custom API Tools
-
-Place JSON config files in `~/.config/agenvoy/apis/` or `./.config/agenvoy/apis/`:
-
-```json
-{
-  "name": "my_api",
-  "description": "Call my custom service",
-  "endpoint": {
-    "url": "https://api.example.com/v1/data",
-    "method": "POST",
-    "content_type": "json",
-    "timeout": 10
-  },
-  "auth": {
-    "type": "bearer",
-    "env": "MY_API_KEY"
-  },
-  "parameters": {
-    "query": {
-      "type": "string",
-      "description": "Search query",
-      "required": true
-    }
-  },
-  "response": {
-    "format": "json"
-  }
-}
-```
-
-The tool is automatically registered as `api_my_api` and the AI can invoke it directly. `auth.type` supports `bearer`, `apikey`, and `basic`.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DISCORD_TOKEN` | Yes | Discord bot token |
+| `DISCORD_GUILD_ID` | No | Guild ID for instant slash command registration (development). Leave empty for global registration (up to 1 hour propagation). |
 
 ## Usage
 
-### Add a Provider
+### CLI — Basic
 
 ```bash
-agenvoy add
+agenvoy run What is the current price of TSMC stock?
 ```
 
-Interactive setup for any supported provider. Credentials are saved to the OS keychain.
-
-### List Configured Models
+### CLI — With Image Input
 
 ```bash
-agenvoy list
+agenvoy run Describe this chart --image ./chart.png
+agenvoy run-allow Compare these two screenshots --image /tmp/before.png --image /tmp/after.png
 ```
 
-### List All Available Skills
+### CLI — With File Input
 
 ```bash
-agenvoy list skills
+agenvoy run Analyze this log --file ./app.log
+agenvoy run-allow Compare two configs --file ./config.a.yaml --file ./config.b.yaml
 ```
 
-Example output:
-
-```
-Found 3 skill(s):
-
-• commit-generate
-  Generate a one-sentence Traditional Chinese commit message from git diff
-  Path: /Users/user/.claude/skills/commit-generate
-
-• readme-generate
-  Auto-generate bilingual README from source code analysis
-  Path: /Users/user/.claude/skills/readme-generate
-```
-
-### Run a Task (Interactive Mode)
+### CLI — Automatic Mode
 
 ```bash
-agenvoy run Check TSMC stock price today
+agenvoy run-allow Generate a commit message for the current changes
 ```
 
-A confirmation prompt appears before each tool call:
-
-```
-[*] Skill: fetch-finance
-[*] claude@claude-sonnet-4-5
-[*] Fetch Ticker — 2330.TW (1d)
-? Run fetch_yahoo_finance? [Yes/Skip/Stop]
-```
-
-### Run a Task (Automatic Mode)
+### Discord Bot Server
 
 ```bash
-agenvoy run-allow Generate README
+# Copy and fill in environment variables
+cp .env.example .env
+
+# Run the server
+./agenvoy-server
 ```
 
-`run-allow` skips all tool confirmation prompts and runs fully automatically.
+The bot responds to:
+- **Direct messages**: any message triggers the agentic loop
+- **Channel messages**: only when the bot is @mentioned
 
-### Multi-line Input
-
-Multi-word input is passed as multiple arguments and joined automatically — no quoting required. Two styles are supported:
-
-Shell line continuation (natural multi-line):
-
-```bash
-agenvoy run Fix the bug in main.go \
-  The error is: index out of range \
-  Here is the relevant code snippet
-```
-
-Inline `\n` escape (single-line equivalent):
-
-```bash
-agenvoy run Fix the bug in main.go\nThe error is: index out of range
-```
-
-Both produce identical input to the agent.
-
-### Use as a Library
+### Library — Embedding the Execution Engine
 
 ```go
 package main
@@ -255,7 +189,6 @@ import (
 func main() {
     ctx := context.Background()
 
-    // Initialize agents
     claudeAgent, err := claude.New("claude@claude-sonnet-4-5")
     if err != nil {
         panic(err)
@@ -265,7 +198,6 @@ func main() {
         panic(err)
     }
 
-    // Build agent registry
     registry := atypes.AgentRegistry{
         Registry: map[string]atypes.Agent{
             "claude@claude-sonnet-4-5": claudeAgent,
@@ -278,15 +210,13 @@ func main() {
         Fallback: claudeAgent,
     }
 
-    // Selector bot uses a lightweight model for routing
     selectorBot, _ := openai.New("openai@gpt-5-mini")
-
     scanner := skill.NewScanner()
     events := make(chan atypes.Event, 16)
 
     go func() {
         defer close(events)
-        if err := exec.Run(ctx, selectorBot, registry, scanner, "Check TSMC stock price", nil, events, true); err != nil {
+        if err := exec.Run(ctx, selectorBot, registry, scanner, "Check TSMC stock price", nil, nil, events, true); err != nil {
             fmt.Println("Error:", err)
         }
     }()
@@ -315,26 +245,6 @@ func main() {
 | `run` | `agenvoy run <input...> [--image <path>]... [--file <path>]...` | Execute a task (interactive mode, confirms before each tool call) |
 | `run-allow` | `agenvoy run-allow <input...> [--image <path>]... [--file <path>]...` | Execute a task (automatic mode, skips all confirmations) |
 
-### Image Input
-
-Attach one or more images with `--image <path>`. The flag is extracted from the input string before it is sent to the agent:
-
-```bash
-agenvoy run Describe this chart --image ./chart.png
-agenvoy run-allow Compare these two screenshots --image /tmp/before.png --image /tmp/after.png
-```
-
-> **Note:** Image input is not supported by the `nvidia` provider.
-
-### File Input
-
-Inject local file content into the prompt with `--file <path>`. Multiple flags are supported. Each file is embedded as `---\npath: <filename>\n---\n<content>`:
-
-```bash
-agenvoy run Analyze this log --file ./app.log
-agenvoy run-allow Compare two configs --file ./config.a.yaml --file ./config.b.yaml
-```
-
 ### Supported Agent Providers
 
 | Provider | Auth Method | Default Model | Environment Variable | Image Input |
@@ -346,7 +256,7 @@ agenvoy run-allow Compare two configs --file ./config.a.yaml --file ./config.b.y
 | `nvidia` | API Key | `openai/gpt-oss-120b` | `NVIDIA_API_KEY` | ✗ |
 | `compat` | Optional API Key | any | `COMPAT_{NAME}_API_KEY` | depends |
 
-Model format: `{provider}@{model-name}`, e.g. `claude@claude-opus-4-6`.
+Model format: `{provider}@{model-name}`, e.g. `claude@claude-opus-4-6`.<br>
 Compat format: `compat[{name}]@{model}`, e.g. `compat[ollama]@qwen3:8b`.
 
 ### Built-in Tools
@@ -354,14 +264,15 @@ Compat format: `compat[{name}]@{model}`, e.g. `compat[ollama]@qwen3:8b`.
 | Tool | Parameters | Description |
 |------|------------|-------------|
 | `read_file` | `path` | Read file content at the specified path |
-| `list_files` | `path` | List files and subdirectories |
+| `list_files` | `path`, `recursive` | List files and subdirectories |
 | `glob_files` | `pattern` | Find files matching a glob pattern (e.g. `**/*.go`) |
 | `write_file` | `path`, `content` | Write or create a file |
 | `patch_edit` | `path`, `old`, `new` | Exact string replacement (safer than write_file) |
-| `search_content` | `pattern`, `path`, `file_pattern` | Regex search across file contents |
+| `search_content` | `pattern`, `file_pattern` | Regex search across file contents |
 | `search_history` | `keyword`, `time_range` | Search current session history; supports `1d`/`7d`/`1m`/`1y` filter |
 | `run_command` | `command` | Execute an allowlisted shell command |
 | `fetch_page` | `url` | Fetch a page after JS rendering via Chrome (supports SPA) |
+| `download_page` | `href`, `save_to` | Download a page as readable Markdown to a local file |
 | `search_web` | `query`, `range` | DuckDuckGo search returning title/URL/snippet |
 | `fetch_yahoo_finance` | `symbol`, `range` | Real-time stock quotes and candlestick data |
 | `fetch_google_rss` | `keyword`, `time` | Google News RSS search |
@@ -373,6 +284,19 @@ Compat format: `compat[{name}]@{model}`, e.g. `compat[ollama]@qwen3:8b`.
 
 The `run_command` tool is restricted to the following commands:
 `git`, `go`, `node`, `npm`, `yarn`, `pnpm`, `python`, `python3`, `pip`, `pip3`, `ls`, `cat`, `head`, `tail`, `pwd`, `mkdir`, `touch`, `cp`, `mv`, `rm`, `grep`, `sed`, `awk`, `sort`, `uniq`, `diff`, `cut`, `tr`, `wc`, `find`, `jq`, `echo`, `which`, `date`, `docker`, `podman`
+
+### Security Restrictions
+
+Both file tools and `run_command` enforce path-level access control via `internal/tools/file/embed/denied.json`. The following are always blocked:
+
+| Category | Blocked |
+|----------|---------|
+| SSH | `.ssh/` directory, `id_rsa`, `authorized_keys`, `known_hosts`, etc. |
+| Shell history | `.bash_history`, `.zsh_history`, `.zhistory` |
+| Shell config | `.zshrc`, `.bashrc`, `.bash_profile`, `.zprofile`, `.zshenv` |
+| Cloud credentials | `.aws/`, `.gcloud/`, `.docker/`, `.gnupg/` |
+| Private keys | `.pem`, `.key`, `.p12`, `.pfx`, `.cer`, `.crt`, `.der` |
+| Secrets | `.env`, `.env.*`, `.netrc`, `.git-credentials` |
 
 ## API Reference
 
@@ -441,16 +365,38 @@ Creates and runs a concurrent skill scan across 9 standard paths. When duplicate
 ### keychain.Get / keychain.Set
 
 ```go
-func Get(key string) string   // Read from OS keychain, fallback to env var
+func Get(key string) string        // Read from OS keychain, fallback to env var
 func Set(key, value string) error  // Write to OS keychain
 ```
+
+### discord.New
+
+```go
+func New(
+    plannerAgent  agentTypes.Agent,
+    agentRegistry agentTypes.AgentRegistry,
+    skillScanner  *skill.SkillScanner,
+) (*discordTypes.DiscordBot, error)
+```
+
+Creates and connects a Discord bot session, registers slash commands, and returns the bot handle. Returns `nil, nil` when `DISCORD_TOKEN` is not set.
+
+### File Attachment from Agent Reply
+
+Agents running in Discord mode can send local files by embedding a marker in their text reply:
+
+```
+[SEND_FILE:/absolute/path/to/file.png]
+```
+
+Multiple files are supported. The markers are stripped from the visible message text before sending.
 
 ### APIDocumentData (Custom API Config Schema)
 
 ```go
 type APIDocumentData struct {
     Name        string                       // Tool name (auto-prefixed with api_)
-    Description string                       // Tool description (used by LLM for invocation decisions)
+    Description string                       // Tool description (used by LLM for routing)
     Endpoint    APIDocumentEndpointData      // URL, Method, ContentType, Timeout
     Auth        *APIDocumentAuthData         // Authentication (bearer/apikey/basic)
     Parameters  map[string]APIParameterData  // Parameter definitions (with required, default)
