@@ -54,11 +54,12 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		"anthropic-version": "2023-06-01",
 		"Content-Type":      "application/json",
 	}, map[string]any{
-		"model":      a.model,
-		"max_tokens": maxTokens,
-		"system":     systemPrompt,
-		"messages":   newMessages,
-		"tools":      newTools,
+		"model":       a.model,
+		"max_tokens":  maxTokens,
+		"temperature": 0.2,
+		"system":      systemPrompt,
+		"messages":    newMessages,
+		"tools":       newTools,
 	}, "json")
 	if err != nil {
 		return nil, fmt.Errorf("utils.POST: %w", err)

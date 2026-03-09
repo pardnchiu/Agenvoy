@@ -34,9 +34,10 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		"Authorization": "Bearer " + a.apiKey,
 		"Content-Type":  "application/json",
 	}, map[string]any{
-		"model":    a.model,
-		"messages": messages,
-		"tools":    tools,
+		"model":       a.model,
+		"messages":    messages,
+		"temperature": 0.2,
+		"tools":       tools,
 	}, "json")
 	if err != nil {
 		return nil, fmt.Errorf("utils.POST: %w", err)

@@ -124,8 +124,17 @@ func (a *Agent) convertToTools(tools []toolTypes.Tool) []map[string]any {
 }
 
 func (a *Agent) generateRequestBody(messages []Content, prompt string, newTools []map[string]any) map[string]any {
+	generationConfig := map[string]any{
+		"temperature": 0.2,
+	}
+	if strings.Contains(a.model, "2.5") {
+		generationConfig["thinkingConfig"] = map[string]any{
+			"thinkingBudget": 0,
+		}
+	}
 	body := map[string]any{
-		"contents": messages,
+		"contents":         messages,
+		"generationConfig": generationConfig,
 	}
 
 	if prompt != "" {
