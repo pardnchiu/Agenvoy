@@ -27,35 +27,34 @@
 
 > `go install github.com/pardnchiu/agenvoy/cmd/cli@latest` · [完整文件](./doc.zh.md)
 
-### 雙層路由 Agentic 執行引擎
+### 並行 Skill 與 Agent 調度
 
-每次執行前，輕量 Selector Bot 同時進行兩項 LLM 路由決策：從 9 個標準路徑掃描的 Markdown 檔案中匹配最佳 Skill，並從 Agent Registry 中挑選最合適的後端。執行迴圈最多執行 16 次（一般模式）或 128 次（Skill 模式），對已快取的工具呼叫進行去重，並在達到迭代上限時自動觸發摘要流程——始終回傳完整的最終回應。
+Selector Bot 在單一規劃階段同時從 9 個標準路徑掃描 Markdown Skill 定義，並從 Provider 登錄檔中選出最合適的 AI 後端，兩者並行執行而非依序查找。配對完成後，執行引擎以最多 128 次迭代的工具呼叫迴圈完成任務，並在達到上限時自動觸發摘要。
 
-### Discord Bot 含 Slash Command 與檔案附件
+### 安全優先的工具執行
 
-平台除 CLI 外另提供獨立的 Discord server 模式。支援私訊與頻道 mention 觸發，收到訊息後立即回應確認再於背景執行完整的 Agentic 迴圈。Agent 可在回覆中嵌入 `[SEND_FILE:/path]` marker，系統自動將本地圖片、文字檔或任意二進位檔作為附件傳送至 Discord。Slash command 開發期間可指定 Guild ID 即時生效，上線後改為全域註冊。
+每次檔案操作都會對照內嵌的封鎖清單（涵蓋 SSH 金鑰、`.env` 檔案與憑證目錄）進行驗證。Shell `rm` 指令被攔截並導向 `.Trash` 而非永久刪除，Shell 執行亦限制於明確的指令白名單。16 個以上的內建工具（檔案、API、瀏覽器、計算機、網頁搜尋）與 JSON 設定驅動的自訂 API 適配器，在安全邊界內提供完整的 Agentic 能力。
 
-### 安全優先的共用 Agent 設計
+### OS Keychain 憑證管理
 
-透過單一宣告式 `denied.json` 設定，在檔案工具與 shell 指令兩個層面封鎖敏感路徑存取。涵蓋 SSH 金鑰目錄與檔名、shell 歷史記錄與設定檔、雲端憑證目錄（`.aws`、`.gcloud`、`.docker`）、私鑰副檔名（`.pem`、`.key`、`.p12`）及 `.env` 檔案。`rm` 指令被攔截並重定向至 `.Trash` 目錄而非永久刪除，API 憑證存放於系統原生 Keychain 而非環境變數。
+Provider API 金鑰儲存於系統原生的 OS Keychain（macOS / Linux / Windows），而非 `.env` 檔案，防止憑證意外洩漏。GitHub Copilot 採用 OAuth Device Code Flow 並支援自動刷新令牌。六個 Provider（Copilot、OpenAI、Claude、Gemini、NVIDIA、Compat）共用統一的互動式 `agenvoy add` 設定流程，可從內嵌模型登錄檔互動選擇模型。
 
 ## 架構
 
 ```mermaid
 graph TB
-    CLI["CLI (cmd/cli)"] --> Run["exec.Run"]
-    Discord["Discord Bot (cmd/server)"] --> Run
-    Run --> SelSkill["selectSkill\n(Selector Bot)"]
-    Run --> SelAgent["selectAgent\n(Selector Bot)"]
-    SelSkill --> Skills["Skill Scanner\n9 個標準路徑"]
-    SelAgent --> Registry["AgentRegistry\nCopilot / OpenAI / Claude\nGemini / NVIDIA / Compat"]
-    SelSkill -- "匹配 Skill" --> Execute["exec.Execute"]
-    SelAgent -- "選擇 Agent" --> Execute
-    Execute --> Agent["Agent.Send"]
-    Execute --> ToolCall["toolCall\n(安全檢查 + 確認)"]
-    ToolCall --> Tools["Tools Executor\n16 內建 + 自訂 API"]
-    Execute --> Session["Session\nhistory.json / summary.json"]
-    Execute -- "結果" --> Reply["Discord Reply\n文字 / 檔案附件"]
+    Input["CLI / Discord"] --> Run["exec.Run()"]
+    Run --> Concurrent["並行調度"]
+    Concurrent --> SkillSelect["SelectSkill() — 9 scan paths"]
+    Concurrent --> AgentSelect["SelectAgent() — provider registry"]
+    SkillSelect --> Execute["exec.Execute()"]
+    AgentSelect --> Execute
+    Execute --> Send["Agent.Send() — LLM call"]
+    Send --> ToolCall["ToolCall() — 去重快取"]
+    ToolCall --> Security["Security Gate\ndenied.json + whitelist"]
+    Security --> Tools["File / API / Browser / Shell"]
+    Tools --> Send
+    Send --> Output["回覆 → CLI / Discord"]
 ```
 
 ## 檔案結構
@@ -63,41 +62,24 @@ graph TB
 ```
 agenvoy/
 ├── cmd/
-│   ├── cli/
-│   │   ├── main.go                  # CLI 進入點
-│   │   ├── addProvider.go           # 互動式 Provider 設定
-│   │   ├── getAgentRegistry.go      # 多 Provider Agent Registry 初始化
-│   │   └── runEvents.go             # 事件迴圈與互動確認
-│   └── server/
-│       └── main.go                  # Discord Bot server 進入點
+│   ├── cli/                # CLI：add / remove / list / run
+│   └── server/             # Discord Bot 進入點
 ├── internal/
 │   ├── agents/
-│   │   ├── exec/                    # 執行核心（路由、工具迴圈、session 管理）
-│   │   ├── provider/                # AI 後端（copilot/openai/claude/gemini/nvidia/compat）
-│   │   └── types/                   # 共用介面（Agent、Message、Event）
-│   ├── discord/
-│   │   ├── command/                 # Slash command 定義與處理器
-│   │   ├── types/                   # Discord 專用型別
-│   │   ├── run.go                   # Discord 訊息的 Agentic 迴圈
-│   │   ├── reply.go                 # 文字與檔案附件回覆
-│   │   └── session.go               # Discord session 與歷史管理
-│   ├── keychain/                    # 系統 Keychain 憑證存取
-│   ├── skill/                       # 並行 Skill 掃描與解析
-│   ├── tools/
-│   │   ├── file/
-│   │   │   └── embed/denied.json    # 敏感路徑存取控制設定
-│   │   ├── browser/                 # JS 渲染頁面擷取與下載
-│   │   ├── apiAdapter/              # JSON 設定驅動的自訂 API 工具
-│   │   └── apis/                    # 財經、RSS、天氣工具
-│   └── utils/
-├── examples/apis/                   # 自訂 API 設定範例
+│   │   ├── exec/           # 核心執行引擎與 Session 迴圈
+│   │   ├── provider/       # 6 個 AI Provider 後端 + 模型登錄檔
+│   │   └── types/          # Agent 介面 + Message 類型
+│   ├── discord/            # Discord Slash Command + 檔案附件
+│   ├── skill/              # Markdown Skill 掃描器與解析器
+│   ├── tools/              # 16+ 內建工具 + 自訂 API 適配器
+│   └── keychain/           # OS Keychain 憑證儲存
 ├── go.mod
-└── README.md
+└── LICENSE
 ```
 
 ## 授權
 
-本專案採用 [AGPL-3.0 LICENSE](LICENSE)。
+本專案採用 [AGPL-3.0 LICENSE](../LICENSE)。
 
 ## Author
 

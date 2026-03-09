@@ -27,35 +27,34 @@
 
 > `go install github.com/pardnchiu/agenvoy/cmd/cli@latest` · [Documentation](./doc/doc.md)
 
-### Dual-Layer Routing Agentic Execution Engine
+### Concurrent Skill & Agent Dispatch
 
-Before each execution, a lightweight Selector Bot runs two concurrent LLM routing decisions: it matches the best Skill from markdown files scanned across 9 standard paths, and picks the most suitable backend from the Agent Registry. The execution loop runs up to 16 iterations (general mode) or 128 iterations (Skill mode), deduplicates cached tool calls, and automatically triggers a summarization pass when the iteration limit is reached — always returning a coherent final response.
+A Selector Bot concurrently resolves the best Skill from Markdown files across 9 standard scan paths and selects the optimal AI backend from the provider registry — both in a single planning phase, not sequentially. The execution engine then runs a tool-call loop of up to 128 iterations, automatically triggering summarization when the limit is reached.
 
-### Discord Bot with Slash Commands and File Attachment
+### Security-First Tool Execution
 
-The platform ships a standalone Discord server mode alongside the CLI. It handles both direct messages and mention-triggered channel messages, responds with an immediate acknowledgment before processing, and executes the same full agentic loop in the background. Agents can send local files back to Discord by embedding a `[SEND_FILE:/path]` marker in their reply — images, text files, and any binary are supported. Slash commands register instantly against a Guild ID during development and globally for production.
+Every file operation is validated against an embedded blocklist covering SSH keys, `.env` files, and credential directories. Shell `rm` commands are intercepted and redirected to `.Trash` instead of permanent deletion, and shell execution is restricted to an explicit command whitelist. Over 16 built-in tools (file, API, browser, calculator, web search) and a JSON-config-driven custom API adapter provide full agentic capability within secure boundaries.
 
-### Security-First Shared Agent Design
+### OS Keychain Credential Management
 
-A multi-layer access control system blocks sensitive path access at both the file tool and shell command layers using a single declarative `denied.json` config. It covers SSH keys, shell history and config files, cloud credential directories (`.aws`, `.gcloud`, `.docker`), private key extensions (`.pem`, `.key`, `.p12`), and `.env` files. The `rm` command is intercepted and redirected to `.Trash` instead of permanent deletion, and API credentials are stored in the OS-native keychain rather than environment variables.
+Provider API keys are stored in the native OS keychain (macOS / Linux / Windows) rather than `.env` files, preventing accidental credential exposure. GitHub Copilot authentication uses OAuth Device Code Flow with automatic token refresh. All six providers (Copilot, OpenAI, Claude, Gemini, NVIDIA, Compat) share a unified interactive `agenvoy add` setup with interactive model selection from an embedded model registry.
 
 ## Architecture
 
 ```mermaid
 graph TB
-    CLI["CLI (cmd/cli)"] --> Run["exec.Run"]
-    Discord["Discord Bot (cmd/server)"] --> Run
-    Run --> SelSkill["selectSkill\n(Selector Bot)"]
-    Run --> SelAgent["selectAgent\n(Selector Bot)"]
-    SelSkill --> Skills["Skill Scanner\n9 standard paths"]
-    SelAgent --> Registry["AgentRegistry\nCopilot / OpenAI / Claude\nGemini / NVIDIA / Compat"]
-    SelSkill -- "matched skill" --> Execute["exec.Execute"]
-    SelAgent -- "chosen agent" --> Execute
-    Execute --> Agent["Agent.Send"]
-    Execute --> ToolCall["toolCall\n(security check + confirm)"]
-    ToolCall --> Tools["Tools Executor\n16 built-in + custom API"]
-    Execute --> Session["Session\nhistory.json / summary.json"]
-    Execute -- "result" --> Reply["Discord Reply\ntext / file attachment"]
+    Input["CLI / Discord"] --> Run["exec.Run()"]
+    Run --> Concurrent["Concurrent Dispatch"]
+    Concurrent --> SkillSelect["SelectSkill() — 9 scan paths"]
+    Concurrent --> AgentSelect["SelectAgent() — provider registry"]
+    SkillSelect --> Execute["exec.Execute()"]
+    AgentSelect --> Execute
+    Execute --> Send["Agent.Send() — LLM call"]
+    Send --> ToolCall["ToolCall() — deduplicated cache"]
+    ToolCall --> Security["Security Gate\ndenied.json + whitelist"]
+    Security --> Tools["File / API / Browser / Shell"]
+    Tools --> Send
+    Send --> Output["Reply → CLI / Discord"]
 ```
 
 ## File Structure
@@ -63,36 +62,19 @@ graph TB
 ```
 agenvoy/
 ├── cmd/
-│   ├── cli/
-│   │   ├── main.go                  # CLI entry point
-│   │   ├── addProvider.go           # Interactive provider setup
-│   │   ├── getAgentRegistry.go      # Multi-provider Agent Registry init
-│   │   └── runEvents.go             # Event loop and interactive confirm
-│   └── server/
-│       └── main.go                  # Discord bot server entry point
+│   ├── cli/                # CLI: add / remove / list / run
+│   └── server/             # Discord bot entry point
 ├── internal/
 │   ├── agents/
-│   │   ├── exec/                    # Execution core (routing, tool loop, session)
-│   │   ├── provider/                # AI backends (copilot/openai/claude/gemini/nvidia/compat)
-│   │   └── types/                   # Shared interfaces (Agent, Message, Event)
-│   ├── discord/
-│   │   ├── command/                 # Slash command definitions and handler
-│   │   ├── types/                   # Discord-specific types
-│   │   ├── run.go                   # Agentic loop for Discord messages
-│   │   ├── reply.go                 # Text and file attachment reply
-│   │   └── session.go               # Discord session and history management
-│   ├── keychain/                    # OS keychain credential storage
-│   ├── skill/                       # Concurrent skill scanning and parsing
-│   ├── tools/
-│   │   ├── file/
-│   │   │   └── embed/denied.json    # Sensitive path access control config
-│   │   ├── browser/                 # JS-rendered page fetch and download
-│   │   ├── apiAdapter/              # JSON-config-driven custom API tools
-│   │   └── apis/                    # Finance, RSS, Weather tools
-│   └── utils/
-├── examples/apis/                   # Sample custom API configs
+│   │   ├── exec/           # Core execution engine and session loop
+│   │   ├── provider/       # 6 AI provider backends + model registry
+│   │   └── types/          # Agent interface + message types
+│   ├── discord/            # Discord slash commands + file attachments
+│   ├── skill/              # Markdown skill scanner and parser
+│   ├── tools/              # 16+ built-in tools + custom API adapter
+│   └── keychain/           # OS keychain credential storage
 ├── go.mod
-└── README.md
+└── LICENSE
 ```
 
 ## License
