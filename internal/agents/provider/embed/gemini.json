@@ -1,0 +1,35 @@
+{
+  "default": "gemini-2.5-pro",
+  "models": {
+    "gemini-3.1-pro-preview": {
+      "input": 1000000,
+      "output": 65536,
+      "description": "Gemini 3.1 旗艦模型，具備強大推理與 Agentic 程式能力"
+    },
+    "gemini-3.1-flash-lite-preview": {
+      "input": 1000000,
+      "output": 65536,
+      "description": "高效輕量版，以極低成本達到接近旗艦的效能，適合大規模任務"
+    },
+    "gemini-3.1-pro-preview-customtools": {
+      "input": 1000000,
+      "output": 65536,
+      "description": "Gemini 3.1 Pro 工具優先版，專為 Agentic 工作流與自訂工具整合優化"
+    },
+    "gemini-3-flash-preview": {
+      "input": 1048576,
+      "output": 65536,
+      "description": "Gemini 3 Flash，支援可配置思考深度，適合結構化輸出與工具呼叫"
+    },
+    "gemini-2.5-pro": {
+      "input": 1048576,
+      "output": 65536,
+      "description": "Google 最強大的多模態模型，支援超長上下文與深度推理"
+    },
+    "gemini-2.5-flash": {
+      "input": 1048576,
+      "output": 65536,
+      "description": "高速版 Gemini 2.5，低延遲高吞吐量，兼具推理與多模態能力"
+    }
+  }
+}

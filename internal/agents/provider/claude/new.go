@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/keychain"
 )
 
@@ -18,15 +19,11 @@ type Agent struct {
 }
 
 const (
-	// claude-sonnet-4-5 200K/64000
-	// claude-opus-4-6   200K/128K
-	// claude-opus-4-5   200K/128K
-	defaultModel = "claude-sonnet-4-5"
-	prefix       = "claude@"
+	prefix = "claude@"
 )
 
 func New(model ...string) (*Agent, error) {
-	usedModel := defaultModel
+	usedModel := provider.Default("claude")
 	if len(model) > 0 && strings.HasPrefix(model[0], prefix) {
 		usedModel = strings.TrimPrefix(model[0], prefix)
 	}

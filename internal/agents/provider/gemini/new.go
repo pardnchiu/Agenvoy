@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/keychain"
 )
 
@@ -18,14 +19,11 @@ type Agent struct {
 }
 
 const (
-	// gemini-2.5-pro   1m/64k
-	// gemini-2.5-flash 1m/64k
-	defaultModel = "gemini-2.5-pro"
-	prefix       = "gemini@"
+	prefix = "gemini@"
 )
 
 func New(model ...string) (*Agent, error) {
-	usedModel := defaultModel
+	usedModel := provider.Default("gemini")
 	if len(model) > 0 && strings.HasPrefix(model[0], prefix) {
 		usedModel = strings.TrimPrefix(model[0], prefix)
 	}

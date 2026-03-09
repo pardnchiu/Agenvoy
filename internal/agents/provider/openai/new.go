@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/keychain"
 )
 
@@ -18,12 +19,11 @@ type Agent struct {
 }
 
 const (
-	defaultModel = "gpt-5-mini"
-	prefix       = "openai@"
+	prefix = "openai@"
 )
 
 func New(model ...string) (*Agent, error) {
-	usedModel := defaultModel
+	usedModel := provider.Default("openai")
 	if len(model) > 0 && strings.HasPrefix(model[0], prefix) {
 		usedModel = strings.TrimPrefix(model[0], prefix)
 	}

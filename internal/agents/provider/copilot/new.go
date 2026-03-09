@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -31,16 +32,11 @@ type Agent struct {
 }
 
 const (
-	// gpt-4.1      1m/32k
-	// gpt-4.1-mini 1m/32k
-	// gpt-5-mini   400k/128k
-	// gpt-4o       128k/4k
-	defaultModel = "gpt-4.1"
-	prefix       = "copilot@"
+	prefix = "copilot@"
 )
 
 func New(model ...string) (*Agent, error) {
-	usedModel := defaultModel
+	usedModel := provider.Default("copilot")
 	if len(model) > 0 && strings.HasPrefix(model[0], prefix) {
 		usedModel = strings.TrimPrefix(model[0], prefix)
 	}

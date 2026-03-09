@@ -106,11 +106,6 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			ToolID:   toolID,
 		}
 
-		// ensure result is not too long
-		const maxToolResultLen = 12000
-		if len(result) > maxToolResultLen {
-			result = result[:maxToolResultLen] + "\n...(truncated)"
-		}
 		content := strings.TrimSpace(fmt.Sprintf("[%s] %s", toolName, result))
 		alreadyCall[hash] = content
 

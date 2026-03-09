@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -31,10 +33,18 @@ func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput strin
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {
+	truncated := make([]agentTypes.Message, len(messages))
+	copy(truncated, messages)
+	for i := range truncated {
+		if s, ok := truncated[i].Content.(string); ok {
+			truncated[i].Content = utils.TruncateUTF8(s, provider.InputBytes("gemini", a.model))
+		}
+	}
+
 	var systemPrompt string
 	var newMessages []Content
 
-	for _, msg := range messages {
+	for _, msg := range truncated {
 		if msg.Role == "system" {
 			if content, ok := msg.Content.(string); ok {
 				systemPrompt = content
@@ -90,6 +100,7 @@ func (a *Agent) convertToContent(message agentTypes.Message) Content {
 			var args map[string]any
 			json.Unmarshal([]byte(tool.Function.Arguments), &args)
 			content.Parts = append(content.Parts, Part{
+				ThoughtSignature: tool.ThoughtSignature,
 				FunctionCall: &FunctionCall{
 					Name: tool.Function.Name,
 					Args: args,
@@ -127,7 +138,7 @@ func (a *Agent) generateRequestBody(messages []Content, prompt string, newTools 
 	generationConfig := map[string]any{
 		"temperature": 0.2,
 	}
-	if strings.Contains(a.model, "2.5") {
+	if strings.Contains(a.model, "2.5-flash") {
 		generationConfig["thinkingConfig"] = map[string]any{
 			"thinkingBudget": 0,
 		}
@@ -180,8 +191,9 @@ func (a *Agent) convertToOutput(resp *Output) *agentTypes.Output {
 			}
 
 			toolCall := agentTypes.ToolCall{
-				ID:   part.FunctionCall.Name,
-				Type: "function",
+				ID:               part.FunctionCall.Name,
+				Type:             "function",
+				ThoughtSignature: part.ThoughtSignature,
 			}
 			toolCall.Function.Name = part.FunctionCall.Name
 			toolCall.Function.Arguments = args

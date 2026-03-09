@@ -1,0 +1,9 @@
+{
+  "default": "gpt-4.1",
+  "models": {
+    "gpt-4.1":      { "input": 1047576, "output": 32768,  "description": "非推理旗艦模型，指令遵循與工具呼叫最佳化，低延遲快速推理" },
+    "gpt-4.1-mini": { "input": 1000000, "output": 32768,  "description": "GPT-4.1 輕量版，保有百萬 Token 上下文，兼顧成本與效能" },
+    "gpt-5-mini":   { "input": 400000,  "output": 131072, "description": "GPT-5 高效版，速度更快且成本更低，適合明確定義的任務" },
+    "gpt-4o":       { "input": 128000,  "output": 16384,  "description": "多模態旗艦模型，支援文字、圖像與音訊輸入" }
+  }
+}

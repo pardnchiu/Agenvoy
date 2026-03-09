@@ -11,7 +11,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 )
+
+func TruncateUTF8(s string, maxBytes int) string {
+	if len(s) <= maxBytes {
+		return s
+	}
+	end := maxBytes
+	for end > 0 && !utf8.Valid([]byte(s[:end])) {
+		end--
+	}
+	return s[:end] + "\n...(truncated)"
+}
 
 func GET[T any](ctx context.Context, client *http.Client, api string, header map[string]string) (T, int, error) {
 	var result T
@@ -109,7 +121,8 @@ func POST[T any](ctx context.Context, client *http.Client, api string, header ma
 	statusCode := resp.StatusCode
 
 	if statusCode < 200 || statusCode >= 300 {
-		return result, statusCode, nil
+		b, _ := io.ReadAll(resp.Body)
+		return result, statusCode, fmt.Errorf("HTTP %d: %s", statusCode, strings.TrimSpace(string(b)))
 	}
 
 	if s, ok := any(&result).(*string); ok {

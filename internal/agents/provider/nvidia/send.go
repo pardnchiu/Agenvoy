@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -30,12 +31,20 @@ func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput strin
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {
+	truncated := make([]agentTypes.Message, len(messages))
+	copy(truncated, messages)
+	for i := range truncated {
+		if s, ok := truncated[i].Content.(string); ok {
+			truncated[i].Content = utils.TruncateUTF8(s, provider.InputBytes("nvidia", a.model))
+		}
+	}
+
 	result, _, err := utils.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, map[string]string{
 		"Authorization": "Bearer " + a.apiKey,
 		"Content-Type":  "application/json",
 	}, map[string]any{
 		"model":       a.model,
-		"messages":    messages,
+		"messages":    truncated,
 		"temperature": 0.2,
 		"tools":       tools,
 	}, "json")

@@ -26,6 +26,7 @@ type ToolCall struct {
 		Name      string `json:"name"`
 		Arguments string `json:"arguments"`
 	} `json:"function"`
+	ThoughtSignature string `json:"thought_signature,omitempty"` // Gemini thinking models
 }
 
 type Output struct {

@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/manifoldco/promptui"
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
 	"github.com/pardnchiu/agenvoy/internal/keychain"
 )
@@ -56,25 +58,25 @@ func runAdd() {
 
 	provider := providers[index]
 
-	var model string
+	var model, description string
 	switch {
 	case provider.IsCopilot:
-		model = addCopilot(provider.Prefix, provider.Model)
+		model, description = addCopilot(provider.Prefix, provider.Model)
 
 	case provider.IsCompat:
-		model = addCompat()
+		model, description = addCompat()
 
 	default:
 		addAPIKey(provider.Label, provider.EnvKey)
-		model = getModelName(provider.Prefix, provider.Model)
+		model, description = getModelName(provider.Prefix, provider.Model)
 	}
 
 	if model != "" {
-		upsertModel(model, provider.Description)
+		upsertModel(model, description)
 	}
 }
 
-func addCopilot(prefix, defaultModel string) string {
+func addCopilot(prefix, defaultModel string) (string, string) {
 	_, err := copilot.New()
 	if err != nil {
 		slog.Error("failed to initialize Copilot",
@@ -84,7 +86,7 @@ func addCopilot(prefix, defaultModel string) string {
 	return getModelName(prefix, defaultModel)
 }
 
-func addCompat() string {
+func addCompat() (string, string) {
 	nameInput := promptui.Prompt{
 		Label: "Provider name (ex. ollama)",
 		Validate: func(s string) error {
@@ -153,16 +155,32 @@ func addCompat() string {
 
 	// * if no model specified, skip
 	prefix := fmt.Sprintf("compat[%s]@", providor)
-	return getModelName(prefix, "")
+	model, _ := getModelName(prefix, "")
+	return model, ""
 }
 
 func addAPIKey(label, envKey string) {
+	if existing := keychain.Get(envKey); existing != "" {
+		confirm := promptui.Select{
+			Label:        fmt.Sprintf("%s API Key exist, replace with new?", label),
+			Items:        []string{"No", "Yes"},
+			HideSelected: true,
+		}
+		idx, _, err := confirm.Run()
+		if err != nil {
+			os.Exit(1)
+		}
+		if idx == 0 {
+			return
+		}
+	}
+
 	apiKeyInput := promptui.Prompt{
 		Label: fmt.Sprintf("%s API Key", label),
 		Mask:  '*',
 		Validate: func(s string) error {
 			if strings.TrimSpace(s) == "" {
-				return fmt.Errorf("API key cannot be empty")
+				return fmt.Errorf("API key is required")
 			}
 			return nil
 		},
@@ -179,7 +197,18 @@ func addAPIKey(label, envKey string) {
 	fmt.Printf("[*] %s saved\n", envKey)
 }
 
-func getModelName(prefix, defaultModel string) string {
+func getModelName(prefix, defaultModel string) (string, string) {
+	provider := strings.TrimSuffix(prefix, "@")
+	if idx := strings.Index(provider, "["); idx != -1 {
+		provider = ""
+	}
+
+	if provider != "" {
+		if model, desc, ok := selectModelFromList(prefix, provider, defaultModel); ok {
+			return model, desc
+		}
+	}
+
 	modelInput := promptui.Prompt{
 		Label:   fmt.Sprintf("Model name (prefix: %q)", prefix),
 		Default: defaultModel,
@@ -192,12 +221,60 @@ func getModelName(prefix, defaultModel string) string {
 	if model == "" {
 		model = defaultModel
 	}
-
-	// * is compat and no model specified, skip
 	if model == "" {
-		return ""
+		return "", ""
 	}
-	return prefix + model
+	return prefix + model, ""
+}
+
+func selectModelFromList(prefix, providerName, defaultModel string) (model, desc string, ok bool) {
+	models := provider.Models(providerName)
+	if len(models) == 0 {
+		return "", "", false
+	}
+
+	type entry struct {
+		name string
+		info provider.ModelItem
+	}
+
+	entries := make([]entry, 0, len(models))
+	if info, exists := models[defaultModel]; exists {
+		entries = append(entries, entry{defaultModel, info})
+	}
+	others := make([]string, 0, len(models))
+	for name := range models {
+		if name != defaultModel {
+			others = append(others, name)
+		}
+	}
+	sort.Strings(others)
+	for _, name := range others {
+		entries = append(entries, entry{name, models[name]})
+	}
+
+	items := make([]string, len(entries)+1)
+	for i, e := range entries {
+		items[i] = fmt.Sprintf("%-36s  %s", e.name, e.info.Description)
+	}
+	items[len(entries)] = "exit"
+
+	selector := promptui.Select{
+		Label:        fmt.Sprintf("Select %s", providerName),
+		Items:        items,
+		HideSelected: true,
+		Size:         10,
+	}
+	idx, _, err := selector.Run()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	if idx == len(entries) {
+		os.Exit(0)
+	}
+	selected := entries[idx]
+	return prefix + selected.name, selected.info.Description, true
 }
 
 func upsertModel(name, defaultDesc string) {

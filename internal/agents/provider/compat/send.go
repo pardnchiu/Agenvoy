@@ -26,6 +26,14 @@ func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput strin
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {
+	truncated := make([]agentTypes.Message, len(messages))
+	copy(truncated, messages)
+	for i := range truncated {
+		if s, ok := truncated[i].Content.(string); ok {
+			truncated[i].Content = utils.TruncateUTF8(s, 128_000)
+		}
+	}
+
 	chatAPI := a.baseURL + "/v1/chat/completions"
 
 	headers := map[string]string{
@@ -37,7 +45,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 
 	result, _, err := utils.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, headers, map[string]any{
 		"model":       a.model,
-		"messages":    messages,
+		"messages":    truncated,
 		"temperature": 0.2,
 		"tools":       tools,
 	}, "json")

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -15,7 +16,6 @@ import (
 
 const (
 	messagesAPI = "https://api.anthropic.com/v1/messages"
-	maxTokens   = 16384
 )
 
 func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
@@ -33,10 +33,18 @@ func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput strin
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {
+	truncated := make([]agentTypes.Message, len(messages))
+	copy(truncated, messages)
+	for i := range truncated {
+		if s, ok := truncated[i].Content.(string); ok {
+			truncated[i].Content = utils.TruncateUTF8(s, provider.InputBytes("claude", a.model))
+		}
+	}
+
 	var systemPrompt string
 	var newMessages []map[string]any
 
-	for _, msg := range messages {
+	for _, msg := range truncated {
 		if msg.Role == "system" {
 			if content, ok := msg.Content.(string); ok {
 				systemPrompt = content
@@ -55,7 +63,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		"Content-Type":      "application/json",
 	}, map[string]any{
 		"model":       a.model,
-		"max_tokens":  maxTokens,
+		"max_tokens":  provider.OutputTokens("claude", a.model),
 		"temperature": 0.2,
 		"system":      systemPrompt,
 		"messages":    newMessages,
@@ -70,7 +78,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	}
 
 	if result.StopReason == "max_tokens" {
-		return nil, fmt.Errorf("exceeded max_tokens (%d)", maxTokens)
+		return nil, fmt.Errorf("exceeded max_tokens (%d)", provider.OutputTokens("claude", a.model))
 	}
 
 	return a.convertToOutput(&result), nil
