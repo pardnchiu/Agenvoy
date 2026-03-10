@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/keychain"
@@ -45,6 +46,7 @@ func main() {
 	if os.Args[1] == "list" {
 		if len(os.Args) > 2 && os.Args[2] == "skills" {
 			scanner := skill.NewScanner()
+		scanner.LoadFS(extensions.Skills, "skills")
 
 			if len(scanner.Skills.ByName) == 0 {
 				fmt.Println("No skills found")
@@ -115,6 +117,7 @@ func main() {
 
 		agentRegistry := getAgentRegistry()
 		scanner := skill.NewScanner()
+		scanner.LoadFS(extensions.Skills, "skills")
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

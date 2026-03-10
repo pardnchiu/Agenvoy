@@ -1,7 +1,9 @@
 package skill
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -141,6 +143,61 @@ func (s *SkillScanner) scan(root string, skillChan chan<- *Skill) error {
 	}
 
 	return nil
+}
+
+func (s *SkillScanner) LoadFS(fsys fs.FS, dir string) {
+	entries, err := fs.ReadDir(fsys, dir)
+	if err != nil {
+		slog.Warn("fs.ReadDir", slog.String("error", err.Error()))
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		skillPath := fmt.Sprintf("%s/%s/SKILL.md", dir, entry.Name())
+		data, err := fs.ReadFile(fsys, skillPath)
+		if err != nil {
+			continue
+		}
+
+		hash := fmt.Sprintf("%x", sha256.Sum256(data))
+		skill := &Skill{
+			Name:    entry.Name(),
+			AbsPath: skillPath,
+			Path:    fmt.Sprintf("%s/%s", dir, entry.Name()),
+			Content: string(data),
+			Body:    string(data),
+			Hash:    hash,
+		}
+
+		header, body, err := extractHeader(data)
+		if err == nil {
+			skill.Body = body
+			if m := nameRegex.FindSubmatch(header); m != nil {
+				skill.Name = strings.TrimSpace(string(m[1]))
+			}
+			if m := descRegex.FindSubmatch(header); m != nil {
+				skill.Description = strings.TrimSpace(string(m[1]))
+			}
+		}
+
+		// * embedded skills is lower than user-defined
+		if _, exists := s.Skills.ByName[skill.Name]; exists {
+			slog.Info("user-defined exists",
+				slog.String("name", skill.Name))
+			continue
+		}
+
+		s.Skills.ByName[skill.Name] = skill
+		s.Skills.ByPath[skill.AbsPath] = skill
+		slog.Info("embedded skill loaded", slog.String("name", skill.Name))
+	}
 }
 
 func (s *SkillScanner) List() []string {

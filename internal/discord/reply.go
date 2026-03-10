@@ -12,6 +12,8 @@ import (
 const (
 	// * if content over 2000, split into multiple messages
 	replayMax = 2000
+	// * discord attachment limit
+	attachMax = 10
 )
 
 func Reply(ctx context.Context, dcReply *discordTypes.DiscordReply, reply discordTypes.ReplyMessage) error {
@@ -41,36 +43,70 @@ func Reply(ctx context.Context, dcReply *discordTypes.DiscordReply, reply discor
 	}
 
 	if dcReply.Interaction != nil {
+		replyFiles := chunkFiles(files, attachMax)
+		files := []*discordgo.File(nil)
+		if len(replyFiles) > 0 {
+			files = replyFiles[0]
+			replyFiles = replyFiles[1:]
+		}
 		_, err := dcReply.Session.FollowupMessageCreate(dcReply.Interaction.Interaction, true, &discordgo.WebhookParams{
 			Content: reply.Content,
 			Embeds:  embeds,
 			Files:   files,
 		})
-		return err
+		if err != nil {
+			return err
+		}
+
+		for _, replyFile := range replyFiles {
+			_, err := dcReply.Session.FollowupMessageCreate(dcReply.Interaction.Interaction, true, &discordgo.WebhookParams{
+				Files: replyFile,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
 	chunks := split(reply.Content)
+	replyFiles := chunkFiles(files, attachMax)
+
 	for i, chunk := range chunks {
 		var ref *discordgo.MessageReference
 		if i == 0 {
 			ref = dcReply.Reference
 		}
 		var chunkEmbeds []*discordgo.MessageEmbed
-		var chunkFiles []*discordgo.File
+		var replyFile []*discordgo.File
 		if i == len(chunks)-1 {
 			chunkEmbeds = embeds
-			chunkFiles = files
+			if len(replyFiles) > 0 {
+				replyFile = replyFiles[0]
+				replyFiles = replyFiles[1:]
+			}
 		}
 		_, err := dcReply.Session.ChannelMessageSendComplex(dcReply.ChannelID, &discordgo.MessageSend{
 			Content:   chunk,
 			Reference: ref,
 			Embeds:    chunkEmbeds,
-			Files:     chunkFiles,
+			Files:     replyFile,
 		})
 		if err != nil {
 			return err
 		}
 	}
+
+	// * over 10 files
+	for _, replyFile := range replyFiles {
+		_, err := dcReply.Session.ChannelMessageSendComplex(dcReply.ChannelID, &discordgo.MessageSend{
+			Files: replyFile,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -91,6 +127,17 @@ func split(s string) []string {
 		chunks = append(chunks, s)
 	}
 	return chunks
+}
+
+func chunkFiles(files []*discordgo.File, size int) [][]*discordgo.File {
+	if len(files) == 0 {
+		return nil
+	}
+	var chunkFiles [][]*discordgo.File
+	for size < len(files) {
+		files, chunkFiles = files[size:], append(chunkFiles, files[:size])
+	}
+	return append(chunkFiles, files)
 }
 
 func isLast(s string) int {

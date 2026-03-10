@@ -21,7 +21,11 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	events <- agentTypes.Event{
 		Type: agentTypes.EventSkillSelect,
 	}
-	matchedSkill := SelectSkill(ctx, bot, scanner, trimInput)
+	fileNames := make([]string, len(fileInputs))
+	for i, f := range fileInputs {
+		fileNames[i] = f
+	}
+	matchedSkill := SelectSkill(ctx, bot, scanner, trimInput, fileNames)
 	if matchedSkill != nil {
 		events <- agentTypes.Event{
 			Type: agentTypes.EventSkillResult,

@@ -17,6 +17,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/nvidia"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/openai"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/discord"
 	"github.com/pardnchiu/agenvoy/internal/keychain"
 	"github.com/pardnchiu/agenvoy/internal/skill"
@@ -32,6 +33,7 @@ func init() {
 func main() {
 	registry := buildAgentRegistry()
 	scanner := skill.NewScanner()
+	scanner.LoadFS(extensions.Skills, "skills")
 
 	var selectorBot agentTypes.Agent
 	if cfg, err := keychain.Load(); err == nil && cfg.PlannerModel != "" {

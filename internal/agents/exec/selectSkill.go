@@ -14,7 +14,7 @@ import (
 //go:embed prompt/skillSelector.md
 var skillSelectorPrompt string
 
-func SelectSkill(ctx context.Context, bot agentTypes.Agent, scanner *skill.SkillScanner, userInput string) *skill.Skill {
+func SelectSkill(ctx context.Context, bot agentTypes.Agent, scanner *skill.SkillScanner, userInput string, fileNames []string) *skill.Skill {
 	trimInput := strings.TrimSpace(userInput)
 
 	skills := scanner.List()
@@ -32,6 +32,11 @@ func SelectSkill(ctx context.Context, bot agentTypes.Agent, scanner *skill.Skill
 		return nil
 	}
 
+	userContent := strings.TrimSpace(trimInput)
+	if len(fileNames) > 0 {
+		userContent += fmt.Sprintf("\nAttached files: %s", strings.Join(fileNames, ", "))
+	}
+
 	messages := []agentTypes.Message{
 		{
 			Role:    "system",
@@ -42,7 +47,7 @@ func SelectSkill(ctx context.Context, bot agentTypes.Agent, scanner *skill.Skill
 			Content: fmt.Sprintf(
 				"Available skills: %s\nUser request: %s",
 				string(skillJson),
-				strings.TrimSpace(trimInput),
+				userContent,
 			),
 		},
 	}
