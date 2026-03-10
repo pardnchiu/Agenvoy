@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -15,8 +16,32 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
+func newAgentFromModel(modelName string) agentTypes.Agent {
+	agentMap := map[string]func(string) (agentTypes.Agent, error){
+		"copilot": func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
+		"openai":  func(m string) (agentTypes.Agent, error) { return openai.New(m) },
+		"compat":  func(m string) (agentTypes.Agent, error) { return compat.New(m) },
+		"claude":  func(m string) (agentTypes.Agent, error) { return claude.New(m) },
+		"gemini":  func(m string) (agentTypes.Agent, error) { return gemini.New(m) },
+		"nvidia":  func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
+	}
+	providerName := strings.SplitN(modelName, "@", 2)[0]
+	provider, _, _ := strings.Cut(providerName, "[")
+	fn, ok := agentMap[provider]
+	if !ok {
+		return nil
+	}
+	agent, err := fn(modelName)
+	if err != nil {
+		slog.Warn("newAgentFromModel",
+			slog.String("error", err.Error()))
+		return nil
+	}
+	return agent
+}
+
 func getAgentRegistry() agentTypes.AgentRegistry {
-	newFn := map[string]func(string) (agentTypes.Agent, error){
+	agentMap := map[string]func(string) (agentTypes.Agent, error){
 		"copilot": func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
 		"openai":  func(m string) (agentTypes.Agent, error) { return openai.New(m) },
 		"compat":  func(m string) (agentTypes.Agent, error) { return compat.New(m) },
@@ -37,7 +62,7 @@ func getAgentRegistry() agentTypes.AgentRegistry {
 	for _, e := range agentEntries {
 		providerFull := strings.SplitN(e.Name, "@", 2)[0]
 		provider, _, _ := strings.Cut(providerFull, "[")
-		fn, ok := newFn[provider]
+		fn, ok := agentMap[provider]
 		if !ok {
 			continue
 		}
@@ -54,7 +79,7 @@ func getAgentRegistry() agentTypes.AgentRegistry {
 	}
 
 	if agentRegistry.Fallback == nil {
-		slog.Error("no agent available; check API keys")
+		fmt.Println("No models added. Run 'add' first.")
 		os.Exit(1)
 	}
 

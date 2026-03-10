@@ -26,9 +26,10 @@ type ProviderItem struct {
 }
 
 type ModelItem struct {
-	Input       int    `json:"input"`
-	Output      int    `json:"output"`
-	Description string `json:"description"`
+	Input         int    `json:"input"`
+	Output        int    `json:"output"`
+	Description   string `json:"description"`
+	NoTemperature bool   `json:"no_temperature,omitempty"`
 }
 
 func parse(data []byte) ProviderItem {
@@ -73,6 +74,10 @@ func Models(provider string) map[string]ModelItem {
 		return nil
 	}
 	return cfg.Models
+}
+
+func SupportTemperature(providerName, model string) bool {
+	return !Get(providerName, model).NoTemperature
 }
 
 func InputBytes(provider, model string) int {

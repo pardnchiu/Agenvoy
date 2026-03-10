@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/keychain"
 	"github.com/pardnchiu/agenvoy/internal/skill"
@@ -35,6 +34,11 @@ func main() {
 
 	if os.Args[1] == "remove" {
 		runRemove()
+		return
+	}
+
+	if os.Args[1] == "planner" {
+		runPlanner()
 		return
 	}
 
@@ -115,16 +119,19 @@ func main() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		selectorBot, err := copilot.New()
-		if err != nil {
-			slog.Error("failed to initialize", slog.String("error", err.Error()))
-			os.Exit(1)
+		var selectorBot agentTypes.Agent
+		if cfg, err := keychain.Load(); err == nil && cfg.PlannerModel != "" {
+			selectorBot = newAgentFromModel(cfg.PlannerModel)
+		}
+		if selectorBot == nil {
+			selectorBot = agentRegistry.Fallback
 		}
 
 		if err := runEvents(ctx, cancel, func(ch chan<- agentTypes.Event) error {
 			return exec.Run(ctx, selectorBot, agentRegistry, scanner, userInput, imageInputs, fileInputs, ch, allowAll)
 		}); err != nil && ctx.Err() == nil {
-			slog.Error("failed to execute", slog.String("error", err.Error()))
+			slog.Error("failed to execute",
+				slog.String("error", err.Error()))
 			os.Exit(1)
 		}
 		return

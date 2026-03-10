@@ -39,15 +39,18 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		}
 	}
 
+	body := map[string]any{
+		"model":    a.model,
+		"messages": truncated,
+		"tools":    tools,
+	}
+	if provider.SupportTemperature("openai", a.model) {
+		body["temperature"] = 0.2
+	}
 	result, _, err := utils.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, map[string]string{
 		"Authorization": "Bearer " + a.apiKey,
 		"Content-Type":  "application/json",
-	}, map[string]any{
-		"model":       a.model,
-		"messages":    truncated,
-		"temperature": 0.2,
-		"tools":       tools,
-	}, "json")
+	}, body, "json")
 	if err != nil {
 		return nil, fmt.Errorf("utils.POST: %w", err)
 	}

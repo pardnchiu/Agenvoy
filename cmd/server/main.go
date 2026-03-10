@@ -18,6 +18,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/openai"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
+	"github.com/pardnchiu/agenvoy/internal/keychain"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
@@ -33,10 +34,12 @@ func main() {
 	scanner := skill.NewScanner()
 
 	var selectorBot agentTypes.Agent
-	if cb, err := copilot.New(); err == nil {
-		selectorBot = cb
-	} else {
-		slog.Warn("failed to init selectorBot, using fallback", slog.String("error", err.Error()))
+	if cfg, err := keychain.Load(); err == nil && cfg.PlannerModel != "" {
+		if a, ok := registry.Registry[cfg.PlannerModel]; ok {
+			selectorBot = a
+		}
+	}
+	if selectorBot == nil {
 		selectorBot = registry.Fallback
 	}
 

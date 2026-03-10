@@ -29,7 +29,7 @@ func runRemove() {
 			items = append(items, m.Name)
 		}
 	}
-	items = append(items, "Cancel")
+	items = append(items, "exit")
 
 	selector := promptui.Select{
 		Label:        "Select model to remove",
@@ -43,7 +43,6 @@ func runRemove() {
 	}
 
 	if index == len(cfg.Models) {
-		fmt.Println("Cancelled.")
 		return
 	}
 

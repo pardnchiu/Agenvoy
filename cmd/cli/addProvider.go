@@ -39,10 +39,11 @@ func init() {
 }
 
 func runAdd() {
-	items := make([]string, len(providers))
+	items := make([]string, len(providers)+1)
 	for i, provider := range providers {
 		items[i] = provider.Label
 	}
+	items[len(providers)] = "exit"
 
 	selector := promptui.Select{
 		Label:        "Select provider to add",
@@ -54,6 +55,10 @@ func runAdd() {
 		slog.Error("selector.Run",
 			slog.String("error", err.Error()))
 		os.Exit(1)
+	}
+
+	if index == len(providers) {
+		os.Exit(0)
 	}
 
 	provider := providers[index]
@@ -277,6 +282,47 @@ func selectModelFromList(prefix, providerName, defaultModel string) (model, desc
 	return prefix + selected.name, selected.info.Description, true
 }
 
+func runPlanner() {
+	cfg, err := keychain.Load()
+	if err != nil {
+		slog.Error("keychain.Load",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	if len(cfg.Models) == 0 {
+		fmt.Println("No models added. Run 'add' first.")
+		return
+	}
+
+	items := make([]string, len(cfg.Models)+1)
+	for i, m := range cfg.Models {
+		items[i] = m.Name
+	}
+	items[len(cfg.Models)] = "exit"
+
+	selector := promptui.Select{
+		Label:        "Select planner model",
+		Items:        items,
+		HideSelected: true,
+	}
+	idx, _, err := selector.Run()
+	if err != nil {
+		os.Exit(1)
+	}
+	if idx == len(cfg.Models) {
+		os.Exit(0)
+	}
+
+	cfg.PlannerModel = cfg.Models[idx].Name
+	if err := keychain.Save(cfg); err != nil {
+		slog.Error("keychain.Save",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	fmt.Printf("[*] set %q as planner model\n", cfg.PlannerModel)
+}
+
 func upsertModel(name, defaultDesc string) {
 	descriptionInput := promptui.Prompt{
 		Label:   "Model description",
@@ -321,10 +367,19 @@ func upsertModel(name, defaultDesc string) {
 		})
 	}
 
+	if cfg.PlannerModel == "" {
+		cfg.PlannerModel = name
+	}
+
 	if err := keychain.Save(cfg); err != nil {
 		slog.Error("keychain.Save",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
 	fmt.Printf("[*] %q added\n", name)
+
+	if cfg.PlannerModel == name {
+		fmt.Printf("[*] set %q as planner model\n", name)
+	}
 }

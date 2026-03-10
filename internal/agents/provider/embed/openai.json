@@ -1,16 +1,40 @@
 {
   "default": "gpt-5-mini",
   "models": {
-    "gpt-5.4":      { "input": 1050000, "output": 131072, "description": "OpenAI 最新旗艦模型，支援多層次推理深度，具備原生電腦控制與超長上下文" },
-    "gpt-5.4-pro":  { "input": 922000,  "output": 131072, "description": "GPT-5.4 加強版，更精確的回應，整合工具搜尋，減少 47% Token 使用" },
-    "gpt-5":        { "input": 400000,  "output": 131072, "description": "智慧推理模型，支援可配置推理深度，適合程式與 Agentic 任務" },
-    "gpt-5-mini":   { "input": 400000,  "output": 131072, "description": "GPT-5 高效版，速度更快且成本更低，適合明確定義的任務" },
-    "gpt-5-nano":   { "input": 400000,  "output": 131072, "description": "GPT-5 最輕量版，專為摘要與分類設計，延遲與成本最低" },
-    "gpt-4.1":      { "input": 1047576, "output": 32768,  "description": "非推理旗艦模型，指令遵循與工具呼叫最佳化，低延遲快速推理" },
-    "gpt-4.1-mini": { "input": 1000000, "output": 32768,  "description": "GPT-4.1 輕量版，保有百萬 Token 上下文，兼顧成本與效能" },
-    "gpt-4o":       { "input": 128000,  "output": 16384,  "description": "多模態旗艦模型，支援文字、圖像與音訊輸入" },
-    "gpt-4o-mini":  { "input": 128000,  "output": 16384,  "description": "GPT-4o 輕量版，低成本高效率，適合簡單任務" },
-    "o3":           { "input": 200000,  "output": 100000, "description": "深度推理模型，適合數學、科學與複雜邏輯問題" },
-    "o4-mini":      { "input": 200000,  "output": 100000, "description": "輕量推理模型，在效率與推理深度之間取得平衡" }
+    "gpt-5.4": {
+      "input": 1050000,
+      "output": 131072,
+      "description": "OpenAI 最新旗艦模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
+    },
+    "gpt-5.4-pro": {
+      "input": 922000,
+      "output": 131072,
+      "description": "GPT-5.4 加強版，更精確的回應，整合工具搜尋，減少 47% Token 使用"
+    },
+    "gpt-5": {
+      "input": 400000,
+      "output": 131072,
+      "description": "智慧推理模型，支援可配置推理深度，適合程式與 Agentic 任務",
+      "no_temperature": true
+    },
+    "gpt-5-mini": {
+      "input": 400000,
+      "output": 131072,
+      "description": "GPT-5 高效版，速度更快且成本更低，適合明確定義的任務",
+      "no_temperature": true
+    },
+    "gpt-5-nano": {
+      "input": 400000,
+      "output": 131072,
+      "description": "GPT-5 最輕量版，專為摘要與分類設計，延遲與成本最低",
+      "no_temperature": true
+    },
+    "gpt-4.1": {
+      "input": 1047576,
+      "output": 32768,
+      "description": "非推理旗艦模型，指令遵循與工具呼叫最佳化，低延遲快速推理",
+      "no_temperature": true
+    },
+    "gpt-4o": { "input": 128000, "output": 16384, "description": "多模態旗艦模型，支援文字、圖像與音訊輸入" }
   }
 }
