@@ -1,11 +1,6 @@
 {
   "default": "gpt-4.1",
   "models": {
-    "gpt-5.4": {
-      "input": 1050000,
-      "output": 131072,
-      "description": "OpenAI 最新旗艦模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
-    },
     "gpt-5-mini": {
       "input": 400000,
       "output": 131072,
