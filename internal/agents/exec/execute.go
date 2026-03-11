@@ -130,7 +130,11 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				filename := dateWithSec + ".json"
 				toolActionsPath := filepath.Join(toolActionsDir, filename)
 				if data, err := json.Marshal(session.Tools); err == nil {
-					os.WriteFile(toolActionsPath, data, 0644)
+					err := utils.WriteFile(toolActionsPath, string(data), 0644)
+					if err != nil {
+						slog.Warn("utils.WriteFile",
+							slog.String("error", err.Error()))
+					}
 				}
 			}
 		}

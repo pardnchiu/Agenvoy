@@ -76,12 +76,13 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (string, err
 		if err != nil {
 			return "", err
 		}
+
 		out, err := json.Marshal(results)
 		if err != nil {
 			return "", fmt.Errorf("json.Marshal: %w", err)
 		}
-		err = os.WriteFile(cachePath, out, 0644)
-		if err != nil {
+
+		if err = utils.WriteFile(cachePath, string(out), 0644); err != nil {
 			slog.Warn("failed to write cache file",
 				slog.String("path", err.Error()))
 		}

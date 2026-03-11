@@ -62,7 +62,7 @@ func Save(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return os.WriteFile(configPath, data, 0644)
+	return utils.WriteFile(configPath, string(data), 0644)
 }
 
 func UpsertModel(entry ModelEntry) error {

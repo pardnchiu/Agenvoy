@@ -82,8 +82,8 @@ func Download(href, saveTo string) (string, error) {
 		}
 
 		content = data.Markdown
-		if err := os.WriteFile(cachePath, []byte(content), 0644); err != nil {
-			slog.Warn("os.WriteFile",
+		if err := utils.WriteFile(cachePath, content, 0644); err != nil {
+			slog.Warn("utils.WriteFile",
 				slog.String("error", err.Error()))
 		}
 	}
@@ -91,8 +91,9 @@ func Download(href, saveTo string) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(saveTo), 0755); err != nil {
 		return "", fmt.Errorf("os.MkdirAll: %w", err)
 	}
-	if err := os.WriteFile(saveTo, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("os.WriteFile: %w", err)
+
+	if err := utils.WriteFile(saveTo, content, 0644); err != nil {
+		return "", fmt.Errorf("utils.WriteFile: %w", err)
 	}
 
 	return fmt.Sprintf("Downloaded %d chars to %s", len(content), saveTo), nil

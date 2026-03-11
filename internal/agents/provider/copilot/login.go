@@ -131,9 +131,8 @@ func (c *Agent) getAccessToken(ctx context.Context, client *http.Client, deviceC
 			return nil, fmt.Errorf("json.Marshal: %w", err)
 		}
 
-		err = os.WriteFile(c.tokenDir, data, 0600)
-		if err != nil {
-			return nil, fmt.Errorf("os.WriteFile: %w", err)
+		if err := utils.WriteFile(c.tokenDir, string(data), 0600); err != nil {
+			return nil, fmt.Errorf("utils.WriteFile: %w", err)
 		}
 		return token, nil
 

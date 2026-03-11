@@ -36,8 +36,8 @@ func writeHistory(choice agentTypes.OutputChoices, configDir *utils.ConfigDirDat
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	if err := os.WriteFile(historyPath, historyData, 0644); err != nil {
-		return fmt.Errorf("os.WriteFile: %w", err)
+	if err := utils.WriteFile(historyPath, string(historyData), 0644); err != nil {
+		return fmt.Errorf("utils.WriteFile: %w", err)
 	}
 	return nil
 }

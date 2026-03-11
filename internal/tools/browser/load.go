@@ -111,9 +111,8 @@ func Load(href string) (string, error) {
 		return skippedMessage(href), nil
 	}
 
-	err = os.WriteFile(cachePath, []byte(data.Markdown), 0644)
-	if err != nil {
-		slog.Warn("os.WriteFile",
+	if err = utils.WriteFile(cachePath, data.Markdown, 0644); err != nil {
+		slog.Warn("utils.WriteFile",
 			slog.String("error", err.Error()))
 	}
 	return data.Markdown, nil

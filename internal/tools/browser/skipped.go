@@ -51,9 +51,8 @@ func addToSkippedMap(href string, status int) {
 		return
 	}
 
-	err = os.WriteFile(path, []byte("1"), 0644)
-	if err != nil {
-		slog.Warn("os.WriteFile",
+	if err = utils.WriteFile(path, "1", 0644); err != nil {
+		slog.Warn("utils.WriteFile",
 			slog.String("error", err.Error()))
 	}
 }

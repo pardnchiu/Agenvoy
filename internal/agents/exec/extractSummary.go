@@ -2,6 +2,7 @@ package exec
 
 import (
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -74,7 +75,11 @@ func extractSummary(configDir *utils.ConfigDirData, sessionID, value string) str
 
 		data, err := json.Marshal(jsonData)
 		if err == nil {
-			os.WriteFile(path, data, 0644)
+			err := utils.WriteFile(path, string(data), 0644)
+			if err != nil {
+				slog.Warn("utils.WriteFile",
+					slog.String("error", err.Error()))
+			}
 		}
 	}
 	return cleaned

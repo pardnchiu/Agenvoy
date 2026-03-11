@@ -118,8 +118,8 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			if err != nil {
 				return nil, fmt.Errorf("json.Marshal: %w", err)
 			}
-			if err := os.WriteFile(indexJsonPath, merged, 0644); err != nil {
-				return nil, fmt.Errorf("os.WriteFile: %w", err)
+			if err := utils.WriteFile(indexJsonPath, string(merged), 0644); err != nil {
+				return nil, fmt.Errorf("utils.WriteFile: %w", err)
 			}
 			indexData.SessionID = newID
 		}

@@ -143,8 +143,8 @@ func SaveErrorMemory(sessionID string, record ErrorMemory) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("json.Marshal: %w", err)
 	}
-	if err := os.WriteFile(jsonPath, data, 0644); err != nil {
-		return "", fmt.Errorf("os.WriteFile: %w", err)
+	if err := utils.WriteFile(jsonPath, string(data), 0644); err != nil {
+		return "", fmt.Errorf("utils.WriteFile: %w", err)
 	}
 
 	index := getErrorList(configDir.Home)
@@ -162,8 +162,8 @@ func writeErrorList(home string, index map[string]ErrorMemoryItem) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(filepath.Join(home, "errors.json"), data, 0644)
-	if err != nil {
+
+	if err = utils.WriteFile(filepath.Join(home, "errors.json"), string(data), 0644); err != nil {
 		return err
 	}
 	return nil
