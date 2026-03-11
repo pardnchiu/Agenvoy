@@ -21,7 +21,7 @@ func search(e *toolTypes.Executor, pattern, filePattern string) (string, error) 
 
 	err = filepath.Walk(e.WorkPath, func(path string, d os.FileInfo, err error) error {
 		if err != nil {
-			slog.Warn("failed to access path",
+			slog.Warn("failed to access path, just skipping",
 				slog.String("error", err.Error()))
 			return nil
 		}

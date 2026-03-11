@@ -46,7 +46,7 @@ func isDenied(path string) bool {
 		}
 	}
 	for _, prefix := range DeniedConfig.Prefixes {
-		if strings.HasPrefix(base, prefix) {
+		if strings.HasPrefix(base, prefix) && !strings.Contains(base, ".example") {
 			return true
 		}
 	}
