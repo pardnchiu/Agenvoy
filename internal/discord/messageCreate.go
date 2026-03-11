@@ -88,12 +88,13 @@ func messageCreate(bot *discordTypes.DiscordBot, dcSession *discordgo.Session, d
 	// * without timeout, to ensure the message will be processed like command
 	ctx := context.Background()
 	if message.Cmd == "" && bot.PlannerAgent != nil {
-		dcSession.ChannelMessageSend(dcMessageCreate.ChannelID, "收到，等候處理...")
+		dcSession.MessageReactionAdd(dcMessageCreate.ChannelID, dcMessageCreate.ID, "🦍")
 		go func() {
 			if err := run(ctx, bot, dcSession, dcMessageCreate, message); err != nil {
 				slog.Warn("run",
 					slog.String("error", err.Error()))
 			}
+			dcSession.MessageReactionRemove(dcMessageCreate.ChannelID, dcMessageCreate.ID, "🦍", "@me")
 		}()
 	}
 }
