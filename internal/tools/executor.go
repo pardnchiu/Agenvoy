@@ -144,6 +144,26 @@ func Execute(ctx context.Context, e *toolTypes.Executor, name string, args json.
 		}
 		return searchWeb.Search(ctx, params.Query, searchWeb.TimeRange(params.Range))
 
+	case "write_scheduler_script":
+		var params struct {
+			Name    string `json:"name"`
+			Content string `json:"content"`
+		}
+		if err := json.Unmarshal(args, &params); err != nil {
+			return "", fmt.Errorf("json.Unmarshal: %w", err)
+		}
+		return cron.WriteScript(params.Name, params.Content)
+
+	case "add_onetime_task":
+		var params struct {
+			At     string `json:"at"`
+			Script string `json:"script"`
+		}
+		if err := json.Unmarshal(args, &params); err != nil {
+			return "", fmt.Errorf("json.Unmarshal: %w", err)
+		}
+		return cron.AddOneTimeTask(params.At, params.Script)
+
 	case "calculate":
 		var params struct {
 			Expression string `json:"expression"`

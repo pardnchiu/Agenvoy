@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/cron"
 	discordCommand "github.com/pardnchiu/agenvoy/internal/discord/command"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
@@ -21,6 +22,14 @@ func New(plannerAgent agentTypes.Agent, agentRegistry agentTypes.AgentRegistry, 
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
 		return nil, fmt.Errorf("create discord session: %w", err)
+	}
+
+	if err := cron.New(); err != nil {
+		slog.Warn("cron.New",
+			slog.String("error", err.Error()))
+	} else if err := cron.Get().Load(); err != nil {
+		slog.Warn("cron.Get",
+			slog.String("error", err.Error()))
 	}
 
 	bot := &discordTypes.DiscordBot{
@@ -56,6 +65,7 @@ func New(plannerAgent agentTypes.Agent, agentRegistry agentTypes.AgentRegistry, 
 
 func Close(b *discordTypes.DiscordBot) error {
 	slog.Info("shutting down")
+	cron.Stop()
 	if b.Session == nil {
 		return nil
 	}

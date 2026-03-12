@@ -369,6 +369,48 @@
   {
     "type": "function",
     "function": {
+      "name": "write_scheduler_script",
+      "description": "在 ~/.config/agenvoy/scheduler/scripts/ 建立腳本檔案（.sh 或 .py）。回傳值為實際儲存的檔名（含 UTC timestamp 後綴，例如 notify_1741569300.sh），必須將此回傳檔名傳給 add_onetime_task 的 script 參數。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "腳本檔名，只填檔名不含路徑，必須以 .sh 或 .py 結尾，例如 'notify.sh'、'backup.py'"
+          },
+          "content": {
+            "type": "string",
+            "description": "腳本內容"
+          }
+        },
+        "required": ["name", "content"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "add_onetime_task",
+      "description": "設定一次性定時任務，到達指定時間時執行腳本，執行後自動從排程中移除。【必須先呼叫 write_scheduler_script，並將其回傳的實際檔名填入 script】",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "description": "執行時間，支援：+5m（5分鐘後）、+1h30m（1.5小時後）、15:04（今天指定時間）、2006-01-02 15:04（指定日期時間）、RFC3339"
+          },
+          "script": {
+            "type": "string",
+            "description": "write_scheduler_script 回傳的實際檔名（含 timestamp 後綴），例如 'open_pardn_io_1741569300.sh'"
+          }
+        },
+        "required": ["at", "script"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "calculate",
       "description": "執行數學運算，返回精確結果。支援四則運算（+、-、*、/）、取模（%）、括號、冪次（用 ^ 符號）及數學函式（sqrt、abs、ceil、floor、round、log、log2、log10、sin、cos、tan、pow）。pow 需傳入兩個引數：pow(base, exp)。",
       "parameters": {
