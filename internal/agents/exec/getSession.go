@@ -14,12 +14,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
-
-//go:embed prompt/summaryPrompt.md
-var summaryPrompt string
 
 const (
 	MaxHistoryMessages = 16
@@ -118,7 +117,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			if err != nil {
 				return nil, fmt.Errorf("json.Marshal: %w", err)
 			}
-			if err := utils.WriteFile(indexJsonPath, string(merged), 0644); err != nil {
+			if err := filesystem.WriteFile(indexJsonPath, string(merged), 0644); err != nil {
 				return nil, fmt.Errorf("utils.WriteFile: %w", err)
 			}
 			indexData.SessionID = newID
@@ -129,7 +128,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		if summaryData, err := os.ReadFile(filepath.Join(configDir.Home, sessionID, "summary.json")); err == nil {
 			summary = strings.NewReplacer(
 				"{{.Summary}}", string(summaryData),
-			).Replace(strings.TrimSpace(summaryPrompt))
+			).Replace(strings.TrimSpace(configs.SummaryPrompt))
 		}
 
 		if historyData, err := os.ReadFile(filepath.Join(configDir.Home, sessionID, "history.json")); err == nil {

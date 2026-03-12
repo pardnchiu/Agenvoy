@@ -9,12 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
-
-//go:embed prompt/agentSelector.md
-var agentSelectorPrompt string
 
 func GetAgentEntries() []agentTypes.AgentEntry {
 	configDir, err := utils.GetConfigDir()
@@ -73,7 +71,7 @@ func SelectAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.
 	messages := []agentTypes.Message{
 		{
 			Role:    "system",
-			Content: strings.TrimSpace(agentSelectorPrompt),
+			Content: strings.TrimSpace(configs.AgentSelector),
 		},
 		{
 			Role: "user",

@@ -12,17 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
-
-//go:embed prompt/systemPrompt.md
-var systemPrompt string
-
-//go:embed prompt/skillExtension.md
-var skillExtensionPrompt string
 
 const (
 	MaxToolIterations  = 16
@@ -131,7 +127,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				filename := dateWithSec + ".json"
 				toolActionsPath := filepath.Join(toolActionsDir, filename)
 				if data, err := json.Marshal(session.Tools); err == nil {
-					err := utils.WriteFile(toolActionsPath, string(data), 0644)
+					err := filesystem.WriteFile(toolActionsPath, string(data), 0644)
 					if err != nil {
 						slog.Warn("utils.WriteFile",
 							slog.String("error", err.Error()))
@@ -173,7 +169,7 @@ func GetSystemPrompt(data ExecData) string {
 			"{{.SkillPath}}", "None",
 			"{{.SkillExt}}", "",
 			"{{.Content}}", "",
-		).Replace(systemPrompt)
+		).Replace(configs.SystemPrompt)
 	}
 	content := data.Skill.Content
 
@@ -190,7 +186,7 @@ func GetSystemPrompt(data ExecData) string {
 		"{{.Localtime}}", localtime,
 		"{{.WorkPath}}", data.WorkDir,
 		"{{.SkillPath}}", data.Skill.Path,
-		"{{.SkillExt}}", skillExtensionPrompt,
+		"{{.SkillExt}}", configs.SkillExecution,
 		"{{.Content}}", content,
-	).Replace(systemPrompt)
+	).Replace(configs.SystemPrompt)
 }

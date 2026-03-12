@@ -18,6 +18,7 @@ import (
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -111,7 +112,7 @@ func Load(href string) (string, error) {
 		return skippedMessage(href), nil
 	}
 
-	if err = utils.WriteFile(cachePath, data.Markdown, 0644); err != nil {
+	if err = filesystem.WriteFile(cachePath, data.Markdown, 0644); err != nil {
 		slog.Warn("utils.WriteFile",
 			slog.String("error", err.Error()))
 	}

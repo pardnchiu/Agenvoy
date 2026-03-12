@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
-	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func write(e *toolTypes.Executor, path, content string) (string, error) {
@@ -21,7 +21,7 @@ func write(e *toolTypes.Executor, path, content string) (string, error) {
 		return "", fmt.Errorf("failed to create directory (%s): %w", path, err)
 	}
 
-	if err := utils.WriteFile(fullPath, content, 0644); err != nil {
+	if err := filesystem.WriteFile(fullPath, content, 0644); err != nil {
 		return "", fmt.Errorf("utils.WriteFile: %w", path, err)
 	}
 

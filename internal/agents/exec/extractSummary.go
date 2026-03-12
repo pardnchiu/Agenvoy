@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -75,7 +76,7 @@ func extractSummary(configDir *utils.ConfigDirData, sessionID, value string) str
 
 		data, err := json.Marshal(jsonData)
 		if err == nil {
-			err := utils.WriteFile(path, string(data), 0644)
+			err := filesystem.WriteFile(path, string(data), 0644)
 			if err != nil {
 				slog.Warn("utils.WriteFile",
 					slog.String("error", err.Error()))

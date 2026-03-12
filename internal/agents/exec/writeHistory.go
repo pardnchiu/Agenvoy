@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -36,7 +37,7 @@ func writeHistory(choice agentTypes.OutputChoices, configDir *utils.ConfigDirDat
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	if err := utils.WriteFile(historyPath, string(historyData), 0644); err != nil {
+	if err := filesystem.WriteFile(historyPath, string(historyData), 0644); err != nil {
 		return fmt.Errorf("utils.WriteFile: %w", err)
 	}
 	return nil

@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
-	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func patch(e *toolTypes.Executor, path, oldString, newString string) (string, error) {
@@ -27,7 +27,7 @@ func patch(e *toolTypes.Executor, path, oldString, newString string) (string, er
 	}
 
 	newContent := strings.Replace(content, oldString, newString, 1)
-	if err := utils.WriteFile(fullPath, newContent, 0644); err != nil {
+	if err := filesystem.WriteFile(fullPath, newContent, 0644); err != nil {
 		return "", fmt.Errorf("utils.WriteFile: %w", err)
 	}
 

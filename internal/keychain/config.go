@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -62,7 +63,7 @@ func Save(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return utils.WriteFile(configPath, string(data), 0644)
+	return filesystem.WriteFile(configPath, string(data), 0644)
 }
 
 func UpsertModel(entry ModelEntry) error {

@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -131,7 +132,7 @@ func (c *Agent) getAccessToken(ctx context.Context, client *http.Client, deviceC
 			return nil, fmt.Errorf("json.Marshal: %w", err)
 		}
 
-		if err := utils.WriteFile(c.tokenDir, string(data), 0600); err != nil {
+		if err := filesystem.WriteFile(c.tokenDir, string(data), 0600); err != nil {
 			return nil, fmt.Errorf("utils.WriteFile: %w", err)
 		}
 		return token, nil

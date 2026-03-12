@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -45,7 +46,7 @@ func SaveToolError(sessionID, toolName, args, errMsg string) string {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return hash
 	}
-	utils.WriteFile(filepath.Join(dir, hash+".json"), string(data), 0644)
+	filesystem.WriteFile(filepath.Join(dir, hash+".json"), string(data), 0644)
 	return hash
 }
 

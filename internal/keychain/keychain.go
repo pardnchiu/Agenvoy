@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -103,7 +104,7 @@ func setFallback(key, value string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
-	return utils.WriteFile(path, data, 0600)
+	return filesystem.WriteFile(path, data, 0600)
 }
 
 func getFallback(key string) string {

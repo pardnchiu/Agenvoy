@@ -7,12 +7,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
-
-//go:embed prompt/skillSelector.md
-var skillSelectorPrompt string
 
 func SelectSkill(ctx context.Context, bot agentTypes.Agent, scanner *skill.SkillScanner, userInput string, fileNames []string) *skill.Skill {
 	trimInput := strings.TrimSpace(userInput)
@@ -40,7 +38,7 @@ func SelectSkill(ctx context.Context, bot agentTypes.Agent, scanner *skill.Skill
 	messages := []agentTypes.Message{
 		{
 			Role:    "system",
-			Content: strings.TrimSpace(skillSelectorPrompt),
+			Content: strings.TrimSpace(configs.SkillSelector),
 		},
 		{
 			Role: "user",

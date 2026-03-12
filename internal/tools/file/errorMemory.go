@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -144,7 +145,7 @@ func SaveErrorMemory(sessionID string, record ErrorMemory) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("json.Marshal: %w", err)
 	}
-	if err := utils.WriteFile(jsonPath, string(data), 0644); err != nil {
+	if err := filesystem.WriteFile(jsonPath, string(data), 0644); err != nil {
 		return "", fmt.Errorf("utils.WriteFile: %w", err)
 	}
 
@@ -164,7 +165,7 @@ func writeErrorList(home string, index map[string]ErrorMemoryItem) error {
 		return err
 	}
 
-	if err = utils.WriteFile(filepath.Join(home, "errors.json"), string(data), 0644); err != nil {
+	if err = filesystem.WriteFile(filepath.Join(home, "errors.json"), string(data), 0644); err != nil {
 		return err
 	}
 	return nil

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -82,7 +83,7 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (string, err
 			return "", fmt.Errorf("json.Marshal: %w", err)
 		}
 
-		if err = utils.WriteFile(cachePath, string(out), 0644); err != nil {
+		if err = filesystem.WriteFile(cachePath, string(out), 0644); err != nil {
 			slog.Warn("failed to write cache file",
 				slog.String("path", err.Error()))
 		}
