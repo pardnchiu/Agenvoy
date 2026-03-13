@@ -12,7 +12,7 @@ import (
 )
 
 // * allow: +5m, +1h30m, 15:04, 2006-01-02 15:04, RFC3339
-func AddOneTimeTask(timeText, script string) (string, error) {
+func AddOneTimeTask(timeText, script, channelID string) (string, error) {
 	mgr := cron.Get()
 	if mgr == nil {
 		return "", fmt.Errorf("scheduler not initialized")
@@ -23,7 +23,7 @@ func AddOneTimeTask(timeText, script string) (string, error) {
 		return "", err
 	}
 
-	if err := mgr.AddTask(at, script); err != nil {
+	if err := mgr.AddTask(at, script, channelID); err != nil {
 		return "", err
 	}
 

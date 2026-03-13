@@ -25,36 +25,24 @@ func Stop() {
 	}
 }
 
+type OnCompletedFn func(channelID, output string)
+
 type Scheduler struct {
-	mu           sync.Mutex
-	schedulerDir string
-	scriptsDir   string
-	timers       map[string]*time.Timer
+	mu          sync.Mutex
+	timers      map[string]*time.Timer
+	OnCompleted OnCompletedFn
 }
 
 type taskItem struct {
-	line   string
-	at     time.Time
-	script string
+	line      string
+	at        time.Time
+	script    string
+	channelID string
 }
 
 func New() error {
-	// * ~/.config/agenvoy/scheduler
-	// schedulerDir, err := utils.GetConfigDir("scheduler")
-	// if err != nil {
-	// 	return fmt.Errorf("utils.GetConfigDir: %w", err)
-	// }
-
-	// * ~/.config/agenvoy/scheduler/scripts
-	scriptsDir := filepath.Join(filesystem.SchedulerDir, "scripts")
-	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
-		return fmt.Errorf("os.MkdirAll: %w", err)
-	}
-
 	scheduler = &Scheduler{
-		schedulerDir: filesystem.SchedulerDir,
-		scriptsDir:   scriptsDir,
-		timers:       make(map[string]*time.Timer),
+		timers: make(map[string]*time.Timer),
 	}
 	return nil
 }
@@ -63,7 +51,7 @@ func (s *Scheduler) Load() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	lines, err := filesystem.ReadFile(s.schedulerDir)
+	lines, err := filesystem.ReadFile(filesystem.TasksPath)
 	if err != nil {
 		return err
 	}
@@ -95,7 +83,7 @@ func (s *Scheduler) Load() error {
 		s.setTask(item)
 	}
 
-	return filesystem.WriteFile(s.schedulerDir, linesToContent(skip), 0644)
+	return filesystem.WriteFile(filesystem.TasksPath, linesToContent(skip), 0644)
 }
 
 func parseLine(line string) (taskItem, error) {
@@ -108,11 +96,16 @@ func parseLine(line string) (taskItem, error) {
 	if err != nil {
 		return taskItem{}, fmt.Errorf("not RFC3339: %w", err)
 	}
-	return taskItem{
+
+	item := taskItem{
 		line:   line,
 		at:     at,
-		script: strings.Join(fields[1:], " "),
-	}, nil
+		script: fields[1],
+	}
+	if len(fields) >= 3 {
+		item.channelID = fields[2]
+	}
+	return item, nil
 }
 
 func linesToContent(lines []string) string {
@@ -123,26 +116,42 @@ func linesToContent(lines []string) string {
 	return newContent
 }
 
-func (s *Scheduler) setTask(item taskItem) {
-	scriptPath := filepath.Join(s.scriptsDir, item.script)
+func (s *Scheduler) setTask(item taskItem) error {
+	if err := os.MkdirAll(filesystem.ScriptsDir, 0755); err != nil {
+		return fmt.Errorf("os.MkdirAll: %w", err)
+	}
+
+	scriptPath := filepath.Join(filesystem.ScriptsDir, item.script)
 	delay := time.Until(item.at)
 
 	execTime := time.AfterFunc(delay, func() {
-		if err := runScript(scriptPath); err != nil {
+		output, err := runScript(scriptPath)
+		if err != nil {
 			slog.Error("runScript",
 				slog.String("error", err.Error()))
+			output = fmt.Sprintf("error: %s", err.Error())
+		}
+
+		if item.channelID != "" {
+			s.mu.Lock()
+			cb := s.OnCompleted
+			s.mu.Unlock()
+			if cb != nil {
+				cb(item.channelID, output)
+			}
 		}
 
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
 		delete(s.timers, item.line)
-		removeLine(s.schedulerDir, item.line)
+		removeLine(filesystem.TasksPath, item.line)
 	})
 	s.timers[item.line] = execTime
+	return nil
 }
 
-func runScript(scriptPath string) error {
+func runScript(scriptPath string) (string, error) {
 	var cmd *exec.Cmd
 	switch strings.ToLower(filepath.Ext(scriptPath)) {
 	case ".py":
@@ -151,26 +160,29 @@ func runScript(scriptPath string) error {
 		cmd = exec.Command("sh", scriptPath)
 	}
 
-	_, err := cmd.CombinedOutput()
-	return err
+	out, err := cmd.CombinedOutput()
+	return strings.TrimSpace(string(out)), err
 }
 
-func (s *Scheduler) AddTask(at time.Time, script string) error {
+func (s *Scheduler) AddTask(at time.Time, script, channelID string) error {
 	if !at.After(time.Now()) {
 		return fmt.Errorf("already gone")
 	}
 
 	line := fmt.Sprintf("%s %s", at.UTC().Format(time.RFC3339), script)
+	if channelID != "" {
+		line = fmt.Sprintf("%s %s", line, channelID)
+	}
 	item, _ := parseLine(line)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := appendLine(s.schedulerDir, line); err != nil {
+	if err := appendLine(filesystem.TasksPath, line); err != nil {
 		return fmt.Errorf("appendLine: %w", err)
 	}
-	s.setTask(item)
-	return nil
+
+	return s.setTask(item)
 }
 
 func (s *Scheduler) stop() {

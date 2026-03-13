@@ -16,6 +16,8 @@ var (
 	APIsDir      string
 	ErrorsDir    string
 	SchedulerDir string
+	TasksPath    string
+	ScriptsDir   string
 	SkillsDir    string
 	ToolsDir     string
 
@@ -47,6 +49,9 @@ func Init() error {
 		APIsDir = filepath.Join(AgenvoyDir, "apis")
 		ErrorsDir = filepath.Join(AgenvoyDir, "errors")
 		SchedulerDir = filepath.Join(AgenvoyDir, "scheduler")
+		TasksPath = filepath.Join(SchedulerDir, "tasks")
+		ScriptsDir = filepath.Join(SchedulerDir, "scripts")
+
 		SkillsDir = filepath.Join(AgenvoyDir, "skills")
 		ToolsDir = filepath.Join(AgenvoyDir, "tools")
 
@@ -55,8 +60,7 @@ func Init() error {
 		WorkSkillsDir = filepath.Join(WorkAgenvoyDir, "skills")
 	})
 
-	err = os.MkdirAll(AgenvoyDir, 0755)
-	if err != nil {
+	if err = os.MkdirAll(AgenvoyDir, 0755); err != nil {
 		return fmt.Errorf("os.MkdirAll: %w", err)
 	}
 

@@ -164,13 +164,14 @@ func Execute(ctx context.Context, e *toolTypes.Executor, name string, args json.
 
 	case "add_onetime_task":
 		var params struct {
-			At     string `json:"at"`
-			Script string `json:"script"`
+			At        string `json:"at"`
+			Script    string `json:"script"`
+			ChannelID string `json:"discord_channel_id"`
 		}
 		if err := json.Unmarshal(args, &params); err != nil {
 			return "", fmt.Errorf("json.Unmarshal: %w", err)
 		}
-		return cron.AddOneTimeTask(params.At, params.Script)
+		return cron.AddOneTimeTask(params.At, params.Script, params.ChannelID)
 
 	case "calculate":
 		var params struct {

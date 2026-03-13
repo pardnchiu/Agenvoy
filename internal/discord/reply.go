@@ -16,6 +16,62 @@ const (
 	attachMax = 10
 )
 
+func Send(bot *discordTypes.DiscordBot, channelID string, reply discordTypes.ReplyMessage) error {
+	var embeds []*discordgo.MessageEmbed
+	if reply.ImageURL != "" {
+		embeds = []*discordgo.MessageEmbed{
+			{Image: &discordgo.MessageEmbedImage{URL: reply.ImageURL}},
+		}
+	}
+
+	var files []*discordgo.File
+	for _, path := range reply.FilePaths {
+		f, err := os.Open(path)
+		if err != nil {
+			continue
+		}
+		defer f.Close()
+		files = append(files, &discordgo.File{
+			Name:   filepath.Base(path),
+			Reader: f,
+		})
+	}
+
+	chunks := split(reply.Content)
+	replyFiles := chunkFiles(files, attachMax)
+
+	for i, chunk := range chunks {
+		var chunkEmbeds []*discordgo.MessageEmbed
+		var replyFile []*discordgo.File
+		if i == len(chunks)-1 {
+			chunkEmbeds = embeds
+			if len(replyFiles) > 0 {
+				replyFile = replyFiles[0]
+				replyFiles = replyFiles[1:]
+			}
+		}
+		_, err := bot.Session.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+			Content: chunk,
+			Embeds:  chunkEmbeds,
+			Files:   replyFile,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, replyFile := range replyFiles {
+		_, err := bot.Session.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+			Files: replyFile,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func Reply(ctx context.Context, dcReply *discordTypes.DiscordReply, reply discordTypes.ReplyMessage) error {
 	var embeds []*discordgo.MessageEmbed
 

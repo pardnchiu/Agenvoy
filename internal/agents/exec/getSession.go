@@ -116,9 +116,9 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		}
 		sessionID = strings.TrimSpace(indexData.SessionID)
 
-		oldHistory := sessionManager.GetHistory(sessionID)
+		oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 		session.Histories = oldHistory
-		session.Messages = append(session.Messages, oldHistory...)
+		session.Messages = append(session.Messages, maxHistory...)
 
 		// * insert summary prompt every time
 		if summary := sessionManager.GetSummaryPrompt(sessionID); summary != "" {

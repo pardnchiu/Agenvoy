@@ -72,7 +72,21 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 	if channelID == "" {
 		channelID = "ch"
 	}
-	key := fmt.Sprintf("%s_%s_%s", guildID, channelID, userID)
+	var key string
+	var config map[string]string
+	if guildID == "dm" {
+		key = fmt.Sprintf("%s_%s", channelID, userID)
+		config = map[string]string{
+			"channel_id": channelID,
+			"user_id":    userID,
+		}
+	} else {
+		key = fmt.Sprintf("%s_%s", guildID, channelID)
+		config = map[string]string{
+			"guild_id":   guildID,
+			"channel_id": channelID,
+		}
+	}
 	sum := sha256.Sum256([]byte(key))
 
 	sessionID := hex.EncodeToString(sum[:])
@@ -84,11 +98,7 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 			return "", fmt.Errorf("os.MkdirAll: %w", err)
 		}
 
-		configData, err := json.Marshal(map[string]string{
-			"guild_id":   guildID,
-			"channel_id": channelID,
-			"user_id":    userID,
-		})
+		configData, err := json.Marshal(config)
 		if err != nil {
 			return "", fmt.Errorf("json.Marshal: %w", err)
 		}
@@ -102,22 +112,24 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 
 var MaxHistoryMessages = 16
 
-func GetHistory(sessionID string) []agentTypes.Message {
+func GetHistory(sessionID string) (old, max []agentTypes.Message) {
 	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
 	historyPath := filepath.Join(sessionDir, "history.json")
 
 	data, err := os.ReadFile(historyPath)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	var oldHistory []agentTypes.Message
 	if err := json.Unmarshal(data, &oldHistory); err != nil {
-		return nil
+		return nil, nil
 	}
+
+	maxHistory := oldHistory
 	if len(oldHistory) > MaxHistoryMessages {
-		oldHistory = oldHistory[len(oldHistory)-MaxHistoryMessages:]
+		maxHistory = oldHistory[len(oldHistory)-MaxHistoryMessages:]
 	}
-	return oldHistory
+	return oldHistory, maxHistory
 }
 
 func SaveHistory(sessionID, content string) error {

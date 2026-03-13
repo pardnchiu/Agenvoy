@@ -39,7 +39,7 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 		Content: receiveMessage.Content,
 	}
 
-	session, err := getSession(ctx, receiveMessage.GuildID, receiveMessage.ChannelID, receiveMessage.AuthorID, receiveMessage.Content, receiveMessage.ImageInputs, receiveMessage.FileInputs, execData)
+	session, err := getSession(ctx, dcSession, receiveMessage.GuildID, receiveMessage.ChannelID, receiveMessage.AuthorID, dcMessageCreate.ID, receiveMessage.Content, receiveMessage.ImageInputs, receiveMessage.FileInputs, execData)
 	if err != nil {
 		return fmt.Errorf("loadDiscordSession: %w", err)
 	}
@@ -118,7 +118,10 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 		ChannelID: dcMessageCreate.ChannelID,
 		Reference: dcMessageCreate.Reference(),
 	}
-	if err := Reply(ctx, dr, discordTypes.ReplyMessage{Content: replyText, FilePaths: filePaths}); err != nil {
+	if err := Reply(ctx, dr, discordTypes.ReplyMessage{
+		Content:   replyText,
+		FilePaths: filePaths,
+	}); err != nil {
 		slog.Warn("ReplyDiscord",
 			slog.String("error", err.Error()))
 	}

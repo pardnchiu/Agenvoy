@@ -39,6 +39,18 @@ func New(plannerAgent agentTypes.Agent, agentRegistry agentTypes.AgentRegistry, 
 		SkillScanner:  skillScanner,
 	}
 
+	if cronMgr := cron.Get(); cronMgr != nil {
+		cronMgr.OnCompleted = func(channelID, output string) {
+			if output == "" {
+				output = "任務完成"
+			}
+			if err := Send(bot, channelID, discordTypes.ReplyMessage{Content: output}); err != nil {
+				slog.Warn("Send",
+					slog.String("error", err.Error()))
+			}
+		}
+	}
+
 	session.AddHandler(interactionCreate)
 	session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		messageCreate(bot, s, m)
