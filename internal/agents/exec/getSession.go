@@ -65,7 +65,6 @@ func buildContent(content string, imageInputs []string, fileInputs []string) any
 func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	prompt := GetSystemPrompt(execData)
 	trimInput := strings.TrimSpace(execData.Content)
-	now := fmt.Sprintf("%d", time.Now().Unix())
 	session := agentTypes.AgentSession{
 		Tools: []agentTypes.Message{},
 		Messages: []agentTypes.Message{
@@ -128,7 +127,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			})
 		}
 
-		userText := fmt.Sprintf("ts:%s\n%s", now, trimInput)
+		userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), trimInput)
 		session.Histories = append(session.Histories, agentTypes.Message{
 			Role:    "user",
 			Content: userText,
@@ -145,7 +144,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			return nil, fmt.Errorf("newSessionID: %w", err)
 		}
 
-		userText := fmt.Sprintf("ts:%s\n%s", now, trimInput)
+		userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), trimInput)
 		session.Histories = append(session.Histories, agentTypes.Message{
 			Role:    "user",
 			Content: userText,

@@ -95,17 +95,20 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				text = "工具無法取得資料，請稍後再試或改用其他方式查詢。"
 			}
 			cleaned := extractSummary(session.ID, text)
+			if cleaned == "" {
+				cleaned = "工具無法取得資料，請稍後再試或改用其他方式查詢。"
+			}
 
 			events <- agentTypes.Event{
 				Type: agentTypes.EventText,
 				Text: cleaned,
 			}
 
-			choice.Message.Content = fmt.Sprintf("當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), cleaned)
+			choice.Message.Content = fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), cleaned)
 
 			session.Messages = append(session.Messages, choice.Message)
 
-			if err := writeHistory(choice, session); err != nil {
+			if err := saveNewHistory(choice, session); err != nil {
 				slog.Warn("writeHistory",
 					slog.String("error", err.Error()))
 			}
@@ -153,33 +156,55 @@ func GetSystemPrompt(data ExecData) string {
 	systemOS := runtime.GOOS
 	localtime := time.Now().Format("2006-01-02 15:04:05 MST")
 
+	var skillPath string
+	var skillExt string
+	var content string
 	if data.Skill == nil {
-		return strings.NewReplacer(
-			"{{.SystemOS}}", systemOS,
-			"{{.Localtime}}", localtime,
-			"{{.WorkPath}}", data.WorkDir,
-			"{{.SkillPath}}", "None",
-			"{{.SkillExt}}", "",
-			"{{.Content}}", "",
-		).Replace(configs.SystemPrompt)
-	}
-	content := data.Skill.Content
+		skillPath = "None"
+	} else {
+		skillPath = data.Skill.Path
+		skillExt = configs.SkillExecution
+		content = data.Skill.Content
 
-	// * add skill path, ensure path is correct
-	for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
-		resolved := filepath.Join(data.Skill.Path, prefix)
+		// * add skill path, ensure path is correct
+		for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
+			resolved := filepath.Join(data.Skill.Path, prefix)
 
-		if _, err := os.Stat(resolved); err == nil {
-			content = strings.ReplaceAll(content, prefix, resolved+string(filepath.Separator))
+			if _, err := os.Stat(resolved); err == nil {
+				content = strings.ReplaceAll(content, prefix, resolved+string(filepath.Separator))
+			}
 		}
 	}
-
 	return strings.NewReplacer(
 		"{{.SystemOS}}", systemOS,
 		"{{.Localtime}}", localtime,
 		"{{.WorkPath}}", data.WorkDir,
-		"{{.SkillPath}}", data.Skill.Path,
-		"{{.SkillExt}}", configs.SkillExecution,
+		"{{.SkillPath}}", skillPath,
+		"{{.SkillExt}}", skillExt,
 		"{{.Content}}", content,
 	).Replace(configs.SystemPrompt)
+}
+
+func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSession) error {
+	session.Histories = append(session.Histories, choice.Message)
+
+	newHistories := make([]agentTypes.Message, 0, len(session.Histories))
+	for _, message := range session.Histories {
+		if message.Role == "system" ||
+			message.Role == "tool" ||
+			(message.Role == "assistant" && len(message.ToolCalls) > 0) {
+			continue
+		}
+		newHistories = append(newHistories, message)
+	}
+
+	historyBytes, err := json.Marshal(newHistories)
+	if err != nil {
+		return fmt.Errorf("json.Marshal: %w", err)
+	}
+
+	if err = sessionManager.SaveHistory(session.ID, string(historyBytes)); err != nil {
+		return fmt.Errorf("sessionManager.SaveHistory: %w", err)
+	}
+	return nil
 }

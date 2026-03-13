@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	trailingJsonRegex = regexp.MustCompile(`(?s)\n*(?:---\s*\n)?(?:\*{0,2}[^\n*]*[Ss]ummary[^\n*]*\*{0,2}\s*\n)?` + "```" + `(?:json)?\s*(\{.*?\})\s*` + "```" + `\s*$`)
+	trailingJsonRegex  = regexp.MustCompile(`(?s)\n*(?:---\s*\n)?(?:\*{0,2}[^\n*]*[Ss]ummary[^\n*]*\*{0,2}\s*\n)?` + "```" + `(?:json)?\s*(\{.*?\})\s*` + "```" + `\s*$`)
+	timestampHeaderReg = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
 )
 
 func isSummaryJSON(m map[string]any) bool {
@@ -29,19 +30,7 @@ func extractSummary(sessionID, value string) string {
 	const summaryStart = "<!--SUMMARY_START-->"
 	const summaryEnd = "<!--SUMMARY_END-->"
 
-	if strings.HasPrefix(value, "當前時間:") {
-		if idx := strings.Index(value, "\n---\n"); idx != -1 {
-			value = value[idx+5:]
-		}
-	} else {
-		for strings.HasPrefix(value, "ts:") {
-			if idx := strings.Index(value, "\n"); idx != -1 {
-				value = value[idx+1:]
-			} else {
-				break
-			}
-		}
-	}
+	value = timestampHeaderReg.ReplaceAllString(value, "")
 
 	var jsonData any
 	var cleaned string
