@@ -32,6 +32,20 @@ func extractSummary(sessionID, value string) string {
 	const summaryStart = "<!--SUMMARY_START-->"
 	const summaryEnd = "<!--SUMMARY_END-->"
 
+	if strings.HasPrefix(value, "當前時間:") {
+		if idx := strings.Index(value, "\n---\n"); idx != -1 {
+			value = value[idx+5:]
+		}
+	} else {
+		for strings.HasPrefix(value, "ts:") {
+			if idx := strings.Index(value, "\n"); idx != -1 {
+				value = value[idx+1:]
+			} else {
+				break
+			}
+		}
+	}
+
 	var jsonData any
 	var cleaned string
 

@@ -6,12 +6,10 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -26,20 +24,35 @@ import (
 const MaxHistoryMessages = 16
 
 func getSession(ctx context.Context, guildID, channelID, userID, input string, imageInputs []string, fileInputs []discordTypes.FileInput, data exec.ExecData) (*agentTypes.AgentSession, error) {
-	sid := getSessionID(guildID, channelID, userID)
+	sessionID, err := filesystem.GetDiscordSessionID(guildID, channelID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("filesystem.GetDiscordSessionID: %w", err)
+	}
 
 	// configDir, err := utils.GetConfigDir("sessions")
 	// if err != nil {
 	// 	return nil, fmt.Errorf("utils.GetConfigDir: %w", err)
 	// }
 
-	sessionDir := filepath.Join(filesystem.SessionsDir, sid)
-	if err := os.MkdirAll(sessionDir, 0755); err != nil {
-		return nil, fmt.Errorf("os.MkdirAll: %w", err)
-	}
+	// sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+	// if err := os.MkdirAll(sessionDir, 0755); err != nil {
+	// 	return nil, fmt.Errorf("os.MkdirAll: %w", err)
+	// }
+
+	// if configData, err := json.Marshal(map[string]string{
+	// 	"guild_id":   guildID,
+	// 	"channel_id": channelID,
+	// 	"user_id":    userID,
+	// }); err == nil {
+	// 	configPath := filepath.Join(sessionDir, "config.json")
+	// 	if err := filesystem.WriteFile(configPath, string(configData), 0644); err != nil {
+	// 		slog.Warn("filesystem.WriteFile config",
+	// 			slog.String("error", err.Error()))
+	// 	}
+	// }
 
 	session := &agentTypes.AgentSession{
-		ID:    sid,
+		ID:    sessionID,
 		Tools: []agentTypes.Message{},
 		Messages: []agentTypes.Message{
 			{Role: "system", Content: exec.GetSystemPrompt(data)},
@@ -48,30 +61,39 @@ func getSession(ctx context.Context, guildID, channelID, userID, input string, i
 		Histories: []agentTypes.Message{},
 	}
 
-	historyPath := filepath.Join(sessionDir, "history.json")
-	if historyData, err := os.ReadFile(historyPath); err == nil {
-		var oldHistory []agentTypes.Message
-		if json.Unmarshal(historyData, &oldHistory) == nil {
-			session.Histories = oldHistory
-		}
-		if len(oldHistory) > MaxHistoryMessages {
-			oldHistory = oldHistory[len(oldHistory)-MaxHistoryMessages:]
-		}
-		session.Messages = append(session.Messages, oldHistory...)
-	}
-
-	summaryPath := filepath.Join(sessionDir, "summary.json")
-	if summaryData, err := os.ReadFile(summaryPath); err == nil {
-		summary := strings.NewReplacer(
-			"{{.Summary}}", string(summaryData),
-		).Replace(strings.TrimSpace(configs.SummaryPrompt))
+	oldHistory := exec.BytesToHistory(sessionID)
+	session.Histories = oldHistory
+	session.Messages = append(session.Messages, oldHistory...)
+	// historyPath := filepath.Join(sessionDir, "history.json")
+	// if historyData, err := os.ReadFile(historyPath); err == nil {
+	// 	var oldHistory []agentTypes.Message
+	// 	if json.Unmarshal(historyData, &oldHistory) == nil {
+	// 		session.Histories = oldHistory
+	// 	}
+	// 	if len(oldHistory) > MaxHistoryMessages {
+	// 		oldHistory = oldHistory[len(oldHistory)-MaxHistoryMessages:]
+	// 	}
+	// 	session.Messages = append(session.Messages, oldHistory...)
+	// }
+	//
+	if summary := filesystem.GetSummary(sessionID); summary != "" {
 		session.Messages = append(session.Messages, agentTypes.Message{
 			Role:    "system",
 			Content: summary,
 		})
 	}
+	// summaryPath := filepath.Join(sessionDir, "summary.json")
+	// if summaryData, err := os.ReadFile(summaryPath); err == nil {
+	// 	summary := strings.NewReplacer(
+	// 		"{{.Summary}}", string(summaryData),
+	// 	).Replace(strings.TrimSpace(configs.SummaryPrompt))
+	// 	session.Messages = append(session.Messages, agentTypes.Message{
+	// 		Role:    "system",
+	// 		Content: summary,
+	// 	})
+	// }
 
-	userText := fmt.Sprintf("ts:%d\n%s", time.Now().Unix(), strings.TrimSpace(input))
+	userText := fmt.Sprintf("當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), strings.TrimSpace(input))
 
 	var userContent any
 	if len(imageInputs) > 0 || len(fileInputs) > 0 {

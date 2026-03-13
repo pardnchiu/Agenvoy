@@ -50,7 +50,7 @@ func getAgentRegistry() agentTypes.AgentRegistry {
 		"nvidia":  func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
 	}
 
-	agentEntries := exec.GetAgentEntries()
+	agentEntries := exec.GetAgent()
 	// var fallback exec.Agent
 	// registry := make(map[string]exec.Agent, len(agentEntries))
 	// entries := make([]exec.AgentEntryData, 0, len(agentEntries))

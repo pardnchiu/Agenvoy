@@ -35,15 +35,10 @@ type ExecData struct {
 }
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
-	// if skill is empty, then treat as no skill
+	// * if skill is empty, then treat as no skill
 	if data.Skill != nil && data.Skill.Content == "" {
 		data.Skill = nil
 	}
-
-	// configDir, err := utils.GetConfigDir("sessions")
-	// if err != nil {
-	// 	return fmt.Errorf("utils.ConfigDir: %w", err)
-	// }
 
 	exec, err := tools.NewExecutor(data.WorkDir, session.ID)
 	if err != nil {
@@ -65,16 +60,19 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		if err != nil {
 			slog.Warn("data.Agent.Send",
 				slog.String("error", err.Error()))
-			// events <- agentTypes.Event{Type: agentTypes.EventText, Text: "服務暫時無法使用，請稍後再試。"}
-			// events <- agentTypes.Event{Type: agentTypes.EventDone}
 			continue
 		}
 
 		if len(resp.Choices) == 0 {
 			emptyCount++
 			if emptyCount >= MaxEmptyResponses {
-				events <- agentTypes.Event{Type: agentTypes.EventText, Text: "工具無法取得資料，請稍後再試或改用其他方式查詢。"}
-				events <- agentTypes.Event{Type: agentTypes.EventDone}
+				events <- agentTypes.Event{
+					Type: agentTypes.EventText,
+					Text: "工具無法取得資料，請稍後再試或改用其他方式查詢。",
+				}
+				events <- agentTypes.Event{
+					Type: agentTypes.EventDone,
+				}
 				return nil
 			}
 			continue
@@ -98,19 +96,26 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 			cleaned := extractSummary(session.ID, text)
 
-			events <- agentTypes.Event{Type: agentTypes.EventText, Text: cleaned}
+			events <- agentTypes.Event{
+				Type: agentTypes.EventText,
+				Text: cleaned,
+			}
 
-			choice.Message.Content = fmt.Sprintf("ts:%d\n%s", time.Now().Unix(), cleaned)
+			choice.Message.Content = fmt.Sprintf("當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), cleaned)
 
 			session.Messages = append(session.Messages, choice.Message)
 
-			err := writeHistory(choice, session)
-			if err != nil {
-				slog.Warn("Failed to write history",
+			if err := writeHistory(choice, session); err != nil {
+				slog.Warn("writeHistory",
 					slog.String("error", err.Error()))
 			}
+
 		case nil:
-			events <- agentTypes.Event{Type: agentTypes.EventText, Text: "工具無法取得資料，請稍後再試或改用其他方式查詢。"}
+			events <- agentTypes.Event{
+				Type: agentTypes.EventText,
+				Text: "工具無法取得資料，請稍後再試或改用其他方式查詢。",
+			}
+
 		default:
 			return fmt.Errorf("unexpected content type: %T", choice.Message.Content)
 		}
@@ -118,20 +123,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		events <- agentTypes.Event{Type: agentTypes.EventDone}
 
 		if len(session.Tools) > 0 {
-			now := time.Now()
-			date := now.Format("2006-01-02")
-			dateWithSec := now.Format("2006-01-02-15-04-05")
-			toolActionsDir := filepath.Join(filesystem.SessionsDir, session.ID, "tool_calls", date)
-			if err := os.MkdirAll(toolActionsDir, 0755); err == nil {
-				filename := dateWithSec + ".json"
-				toolActionsPath := filepath.Join(toolActionsDir, filename)
-				if data, err := json.Marshal(session.Tools); err == nil {
-					err := filesystem.WriteFile(toolActionsPath, string(data), 0644)
-					if err != nil {
-						slog.Warn("utils.WriteFile",
-							slog.String("error", err.Error()))
-					}
-				}
+			if data, err := json.Marshal(session.Tools); err == nil {
+				filesystem.SaveToToolCall(session.ID, string(data))
 			}
 		}
 		return nil
@@ -172,6 +165,7 @@ func GetSystemPrompt(data ExecData) string {
 	}
 	content := data.Skill.Content
 
+	// * add skill path, ensure path is correct
 	for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
 		resolved := filepath.Join(data.Skill.Path, prefix)
 

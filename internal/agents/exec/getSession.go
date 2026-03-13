@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/configs"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -83,15 +82,15 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	// 	return nil, fmt.Errorf("utils.ConfigDir: %v\n", err)
 	// }
 
-	indexJsonPath := filepath.Join(filesystem.AgenvoyDir, "config.json")
-	unlock, err := lockConfig(filepath.Dir(indexJsonPath))
+	// indexJsonPath := filepath.Join(filesystem.AgenvoyDir, "config.json")
+	unlock, err := lockConfig(filesystem.AgenvoyDir)
 	if err != nil {
 		return nil, fmt.Errorf("lockConfig: %w", err)
 	}
 	defer unlock()
 
 	var sessionID string
-	data, configErr := os.ReadFile(indexJsonPath)
+	data, configErr := os.ReadFile(filesystem.ConfigPath)
 	switch {
 	case configErr == nil:
 		// * config is exist
@@ -110,45 +109,57 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			}
 			raw["session_id"], err = json.Marshal(newID)
 			if err != nil {
-				return nil, fmt.Errorf("json.Marshal session_id: %w", err)
+				return nil, fmt.Errorf("json.Marshal: %w", err)
 			}
 			merged, err := json.Marshal(raw)
 			if err != nil {
 				return nil, fmt.Errorf("json.Marshal: %w", err)
 			}
-			if err := filesystem.WriteFile(indexJsonPath, string(merged), 0644); err != nil {
+			if err := filesystem.WriteFile(filesystem.ConfigPath, string(merged), 0644); err != nil {
 				return nil, fmt.Errorf("utils.WriteFile: %w", err)
 			}
 			indexData.SessionID = newID
 		}
 		sessionID = strings.TrimSpace(indexData.SessionID)
 
-		var summary string
-		if summaryData, err := os.ReadFile(filepath.Join(filesystem.SessionsDir, sessionID, "summary.json")); err == nil {
-			summary = strings.NewReplacer(
-				"{{.Summary}}", string(summaryData),
-			).Replace(strings.TrimSpace(configs.SummaryPrompt))
+		// var summary string
+		// if summaryData, err := os.ReadFile(filepath.Join(filesystem.SessionsDir, sessionID, "summary.json")); err == nil {
+		// 	summary = strings.NewReplacer(
+		// 		"{{.Summary}}", string(summaryData),
+		// 	).Replace(strings.TrimSpace(configs.SummaryPrompt))
+		// }
+
+		oldHistory := BytesToHistory(sessionID)
+		session.Histories = oldHistory
+		session.Messages = append(session.Messages, oldHistory...)
+
+		// * insert summary prompt every time
+		if summary := filesystem.GetSummary(sessionID); summary != "" {
+			session.Messages = append(session.Messages, agentTypes.Message{
+				Role:    "system",
+				Content: summary,
+			})
 		}
 
-		if historyData, err := os.ReadFile(filepath.Join(filesystem.SessionsDir, sessionID, "history.json")); err == nil {
-			// * for ensuring context relevance
-			var oldHistory []agentTypes.Message
-			if err := json.Unmarshal(historyData, &oldHistory); err == nil {
-				session.Histories = oldHistory
-			}
-			if len(oldHistory) > MaxHistoryMessages {
-				oldHistory = oldHistory[len(oldHistory)-MaxHistoryMessages:]
-			}
-			session.Messages = append(session.Messages, oldHistory...)
+		// if historyData, err := os.ReadFile(filepath.Join(filesystem.SessionsDir, sessionID, "history.json")); err == nil {
+		// 	// * for ensuring context relevance
+		// 	var oldHistory []agentTypes.Message
+		// 	if err := json.Unmarshal(historyData, &oldHistory); err == nil {
+		// 		session.Histories = oldHistory
+		// 	}
+		// 	if len(oldHistory) > MaxHistoryMessages {
+		// 		oldHistory = oldHistory[len(oldHistory)-MaxHistoryMessages:]
+		// 	}
+		// 	session.Messages = append(session.Messages, oldHistory...)
 
-			// * insert summary prompt every time
-			if summary != "" {
-				session.Messages = append(session.Messages, agentTypes.Message{
-					Role:    "system",
-					Content: summary,
-				})
-			}
-		}
+		// 	// * insert summary prompt every time
+		// 	if summary != "" {
+		// 		session.Messages = append(session.Messages, agentTypes.Message{
+		// 			Role:    "system",
+		// 			Content: summary,
+		// 		})
+		// 	}
+		// }
 
 		userText := fmt.Sprintf("ts:%s\n%s", now, trimInput)
 		session.Histories = append(session.Histories, agentTypes.Message{
@@ -182,7 +193,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			return nil, fmt.Errorf("json.Marshal: %w", err)
 		}
 
-		file, err := os.OpenFile(indexJsonPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+		file, err := os.OpenFile(filesystem.ConfigPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
 		if err != nil {
 			return nil, fmt.Errorf("os.OpenFile: %w", err)
 		}
@@ -238,4 +249,17 @@ func newSessionID() (string, error) {
 	b[8] = (b[8] & 0x3f) | 0x80
 	h := hex.EncodeToString(b)
 	return h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:], nil
+}
+
+func BytesToHistory(sessionID string) []agentTypes.Message {
+	if historyBytes := filesystem.GetHistory(sessionID); historyBytes != nil {
+		var oldHistory []agentTypes.Message
+		if json.Unmarshal(historyBytes, &oldHistory) == nil {
+			if len(oldHistory) > MaxHistoryMessages {
+				oldHistory = oldHistory[len(oldHistory)-MaxHistoryMessages:]
+			}
+			return oldHistory
+		}
+	}
+	return nil
 }

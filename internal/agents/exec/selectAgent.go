@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/configs"
@@ -14,39 +13,37 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
-func GetAgentEntries() []agentTypes.AgentEntry {
-	// configDir, err := utils.GetConfigDir()
-	// if err != nil {
-	// 	return []agentTypes.AgentEntry{}
-	// }
+type AgentConfig struct {
+	SessionID    string                  `json:"session_id"`
+	DefaultModel string                  `json:"default_model"`
+	PlannerModel string                  `json:"planner_model"`
+	Models       []agentTypes.AgentEntry `json:"models"`
+}
 
-	for _, dir := range []string{
-		filesystem.AgenvoyDir,
-		filesystem.WorkAgenvoyDir,
-	} {
-		data, err := os.ReadFile(filepath.Join(dir, "config.json"))
-		if err != nil {
-			continue
+func GetAgent() []agentTypes.AgentEntry {
+	data, err := os.ReadFile(filesystem.ConfigPath)
+	if err != nil {
+		return []agentTypes.AgentEntry{}
+	}
+	var cfg AgentConfig
+	if json.Unmarshal(data, &cfg) != nil || len(cfg.Models) == 0 {
+		return []agentTypes.AgentEntry{}
+	}
+	if cfg.DefaultModel == "" {
+		cfg.DefaultModel = cfg.Models[0].Name
+		if saved, err := json.Marshal(cfg); err == nil {
+			_ = filesystem.WriteFile(filesystem.ConfigPath, string(saved), 0644)
 		}
-		var cfg struct {
-			Models       []agentTypes.AgentEntry `json:"models"`
-			DefaultModel string                  `json:"default_model"`
-		}
-		if json.Unmarshal(data, &cfg) != nil || len(cfg.Models) == 0 {
-			continue
-		}
-		if cfg.DefaultModel != "" {
-			for i, m := range cfg.Models {
-				// * move default model to first be fallback
-				if m.Name == cfg.DefaultModel {
-					cfg.Models[0], cfg.Models[i] = cfg.Models[i], cfg.Models[0]
-					break
-				}
+	} else {
+		for i, m := range cfg.Models {
+			// * move default model to first be fallback
+			if m.Name == cfg.DefaultModel {
+				cfg.Models[0], cfg.Models[i] = cfg.Models[i], cfg.Models[0]
+				break
 			}
 		}
-		return cfg.Models
 	}
-	return []agentTypes.AgentEntry{}
+	return cfg.Models
 }
 
 func SelectAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool) agentTypes.Agent {
