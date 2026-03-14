@@ -48,13 +48,19 @@ func SyncSkills(ctx context.Context) {
 		}
 
 		path := filepath.Join(filesystem.SkillsDir, entry.Name)
-		if _, err := os.Stat(path); err == nil {
+		if err := os.Mkdir(path, 0755); err != nil {
+			if os.IsExist(err) {
+				continue
+			}
+			slog.Warn("os.Mkdir",
+				slog.String("error", err.Error()))
 			continue
 		}
 
 		if err := downloadDir(ctx, fmt.Sprintf("%s/%s", apiGithubSkills, entry.Name), path); err != nil {
 			slog.Warn("downloadDir",
 				slog.String("error", err.Error()))
+			os.Remove(path)
 		}
 	}
 }

@@ -3,6 +3,7 @@ package filesystem
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -102,6 +103,9 @@ func WriteFile(path, content string, permission os.FileMode) error {
 	// * rename temp to target
 	if err := os.Rename(tmp, path); err != nil {
 		os.Remove(tmp)
+		slog.Warn("os.Rename",
+			slog.String("tmp", tmp),
+			slog.String("error", err.Error()))
 		return fmt.Errorf("os.Rename: %w", err)
 	}
 	return nil

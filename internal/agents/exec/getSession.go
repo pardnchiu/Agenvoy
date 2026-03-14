@@ -117,6 +117,15 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 
 		oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 		session.Histories = oldHistory
+		if len(oldHistory) > len(maxHistory) && len(maxHistory) > 0 {
+			copied := make([]agentTypes.Message, len(maxHistory))
+			copy(copied, maxHistory)
+			if text, ok := copied[0].Content.(string); ok {
+				// * for agent to know thie content is cut
+				copied[0].Content = "...\n" + text
+			}
+			maxHistory = copied
+		}
 		session.Messages = append(session.Messages, maxHistory...)
 
 		// * insert summary prompt every time

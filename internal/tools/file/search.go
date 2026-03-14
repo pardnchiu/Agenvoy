@@ -34,6 +34,11 @@ func search(e *toolTypes.Executor, pattern, filePattern string) (string, error) 
 			return nil
 		}
 
+		// * limited to 1MB
+		if d.Size() > 1<<20 {
+			return nil
+		}
+
 		ext := filepath.Ext(path)
 		exts := map[string]bool{
 			".exe":   true,
