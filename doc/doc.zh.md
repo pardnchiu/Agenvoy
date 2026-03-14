@@ -270,7 +270,12 @@ agenvoy remove
 | `download_page` | `href`, `save_to` | JS 渲染頁面儲存至檔案 |
 | `run_command` | `command` | 執行白名單內的 Shell 指令 |
 | `write_script` | `name`, `content` | 建立排程腳本檔案 |
-| `add_task` | `at`, `script` | 設定一次性定時任務 |
+| `add_task` | `at`, `script`, `channel_id` | 設定一次性定時任務；執行結果傳送至指定 Discord 頻道 |
+| `list_tasks` | — | 列出所有待執行的一次性任務 |
+| `remove_task` | `index` | 依序號移除一次性任務（多個時須先列出） |
+| `add_cron` | `cron_expr`, `script`, `channel_id` | 新增週期性 Cron 任務；執行結果傳送至指定 Discord 頻道 |
+| `list_crons` | — | 列出所有已登錄的 Cron 任務 |
+| `remove_cron` | `index` | 依序號移除 Cron 任務（多個時須先列出） |
 | `calculate` | `expression` | 數學運算（sqrt、sin、cos、pow 等） |
 
 ### 工具執行錯誤追蹤

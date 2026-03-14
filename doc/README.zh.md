@@ -12,7 +12,7 @@
 [![license](https://img.shields.io/github/license/pardnchiu/agenvoy)](LICENSE)
 [![version](https://img.shields.io/github/v/tag/pardnchiu/agenvoy?label=release)](https://github.com/pardnchiu/agenvoy/releases)
 
-> Go 語言 Agentic AI 平台，具備技能路由、多 Provider 智能調度、Discord Bot 整合與安全優先的共用 Agent 設計
+> Go 語言 Agentic AI 平台，具備技能路由、多 Provider 智能調度、持久化任務排程與安全優先的共用 Agent 設計
 
 ## 目錄
 
@@ -35,6 +35,10 @@ Selector Bot 在單一規劃階段同時從 9 個標準路徑掃描 Markdown Ski
 
 19 個以上的內建工具受到內嵌封鎖清單與 Shell 指令白名單的沙箱保護 — SSH 金鑰、`.env` 檔案（`.example` 變體除外）及憑證目錄均被拒絕存取；`rm` 指令被攔截並導向 `.Trash`。在內建工具之外，兩層 Extension 機制無需修改程式碼即可擴充能力：API Extension 是放置於 `~/.config/agenvoy/apis/` 的 JSON 檔，啟動時自動載入並成為 AI 可呼叫的工具，支援 URL 路徑參數、請求範本與 Bearer/API Key 認證；13 個以上的公開 API Extension 已內嵌（地理編碼、金融、資料來源）；Skill Extension 是 Markdown 格式的任務指令集，啟動時由 SyncSkills 自動從 GitHub 下載官方 Skill 至本地，並從 9 個標準路徑掃描所有可用 Skill。
 
+### 持久化任務排程
+
+排程子系統同時支援一次性延遲任務與週期性 Cron 任務，所有排程資訊持久化至磁碟，進程重啟後自動恢復。一次性任務接受相對延遲（`+5m`、`+2h`）或絕對時間戳記；週期性任務接受標準 5 欄位 Cron 表達式，由 go-scheduler 函式庫在登錄時驗證。每個任務綁定一個 Discord 頻道 ID，腳本執行完成後由 Planner Agent 處理 stdout 並自動回傳至對應頻道。專屬的 `schedule-task` Skill 處理自然語言排程意圖，凡含有時間延遲或週期性關鍵字的訊息均會透過排程流程執行，而非立即觸發。
+
 ### OS Keychain 憑證管理
 
 Provider API 金鑰儲存於系統原生的 OS Keychain（macOS / Linux / Windows），而非 `.env` 檔案，防止憑證意外洩漏。GitHub Copilot 採用 OAuth Device Code Flow 並支援自動刷新令牌。六個 Provider（Copilot、OpenAI、Claude、Gemini、NVIDIA、Compat）共用統一的互動式 `agenvoy add` 設定流程，可從內嵌模型登錄檔互動選擇模型。
@@ -52,8 +56,10 @@ graph TB
     Execute --> Send["Agent.Send() — LLM call"]
     Send --> ToolCall["ToolCall() — 去重快取"]
     ToolCall --> Security["Security Gate\ndenied.json + whitelist"]
-    Security --> Tools["File / API / Browser / Shell / Cron"]
+    Security --> Tools["File / API / Browser / Shell"]
+    Security --> Scheduler["Scheduler\nadd_task / add_cron"]
     Tools --> Send
+    Scheduler --> Callback["Discord 回呼\n執行完成後"]
     Send --> Output["回覆 → CLI / Discord"]
 ```
 
@@ -64,6 +70,7 @@ agenvoy/
 ├── cmd/
 │   ├── cli/                # CLI：add / remove / list / run
 │   └── server/             # Discord Bot 進入點
+├── configs/                # 內嵌 Prompt 與 Provider JSON 登錄檔
 ├── extensions/
 │   ├── apis/               # 內嵌 API Extension（13+ JSON）
 │   └── skills/             # 內嵌 Skill Extension（Markdown）
@@ -72,10 +79,11 @@ agenvoy/
 │   │   ├── exec/           # 核心執行引擎與 Session 迴圈
 │   │   ├── provider/       # 6 個 AI Provider 後端 + 模型登錄檔
 │   │   └── types/          # Agent 介面 + Message 類型
-│   ├── cron/               # 一次性任務排程 Daemon
 │   ├── discord/            # Discord Slash Command + 檔案附件
+│   ├── filesystem/         # 集中路徑常數與 Session 管理
+│   ├── scheduler/          # 持久化一次性與週期性任務排程器
 │   ├── skill/              # Markdown Skill 掃描器與解析器
-│   ├── tools/              # 19+ 內建工具 + Cron + 自訂 API 適配器
+│   ├── tools/              # 19+ 內建工具 + 排程器 + 自訂 API 適配器
 │   └── keychain/           # OS Keychain 憑證儲存
 ├── go.mod
 └── LICENSE

@@ -270,7 +270,12 @@ agenvoy remove
 | `download_page` | `href`, `save_to` | JS-rendered page saved to file |
 | `run_command` | `command` | Execute whitelisted shell commands |
 | `write_script` | `name`, `content` | Create a scheduler script file |
-| `add_task` | `at`, `script` | Schedule a one-time task at a given time |
+| `add_task` | `at`, `script`, `channel_id` | Schedule a one-time task; result is delivered to the given Discord channel |
+| `list_tasks` | — | List all pending one-time tasks |
+| `remove_task` | `index` | Remove a one-time task by index (list first if multiple exist) |
+| `add_cron` | `cron_expr`, `script`, `channel_id` | Register a recurring cron task; result is delivered to the given Discord channel |
+| `list_crons` | — | List all registered cron tasks |
+| `remove_cron` | `index` | Remove a cron task by index (list first if multiple exist) |
 | `calculate` | `expression` | Math expressions (sqrt, sin, cos, pow, etc.) |
 
 ### Tool Error Tracking
