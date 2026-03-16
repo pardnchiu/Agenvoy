@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/keychain"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
 )
 
 type Agent struct {

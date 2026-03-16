@@ -149,66 +149,8 @@ func init() {
 		},
 	})
 
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "write_file",
-		Description: "將內容寫入檔案。如果檔案不存在則建立，如果存在則覆寫。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"path": map[string]any{
-					"type":        "string",
-					"description": "要寫入的檔案路徑（相對於專案根目錄或絕對路徑）",
-				},
-				"content": map[string]any{
-					"type":        "string",
-					"description": "要寫入檔案的內容",
-				},
-			},
-			"required": []string{"path", "content"},
-		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				Path    string `json:"path"`
-				Content string `json:"content"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			if isDenied(params.Path) {
-				return "", fmt.Errorf("access denied: %s", params.Path)
-			}
-			return write(e, params.Path, params.Content)
-		},
-	})
-
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "write_script",
-		Description: "在 ~/.config/agenvoy/scheduler/scripts/ 建立腳本檔案（.sh 或 .py）。回傳值為實際儲存的檔名（含 UTC timestamp 後綴，例如 notify_1741569300.sh），必須將此回傳檔名傳給 add_task 或 add_cron 的 script 參數。腳本須以 #!/bin/sh 或 #!/usr/bin/env python3 開頭。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"name": map[string]any{
-					"type":        "string",
-					"description": "腳本檔名，只填檔名不含路徑，必須以 .sh 或 .py 結尾，例如 'notify.sh'、'backup.py'",
-				},
-				"content": map[string]any{
-					"type":        "string",
-					"description": "腳本內容，.sh 必須以 #!/bin/sh 開頭，.py 必須以 #!/usr/bin/env python3 開頭",
-				},
-			},
-			"required": []string{"name", "content"},
-		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				Name    string `json:"name"`
-				Content string `json:"content"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			return writeScript(params.Name, params.Content)
-		},
-	})
+	registWriteFile()
+	registWriteScript()
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "patch_edit",

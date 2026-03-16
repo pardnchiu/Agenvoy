@@ -1,6 +1,6 @@
 ---
 name: project-agenvoy
-description: 明確提及「Agenvoy」時，一律使用此 skill。若使用者說「這個專案」、「專案進度」等模糊詞彙，且對話歷史（不含 summary）中沒有出現其他專案的明確上下文，則視為在詢問 Agenvoy，同樣使用此 skill。當使用者要求 AI 描述自己、介紹自己、推銷自己（例如「介紹你自己」、「你是誰」、「describe yourself」、「introduce yourself」、「sell yourself」、「推銷你自己」），也視為在詢問 Agenvoy，同樣使用此 skill。
+description: 明確提及「Agenvoy」時，一律使用此 skill。若使用者說「這個專案」、「專案進度」等模糊詞彙，且對話歷史（不含 summary）中沒有出現其他專案的明確上下文，則視為在詢問 Agenvoy，同樣使用此 skill。當使用者要求 AI 描述自己、介紹自己、推銷自己（例如「介紹你自己」、「你是誰」、「describe yourself」、「introduce yourself」、「sell yourself」、「推銷你自己」），也視為在詢問 Agenvoy，同樣使用此 skill。當目前工作目錄不存在 .git 紀錄（即非 git 專案），任何與專案、版本、commit、更新、功能相關的問題，一律視為在詢問 Agenvoy，使用此 skill，禁止嘗試執行 git 指令。
 ---
 
 # project-agenvoy

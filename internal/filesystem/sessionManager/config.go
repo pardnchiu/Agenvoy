@@ -1,4 +1,4 @@
-package keychain
+package sessionManager
 
 import (
 	"encoding/json"
@@ -28,11 +28,6 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	// configData, err := utils.GetConfigDir()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("utils.GetConfigDir: %w", err)
-	// }
-
 	configPath := filepath.Join(filesystem.AgenvoyDir, "config.json")
 	data, err := os.ReadFile(configPath)
 	if os.IsNotExist(err) {
@@ -41,6 +36,7 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("os.ReadFile: %w", err)
 	}
+
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
@@ -49,20 +45,16 @@ func Load() (*Config, error) {
 }
 
 func Save(cfg *Config) error {
-	// configData, err := utils.GetConfigDir()
-	// if err != nil {
-	// 	return fmt.Errorf("utils.GetConfigDir: %w", err)
-	// }
-
 	configPath := filepath.Join(filesystem.AgenvoyDir, "config.json")
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
 		return fmt.Errorf("os.MkdirAll: %w", err)
 	}
+
 	data, err := json.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return filesystem.WriteFile(configPath, string(data), 0644)
+	return filesystem.WriteFile(filesystem.AgenvoyDir, configPath, string(data), 0644)
 }
 
 func UpsertModel(entry ModelEntry) error {
@@ -70,6 +62,7 @@ func UpsertModel(entry ModelEntry) error {
 	if err != nil {
 		return err
 	}
+
 	for i, m := range cfg.Models {
 		if m.Name == entry.Name {
 			cfg.Models[i].Description = entry.Description
@@ -86,6 +79,7 @@ func UpsertCompat(provider, url string) error {
 	if err != nil {
 		return err
 	}
+
 	for i, c := range cfg.Compats {
 		if strings.EqualFold(c.Provider, provider) {
 			cfg.Compats[i].URL = url
@@ -104,6 +98,7 @@ func GetCompatURL(provider string) string {
 	if err != nil {
 		return ""
 	}
+
 	for _, c := range cfg.Compats {
 		if strings.EqualFold(c.Provider, provider) {
 			return c.URL

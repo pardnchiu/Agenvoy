@@ -45,7 +45,7 @@ func SaveToolError(sessionID, toolName, args, errMsg string) string {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return hash
 	}
-	filesystem.WriteFile(filepath.Join(dir, hash+".json"), string(data), 0644)
+	filesystem.WriteFile(filesystem.AgenvoyDir, filepath.Join(dir, hash+".json"), string(data), 0644)
 	return hash
 }
 

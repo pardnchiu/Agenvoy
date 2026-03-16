@@ -6,11 +6,11 @@ import (
 	"os"
 
 	"github.com/manifoldco/promptui"
-	"github.com/pardnchiu/agenvoy/internal/keychain"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 )
 
 func runRemove() {
-	cfg, err := keychain.Load()
+	cfg, err := sessionManager.Load()
 	if err != nil {
 		slog.Error("keychain.Load", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -49,7 +49,7 @@ func runRemove() {
 	removed := cfg.Models[index]
 	cfg.Models = append(cfg.Models[:index], cfg.Models[index+1:]...)
 
-	if err := keychain.Save(cfg); err != nil {
+	if err := sessionManager.Save(cfg); err != nil {
 		slog.Error("keychain.Save", slog.String("error", err.Error()))
 		os.Exit(1)
 	}

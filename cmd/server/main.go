@@ -20,7 +20,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/keychain"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
@@ -43,7 +43,7 @@ func main() {
 	scanner := skill.NewScanner()
 
 	var selectorBot agentTypes.Agent
-	if cfg, err := keychain.Load(); err == nil && cfg.PlannerModel != "" {
+	if cfg, err := sessionManager.Load(); err == nil && cfg.PlannerModel != "" {
 		if a, ok := registry.Registry[cfg.PlannerModel]; ok {
 			selectorBot = a
 		}

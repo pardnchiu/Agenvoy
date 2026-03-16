@@ -23,7 +23,7 @@ func SaveToToolCall(sessionID, content string) {
 	if err := os.MkdirAll(toolCallsDir, 0755); err == nil {
 		filename := fmt.Sprintf("%s.json", now.Format("2006-01-02-15-04-05"))
 		toolActionsPath := filepath.Join(toolCallsDir, filename)
-		if err := filesystem.WriteFile(toolActionsPath, content, 0644); err != nil {
+		if err := filesystem.WriteFile(filesystem.AgenvoyDir, toolActionsPath, content, 0644); err != nil {
 			slog.Warn("WriteFile",
 				slog.String("error", err.Error()))
 		}
@@ -102,7 +102,7 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("json.Marshal: %w", err)
 		}
-		if err := filesystem.WriteFile(configPath, string(configData), 0644); err != nil {
+		if err := filesystem.WriteFile(filesystem.AgenvoyDir, configPath, string(configData), 0644); err != nil {
 			return "", fmt.Errorf("WriteFile: %w", err)
 		}
 	}
@@ -156,7 +156,7 @@ func SaveHistory(sessionID, content string) error {
 	}
 
 	historyPath := filepath.Join(sessionDir, "history.json")
-	if err := filesystem.WriteFile(historyPath, content, 0644); err != nil {
+	if err := filesystem.WriteFile(filesystem.AgenvoyDir, historyPath, content, 0644); err != nil {
 		return fmt.Errorf("WriteFile: %w", err)
 	}
 	return nil

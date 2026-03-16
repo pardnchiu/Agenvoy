@@ -2,12 +2,15 @@ package filesystem
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/pardnchiu/agenvoy/configs"
 )
 
 var (
@@ -89,19 +92,24 @@ func ReadFile(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-func WriteFile(path, content string, permission os.FileMode) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+func WriteFile(dir, path, content string, permission os.FileMode) error {
+	absPath, err := GetAbsPath(dir, path)
+	if err != nil {
+		return fmt.Errorf("ABS: %w", err)
+	}
+
+	absDir := filepath.Dir(absPath)
+	if err := os.MkdirAll(absDir, 0755); err != nil {
 		return fmt.Errorf("os.MkdirAll: %w", err)
 	}
 	// * ensure atomic write:
 	// * pre-save data as temp
-	tmp := path + ".tmp"
+	tmp := absPath + ".tmp"
 	if err := os.WriteFile(tmp, []byte(content), permission); err != nil {
 		return fmt.Errorf("os.WriteFile: %w", err)
 	}
 	// * rename temp to target
-	if err := os.Rename(tmp, path); err != nil {
+	if err := os.Rename(tmp, absPath); err != nil {
 		os.Remove(tmp)
 		slog.Warn("os.Rename",
 			slog.String("tmp", tmp),
@@ -116,5 +124,69 @@ func WriteFileWithLines(path string, lines []string, permission os.FileMode) err
 	if len(lines) > 0 {
 		content += "\n"
 	}
-	return WriteFile(path, content, permission)
+	return WriteFile(AgenvoyDir, path, content, permission)
+}
+
+func GetAbsPath(dir, path string) (string, error) {
+	// * format the path to abs path
+	var resolved string
+	if !filepath.IsAbs(path) {
+		resolved = filepath.Join(dir, path)
+	} else {
+		resolved = filepath.Clean(path)
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil || !strings.HasPrefix(resolved, filepath.Clean(homeDir)+string(filepath.Separator)) {
+		return "", fmt.Errorf("only allow user home: %s", path)
+	}
+
+	if isDenied(resolved) {
+		return "", fmt.Errorf("access denied: %s", path)
+	}
+
+	return resolved, nil
+}
+
+type deniedConfig struct {
+	Dirs       []string `json:"dirs"`
+	Files      []string `json:"files"`
+	Prefixes   []string `json:"prefixes"`
+	Extensions []string `json:"extensions"`
+}
+
+var DeniedConfig = func() deniedConfig {
+	var cfg deniedConfig
+	if err := json.Unmarshal(configs.DeniedMap, &cfg); err != nil {
+		slog.Warn("json.Unmarshal",
+			slog.String("error", err.Error()))
+	}
+	return cfg
+}()
+
+func isDenied(path string) bool {
+	cleaned := filepath.Clean(path)
+	base := filepath.Base(cleaned)
+
+	for _, dir := range DeniedConfig.Dirs {
+		if strings.Contains(cleaned, fmt.Sprintf("/%s/", dir)) || strings.Contains(cleaned, fmt.Sprintf("/%s", dir)) {
+			return true
+		}
+	}
+	for _, f := range DeniedConfig.Files {
+		if strings.Contains(cleaned, f) {
+			return true
+		}
+	}
+	for _, prefix := range DeniedConfig.Prefixes {
+		if strings.HasPrefix(base, prefix) && !strings.Contains(base, ".example") {
+			return true
+		}
+	}
+	for _, ext := range DeniedConfig.Extensions {
+		if strings.HasSuffix(base, ext) {
+			return true
+		}
+	}
+	return false
 }

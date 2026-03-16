@@ -12,7 +12,8 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
-	"github.com/pardnchiu/agenvoy/internal/keychain"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 )
 
 type Provider struct {
@@ -129,7 +130,7 @@ func addCompat() (string, string) {
 		url = "http://localhost:11434"
 	}
 
-	if err := keychain.UpsertCompat(providor, url); err != nil {
+	if err := sessionManager.UpsertCompat(providor, url); err != nil {
 		slog.Error(" keychain.UpsertCompat",
 			slog.String("error", err.Error()))
 		os.Exit(1)
@@ -283,7 +284,7 @@ func selectModelFromList(prefix, providerName, defaultModel string) (model, desc
 }
 
 func runPlanner() {
-	cfg, err := keychain.Load()
+	cfg, err := sessionManager.Load()
 	if err != nil {
 		slog.Error("keychain.Load",
 			slog.String("error", err.Error()))
@@ -315,7 +316,7 @@ func runPlanner() {
 	}
 
 	cfg.PlannerModel = cfg.Models[idx].Name
-	if err := keychain.Save(cfg); err != nil {
+	if err := sessionManager.Save(cfg); err != nil {
 		slog.Error("keychain.Save",
 			slog.String("error", err.Error()))
 		os.Exit(1)
@@ -338,7 +339,7 @@ func upsertModel(name, defaultDesc string) {
 		description = defaultDesc
 	}
 
-	cfg, err := keychain.Load()
+	cfg, err := sessionManager.Load()
 	if err != nil {
 		slog.Error("keychain.Load",
 			slog.String("error", err.Error()))
@@ -346,7 +347,7 @@ func upsertModel(name, defaultDesc string) {
 	}
 
 	seen := make(map[string]struct{})
-	deduped := make([]keychain.ModelEntry, 0, len(cfg.Models))
+	deduped := make([]sessionManager.ModelEntry, 0, len(cfg.Models))
 	found := false
 	for _, m := range cfg.Models {
 		if _, ok := seen[m.Name]; ok {
@@ -361,7 +362,7 @@ func upsertModel(name, defaultDesc string) {
 	}
 	cfg.Models = deduped
 	if !found {
-		cfg.Models = append(cfg.Models, keychain.ModelEntry{
+		cfg.Models = append(cfg.Models, sessionManager.ModelEntry{
 			Name:        name,
 			Description: description,
 		})
@@ -371,7 +372,7 @@ func upsertModel(name, defaultDesc string) {
 		cfg.PlannerModel = name
 	}
 
-	if err := keychain.Save(cfg); err != nil {
+	if err := sessionManager.Save(cfg); err != nil {
 		slog.Error("keychain.Save",
 			slog.String("error", err.Error()))
 		os.Exit(1)

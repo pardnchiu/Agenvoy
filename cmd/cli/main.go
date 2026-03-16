@@ -12,7 +12,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/keychain"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
@@ -80,7 +80,7 @@ func main() {
 			return
 		}
 
-		cfg, err := keychain.Load()
+		cfg, err := sessionManager.Load()
 		if err != nil {
 			slog.Error("keychain.Load", slog.String("error", err.Error()))
 			os.Exit(1)
@@ -130,7 +130,7 @@ func main() {
 		defer cancel()
 
 		var selectorBot agentTypes.Agent
-		if cfg, err := keychain.Load(); err == nil && cfg.PlannerModel != "" {
+		if cfg, err := sessionManager.Load(); err == nil && cfg.PlannerModel != "" {
 			selectorBot = newAgentFromModel(cfg.PlannerModel)
 		}
 		if selectorBot == nil {
