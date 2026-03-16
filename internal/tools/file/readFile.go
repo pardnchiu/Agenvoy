@@ -1,6 +1,7 @@
 package file
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
@@ -56,25 +59,46 @@ func isDenied(path string) bool {
 	return false
 }
 
-func read(e *toolTypes.Executor, path string) (string, error) {
-	fullPath, err := getFullPath(e, path)
-	if err != nil {
-		return "", err
-	}
+func registReadFile() {
+	toolRegister.Regist(toolRegister.Def{
+		Name:        "read_file",
+		Description: "讀取指定路徑的檔案內容。用於檢查原始碼、設定檔或專案中的任何文字檔案。",
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"path": map[string]any{
+					"type":        "string",
+					"description": "要讀取的檔案路徑（相對於專案根目錄或絕對路徑）",
+				},
+			},
+			"required": []string{"path"},
+		},
+		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+			var params struct {
+				Path string `json:"path"`
+			}
+			if err := json.Unmarshal(args, &params); err != nil {
+				return "", fmt.Errorf("json.Unmarshal: %w", err)
+			}
 
-	if isDenied(fullPath) {
-		return "", fmt.Errorf("access denied: %s", path)
-	}
+			// TODO: remove this after remove isExclude
+			absPath, err := filesystem.GetAbsPath(e.WorkPath, params.Path)
+			if err != nil {
+				return "", fmt.Errorf("filesystem.GetAbsPath: %w", err)
+			}
 
-	if isExclude(e, fullPath) {
-		return "", fmt.Errorf("path is excluded: %s", path)
-	}
+			// TODO: need to move to filesystem
+			if isExclude(e, absPath) {
+				return "", fmt.Errorf("isExclude: %s", params.Path)
+			}
 
-	data, err := os.ReadFile(fullPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read file (%s): %w", path, err)
-	}
-	return string(data), nil
+			data, err := filesystem.ReadFile(e.WorkPath, params.Path)
+			if err != nil {
+				return "", fmt.Errorf("filesystem.ReadFile: %w", err)
+			}
+			return data, nil
+		},
+	})
 }
 
 func getFullPath(e *toolTypes.Executor, path string) (string, error) {

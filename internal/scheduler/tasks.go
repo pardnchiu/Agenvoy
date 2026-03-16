@@ -14,7 +14,7 @@ func (s *Scheduler) LoadTasks() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	lines, err := filesystem.ReadFile(filesystem.TasksPath)
+	lines, err := filesystem.ReadFileSlice(filesystem.TasksPath)
 	if err != nil {
 		return fmt.Errorf("filesystem.ReadFile: %w", err)
 	}

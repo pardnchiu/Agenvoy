@@ -36,9 +36,11 @@ func registWriteFile() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
+
 			if params.Content == "" {
-				return "", fmt.Errorf("refused to write empty content to file (%s)", params.Path)
+				return "", fmt.Errorf("content is required")
 			}
+
 			if err := filesystem.WriteFile(e.WorkPath, params.Path, params.Content, 0644); err != nil {
 				return "", fmt.Errorf("filesystem.WriteFile: %w", err)
 			}

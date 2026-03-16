@@ -13,7 +13,7 @@ func (s *Scheduler) LoadCrons() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	lines, err := filesystem.ReadFile(filesystem.CronsPath)
+	lines, err := filesystem.ReadFileSlice(filesystem.CronsPath)
 	if err != nil {
 		return fmt.Errorf("filesystem.ReadFile: %w", err)
 	}

@@ -10,29 +10,7 @@ import (
 )
 
 func init() {
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "read_file",
-		Description: "讀取指定路徑的檔案內容。用於檢查原始碼、設定檔或專案中的任何文字檔案。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"path": map[string]any{
-					"type":        "string",
-					"description": "要讀取的檔案路徑（相對於專案根目錄或絕對路徑）",
-				},
-			},
-			"required": []string{"path"},
-		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				Path string `json:"path"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			return read(e, params.Path)
-		},
-	})
+	registReadFile()
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "list_files",

@@ -40,6 +40,10 @@ func registWriteScript() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
+			if params.Content == "" {
+				return "", fmt.Errorf("content is required")
+			}
+
 			ext := strings.ToLower(filepath.Ext(params.Name))
 			if ext != ".sh" && ext != ".py" {
 				return "", fmt.Errorf("scripts only support .sh or .py")

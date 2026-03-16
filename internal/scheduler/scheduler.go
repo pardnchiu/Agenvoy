@@ -106,7 +106,7 @@ func runScript(caller, scriptPath string) string {
 }
 
 func appendLine(path, line string) error {
-	lines, err := filesystem.ReadFile(path)
+	lines, err := filesystem.ReadFileSlice(path)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func appendLine(path, line string) error {
 }
 
 func removeLine(path, target string) {
-	lines, err := filesystem.ReadFile(path)
+	lines, err := filesystem.ReadFileSlice(path)
 	if err != nil {
 		return
 	}
