@@ -3,74 +3,42 @@ package scheduler
 import (
 	"fmt"
 	"log/slog"
-	"path/filepath"
-	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
-func (s *Scheduler) LoadCrons() error {
+func (s *Scheduler) SetupCrons() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	lines, err := filesystem.ReadFileSlice(filesystem.CronsPath)
+	items, err := filesystem.GetCrons()
 	if err != nil {
-		return fmt.Errorf("filesystem.ReadFile: %w", err)
+		return fmt.Errorf("filesystem.GetCrons: %w", err)
 	}
 
-	var tasks []cronItem
-	for _, line := range lines {
-		trim := strings.TrimSpace(line)
-		if trim == "" || strings.HasPrefix(trim, "#") {
-			continue
-		}
-
-		item, err := parseCronLine(trim)
-		if err != nil {
-			slog.Warn("parseCronLine",
-				slog.String("error", err.Error()))
-			continue
-		}
-
-		id, err := s.cron.Add(item.expression, s.makeCronAction(item))
+	var crons []filesystem.CronItem
+	for _, item := range items {
+		id, err := s.cron.Add(item.Expression, s.makeCronAction(item))
 		if err != nil {
 			slog.Warn("s.cron.Add",
 				slog.String("error", err.Error()))
 			continue
 		}
-
-		item.cronID = id
-		tasks = append(tasks, item)
+		item.CronID = id
+		crons = append(crons, item)
 	}
 
-	s.crons = tasks
+	s.crons = crons
 	return nil
 }
 
-func (s *Scheduler) RemoveCronTask(index int) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if index < 1 || index > len(s.crons) {
-		return fmt.Errorf("not exist")
-	}
-
-	target := s.crons[index-1]
-
-	s.cron.Remove(target.cronID)
-	removeLine(filesystem.CronsPath, target.line)
-	s.crons = append(s.crons[:index-1], s.crons[index:]...)
-	removeScript(filepath.Join(filesystem.ScriptsDir, target.script))
-	return nil
-}
-
-func (s *Scheduler) ListCronTasks() []string {
+func (s *Scheduler) ListCrons() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	result := make([]string, len(s.crons))
 	for i, t := range s.crons {
-		result[i] = fmt.Sprintf("%d. %s", i+1, t.line)
+		result[i] = fmt.Sprintf("%s %s %s", t.ID, t.Expression, t.Script)
 	}
 	return result
 }

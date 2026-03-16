@@ -2,20 +2,12 @@ package scheduler
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
-
-type taskItem struct {
-	line      string
-	at        time.Time
-	script    string
-	channelID string
-}
 
 // * allow: +5m, +1h30m, 15:04, 2006-01-02 15:04, RFC3339
 func (s *Scheduler) AddTask(text, script, channelID string) (string, error) {
@@ -28,24 +20,29 @@ func (s *Scheduler) AddTask(text, script, channelID string) (string, error) {
 		return "", fmt.Errorf("already gone")
 	}
 
-	line := buildLine(at.UTC().Format(time.RFC3339), script, channelID)
-	item, err := parseTaskLine(line)
-	// * ensure format is correct
-	if err != nil {
-		return "", fmt.Errorf("parseTaskLine: %w", err)
+	item := filesystem.TaskItem{
+		ID:        newID(at.UTC().Format(time.RFC3339), script),
+		At:        at.UTC(),
+		Script:    script,
+		ChannelID: channelID,
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := appendLine(filesystem.TasksPath, line); err != nil {
-		return "", fmt.Errorf("appendLine: %w", err)
+	tasks, err := filesystem.GetTasks()
+	if err != nil {
+		return "", fmt.Errorf("filesystem.GetTasks: %w", err)
+	}
+
+	if err := filesystem.WriteTasks(append(tasks, item)); err != nil {
+		return "", fmt.Errorf("filesystem.WriteTasks: %w", err)
 	}
 
 	if err := s.setTask(item); err != nil {
 		return "", fmt.Errorf("s.setTask: %w", err)
 	}
-	return fmt.Sprintf("already set up task at %s: %s", at.Local().Format("2006-01-02 15:04:05"), script), nil
+	return fmt.Sprintf("task added: scheduled at %s for %s\n-# ID: `%s`", at.Local().Format("2006-01-02 15:04:05"), script, item.ID), nil
 }
 
 func parseTaskTime(text string) (time.Time, error) {
@@ -80,68 +77,55 @@ func parseTaskTime(text string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("parseTime: %s", text)
 }
 
-func parseTaskLine(line string) (taskItem, error) {
-	fields := strings.Fields(line)
-	if len(fields) < 2 {
-		return taskItem{}, fmt.Errorf("at least 2 fields `{time} {script}`")
-	}
-
-	at, err := time.Parse(time.RFC3339, fields[0])
-	if err != nil {
-		return taskItem{}, fmt.Errorf("not RFC3339: %w", err)
-	}
-
-	item := taskItem{
-		line:   line,
-		at:     at,
-		script: fields[1],
-	}
-	if len(fields) >= 3 {
-		item.channelID = fields[2]
-	}
-	return item, nil
-}
-
-func (s *Scheduler) setTask(item taskItem) error {
-	if err := os.MkdirAll(filesystem.ScriptsDir, 0755); err != nil {
-		return fmt.Errorf("os.MkdirAll: %w", err)
-	}
-
-	scriptPath := filepath.Join(filesystem.ScriptsDir, item.script)
-	delay := time.Until(item.at)
+func (s *Scheduler) setTask(item filesystem.TaskItem) error {
+	scriptPath := filepath.Join(filesystem.ScriptsDir, item.Script)
+	delay := time.Until(item.At)
 
 	execTime := time.AfterFunc(delay, func() {
 		output := runScript("task", scriptPath)
 
-		if item.channelID != "" {
+		if item.ChannelID != "" {
 			s.mu.Lock()
 			cb := s.OnCompleted
 			s.mu.Unlock()
 
 			if cb != nil {
-				cb(item.channelID, output)
+				cb(item.ChannelID, output)
 			}
 		}
 
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
-		delete(s.timers, item.line)
-		removeLine(filesystem.TasksPath, item.line)
-		// * remove in memory cache, ensure completed remove
-		s.removeTask(item.line)
+		delete(s.timers, item.ID)
+		removeTaskFromJSON(item.ID)
+		s.removeTaskByID(item.ID)
 		removeScript(scriptPath)
 	})
-	s.timers[item.line] = execTime
+	s.timers[item.ID] = execTime
 	s.tasks = append(s.tasks, item)
 	return nil
 }
 
-func (s *Scheduler) removeTask(line string) {
+func (s *Scheduler) removeTaskByID(id string) {
 	for i, task := range s.tasks {
-		if task.line == line {
+		if task.ID == id {
 			s.tasks = append(s.tasks[:i], s.tasks[i+1:]...)
 			return
 		}
 	}
+}
+
+func removeTaskFromJSON(id string) {
+	tasks, err := filesystem.GetTasks()
+	if err != nil {
+		return
+	}
+	var kept []filesystem.TaskItem
+	for _, t := range tasks {
+		if t.ID != id {
+			kept = append(kept, t)
+		}
+	}
+	filesystem.WriteTasks(kept)
 }

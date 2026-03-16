@@ -2,6 +2,8 @@ package scheduler
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,9 +13,8 @@ import (
 	"sync"
 	"time"
 
-	goCron "github.com/pardnchiu/go-scheduler"
-
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	goCron "github.com/pardnchiu/go-scheduler"
 )
 
 type cronEngine interface {
@@ -26,8 +27,8 @@ type cronEngine interface {
 type Scheduler struct {
 	mu          sync.Mutex
 	timers      map[string]*time.Timer
-	tasks       []taskItem
-	crons       []cronItem
+	tasks       []filesystem.TaskItem
+	crons       []filesystem.CronItem
 	cron        cronEngine
 	OnCompleted OnCompletedFn
 }
@@ -83,6 +84,11 @@ func Stop() {
 	s.cron.Stop()
 }
 
+func newID(parts ...string) string {
+	h := sha256.Sum256([]byte(strings.Join(parts, "|") + fmt.Sprint(time.Now().UnixNano())))
+	return hex.EncodeToString(h[:])[:8]
+}
+
 func runScript(caller, scriptPath string) string {
 	var cmd *exec.Cmd
 	switch strings.ToLower(filepath.Ext(scriptPath)) {
@@ -103,38 +109,6 @@ func runScript(caller, scriptPath string) string {
 		return fmt.Sprintf("error: %s", err.Error())
 	}
 	return strings.TrimSpace(string(out))
-}
-
-func appendLine(path, line string) error {
-	lines, err := filesystem.ReadFileSlice(path)
-	if err != nil {
-		return err
-	}
-	return filesystem.WriteFileWithLines(path, append(lines, line), 0644)
-}
-
-func removeLine(path, target string) {
-	lines, err := filesystem.ReadFileSlice(path)
-	if err != nil {
-		return
-	}
-	var kept []string
-	for _, l := range lines {
-		if strings.TrimSpace(l) != target {
-			kept = append(kept, l)
-		}
-	}
-	filesystem.WriteFileWithLines(path, kept, 0644)
-}
-
-func buildLine(parts ...string) string {
-	var keep []string
-	for _, part := range parts {
-		if part != "" {
-			keep = append(keep, part)
-		}
-	}
-	return strings.Join(keep, " ")
 }
 
 func removeScript(scriptPath string) {

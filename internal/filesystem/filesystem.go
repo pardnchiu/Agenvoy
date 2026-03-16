@@ -52,8 +52,8 @@ func Init() error {
 		APIsDir = filepath.Join(AgenvoyDir, "apis")
 		ErrorsDir = filepath.Join(AgenvoyDir, "errors")
 		SchedulerDir = filepath.Join(AgenvoyDir, "scheduler")
-		TasksPath = filepath.Join(SchedulerDir, "tasks")
-		CronsPath = filepath.Join(SchedulerDir, "crons")
+		TasksPath = filepath.Join(SchedulerDir, "tasks.json")
+		CronsPath = filepath.Join(SchedulerDir, "crons.json")
 		ScriptsDir = filepath.Join(SchedulerDir, "scripts")
 
 		SkillsDir = filepath.Join(AgenvoyDir, "skills")

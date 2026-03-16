@@ -37,7 +37,7 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 	}
 
 	var oldHistory []agentTypes.Message
-	if msgs, err := dcSession.ChannelMessages(channelID, 32, currentMessageID, "", ""); err == nil {
+	if msgs, err := dcSession.ChannelMessages(channelID, 16, currentMessageID, "", ""); err == nil {
 		botID := dcSession.State.User.ID
 		for i := len(msgs) - 1; i >= 0; i-- {
 			msg := msgs[i]

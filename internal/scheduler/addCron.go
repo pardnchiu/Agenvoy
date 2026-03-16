@@ -8,66 +8,50 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
-type cronItem struct {
-	line       string
-	expression string
-	script     string
-	channelID  string
-	cronID     int64
-}
-
-func (s *Scheduler) AddCron(expression, script, channelID string) error {
-	line := buildLine(expression, script, channelID)
-	item, err := parseCronLine(line)
-	if err != nil {
-		return err
+func (s *Scheduler) AddCron(expression, script, channelID string) (string, error) {
+	if len(strings.Fields(expression)) != 5 {
+		return "", fmt.Errorf("expression must be 5 fields `{min} {hour} {dom} {mon} {dow}`")
 	}
 
-	id, err := s.cron.Add(item.expression, s.makeCronAction(item))
-	if err != nil {
-		return fmt.Errorf("cron.Add: %w", err)
+	item := filesystem.CronItem{
+		ID:         newID(expression, script),
+		Expression: expression,
+		Script:     script,
+		ChannelID:  channelID,
 	}
-	item.cronID = id
+
+	id, err := s.cron.Add(item.Expression, s.makeCronAction(item))
+	if err != nil {
+		return "", fmt.Errorf("s.cron.Add: %w", err)
+	}
+	item.CronID = id
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := appendLine(filesystem.CronsPath, line); err != nil {
+	crons, err := filesystem.GetCrons()
+	if err != nil {
 		s.cron.Remove(id)
-		return fmt.Errorf("appendLine: %w", err)
+		return "", fmt.Errorf("readCronsJSON: %w", err)
+	}
+
+	if err := filesystem.WriteCrons(append(crons, item)); err != nil {
+		s.cron.Remove(id)
+		return "", fmt.Errorf("filesystem.WriteCrons: %w", err)
 	}
 
 	s.crons = append(s.crons, item)
-	return nil
+	return fmt.Sprintf("cron task added: %s %s\n-# ID: `%s`", expression, script, item.ID), nil
 }
 
-func parseCronLine(line string) (cronItem, error) {
-	fields := strings.Fields(line)
-	if len(fields) < 6 {
-		return cronItem{}, fmt.Errorf("at least 6 fields `{min} {hour} {dom} {mon} {dow} {script}`")
-	}
-
-	channelID := ""
-	if len(fields) >= 7 {
-		channelID = fields[6]
-	}
-
-	return cronItem{
-		line:       line,
-		expression: strings.Join(fields[:5], " "),
-		script:     fields[5],
-		channelID:  channelID,
-	}, nil
-}
-
-func (s *Scheduler) makeCronAction(item cronItem) func() {
+func (s *Scheduler) makeCronAction(item filesystem.CronItem) func() {
 	return func() {
-		output := runScript("cron", filepath.Join(filesystem.ScriptsDir, item.script))
+		output := runScript("cron", filepath.Join(filesystem.ScriptsDir, item.Script))
 		s.mu.Lock()
 		cb := s.OnCompleted
 		s.mu.Unlock()
-		if item.channelID != "" && cb != nil {
-			cb(item.channelID, output)
+		if item.ChannelID != "" && cb != nil {
+			cb(item.ChannelID, output)
 		}
 	}
 }

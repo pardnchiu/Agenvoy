@@ -3,65 +3,37 @@ package scheduler
 import (
 	"fmt"
 	"log/slog"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
-func (s *Scheduler) LoadTasks() error {
+func (s *Scheduler) SetupTasks() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	lines, err := filesystem.ReadFileSlice(filesystem.TasksPath)
+	items, err := filesystem.GetTasks()
 	if err != nil {
-		return fmt.Errorf("filesystem.ReadFile: %w", err)
+		return fmt.Errorf("filesystem.GetTasks: %w", err)
 	}
 
 	now := time.Now()
-	var skip []string
-	for _, line := range lines {
-		trim := strings.TrimSpace(line)
-		if trim == "" || strings.HasPrefix(trim, "#") {
+	var valid []filesystem.TaskItem
+	for _, item := range items {
+		if !item.At.After(now) {
 			continue
 		}
-
-		item, err := parseTaskLine(trim)
-		if err != nil {
-			slog.Warn("parseTaskLine",
+		valid = append(valid, item)
+		if err := s.setTask(item); err != nil {
+			slog.Warn("s.setTask",
 				slog.String("error", err.Error()))
-			continue
 		}
-
-		if !item.at.After(now) {
-			continue
-		}
-
-		skip = append(skip, trim)
-		s.setTask(item)
 	}
 
-	return filesystem.WriteFileWithLines(filesystem.TasksPath, skip, 0644)
-}
-
-func (s *Scheduler) RemoveTask(index int) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if index < 1 || index > len(s.tasks) {
-		return fmt.Errorf("not exist")
+	// * rewrite file with only future tasks
+	if err := filesystem.WriteTasks(valid); err != nil {
+		return fmt.Errorf("filesystem.WriteTasks: %w", err)
 	}
-
-	target := s.tasks[index-1]
-
-	if timer, ok := s.timers[target.line]; ok {
-		timer.Stop()
-		delete(s.timers, target.line)
-	}
-	removeLine(filesystem.TasksPath, target.line)
-	s.tasks = append(s.tasks[:index-1], s.tasks[index:]...)
-	removeScript(filepath.Join(filesystem.ScriptsDir, target.script))
 	return nil
 }
 
@@ -71,7 +43,7 @@ func (s *Scheduler) ListTasks() []string {
 
 	result := make([]string, len(s.tasks))
 	for i, task := range s.tasks {
-		result[i] = fmt.Sprintf("%d. %s", i+1, task.line)
+		result[i] = fmt.Sprintf("%s %s %s", task.ID, task.At.Local().Format("2006-01-02 15:04:05"), task.Script)
 	}
 	return result
 }

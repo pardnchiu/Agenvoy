@@ -30,12 +30,12 @@ func New(plannerAgent agentTypes.Agent, agentRegistry agentTypes.AgentRegistry, 
 		slog.Warn("scheduler.New",
 			slog.String("error", err.Error()))
 	} else {
-		if err := scheduler.Get().LoadTasks(); err != nil {
+		if err := scheduler.Get().SetupTasks(); err != nil {
 			slog.Warn("scheduler.Get().LoadTasks",
 				slog.String("error", err.Error()))
 		}
-		if err := scheduler.Get().LoadCrons(); err != nil {
-			slog.Warn("scheduler.Get().LoadCrons",
+		if err := scheduler.Get().SetupCrons(); err != nil {
+			slog.Warn("scheduler.Get().SetupCrons",
 				slog.String("error", err.Error()))
 		}
 	}
