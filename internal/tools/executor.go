@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	_ "embed"
-
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -17,12 +15,9 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-//go:embed embed/tools.json
-var toolsMap []byte
-
 func NewExecutor(workPath, sessionID string) (*toolTypes.Executor, error) {
 	var tools []toolTypes.Tool
-	if err := json.Unmarshal(toolsMap, &tools); err != nil {
+	if err := json.Unmarshal(toolRegister.JSON(), &tools); err != nil {
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 

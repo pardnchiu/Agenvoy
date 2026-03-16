@@ -18,48 +18,70 @@ import (
 )
 
 func init() {
-	toolRegister.Register("run_command", func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-		var params struct {
-			Command string `json:"command"`
-		}
-		if err := json.Unmarshal(args, &params); err != nil {
-			return "", fmt.Errorf("json.Unmarshal: %w", err)
-		}
-		return runCommand(ctx, e, params.Command)
+	toolRegister.Regist(toolRegister.Def{
+		Name:        "run_command",
+		Description: "執行 shell 指令並返回其輸出。用於執行建置工具、git 指令等。",
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"command": map[string]any{
+					"type":        "string",
+					"description": "要執行的 shell 指令",
+				},
+			},
+			"required": []string{"command"},
+		},
+		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+			var params struct {
+				Command string `json:"command"`
+			}
+			if err := json.Unmarshal(args, &params); err != nil {
+				return "", fmt.Errorf("json.Unmarshal: %w", err)
+			}
+			return runCommand(ctx, e, params.Command)
+		},
 	})
 
-	toolRegister.Register("list_tools", func(_ context.Context, e *toolTypes.Executor, _ json.RawMessage) (string, error) {
-		type entry struct {
-			Name        string `json:"name"`
-			Description string `json:"description"`
-		}
+	toolRegister.Regist(toolRegister.Def{
+		Name:        "list_tools",
+		Description: "列出目前所有可用的工具，包含內建工具與動態載入的 API 工具（api_* 前綴）。回傳每個工具的名稱與描述。",
+		Parameters: map[string]any{
+			"type":       "object",
+			"properties": map[string]any{},
+		},
+		Handler: func(_ context.Context, e *toolTypes.Executor, _ json.RawMessage) (string, error) {
+			type entry struct {
+				Name        string `json:"name"`
+				Description string `json:"description"`
+			}
 
-		list := make([]entry, 0, len(e.Tools))
-		for _, t := range e.Tools {
-			list = append(list, entry{
-				Name:        t.Function.Name,
-				Description: t.Function.Description,
-			})
-		}
+			list := make([]entry, 0, len(e.Tools))
+			for _, t := range e.Tools {
+				list = append(list, entry{
+					Name:        t.Function.Name,
+					Description: t.Function.Description,
+				})
+			}
 
-		if e.APIToolbox != nil {
-			for _, raw := range e.APIToolbox.GetTools() {
-				fn, _ := raw["function"].(map[string]any)
-				if fn == nil {
-					continue
-				}
-				name, _ := fn["name"].(string)
-				desc, _ := fn["description"].(string)
-				if name != "" {
-					list = append(list, entry{Name: name, Description: desc})
+			if e.APIToolbox != nil {
+				for _, raw := range e.APIToolbox.GetTools() {
+					fn, _ := raw["function"].(map[string]any)
+					if fn == nil {
+						continue
+					}
+					name, _ := fn["name"].(string)
+					desc, _ := fn["description"].(string)
+					if name != "" {
+						list = append(list, entry{Name: name, Description: desc})
+					}
 				}
 			}
-		}
 
-		out, err := json.MarshalIndent(list, "", "  ")
-		if err != nil {
-			return "", fmt.Errorf("json.MarshalIndent: %w", err)
-		}
-		return string(out), nil
+			out, err := json.Marshal(list)
+			if err != nil {
+				return "", fmt.Errorf("json.Marshal: %w", err)
+			}
+			return string(out), nil
+		},
 	})
 }

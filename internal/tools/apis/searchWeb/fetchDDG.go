@@ -18,7 +18,6 @@ var (
 )
 
 func fetchDDG(ctx context.Context, query string, timeRange TimeRange) ([]ResultData, error) {
-	const limit = 10
 	params := map[string]any{
 		"q":  query,
 		"kl": "tw-tzh",

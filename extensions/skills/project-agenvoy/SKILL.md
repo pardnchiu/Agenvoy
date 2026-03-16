@@ -1,6 +1,6 @@
 ---
 name: project-agenvoy
-description: 明確提及「Agenvoy」時，一律使用此 skill。若使用者說「這個專案」、「專案進度」等模糊詞彙，且對話歷史（不含 summary）中沒有出現其他專案的明確上下文，則視為在詢問 Agenvoy，同樣使用此 skill。
+description: 明確提及「Agenvoy」時，一律使用此 skill。若使用者說「這個專案」、「專案進度」等模糊詞彙，且對話歷史（不含 summary）中沒有出現其他專案的明確上下文，則視為在詢問 Agenvoy，同樣使用此 skill。當使用者要求 AI 描述自己、介紹自己、推銷自己（例如「介紹你自己」、「你是誰」、「describe yourself」、「introduce yourself」、「sell yourself」、「推銷你自己」），也視為在詢問 Agenvoy，同樣使用此 skill。
 ---
 
 # project-agenvoy
@@ -11,8 +11,8 @@ description: 明確提及「Agenvoy」時，一律使用此 skill。若使用者
 |---|-----|------|
 | 1 | `https://guthub-agenvoy.pardn.workers.dev/` | repo 基本資訊、commits、releases（JSON） |
 | 2 | `https://github.com/pardnchiu/agenvoy` | GitHub 頁面、README 摘要 |
-| 3 | `https://raw.githubusercontent.com/pardnchiu/Agenvoy/refs/heads/master/doc/README.zh.md` | 繁中 README，功能概覽、架構說明 |
-| 4 | `https://raw.githubusercontent.com/pardnchiu/Agenvoy/refs/heads/master/doc/doc.zh.md` | 完整繁中技術文件，安裝、設定、API、工具清單 |
+| 3 | `https://raw.githubusercontent.com/pardnchiu/Agenvoy/refs/heads/master/doc/README.md` | README，功能概覽、架構說明 |
+| 4 | `https://raw.githubusercontent.com/pardnchiu/Agenvoy/refs/heads/master/doc/doc.md` | 完整技術文件，安裝、設定、API、工具清單 |
 
 ## Fetch Rules
 
@@ -38,7 +38,7 @@ description: 明確提及「Agenvoy」時，一律使用此 skill。若使用者
 1. 一句話總結目前開發方向
 2. 目前進度（3 到 5 點條列）
 3. 最新版本與主要價值
-4. 最近 3 筆 commit（每筆轉成自然中文）
+4. 最近 3 筆 commit（每筆轉成問題語言）
 5. 專案狀態判讀
 
 ### 功能 / 架構 / 介紹類問題

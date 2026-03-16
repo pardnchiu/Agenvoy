@@ -12,10 +12,36 @@ type Handler func(ctx context.Context, e *toolTypes.Executor, args json.RawMessa
 
 type GroupHandler func(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error)
 
-var handlerMap = map[string]Handler{}
+type Def struct {
+	Name        string
+	Description string
+	Parameters  map[string]any
+	Handler     Handler
+}
 
-func Register(name string, h Handler) {
-	handlerMap[name] = h
+var handlerMap = map[string]Handler{}
+var defList []toolTypes.Tool
+
+func Regist(d Def) {
+	params, _ := json.Marshal(d.Parameters)
+	tool := toolTypes.Tool{
+		Type: "function",
+		Function: toolTypes.ToolFunction{
+			Name:        d.Name,
+			Description: d.Description,
+			Parameters:  params,
+		},
+	}
+	handlerMap[d.Name] = d.Handler
+	defList = append(defList, tool)
+}
+
+func JSON() []byte {
+	b, err := json.Marshal(defList)
+	if err != nil {
+		return []byte("[]")
+	}
+	return b
 }
 
 func Dispatch(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
