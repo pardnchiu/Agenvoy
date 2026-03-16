@@ -93,17 +93,17 @@ agenvoy/
 │   │   ├── provider/       # 6 個 AI Provider 後端 + 模型登錄檔
 │   │   └── types/          # Agent 介面 + Message 類型
 │   ├── discord/            # Discord Slash Command + 檔案附件
-│   ├── filesystem/         # 集中路徑常數與 Session 管理
+│   ├── filesystem/         # 集中路徑常數、Session 管理與 Keychain
 │   ├── scheduler/          # 持久化一次性與週期性任務排程器
 │   ├── skill/              # Markdown Skill 掃描器與解析器
-│   ├── tools/              # 25+ 內建工具 + API Extension 適配器
-│   └── keychain/           # OS Keychain 憑證儲存
+│   ├── tools/              # 25+ 自註冊工具 + API Extension 適配器
 ├── go.mod
 └── LICENSE
 ```
 
 ## 版本歷史
 
+- **v0.13.0** — 自註冊 Tool Registry 取代 switch routing 與嵌入式 JSON 定義；排程器持久化 JSON 儲存含完整 CRUD（tasks 與 crons 的新增/更新/刪除）；Keychain 遷移至 `filesystem` 下；絕對路徑限制僅允許使用者 Home 目錄；裁切歷史加入省略號標記
 - **v0.12.0** — 完整排程子系統（Cron + 一次性任務含 Discord 回呼）；集中 `filesystem` + `configs` 套件；以 `go-scheduler` 取代自製 Cron 解析器；`schedule-task` Skill
 - **v0.11.2** — 修正錯誤記憶雙向關鍵字比對；修正 Claude 多段 System Prompt 合併；System Prompt 新增工具呼叫前禁止輸出文字規則
 - **v0.11.1** — 工具執行錯誤追蹤（hash 型 `tool_errors/`）；原子性寫入（`utils.WriteFile`）；Gemini 多部分訊息修正；8 個新公開 API Extension；`get_tool_error` 工具

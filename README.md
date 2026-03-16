@@ -93,17 +93,17 @@ agenvoy/
 │   │   ├── provider/       # 6 AI provider backends + model registry
 │   │   └── types/          # Agent interface + message types
 │   ├── discord/            # Discord slash commands + file attachments
-│   ├── filesystem/         # Centralized path constants and session manager
+│   ├── filesystem/         # Centralized path constants, session manager, and keychain
 │   ├── scheduler/          # Persistent one-time and recurring task scheduler
 │   ├── skill/              # Markdown skill scanner and parser
-│   ├── tools/              # 25+ built-in tools + API extension adapter
-│   └── keychain/           # OS keychain credential storage
+│   ├── tools/              # 25+ self-registering tools + API extension adapter
 ├── go.mod
 └── LICENSE
 ```
 
 ## Version History
 
+- **v0.13.0** — Self-registering tool Registry replacing switch-based routing and embedded JSON definitions; scheduler persistent JSON storage with full CRUD (add/update/delete for tasks and crons); keychain migrated under `filesystem`; absolute path restriction to user home directory; trimmed history ellipsis markers
 - **v0.12.0** — Full scheduler subsystem (cron + one-time tasks with Discord callbacks); centralize `filesystem` + `configs` packages; replace custom cron parser with `go-scheduler`; `schedule-task` skill
 - **v0.11.2** — Fix bidirectional error-memory keyword matching; fix Claude multi-system-prompt merge; pre-tool text suppression rule in system prompt
 - **v0.11.1** — Tool execution error tracking (hash-based `tool_errors/`); atomic writes (`utils.WriteFile`); Gemini multipart message fix; 8 new public API extensions; `get_tool_error` tool
