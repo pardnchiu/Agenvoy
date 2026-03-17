@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -31,33 +28,6 @@ var DeniedConfig = func() deniedConfig {
 	}
 	return cfg
 }()
-
-func isDenied(path string) bool {
-	cleaned := filepath.Clean(path)
-	base := filepath.Base(cleaned)
-
-	for _, dir := range DeniedConfig.Dirs {
-		if strings.Contains(cleaned, fmt.Sprintf("/%s/", dir)) || strings.Contains(cleaned, fmt.Sprintf("/%s", dir)) {
-			return true
-		}
-	}
-	for _, f := range DeniedConfig.Files {
-		if strings.Contains(cleaned, f) {
-			return true
-		}
-	}
-	for _, prefix := range DeniedConfig.Prefixes {
-		if strings.HasPrefix(base, prefix) && !strings.Contains(base, ".example") {
-			return true
-		}
-	}
-	for _, ext := range DeniedConfig.Extensions {
-		if strings.HasSuffix(base, ext) {
-			return true
-		}
-	}
-	return false
-}
 
 func registReadFile() {
 	toolRegister.Regist(toolRegister.Def{
@@ -83,7 +53,7 @@ func registReadFile() {
 
 			content, _, err := readFile(e, params.Path)
 			if err != nil {
-				return "", fmt.Errorf("readFile: %w", err)
+				return "", fmt.Errorf("file.readFile: %w", err)
 			}
 			return content, nil
 		},
@@ -107,16 +77,4 @@ func readFile(e *toolTypes.Executor, path string) (string, string, error) {
 		return "", absPath, fmt.Errorf("filesystem.ReadFile: %w", err)
 	}
 	return data, absPath, nil
-}
-
-func getFullPath(e *toolTypes.Executor, path string) (string, error) {
-	if !filepath.IsAbs(path) {
-		return filepath.Join(e.WorkPath, path), nil
-	}
-	cleaned := filepath.Clean(path)
-	homeDir, err := os.UserHomeDir()
-	if err != nil || !strings.HasPrefix(cleaned, filepath.Clean(homeDir)+string(filepath.Separator)) {
-		return "", fmt.Errorf("only allow user home: %s", path)
-	}
-	return cleaned, nil
 }

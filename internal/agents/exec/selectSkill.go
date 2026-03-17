@@ -30,7 +30,7 @@ func SelectSkill(ctx context.Context, bot agentTypes.Agent, scanner *skill.Skill
 		return nil
 	}
 
-	userContent := strings.TrimSpace(trimInput)
+	userContent := strings.TrimSpace(userInput)
 	if len(fileNames) > 0 {
 		userContent += fmt.Sprintf("\nAttached files: %s", strings.Join(fileNames, ", "))
 	}

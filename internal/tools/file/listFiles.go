@@ -42,13 +42,16 @@ func registListFiles() {
 			var err error
 			if params.Recursive {
 				files, err = filesystem.WalkFiles(e.WorkPath, params.Path)
+				if err != nil {
+					return "", fmt.Errorf("filesystem.WalkFiles: %w", err)
+				}
 			} else {
 				files, err = filesystem.ListDir(e.WorkPath, params.Path)
+				if err != nil {
+					return "", fmt.Errorf("filesystem.ListDir: %w", err)
+				}
 			}
-			if err != nil {
-				return "", fmt.Errorf("list files: %w", err)
-			}
-			return strings.Join(files, "\n") + "\n", nil
+			return fmt.Sprintf("[%s]", strings.Join(files, ",")), nil
 		},
 	})
 }

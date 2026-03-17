@@ -240,3 +240,30 @@ func ListDir(dirs ...string) ([]string, error) {
 	}
 	return files, nil
 }
+
+func IsMatch(patterns, parts []string) bool {
+	if len(patterns) == 0 {
+		return len(parts) == 0
+	}
+
+	pattern := patterns[0]
+	if pattern == "**" {
+		rest := patterns[1:]
+		for i := 0; i <= len(parts); i++ {
+			if IsMatch(rest, parts[i:]) {
+				return true
+			}
+		}
+		return false
+	}
+
+	if len(parts) == 0 {
+		return false
+	}
+
+	match, err := filepath.Match(pattern, parts[0])
+	if err != nil || !match {
+		return false
+	}
+	return IsMatch(patterns[1:], parts[1:])
+}

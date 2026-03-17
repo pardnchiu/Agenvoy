@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 )
@@ -60,16 +61,33 @@ func extractSummary(sessionID, value string) string {
 		}
 	}
 
-	if jsonData != nil {
-		if newMap, ok := jsonData.(map[string]any); ok {
-			_, oldMap := sessionManager.GetSummary(sessionID)
-			if oldMap != nil {
-				newMap = mergeSummary(oldMap, newMap)
-			}
-			jsonData = newMap
+	if jsonData == nil {
+		jsonData = map[string]any{
+			"confirmed_needs":    []any{},
+			"constraints":        []any{},
+			"core_discussion":    "",
+			"current_conclusion": []any{},
+			"discussion_log": []any{
+				map[string]any{
+					"conclusion": "resolved",
+					"time":       time.Now().Format("2006-01-02 15:04"),
+					"topic":      strings.TrimSpace(cleaned),
+				},
+			},
+			"excluded_options":  []any{},
+			"key_data":          []any{},
+			"pending_questions": []any{},
 		}
-		sessionManager.SaveSummary(sessionID, jsonData)
 	}
+
+	if newMap, ok := jsonData.(map[string]any); ok {
+		_, oldMap := sessionManager.GetSummary(sessionID)
+		if oldMap != nil {
+			newMap = mergeSummary(oldMap, newMap)
+		}
+		jsonData = newMap
+	}
+	sessionManager.SaveSummary(sessionID, jsonData)
 	return cleaned
 }
 

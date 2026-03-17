@@ -53,9 +53,9 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	alreadyCall := make(map[string]string)
 	emptyCount := 0
 	for i := 0; i < limit; i++ {
-		// if i > 0 {
-		// 	time.Sleep(500 * time.Millisecond)
-		// }
+		if i > 0 {
+			time.Sleep(300 * time.Millisecond)
+		}
 		resp, err := data.Agent.Send(ctx, session.Messages, exec.Tools)
 		if err != nil {
 			slog.Warn("data.Agent.Send",

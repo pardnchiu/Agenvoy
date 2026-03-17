@@ -45,7 +45,7 @@ func registPatchEdit() {
 
 			content, absPath, err := readFile(e, params.Path)
 			if err != nil {
-				return "", fmt.Errorf("readFile: %w", err)
+				return "", fmt.Errorf("file.readFile: %w", err)
 			}
 
 			if !strings.Contains(content, params.OldString) {
@@ -56,7 +56,7 @@ func registPatchEdit() {
 			if err := filesystem.WriteFile(absPath, newContent, 0644); err != nil {
 				return "", fmt.Errorf("filesystem.WriteFile: %w", err)
 			}
-			return fmt.Sprintf("%s updated", absPath), nil
+			return fmt.Sprintf("successfully updated %s", absPath), nil
 		},
 	})
 }

@@ -12,30 +12,7 @@ import (
 func init() {
 	registReadFile()
 	registListFiles()
-
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "glob_files",
-		Description: "尋找符合 glob 模式的檔案。用於尋找特定檔案類型（例如 '**/*.go' 表示所有 Go 檔案）。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"pattern": map[string]any{
-					"type":        "string",
-					"description": "用於比對檔案的 Glob 模式（例如 '**/*.go'、'src/**/*.ts'、'*.md'）",
-				},
-			},
-			"required": []string{"pattern"},
-		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				Pattern string `json:"pattern"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			return glob(e, params.Pattern)
-		},
-	})
+	registGlobFiles()
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "search_content",
