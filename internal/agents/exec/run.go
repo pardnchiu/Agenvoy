@@ -42,6 +42,8 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		Type: agentTypes.EventAgentSelect,
 	}
 
+	// SelectTools(ctx, bot, trimInput, fileNames)
+
 	agent := SelectAgent(ctx, bot, registry, trimInput, matchedSkill != nil)
 	events <- agentTypes.Event{
 		Type: agentTypes.EventAgentResult,
