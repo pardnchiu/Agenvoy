@@ -190,6 +190,13 @@ func (a *Agent) convertToOutput(resp *Output) *agentTypes.Output {
 		Choices: make([]agentTypes.OutputChoices, 1),
 	}
 
+	if resp.UsageMetadata != nil {
+		output.Usage = agentTypes.Usage{
+			Input:  resp.UsageMetadata.PromptTokenCount,
+			Output: resp.UsageMetadata.CandidatesTokenCount,
+		}
+	}
+
 	if len(resp.Candidates) == 0 {
 		return output
 	}

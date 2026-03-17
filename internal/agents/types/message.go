@@ -31,6 +31,7 @@ type ToolCall struct {
 
 type Output struct {
 	Choices []OutputChoices `json:"choices"`
+	Usage   Usage           `json:"usage"`
 	Error   *struct {
 		Message string      `json:"message"`
 		Type    string      `json:"type"`
@@ -42,4 +43,24 @@ type OutputChoices struct {
 	Message      Message `json:"message"`
 	Delta        Message `json:"delta"`
 	FinishReason string  `json:"finish_reason,omitempty"`
+}
+
+type Usage struct {
+	Input  int `json:"input_tokens"`
+	Output int `json:"output_tokens"`
+}
+
+func (u *Usage) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		InputTokens      int `json:"input_tokens"`
+		OutputTokens     int `json:"output_tokens"`
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Input = raw.InputTokens + raw.PromptTokens
+	u.Output = raw.OutputTokens + raw.CompletionTokens
+	return nil
 }

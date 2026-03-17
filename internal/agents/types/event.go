@@ -27,6 +27,8 @@ type Event struct {
 	ToolArgs string    `json:"tool_args,omitempty"`
 	ToolID   string    `json:"tool_id,omitempty"`
 	Result   string    `json:"result,omitempty"`
+	Model    string    `json:"model,omitempty"`
+	Usage    *Usage    `json:"usage,omitempty"`
 	Err      error     `json:"-"`
 	ReplyCh  chan bool `json:"-"`
 }

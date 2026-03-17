@@ -50,6 +50,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		limit = MaxSkillIterations
 	}
 
+	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
 	emptyCount := 0
 	for i := 0; i < limit; i++ {
@@ -62,6 +63,9 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				slog.String("error", err.Error()))
 			continue
 		}
+
+		usage.Input += resp.Usage.Input
+		usage.Output += resp.Usage.Output
 
 		if len(resp.Choices) == 0 {
 			if actionError(&emptyCount, events) {
@@ -122,7 +126,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			return fmt.Errorf("unexpected content type: %T", choice.Message.Content)
 		}
 
-		events <- agentTypes.Event{Type: agentTypes.EventDone}
+		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
 
 		if len(session.Tools) > 0 {
 			if data, err := json.Marshal(session.Tools); err == nil {
@@ -138,16 +142,18 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	})
 	resp, err := data.Agent.Send(ctx, summaryMessages, nil)
 	if err == nil && len(resp.Choices) > 0 {
+		usage.Input += resp.Usage.Input
+		usage.Output += resp.Usage.Output
 		if text, ok := resp.Choices[0].Message.Content.(string); ok && text != "" {
 			cleaned := extractSummary(session.ID, text)
 			events <- agentTypes.Event{Type: agentTypes.EventText, Text: cleaned}
-			events <- agentTypes.Event{Type: agentTypes.EventDone}
+			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
 			return nil
 		}
 	}
 
 	events <- agentTypes.Event{Type: agentTypes.EventText, Text: "工具無法取得資料，請稍後再試或改用其他方式查詢。"}
-	events <- agentTypes.Event{Type: agentTypes.EventDone}
+	events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
 	return nil
 }
 

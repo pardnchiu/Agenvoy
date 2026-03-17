@@ -179,6 +179,10 @@ func (a *Agent) convertToTools(tools []toolTypes.Tool) []map[string]any {
 func (a *Agent) convertToOutput(resp *Output) *agentTypes.Output {
 	output := &agentTypes.Output{
 		Choices: make([]agentTypes.OutputChoices, 1),
+		Usage: agentTypes.Usage{
+			Input:  resp.Usage.InputTokens,
+			Output: resp.Usage.OutputTokens,
+		},
 	}
 
 	var toolCalls []agentTypes.ToolCall

@@ -61,6 +61,7 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 
 	var replyText string
 	var execErrors []string
+	var doneEvent agentTypes.Event
 	for e := range events {
 		switch e.Type {
 		case agentTypes.EventSkillResult:
@@ -82,6 +83,8 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 		case agentTypes.EventToolCall:
 			slog.Info("EventToolCall",
 				slog.Any("tool", e.ToolName))
+		case agentTypes.EventDone:
+			doneEvent = e
 		// * use full name for remindering
 		case agentTypes.EventSkillSelect,
 			agentTypes.EventAgentSelect,
@@ -90,8 +93,7 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 			agentTypes.EventToolConfirm,
 			agentTypes.EventToolCallText,
 			agentTypes.EventToolResult,
-			agentTypes.EventToolSkipped,
-			agentTypes.EventDone:
+			agentTypes.EventToolSkipped:
 			break
 		}
 	}
@@ -111,7 +113,15 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	if len(execErrors) > 0 {
 		replyText = fmt.Sprintf("%s\n-# errors: %s", replyText, strings.Join(execErrors, ", "))
 	}
-	replyText = fmt.Sprintf("%s\n-# %s", replyText, agent.Name())
+	model := doneEvent.Model
+	if model == "" {
+		model = agent.Name()
+	}
+	footer := model
+	if doneEvent.Usage != nil {
+		footer = fmt.Sprintf("%s | in:%d out:%d", footer, doneEvent.Usage.Input, doneEvent.Usage.Output)
+	}
+	replyText = fmt.Sprintf("%s\n-# %s", replyText, footer)
 
 	dr := &discordTypes.DiscordReply{
 		Session:   dcSession,
