@@ -98,8 +98,8 @@ func readFile(e *toolTypes.Executor, path string) (string, string, error) {
 	}
 
 	// TODO: need to move to filesystem
-	if isExclude(e, absPath) {
-		return "", absPath, fmt.Errorf("isExclude: %s", path)
+	if filesystem.IsExclude(e.WorkPath, absPath) {
+		return "", absPath, fmt.Errorf("filesystem.IsExclude: %s", path)
 	}
 
 	data, err := filesystem.ReadFile(absPath)
@@ -119,23 +119,4 @@ func getFullPath(e *toolTypes.Executor, path string) (string, error) {
 		return "", fmt.Errorf("only allow user home: %s", path)
 	}
 	return cleaned, nil
-}
-
-func isExclude(e *toolTypes.Executor, path string) bool {
-	excluded := false
-	for _, e := range e.Exclude {
-		match, err := filepath.Match(e.File, filepath.Base(path))
-		if err != nil {
-			continue
-		}
-
-		if !match {
-			match = strings.Contains(path, "/"+e.File+"/") ||
-				strings.HasPrefix(path, e.File+"/")
-		}
-		if match {
-			excluded = !e.Negate
-		}
-	}
-	return excluded
 }

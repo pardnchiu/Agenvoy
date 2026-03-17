@@ -10,7 +10,6 @@ import (
 	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	apiAdapter "github.com/pardnchiu/agenvoy/internal/tools/apis/adapter"
-	"github.com/pardnchiu/agenvoy/internal/tools/file"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -34,11 +33,6 @@ func NewExecutor(workPath, sessionID string) (*toolTypes.Executor, error) {
 	apiToolbox := apiAdapter.New()
 	apiToolbox.LoadFS(extensions.APIs, "apis")
 
-	// if configDir, err := utils.GetConfigDir("apis"); err == nil {
-	// 	apiToolbox.Load(configDir.Home)
-	// 	apiToolbox.Load(configDir.Work)
-	// }
-	//
 	for _, dir := range []string{
 		filesystem.APIsDir,
 		filesystem.WorkAPIsDir,
@@ -62,7 +56,6 @@ func NewExecutor(workPath, sessionID string) (*toolTypes.Executor, error) {
 		WorkPath:       workPath,
 		SessionID:      sessionID,
 		AllowedCommand: allowedCommand,
-		Exclude:        file.ListExcludes(workPath),
 		Tools:          tools,
 		APIToolbox:     apiToolbox,
 	}, nil

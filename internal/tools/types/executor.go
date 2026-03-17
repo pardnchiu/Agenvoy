@@ -11,14 +11,8 @@ type Executor struct {
 	SessionID      string
 	Allowed        []string // * limit to these folders to use
 	AllowedCommand map[string]bool
-	Exclude        []Exclude
 	Tools          []Tool
 	APIToolbox     *apiAdapter.Translator
-}
-
-type Exclude struct {
-	File   string
-	Negate bool
 }
 
 type Tool struct {

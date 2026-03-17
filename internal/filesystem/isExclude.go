@@ -1,4 +1,4 @@
-package file
+package filesystem
 
 import (
 	"bufio"
@@ -10,24 +10,48 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/configs"
-	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func ListExcludes(root string) []toolTypes.Exclude {
+type Exclude struct {
+	File   string
+	Negate bool
+}
+
+func IsExclude(workDir, absPath string) bool {
+	excludes := listExcludes(workDir)
+	excluded := false
+	for _, exclude := range excludes {
+		match, err := filepath.Match(exclude.File, filepath.Base(absPath))
+		if err != nil {
+			continue
+		}
+
+		if !match {
+			match = strings.Contains(absPath, "/"+exclude.File+"/") ||
+				strings.HasPrefix(absPath, exclude.File+"/")
+		}
+		if match {
+			excluded = !exclude.Negate
+		}
+	}
+	return excluded
+}
+
+func listExcludes(dir string) []Exclude {
 	var defaults []string
 	if err := json.Unmarshal(configs.ExcludeList, &defaults); err != nil {
-		slog.Warn("failed to unmarshal exclude files, using empty list",
+		slog.Warn("json.Unmarshal",
 			slog.String("error", err.Error()))
 	}
 
-	newFiles := make([]toolTypes.Exclude, 0, len(defaults))
+	newFiles := make([]Exclude, 0, len(defaults))
 	for _, line := range defaults {
 		if ef, ok := checkLine(line); ok {
 			newFiles = append(newFiles, ef)
 		}
 	}
 
-	entries, err := os.ReadDir(root)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return newFiles
 	}
@@ -41,20 +65,20 @@ func ListExcludes(root string) []toolTypes.Exclude {
 			continue
 		}
 
-		newFiles = append(newFiles, parseIgnore(filepath.Join(root, name))...)
+		newFiles = append(newFiles, parseIgnore(filepath.Join(dir, name))...)
 	}
 
 	return newFiles
 }
 
-func parseIgnore(path string) []toolTypes.Exclude {
+func parseIgnore(path string) []Exclude {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil
 	}
 	defer file.Close()
 
-	var files []toolTypes.Exclude
+	var files []Exclude
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		if ef, ok := checkLine(scanner.Text()); ok {
@@ -65,10 +89,10 @@ func parseIgnore(path string) []toolTypes.Exclude {
 	return files
 }
 
-func checkLine(raw string) (toolTypes.Exclude, bool) {
+func checkLine(raw string) (Exclude, bool) {
 	line := strings.TrimSpace(raw)
 	if line == "" || strings.HasPrefix(line, "#") {
-		return toolTypes.Exclude{}, false
+		return Exclude{}, false
 	}
 
 	negate := false
@@ -80,10 +104,10 @@ func checkLine(raw string) (toolTypes.Exclude, bool) {
 	line = strings.TrimPrefix(line, "/")
 	line = strings.TrimSuffix(line, "/")
 	if line == "" {
-		return toolTypes.Exclude{}, false
+		return Exclude{}, false
 	}
 
-	return toolTypes.Exclude{
+	return Exclude{
 		File:   line,
 		Negate: negate,
 	}, true

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
@@ -12,7 +13,7 @@ func glob(e *toolTypes.Executor, pattern string) (string, error) {
 	pattern = filepath.ToSlash(pattern)
 	patterns := strings.Split(pattern, "/")
 
-	files, err := walkFiles(e, e.WorkPath)
+	files, err := filesystem.WalkFiles(e.WorkPath)
 	if err != nil {
 		return "", err
 	}
