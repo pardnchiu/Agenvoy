@@ -2,6 +2,7 @@ package discord
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -91,6 +92,9 @@ func New(plannerAgent agentTypes.Agent, agentRegistry agentTypes.AgentRegistry, 
 
 func wrapScriptOutput(agent agentTypes.Agent, output string) string {
 	if agent == nil {
+		return output
+	}
+	if err := json.Unmarshal([]byte(output), &struct{}{}); err != nil {
 		return output
 	}
 	messages := []agentTypes.Message{

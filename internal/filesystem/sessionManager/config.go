@@ -54,7 +54,7 @@ func Save(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return filesystem.WriteFile(filesystem.AgenvoyDir, configPath, string(data), 0644)
+	return filesystem.WriteFile(configPath, string(data), 0644)
 }
 
 func UpsertModel(entry ModelEntry) error {

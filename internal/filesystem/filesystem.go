@@ -71,15 +71,10 @@ func Init() error {
 	return nil
 }
 
-func ReadFile(dir, path string) (string, error) {
-	absPath, err := GetAbsPath(dir, path)
+func ReadFile(path string) (string, error) {
+	bytes, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("filesystem.GetAbsPath: %w", err)
-	}
-
-	bytes, err := os.ReadFile(absPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read file (%s): %w", absPath, err)
+		return "", fmt.Errorf("os.ReadFile: %w", err)
 	}
 
 	return string(bytes), nil
@@ -103,24 +98,19 @@ func ReadFileSlice(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-func WriteFile(dir, path, content string, permission os.FileMode) error {
-	absPath, err := GetAbsPath(dir, path)
-	if err != nil {
-		return fmt.Errorf("GetAbsPath: %w", err)
-	}
-
-	absDir := filepath.Dir(absPath)
+func WriteFile(path, content string, permission os.FileMode) error {
+	absDir := filepath.Dir(path)
 	if err := os.MkdirAll(absDir, 0755); err != nil {
 		return fmt.Errorf("os.MkdirAll: %w", err)
 	}
 	// * ensure atomic write:
 	// * pre-save data as temp
-	tmp := absPath + ".tmp"
+	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, []byte(content), permission); err != nil {
 		return fmt.Errorf("os.WriteFile: %w", err)
 	}
 	// * rename temp to target
-	if err := os.Rename(tmp, absPath); err != nil {
+	if err := os.Rename(tmp, path); err != nil {
 		os.Remove(tmp)
 		slog.Warn("os.Rename",
 			slog.String("tmp", tmp),
@@ -135,7 +125,7 @@ func WriteFileWithLines(path string, lines []string, permission os.FileMode) err
 	if len(lines) > 0 {
 		content += "\n"
 	}
-	return WriteFile(AgenvoyDir, path, content, permission)
+	return WriteFile(path, content, permission)
 }
 
 func GetAbsPath(dir, path string) (string, error) {

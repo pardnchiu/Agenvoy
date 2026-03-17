@@ -17,7 +17,7 @@ type CronItem struct {
 }
 
 func GetCrons() ([]CronItem, error) {
-	data, err := ReadFile(AgenvoyDir, CronsPath)
+	data, err := ReadFile(CronsPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
@@ -37,7 +37,7 @@ func WriteCrons(crons []CronItem) error {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
 
-	if err := WriteFile(AgenvoyDir, CronsPath, string(bytes), 0644); err != nil {
+	if err := WriteFile(CronsPath, string(bytes), 0644); err != nil {
 		return fmt.Errorf("WriteFile: %w", err)
 	}
 	return nil
@@ -51,7 +51,7 @@ type TaskItem struct {
 }
 
 func GetTasks() ([]TaskItem, error) {
-	data, err := ReadFile(AgenvoyDir, TasksPath)
+	data, err := ReadFile(TasksPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
@@ -70,5 +70,5 @@ func WriteTasks(items []TaskItem) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return WriteFile(AgenvoyDir, TasksPath, string(data), 0644)
+	return WriteFile(TasksPath, string(data), 0644)
 }

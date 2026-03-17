@@ -302,7 +302,7 @@ func init() {
 			if filepath.Base(params.Name) != params.Name {
 				return "", fmt.Errorf("must not contain path separator")
 			}
-			data, err := filesystem.ReadFile(filesystem.AgenvoyDir, filepath.Join(filesystem.ScriptsDir, params.Name))
+			data, err := filesystem.ReadFile(filepath.Join(filesystem.ScriptsDir, params.Name))
 			if err != nil {
 				return "", fmt.Errorf("filesystem.ReadFile: %w", err)
 			}
@@ -341,7 +341,7 @@ func init() {
 			if params.Content == "" {
 				return "", fmt.Errorf("content is required")
 			}
-			if err := filesystem.WriteFile(filesystem.ScriptsDir, filepath.Join(filesystem.ScriptsDir, params.Name), params.Content, 0755); err != nil {
+			if err := filesystem.WriteFile(filepath.Join(filesystem.ScriptsDir, params.Name), params.Content, 0755); err != nil {
 				return "", fmt.Errorf("filesystem.WriteFile: %w", err)
 			}
 			return fmt.Sprintf("script updated: %s", params.Name), nil

@@ -56,7 +56,7 @@ func registWriteScript() {
 			uniqueName := fmt.Sprintf("%s_%d%s", base, time.Now().UTC().Unix(), ext)
 			path := filepath.Join(filesystem.ScriptsDir, uniqueName)
 
-			if err := filesystem.WriteFile(filesystem.ScriptsDir, path, params.Content, 0755); err != nil {
+			if err := filesystem.WriteFile(path, params.Content, 0755); err != nil {
 				return "", fmt.Errorf("filesystem.WriteFile: %w", err)
 			}
 

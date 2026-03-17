@@ -52,7 +52,7 @@ func addToSkippedMap(href string, status int) {
 		return
 	}
 
-	if err = filesystem.WriteFile(filesystem.AgenvoyDir, path, "1", 0644); err != nil {
+	if err = filesystem.WriteFile(path, "1", 0644); err != nil {
 		slog.Warn("utils.WriteFile",
 			slog.String("error", err.Error()))
 	}

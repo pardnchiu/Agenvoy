@@ -103,7 +103,7 @@ func setFallback(key, value string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
-	return filesystem.WriteFile(filesystem.AgenvoyDir, path, data, 0600)
+	return filesystem.WriteFile(path, data, 0600)
 }
 
 func getFallback(key string) string {

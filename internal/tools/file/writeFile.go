@@ -41,10 +41,15 @@ func registWriteFile() {
 				return "", fmt.Errorf("content is required")
 			}
 
-			if err := filesystem.WriteFile(e.WorkPath, params.Path, params.Content, 0644); err != nil {
+			absPath, err := filesystem.GetAbsPath(e.WorkPath, params.Path)
+			if err != nil {
+				return "", fmt.Errorf("filesystem.GetAbsPath: %w", err)
+			}
+
+			if err := filesystem.WriteFile(absPath, params.Content, 0644); err != nil {
 				return "", fmt.Errorf("filesystem.WriteFile: %w", err)
 			}
-			return fmt.Sprintf("Successfully wrote file: %s", params.Path), nil
+			return fmt.Sprintf("%s wrote", absPath), nil
 		},
 	})
 }

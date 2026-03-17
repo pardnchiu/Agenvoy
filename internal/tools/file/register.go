@@ -11,38 +11,7 @@ import (
 
 func init() {
 	registReadFile()
-
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "list_files",
-		Description: "列出指定路徑的檔案和目錄。用於探索專案結構。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"path": map[string]any{
-					"type":        "string",
-					"description": "要列出的目錄路徑（相對於專案根目錄或絕對路徑）。使用 '.' 表示目前目錄。",
-				},
-				"recursive": map[string]any{
-					"type":        "boolean",
-					"description": "如果為 true，則遞迴列出檔案。預設為 false。",
-				},
-			},
-			"required": []string{"path"},
-		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				Path      string `json:"path"`
-				Recursive bool   `json:"recursive"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			if isDenied(params.Path) {
-				return "", fmt.Errorf("access denied: %s", params.Path)
-			}
-			return list(e, params.Path, params.Recursive)
-		},
-	})
+	registListFiles()
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "glob_files",
@@ -129,43 +98,7 @@ func init() {
 
 	registWriteFile()
 	registWriteScript()
-
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "patch_edit",
-		Description: "透過精確字串匹配來編輯檔案。僅替換第一個匹配項。適合對檔案進行小幅修改，比 write_file 更安全。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"path": map[string]any{
-					"type":        "string",
-					"description": "要編輯的檔案路徑（相對於專案根目錄或絕對路徑）",
-				},
-				"old_string": map[string]any{
-					"type":        "string",
-					"description": "要被替換的原始內容（必須精確匹配）",
-				},
-				"new_string": map[string]any{
-					"type":        "string",
-					"description": "替換為的新內容",
-				},
-			},
-			"required": []string{"path", "old_string", "new_string"},
-		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				Path      string `json:"path"`
-				OldString string `json:"old_string"`
-				NewString string `json:"new_string"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			if isDenied(params.Path) {
-				return "", fmt.Errorf("access denied: %s", params.Path)
-			}
-			return patch(e, params.Path, params.OldString, params.NewString)
-		},
-	})
+	registPatchEdit()
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "get_tool_error",

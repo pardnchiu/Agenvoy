@@ -40,7 +40,7 @@ func GetSummaryPrompt(sessionID string) string {
 
 func SaveSummary(sessionID string, data any) {
 	if bytes, err := json.Marshal(data); err == nil {
-		if err := filesystem.WriteFile(filesystem.AgenvoyDir, SummaryPath(sessionID), string(bytes), 0644); err != nil {
+		if err := filesystem.WriteFile(SummaryPath(sessionID), string(bytes), 0644); err != nil {
 			slog.Warn("WriteFile",
 				slog.String("error", err.Error()))
 		}

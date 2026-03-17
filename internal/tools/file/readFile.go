@@ -81,24 +81,32 @@ func registReadFile() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			// TODO: remove this after remove isExclude
-			absPath, err := filesystem.GetAbsPath(e.WorkPath, params.Path)
+			content, _, err := readFile(e, params.Path)
 			if err != nil {
-				return "", fmt.Errorf("filesystem.GetAbsPath: %w", err)
+				return "", fmt.Errorf("readFile: %w", err)
 			}
-
-			// TODO: need to move to filesystem
-			if isExclude(e, absPath) {
-				return "", fmt.Errorf("isExclude: %s", params.Path)
-			}
-
-			data, err := filesystem.ReadFile(e.WorkPath, params.Path)
-			if err != nil {
-				return "", fmt.Errorf("filesystem.ReadFile: %w", err)
-			}
-			return data, nil
+			return content, nil
 		},
 	})
+}
+
+func readFile(e *toolTypes.Executor, path string) (string, string, error) {
+	// TODO: remove this after remove isExclude
+	absPath, err := filesystem.GetAbsPath(e.WorkPath, path)
+	if err != nil {
+		return "", "", fmt.Errorf("filesystem.GetAbsPath: %w", err)
+	}
+
+	// TODO: need to move to filesystem
+	if isExclude(e, absPath) {
+		return "", absPath, fmt.Errorf("isExclude: %s", path)
+	}
+
+	data, err := filesystem.ReadFile(absPath)
+	if err != nil {
+		return "", absPath, fmt.Errorf("filesystem.ReadFile: %w", err)
+	}
+	return data, absPath, nil
 }
 
 func getFullPath(e *toolTypes.Executor, path string) (string, error) {
