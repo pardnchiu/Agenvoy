@@ -12,7 +12,7 @@
 [![license](https://img.shields.io/github/license/pardnchiu/agenvoy)](LICENSE)
 [![version](https://img.shields.io/github/v/tag/pardnchiu/agenvoy?label=release)](https://github.com/pardnchiu/agenvoy/releases)
 
-> Go 語言 Agentic AI 平台，具備多 Provider 智能路由、Skill 驅動執行、持久化任務排程、JSON 驅動工具擴充與安全優先的憑證管理
+> Agenvoy 以 [OpenClaw](https://openclaw.ai) 為靈感，基於 Go 標準庫，專注於多模型智能調度與安全優先的設計理念
 
 ## 目錄
 
@@ -32,11 +32,19 @@
 
 Agenvoy 將七個 AI 後端 — GitHub Copilot、Claude、OpenAI、Gemini、Nvidia NIM，以及任意 OpenAI 相容端點（Compat/Ollama）— 統一於單一 `Agent` 介面之後。專屬 Planner LLM 針對每個請求自動選出最適合的 Provider，無需手動切換模型。具名 `compat[{name}]` 實例支援多個本地模型端點並存，各自擁有獨立的 URL 與憑證設定。
 
+### Token 用量追蹤
+
+每次請求的 input/output token 用量在 Session 內所有工具呼叫迭代中完整累計。總消耗量與模型名稱一同顯示於 CLI 輸出與 Discord 回覆頁尾，讓六個 Provider 的成本監控即時透明化。
+
+### 沙箱隔離指令執行
+
+所有外部指令與腳本在作業系統原生沙箱中執行。Linux 使用 bubblewrap（`bwrap`）建立唯讀根檔案系統、僅 `$HOME` 可寫，搭配 PID/Mount namespace 隔離與 `--die-with-parent` 防止孤兒程序。macOS 使用 `sandbox-exec` 搭配 Seatbelt Profile，預設拒絕所有操作，僅允許檔案讀取與限縮於使用者 Home 目錄的寫入。啟動時自動偵測沙箱依賴，Linux 環境下若未安裝 bubblewrap 將透過系統套件管理器（`apt-get` / `dnf` / `yum` / `pacman` / `apk`）自動安裝。
+
 ### Skill 驅動的 Agentic 執行
 
 Skill 是帶有 YAML Frontmatter 的 Markdown 定義檔（`SKILL.md`），描述任務的 System Prompt 與工具允許清單。執行時 Selector LLM 從 9 個標準掃描路徑中挑選最符合的 Skill，隨後驅動最多 128 次迭代的工具呼叫迴圈直至任務完成。達到迭代上限時自動觸發摘要而非回傳錯誤。官方 Skill Extension 由 SyncSkills 在啟動時從 GitHub 自動同步至本地。
 
-### 25 個以上跨六大類別的內建工具
+### 25+ 跨六大類別的內建工具
 
 執行器內建完整工具鏈：檔案操作（`read_file`、`write_file`、`patch_edit`、`glob_files`、`search_content`）、網路存取（`search_web`、`fetch_page`、`download_page`、`fetch_google_rss`）、排程（`add_task`、`add_cron`、`write_script`）、錯誤記憶（`remember_error`、`search_errors`、`get_tool_error`）、數學計算器，以及任意 HTTP 請求。所有 `rm` 操作均導向 `.Trash`，所有寫入使用先寫 tmp 再 rename 的原子性操作防止部分寫入損毀。
 
@@ -52,28 +60,71 @@ Skill 是帶有 YAML Frontmatter 的 Markdown 定義檔（`SKILL.md`），描述
 
 每輪對話結尾，Agent 輸出結構化 JSON 摘要，以欄位層級的去重策略深度合併至先前的 Session 摘要後儲存於 `~/.config/agenvoy/`。後續 Session 注入此摘要以及最近 N 輪對話，使 Agent 無需重播完整歷史即可引用過往決策、限制條件與結論。工具執行錯誤以 SHA-256 金鑰持久化，Agent 可在重試前查詢歷史根因。
 
-### OS Keychain 憑證管理
+### 多層安全防護與 Symlink 安全路徑驗證
 
-API 金鑰儲存於系統原生 Keychain（macOS Keychain、Linux Secret Service）而非 `.env` 檔案，防止憑證意外洩漏。GitHub Copilot 採用 OAuth Device Code Flow 並自動刷新令牌。互動式 `agenvoy add` / `agenvoy remove` 指令管理全部六個 Provider 的憑證，並提供內嵌模型登錄檔供引導選擇。多層路徑封鎖清單阻止存取 SSH 金鑰、Shell 設定檔、雲端憑證（`.aws`、`.gcloud`、`.docker`）、`.env` 檔案與私鑰格式。
+API 金鑰儲存於系統原生 Keychain（macOS Keychain、Linux Secret Service）而非 `.env` 檔案，防止憑證意外洩漏。GitHub Copilot 採用 OAuth Device Code Flow 並自動刷新令牌。多層路徑封鎖清單阻止存取 SSH 金鑰、Shell 設定檔、雲端憑證（`.aws`、`.gcloud`、`.docker`）、`.env` 檔案與私鑰格式。所有路徑解析均使用 `filepath.EvalSymlinks` 防止捷徑繞過 Home 目錄邊界。
 
 ## 架構
 
 ```mermaid
 graph TB
-    Input["CLI / Discord"] --> Run["exec.Run()"]
-    Run --> Concurrent["並行調度"]
-    Concurrent --> SkillSelect["SelectSkill() — 9 scan paths"]
-    Concurrent --> AgentSelect["SelectAgent() — provider registry"]
-    SkillSelect --> Execute["exec.Execute()"]
+    subgraph Entry ["進入點"]
+        CLI["cmd/cli"]
+        Discord["cmd/server\nDiscord Bot"]
+    end
+
+    subgraph Core ["執行引擎"]
+        Run["exec.Run()"]
+        SkillSelect["SelectSkill()\n9 個掃描路徑"]
+        AgentSelect["SelectAgent()\nProvider 登錄檔"]
+        Execute["exec.Execute()\n≤128 次迭代"]
+        Send["Agent.Send()"]
+        Usage["Token 累計\n每次請求 in/out"]
+    end
+
+    subgraph Providers ["LLM Providers"]
+        Copilot["Copilot"]
+        OpenAI["OpenAI"]
+        Claude["Claude"]
+        Gemini["Gemini"]
+        Nvidia["Nvidia"]
+        Compat["Compat\nOllama"]
+    end
+
+    subgraph Security ["安全層"]
+        Sandbox["沙箱\nbwrap / sandbox-exec"]
+        PathGuard["路徑驗證\nEvalSymlinks + denied.json"]
+        Keychain["OS Keychain\nmacOS / Linux"]
+    end
+
+    subgraph Tools ["工具類別"]
+        FileOps["檔案操作\nread / write / patch / glob"]
+        WebAccess["網路存取\nfetch / search / download"]
+        APIExt["API Extension\n13+ JSON 定義"]
+        Scheduler["排程器\ncron + 一次性任務"]
+        ErrorMem["錯誤記憶\nSHA-256 索引"]
+    end
+
+    subgraph Persistence ["持久化"]
+        Session["Session 摘要\n深度合併 + 去重"]
+        History["對話歷史\n最近 N 輪"]
+    end
+
+    CLI --> Run
+    Discord --> Run
+    Run --> SkillSelect
+    Run --> AgentSelect
+    SkillSelect --> Execute
     AgentSelect --> Execute
-    Execute --> Send["Agent.Send() — LLM call"]
-    Send --> ToolCall["ToolCall() — 去重快取"]
-    ToolCall --> Security["Security Gate\ndenied.json + whitelist"]
-    Security --> Tools["File / API / Browser / Shell"]
-    Security --> Scheduler["Scheduler\nadd_task / add_cron"]
-    Tools --> Send
-    Scheduler --> Callback["Discord 回呼\n執行完成後"]
-    Send --> Output["回覆 → CLI / Discord"]
+    Execute --> Send
+    Send --> Providers
+    Send --> Usage
+    Execute -->|"tool calls"| Security
+    Security --> Tools
+    Tools -->|"results"| Execute
+    Scheduler -->|"完成後回傳"| Discord
+    Execute --> Persistence
+    Persistence -.->|"注入"| Execute
 ```
 
 ## 檔案結構
@@ -91,18 +142,20 @@ agenvoy/
 │   ├── agents/
 │   │   ├── exec/           # 核心執行引擎與 Session 迴圈
 │   │   ├── provider/       # 6 個 AI Provider 後端 + 模型登錄檔
-│   │   └── types/          # Agent 介面 + Message 類型
+│   │   └── types/          # Agent 介面 + Message / Usage 類型
 │   ├── discord/            # Discord Slash Command + 檔案附件
-│   ├── filesystem/         # 集中路徑常數、Session 管理與 Keychain
+│   ├── filesystem/         # 路徑驗證、Session 管理與 Keychain
+│   ├── sandbox/            # 沙箱隔離（bwrap / sandbox-exec）
 │   ├── scheduler/          # 持久化一次性與週期性任務排程器
 │   ├── skill/              # Markdown Skill 掃描器與解析器
-│   ├── tools/              # 25+ 自註冊工具 + API Extension 適配器
+│   └── tools/              # 25+ 自註冊工具 + API Extension 適配器
 ├── go.mod
 └── LICENSE
 ```
 
 ## 版本歷史
 
+- **v0.14.0** — 作業系統原生沙箱隔離（Linux bubblewrap 自動安裝、macOS sandbox-exec）；每次請求的 token 用量追蹤（跨所有工具呼叫迭代累計）；工具處理器重構為獨立命名檔案；exclude 邏輯與 file walk/list 移至 `filesystem` package；`GetAbsPath` 新增 symlink 安全路徑解析
 - **v0.13.0** — 自註冊 Tool Registry 取代 switch routing 與嵌入式 JSON 定義；排程器持久化 JSON 儲存含完整 CRUD（tasks 與 crons 的新增/更新/刪除）；Keychain 遷移至 `filesystem` 下；絕對路徑限制僅允許使用者 Home 目錄；裁切歷史加入省略號標記
 - **v0.12.0** — 完整排程子系統（Cron + 一次性任務含 Discord 回呼）；集中 `filesystem` + `configs` 套件；以 `go-scheduler` 取代自製 Cron 解析器；`schedule-task` Skill
 - **v0.11.2** — 修正錯誤記憶雙向關鍵字比對；修正 Claude 多段 System Prompt 合併；System Prompt 新增工具呼叫前禁止輸出文字規則

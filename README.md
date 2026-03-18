@@ -12,7 +12,7 @@
 [![license](https://img.shields.io/github/license/pardnchiu/agenvoy)](LICENSE)
 [![version](https://img.shields.io/github/v/tag/pardnchiu/agenvoy?label=release)](https://github.com/pardnchiu/agenvoy/releases)
 
-> A Go agentic AI platform with multi-provider intelligent routing, skill-based execution, persistent task scheduling, extensible JSON-driven tools, and security-first credential management
+> Agenvoy is inspired by [OpenClaw](https://openclaw.ai), built on a Go-based architecture with multi-provider intelligent dispatch and a security-first design.
 
 ## Table of Contents
 
@@ -31,6 +31,14 @@
 ### Multi-Provider LLM with Intelligent Routing
 
 Agenvoy integrates seven AI backends — GitHub Copilot, Claude, OpenAI, Gemini, Nvidia NIM, and any OpenAI-compatible endpoint (Compat/Ollama) — behind a unified `Agent` interface. A dedicated planner LLM automatically selects the most appropriate provider for each request, eliminating the need to manually switch models. Named `compat[{name}]` instances allow multiple local model endpoints to coexist, each with independent URL and credential configuration.
+
+### Token Usage Tracking
+
+Every request's input/output token usage is fully accumulated across all tool-call iterations within a session. The total consumption is displayed alongside the model name in both CLI output and Discord reply footers, making cost monitoring transparent and immediate across all six providers.
+
+### Sandbox-Isolated Command Execution
+
+All external commands and scripts run inside an OS-native sandbox. Linux uses bubblewrap (`bwrap`) with a read-only root filesystem, writable `$HOME`, PID/mount namespace isolation, and `--die-with-parent` to prevent orphan processes. macOS uses `sandbox-exec` with a Seatbelt profile that denies all by default, allowing only read access to the filesystem and write access scoped to the user's home directory. On startup, sandbox dependencies are automatically detected — on Linux, if bubblewrap is not installed, it will be installed automatically via the system package manager (`apt-get` / `dnf` / `yum` / `pacman` / `apk`).
 
 ### Skill-Based Agentic Execution
 
@@ -52,28 +60,71 @@ External REST APIs are defined as JSON files under `extensions/apis/` and loaded
 
 At the end of each turn, the agent emits a structured JSON summary that is deep-merged with the previous session summary using field-level deduplication, then stored in `~/.config/agenvoy/`. Subsequent sessions inject this summary alongside the last N conversation turns, allowing the agent to recall decisions, constraints, and conclusions without replaying full history. Tool-execution errors are persisted with SHA-256 keys so the agent can look up past root causes before retrying.
 
-### OS Keychain Credential Management
+### Multi-Layer Security with Symlink-Safe Path Validation
 
-API keys are stored in the OS-native keychain (macOS Keychain, Linux Secret Service) rather than plain environment variables. GitHub Copilot uses OAuth Device Code Flow with automatic token refresh. The interactive `agenvoy add` / `agenvoy remove` commands manage credentials across all six providers with an embedded model registry for guided selection. A multi-layer path deny-list blocks access to SSH keys, shell configs, cloud credentials (`.aws`, `.gcloud`, `.docker`), `.env` files, and private key formats across all file and command tools.
+API keys are stored in the OS-native keychain (macOS Keychain, Linux Secret Service) rather than plain environment variables. GitHub Copilot uses OAuth Device Code Flow with automatic token refresh. A multi-layer path deny-list blocks access to SSH keys, shell configs, cloud credentials (`.aws`, `.gcloud`, `.docker`), `.env` files, and private key formats. All path resolution uses `filepath.EvalSymlinks` to prevent symlink-based escapes from the home directory boundary.
 
 ## Architecture
 
 ```mermaid
 graph TB
-    Input["CLI / Discord"] --> Run["exec.Run()"]
-    Run --> Concurrent["Concurrent Dispatch"]
-    Concurrent --> SkillSelect["SelectSkill() — 9 scan paths"]
-    Concurrent --> AgentSelect["SelectAgent() — provider registry"]
-    SkillSelect --> Execute["exec.Execute()"]
+    subgraph Entry ["Entry Points"]
+        CLI["cmd/cli"]
+        Discord["cmd/server\nDiscord Bot"]
+    end
+
+    subgraph Core ["Execution Engine"]
+        Run["exec.Run()"]
+        SkillSelect["SelectSkill()\n9 scan paths"]
+        AgentSelect["SelectAgent()\nprovider registry"]
+        Execute["exec.Execute()\n≤128 iterations"]
+        Send["Agent.Send()"]
+        Usage["Token Accumulation\nin/out per request"]
+    end
+
+    subgraph Providers ["LLM Providers"]
+        Copilot["Copilot"]
+        OpenAI["OpenAI"]
+        Claude["Claude"]
+        Gemini["Gemini"]
+        Nvidia["Nvidia"]
+        Compat["Compat\nOllama"]
+    end
+
+    subgraph Security ["Security Layer"]
+        Sandbox["Sandbox\nbwrap / sandbox-exec"]
+        PathGuard["Path Validation\nEvalSymlinks + denied.json"]
+        Keychain["OS Keychain\nmacOS / Linux"]
+    end
+
+    subgraph Tools ["Tool Categories"]
+        FileOps["File Ops\nread / write / patch / glob"]
+        WebAccess["Web Access\nfetch / search / download"]
+        APIExt["API Extensions\n13+ JSON definitions"]
+        Scheduler["Scheduler\ncron + one-time tasks"]
+        ErrorMem["Error Memory\nSHA-256 keyed"]
+    end
+
+    subgraph Persistence ["Persistence"]
+        Session["Session Summary\ndeep-merge + dedup"]
+        History["Conversation History\nlast N turns"]
+    end
+
+    CLI --> Run
+    Discord --> Run
+    Run --> SkillSelect
+    Run --> AgentSelect
+    SkillSelect --> Execute
     AgentSelect --> Execute
-    Execute --> Send["Agent.Send() — LLM call"]
-    Send --> ToolCall["ToolCall() — deduplicated cache"]
-    ToolCall --> Security["Security Gate\ndenied.json + whitelist"]
-    Security --> Tools["File / API / Browser / Shell"]
-    Security --> Scheduler["Scheduler\nadd_task / add_cron"]
-    Tools --> Send
-    Scheduler --> Callback["Discord Callback\non completion"]
-    Send --> Output["Reply → CLI / Discord"]
+    Execute --> Send
+    Send --> Providers
+    Send --> Usage
+    Execute -->|"tool calls"| Security
+    Security --> Tools
+    Tools -->|"results"| Execute
+    Scheduler -->|"on complete"| Discord
+    Execute --> Persistence
+    Persistence -.->|"inject"| Execute
 ```
 
 ## File Structure
@@ -91,18 +142,20 @@ agenvoy/
 │   ├── agents/
 │   │   ├── exec/           # Core execution engine and session loop
 │   │   ├── provider/       # 6 AI provider backends + model registry
-│   │   └── types/          # Agent interface + message types
+│   │   └── types/          # Agent interface + message / usage types
 │   ├── discord/            # Discord slash commands + file attachments
-│   ├── filesystem/         # Centralized path constants, session manager, and keychain
+│   ├── filesystem/         # Path validation, session manager, and keychain
+│   ├── sandbox/            # Sandbox isolation (bwrap / sandbox-exec)
 │   ├── scheduler/          # Persistent one-time and recurring task scheduler
 │   ├── skill/              # Markdown skill scanner and parser
-│   ├── tools/              # 25+ self-registering tools + API extension adapter
+│   └── tools/              # 25+ self-registering tools + API extension adapter
 ├── go.mod
 └── LICENSE
 ```
 
 ## Version History
 
+- **v0.14.0** — OS-native sandbox isolation (bubblewrap on Linux with auto-install, sandbox-exec on macOS); per-request token usage tracking accumulated across all tool-call iterations; tool handlers restructured into individually named files; exclude logic and file walk/list moved into `filesystem` package; symlink-safe path resolution in `GetAbsPath`
 - **v0.13.0** — Self-registering tool Registry replacing switch-based routing and embedded JSON definitions; scheduler persistent JSON storage with full CRUD (add/update/delete for tasks and crons); keychain migrated under `filesystem`; absolute path restriction to user home directory; trimmed history ellipsis markers
 - **v0.12.0** — Full scheduler subsystem (cron + one-time tasks with Discord callbacks); centralize `filesystem` + `configs` packages; replace custom cron parser with `go-scheduler`; `schedule-task` skill
 - **v0.11.2** — Fix bidirectional error-memory keyword matching; fix Claude multi-system-prompt merge; pre-tool text suppression rule in system prompt

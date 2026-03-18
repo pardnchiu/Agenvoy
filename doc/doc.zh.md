@@ -4,9 +4,35 @@
 
 ## 前置需求
 
+### 系統需求
+
 - Go 1.20 或更高版本
 - 至少一組 AI Provider 憑證（GitHub Copilot 訂閱、或任一 API Key）
 - Discord Bot Token（僅限 Server 模式）
+
+### 沙箱依賴
+
+| 平台 | 依賴 | 說明 |
+|------|------|------|
+| Linux | `bubblewrap`（`bwrap`） | 啟動時自動偵測，未安裝則透過 `apt-get` / `dnf` / `yum` / `pacman` / `apk` 自動安裝 |
+| macOS | `sandbox-exec` | 已內建於系統，無需額外安裝 |
+
+### 瀏覽器依賴（選用）
+
+- Chromium 或 Google Chrome — `fetch_page` 與 `download_page` 工具使用 headless 模式渲染頁面
+- `go-rod` 會在首次使用時自動下載 Chromium（若系統未安裝）
+
+### Go 相依套件
+
+| 套件 | 用途 |
+|------|------|
+| `github.com/bwmarrin/discordgo` | Discord Bot API |
+| `github.com/go-rod/rod` | Headless Chrome 瀏覽器自動化 |
+| `github.com/go-shiori/go-readability` | HTML 內容擷取與清理 |
+| `github.com/joho/godotenv` | `.env` 環境變數載入 |
+| `github.com/manifoldco/promptui` | CLI 互動式選單 |
+| `github.com/pardnchiu/go-scheduler` | Cron 表達式解析與排程 |
+| `golang.org/x/net` | HTML tokenizer 與網路工具 |
 
 ## 安裝
 
@@ -267,7 +293,7 @@ agenvoy remove
 | `search_web` | `query`, `time_range` | 並行網頁搜尋（Google + DuckDuckGo） |
 | `fetch_page` | `url` | 無頭 Chrome 渲染頁面轉 Markdown（唯讀） |
 | `download_page` | `href`, `save_to` | JS 渲染頁面儲存至本地檔案 |
-| `run_command` | `command` | 執行白名單內的 Shell 指令（300 秒逾時） |
+| `run_command` | `command` | 於沙箱中執行白名單內的 Shell 指令（300 秒逾時） |
 | `write_script` | `name`, `content` | 在排程器目錄建立 `.sh` 或 `.py` 腳本 |
 | `add_task` | `at`, `script`, `channel_id` | 設定一次性定時任務；執行結果傳送至指定 Discord 頻道 |
 | `list_tasks` | — | 列出所有待執行的一次性任務 |
@@ -277,6 +303,29 @@ agenvoy remove
 | `remove_cron` | `index` | 依序號移除 Cron 任務（多個時須先列出） |
 | `list_tools` | — | 列出所有可用工具，含動態載入的 API Extension |
 | `calculate` | `expression` | 數學運算（sqrt、abs、pow、ceil、floor、sin、cos、tan、log） |
+
+### 沙箱隔離
+
+所有透過 `run_command` 執行的指令與排程器腳本均在作業系統原生沙箱中執行：
+
+| 特性 | Linux（bwrap） | macOS（sandbox-exec） |
+|------|---------------|----------------------|
+| 檔案系統 | 唯讀根目錄，僅 `$HOME` 可寫 | 預設拒絕，允許 `file-read*`，`file-write*` 限縮至 `$HOME` |
+| PID 隔離 | `--unshare-pid` | 不支援 |
+| Mount 隔離 | `--unshare-mnt` | 不支援 |
+| 網路 | 允許（`--share-net`） | 允許（`allow network*`） |
+| 孤兒程序防護 | `--die-with-parent` | 不支援 |
+| 路徑驗證 | `filepath.EvalSymlinks` → 超出 `$HOME` 則拒絕 | 相同 |
+| 自動安裝 | 啟動時偵測，未安裝則自動透過套件管理器安裝 | 內建，無需安裝 |
+
+### Token 用量追蹤
+
+每次 LLM API 呼叫回傳 input/output token 數量，在單次執行 Session 內所有迭代中累計（含工具呼叫迴圈與最終摘要）。完成時顯示總量：
+
+- **CLI**：`(耗時) [模型 | in:N out:N]`
+- **Discord**：頁尾 `-# 模型 | in:N out:N`
+
+各 Provider 的格式差異透明處理：Claude（`input_tokens`/`output_tokens`）、OpenAI 相容（`prompt_tokens`/`completion_tokens`）、Gemini（`promptTokenCount`/`candidatesTokenCount`）統一透過自訂 `UnmarshalJSON` 正規化為 `Usage` struct。
 
 ### 工具執行錯誤追蹤
 

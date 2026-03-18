@@ -4,9 +4,35 @@
 
 ## Prerequisites
 
+### System Requirements
+
 - Go 1.20 or higher
 - At least one AI provider credential (GitHub Copilot subscription, or any API key)
 - Discord Bot Token (server mode only)
+
+### Sandbox Dependencies
+
+| Platform | Dependency | Notes |
+|----------|-----------|-------|
+| Linux | `bubblewrap` (`bwrap`) | Auto-detected on startup; if not installed, automatically installed via `apt-get` / `dnf` / `yum` / `pacman` / `apk` |
+| macOS | `sandbox-exec` | Built into macOS, no installation required |
+
+### Browser Dependencies (Optional)
+
+- Chromium or Google Chrome — used by `fetch_page` and `download_page` tools in headless mode
+- `go-rod` will auto-download Chromium on first use if not present on the system
+
+### Go Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `github.com/bwmarrin/discordgo` | Discord Bot API |
+| `github.com/go-rod/rod` | Headless Chrome browser automation |
+| `github.com/go-shiori/go-readability` | HTML content extraction and cleanup |
+| `github.com/joho/godotenv` | `.env` environment variable loading |
+| `github.com/manifoldco/promptui` | Interactive CLI selection menus |
+| `github.com/pardnchiu/go-scheduler` | Cron expression parsing and scheduling |
+| `golang.org/x/net` | HTML tokenizer and network utilities |
 
 ## Installation
 
@@ -267,7 +293,7 @@ agenvoy remove
 | `search_web` | `query`, `time_range` | Concurrent web search (Google + DuckDuckGo) |
 | `fetch_page` | `url` | JS-rendered page content as Markdown (headless Chrome) |
 | `download_page` | `href`, `save_to` | JS-rendered page saved to a local file |
-| `run_command` | `command` | Execute whitelisted shell commands (300s timeout) |
+| `run_command` | `command` | Execute whitelisted shell commands in sandbox (300s timeout) |
 | `write_script` | `name`, `content` | Create a `.sh` or `.py` script under the scheduler directory |
 | `add_task` | `at`, `script`, `channel_id` | Schedule a one-time task; result is posted to the Discord channel on completion |
 | `list_tasks` | — | List all pending one-time tasks |
@@ -277,6 +303,29 @@ agenvoy remove
 | `remove_cron` | `index` | Remove a cron task by index (list first if multiple) |
 | `list_tools` | — | List all currently available tools including dynamic API extensions |
 | `calculate` | `expression` | Evaluate math expressions (sqrt, abs, pow, ceil, floor, sin, cos, tan, log) |
+
+### Sandbox Isolation
+
+All commands executed via `run_command` and scheduler scripts run inside an OS-native sandbox:
+
+| Feature | Linux (bwrap) | macOS (sandbox-exec) |
+|---------|---------------|----------------------|
+| Filesystem | Read-only root, writable `$HOME` | Deny-default, `file-read*` allowed, `file-write*` scoped to `$HOME` |
+| PID isolation | `--unshare-pid` | Not available |
+| Mount isolation | `--unshare-mnt` | Not available |
+| Network | Allowed (`--share-net`) | Allowed (`allow network*`) |
+| Orphan prevention | `--die-with-parent` | Not available |
+| Path validation | `filepath.EvalSymlinks` → reject if outside `$HOME` | Same |
+| Auto-install | Detected on startup; installs automatically via package manager if missing | Built-in, no installation needed |
+
+### Token Usage Tracking
+
+Every LLM API call returns input/output token counts. These are accumulated across all iterations within a single execution session (including tool-call loops and final summarization). The total is displayed on completion:
+
+- **CLI**: `(elapsed) [model | in:N out:N]`
+- **Discord**: footer line `-# model | in:N out:N`
+
+Supported provider formats are handled transparently: Claude (`input_tokens`/`output_tokens`), OpenAI-compatible (`prompt_tokens`/`completion_tokens`), and Gemini (`promptTokenCount`/`candidatesTokenCount`) are all normalized to a unified `Usage` struct via custom `UnmarshalJSON`.
 
 ### Tool Error Tracking
 
