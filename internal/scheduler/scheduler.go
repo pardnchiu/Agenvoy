@@ -115,9 +115,14 @@ func runScript(caller, scriptPath string) string {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		output := strings.TrimSpace(string(out))
 		slog.Error(caller,
 			slog.String("script", filepath.Base(scriptPath)),
-			slog.String("error", err.Error()))
+			slog.String("error", err.Error()),
+			slog.String("output", output))
+		if output != "" {
+			return fmt.Sprintf("error: %s\n%s", err.Error(), output)
+		}
 		return fmt.Sprintf("error: %s", err.Error())
 	}
 	return strings.TrimSpace(string(out))

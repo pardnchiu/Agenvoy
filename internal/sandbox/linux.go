@@ -4,8 +4,10 @@ package sandbox
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
+	"sync"
 )
 
 // * if is nil, then install bubblewrap first
@@ -50,7 +52,28 @@ func checkBinary(name string) bool {
 	return err == nil
 }
 
+var (
+	bwrapOnce  sync.Once
+	isAvaiable bool
+)
+
+func checkBwrap() bool {
+	cmd := exec.Command("bwrap", "--ro-bind", "/", "/", "--", "/bin/true")
+	return cmd.Run() == nil
+}
+
 func Wrap(binary string, args []string, workDir string) (string, []string, error) {
+	bwrapOnce.Do(func() {
+		isAvaiable = checkBwrap()
+		if !isAvaiable {
+			slog.Warn("bwrap unavailable")
+		}
+	})
+
+	if !isAvaiable {
+		return binary, args, nil
+	}
+
 	homeDir, err := vaildateDir(workDir)
 	if err != nil {
 		return "", nil, err
@@ -62,7 +85,6 @@ func Wrap(binary string, args []string, workDir string) (string, []string, error
 		"--tmpfs", "/tmp",
 		"--dev", "/dev",
 		"--proc", "/proc",
-		"--unshare-all",
 		"--share-net",
 		"--die-with-parent",
 		"--", binary,

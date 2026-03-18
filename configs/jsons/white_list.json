@@ -34,5 +34,7 @@
   "which",
   "date",
   "docker",
-  "podman"
+  "podman",
+  "sh",
+  "bash"
 ]
