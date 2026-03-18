@@ -41,7 +41,7 @@ func registWriteFile() {
 				return "", fmt.Errorf("content is required")
 			}
 
-			absPath, err := filesystem.GetAbsPath(e.WorkPath, params.Path)
+			absPath, err := filesystem.GetAbsPath(e.WorkDir, params.Path)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.GetAbsPath: %w", err)
 			}

@@ -36,7 +36,7 @@ func registGlobFiles() {
 
 			pattern := filepath.ToSlash(params.Pattern)
 			patterns := strings.Split(pattern, "/")
-			files, err := filesystem.WalkFiles(e.WorkPath)
+			files, err := filesystem.WalkFiles(e.WorkDir)
 			if err != nil {
 				return "", err
 			}

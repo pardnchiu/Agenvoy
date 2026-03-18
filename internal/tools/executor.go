@@ -53,7 +53,7 @@ func NewExecutor(workPath, sessionID string) (*toolTypes.Executor, error) {
 	}
 
 	return &toolTypes.Executor{
-		WorkPath:       workPath,
+		WorkDir:        workPath,
 		SessionID:      sessionID,
 		AllowedCommand: allowedCommand,
 		Tools:          tools,

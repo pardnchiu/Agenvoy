@@ -7,7 +7,7 @@ import (
 )
 
 type Executor struct {
-	WorkPath       string
+	WorkDir        string
 	SessionID      string
 	Allowed        []string // * limit to these folders to use
 	AllowedCommand map[string]bool

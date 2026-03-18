@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/sandbox"
 	"github.com/pardnchiu/agenvoy/internal/tools/file"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -71,13 +72,22 @@ func runCommand(ctx context.Context, e *toolTypes.Executor, command string) (str
 	ctx, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
 
-	var cmd *exec.Cmd
+	var (
+		wrappedBin  string
+		wrappedArgs []string
+		err         error
+	)
 	if hasShellOps {
-		cmd = exec.CommandContext(ctx, binary, args...)
+		wrappedBin, wrappedArgs, err = sandbox.Wrap(binary, args, e.WorkDir)
 	} else {
-		cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+		wrappedBin, wrappedArgs, err = sandbox.Wrap(args[0], args[1:], e.WorkDir)
 	}
-	cmd.Dir = e.WorkPath
+	if err != nil {
+		return "", fmt.Errorf("sandbox.Wrap: %w", err)
+	}
+
+	cmd := exec.CommandContext(ctx, wrappedBin, wrappedArgs...)
+	cmd.Dir = e.WorkDir
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -88,7 +98,7 @@ func runCommand(ctx context.Context, e *toolTypes.Executor, command string) (str
 }
 
 func moveToTrash(ctx context.Context, e *toolTypes.Executor, args []string) (string, error) {
-	trashPath := filepath.Join(e.WorkPath, ".Trash")
+	trashPath := filepath.Join(e.WorkDir, ".Trash")
 	if err := os.MkdirAll(trashPath, 0755); err != nil {
 		return "", fmt.Errorf("os.MkdirAll .Trash: %w", err)
 	}
@@ -101,7 +111,7 @@ func moveToTrash(ctx context.Context, e *toolTypes.Executor, args []string) (str
 		if strings.HasPrefix(arg, "-") {
 			continue
 		}
-		src := filepath.Join(e.WorkPath, filepath.Clean(arg))
+		src := filepath.Join(e.WorkDir, filepath.Clean(arg))
 		name := filepath.Base(arg)
 		dst := filepath.Join(trashPath, name)
 

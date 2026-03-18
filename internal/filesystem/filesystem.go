@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -130,23 +131,34 @@ func WriteFileWithLines(path string, lines []string, permission os.FileMode) err
 
 func GetAbsPath(dir, path string) (string, error) {
 	// * format the path to abs path
-	var resolved string
+	absPath := path
 	if !filepath.IsAbs(path) {
-		resolved = filepath.Join(dir, path)
-	} else {
-		resolved = filepath.Clean(path)
+		absPath = filepath.Join(dir, path)
+	}
+
+	realPath, err := filepath.EvalSymlinks(absPath)
+	if errors.Is(err, os.ErrNotExist) {
+		realParent, parentErr := filepath.EvalSymlinks(filepath.Dir(absPath))
+		if parentErr != nil {
+			return "", fmt.Errorf("filepath.EvalSymlinks: %w", parentErr)
+		}
+		realPath = filepath.Join(realParent, filepath.Base(absPath))
+		err = nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("filepath.EvalSymlinks: %w", err)
 	}
 
 	homeDir, err := os.UserHomeDir()
-	if err != nil || !strings.HasPrefix(resolved, filepath.Clean(homeDir)+string(filepath.Separator)) {
+	if err != nil || !strings.HasPrefix(realPath, filepath.Clean(homeDir)+string(filepath.Separator)) {
 		return "", fmt.Errorf("only allow user home: %s", path)
 	}
 
-	if isDenied(resolved) {
+	if isDenied(realPath) {
 		return "", fmt.Errorf("access denied: %s", path)
 	}
 
-	return resolved, nil
+	return realPath, nil
 }
 
 func WalkFiles(dirs ...string) ([]string, error) {

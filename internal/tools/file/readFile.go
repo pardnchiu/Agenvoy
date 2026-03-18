@@ -62,13 +62,13 @@ func registReadFile() {
 
 func readFile(e *toolTypes.Executor, path string) (string, string, error) {
 	// TODO: remove this after remove isExclude
-	absPath, err := filesystem.GetAbsPath(e.WorkPath, path)
+	absPath, err := filesystem.GetAbsPath(e.WorkDir, path)
 	if err != nil {
 		return "", "", fmt.Errorf("filesystem.GetAbsPath: %w", err)
 	}
 
 	// TODO: need to move to filesystem
-	if filesystem.IsExclude(e.WorkPath, absPath) {
+	if filesystem.IsExclude(e.WorkDir, absPath) {
 		return "", absPath, fmt.Errorf("filesystem.IsExclude: %s", path)
 	}
 

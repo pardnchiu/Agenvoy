@@ -41,12 +41,12 @@ func registListFiles() {
 			var files []string
 			var err error
 			if params.Recursive {
-				files, err = filesystem.WalkFiles(e.WorkPath, params.Path)
+				files, err = filesystem.WalkFiles(e.WorkDir, params.Path)
 				if err != nil {
 					return "", fmt.Errorf("filesystem.WalkFiles: %w", err)
 				}
 			} else {
-				files, err = filesystem.ListDir(e.WorkPath, params.Path)
+				files, err = filesystem.ListDir(e.WorkDir, params.Path)
 				if err != nil {
 					return "", fmt.Errorf("filesystem.ListDir: %w", err)
 				}

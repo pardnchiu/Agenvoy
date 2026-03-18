@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/sandbox"
 	goCron "github.com/pardnchiu/go-scheduler"
 )
 
@@ -90,13 +91,24 @@ func newID(parts ...string) string {
 }
 
 func runScript(caller, scriptPath string) string {
-	var cmd *exec.Cmd
+	var binary string
 	switch strings.ToLower(filepath.Ext(scriptPath)) {
 	case ".py":
-		cmd = exec.Command("python3", scriptPath)
+		binary = "python3"
 	default:
-		cmd = exec.Command("sh", scriptPath)
+		binary = "sh"
 	}
+
+	workDir := filepath.Dir(scriptPath)
+	wrappedBin, wrappedArgs, err := sandbox.Wrap(binary, []string{scriptPath}, workDir)
+	if err != nil {
+		slog.Error(caller,
+			slog.String("script", filepath.Base(scriptPath)),
+			slog.String("error", err.Error()))
+		return fmt.Sprintf("error: %s", err.Error())
+	}
+
+	cmd := exec.Command(wrappedBin, wrappedArgs...)
 	cmd.Env = append(os.Environ(),
 		"PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin",
 	)

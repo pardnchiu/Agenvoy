@@ -19,7 +19,7 @@ func search(e *toolTypes.Executor, pattern, filePattern string) (string, error) 
 
 	var result strings.Builder
 
-	err = filepath.Walk(e.WorkPath, func(path string, d os.FileInfo, err error) error {
+	err = filepath.Walk(e.WorkDir, func(path string, d os.FileInfo, err error) error {
 		if err != nil {
 			slog.Warn("failed to access path, just skipping",
 				slog.String("error", err.Error()))
@@ -72,7 +72,7 @@ func search(e *toolTypes.Executor, pattern, filePattern string) (string, error) 
 		}
 
 		lines := strings.Split(string(data), "\n")
-		relPath, err := filepath.Rel(e.WorkPath, path)
+		relPath, err := filepath.Rel(e.WorkDir, path)
 		if err != nil {
 			slog.Warn("failed to get relative path",
 				slog.String("error", err.Error()))

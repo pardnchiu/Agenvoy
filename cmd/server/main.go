@@ -21,6 +21,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/discord"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
+	"github.com/pardnchiu/agenvoy/internal/sandbox"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
@@ -32,6 +33,12 @@ func init() {
 }
 
 func main() {
+	if err := sandbox.CheckDependence(); err != nil {
+		slog.Error("sandbox.CheckDependence",
+			slog.String("error", err.Error()))
+		return
+	}
+
 	if err := filesystem.Init(); err != nil {
 		slog.Error("filesystem.Init",
 			slog.String("error", err.Error()))
