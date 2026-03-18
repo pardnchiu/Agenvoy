@@ -2,6 +2,7 @@ package exec
 
 import (
 	"encoding/json"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -28,15 +29,17 @@ func isSummaryJSON(m map[string]any) bool {
 }
 
 func extractSummary(sessionID, value string) string {
-	const summaryStart = "<!--SUMMARY_START-->"
-	const summaryEnd = "<!--SUMMARY_END-->"
+	const summaryStart = "<summary>"
+	const summaryEnd = "</summary>"
+
+	slog.Info("content",
+		slog.String("original", value))
 
 	value = timestampHeaderReg.ReplaceAllString(value, "")
 
 	var jsonData any
 	var cleaned string
 
-	// Primary: delimiter-wrapped summary
 	start := strings.Index(value, summaryStart)
 	end := strings.Index(value, summaryEnd)
 	if start != -1 && end != -1 && end > start {
@@ -47,7 +50,7 @@ func extractSummary(sessionID, value string) string {
 		if start != -1 {
 			cleaned = strings.TrimRight(value[:start], " \t\n\r")
 		}
-		// Fallback: strip any trailing markdown JSON block that looks like a summary
+
 		if loc := trailingJsonRegex.FindStringSubmatchIndex(value); loc != nil {
 			jsonPart := value[loc[2]:loc[3]]
 			var m map[string]any
