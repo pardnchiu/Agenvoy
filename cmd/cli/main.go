@@ -15,7 +15,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 	"github.com/pardnchiu/agenvoy/internal/sandbox"
 	"github.com/pardnchiu/agenvoy/internal/skill"
-	"github.com/pardnchiu/agenvoy/internal/tools/browser"
 )
 
 func main() {

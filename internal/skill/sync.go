@@ -48,11 +48,11 @@ func SyncSkills(ctx context.Context) {
 		}
 
 		path := filepath.Join(filesystem.SkillsDir, entry.Name)
-		if err := os.Mkdir(path, 0755); err != nil {
-			if os.IsExist(err) {
-				continue
-			}
-			slog.Warn("os.Mkdir",
+		if _, err := os.Stat(path); err == nil {
+			continue
+		}
+		if err := os.MkdirAll(path, 0755); err != nil {
+			slog.Warn("os.MkdirAll",
 				slog.String("error", err.Error()))
 			continue
 		}
