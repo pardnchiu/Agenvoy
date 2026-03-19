@@ -16,10 +16,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 )
 
-const (
-	MaxHistoryMessages = 16
-)
-
 type IndexData struct {
 	SessionID string `json:"session_id"`
 }

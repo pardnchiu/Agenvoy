@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -128,7 +129,14 @@ func GetChannelID(sessionID string) (string, error) {
 	return config["channel_id"], nil
 }
 
-var MaxHistoryMessages = 16
+var MaxHistoryMessages = func() int {
+	if v := os.Getenv("MAX_HISTORY_MESSAGES"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 16
+}()
 
 func GetHistory(sessionID string) (old, max []agentTypes.Message) {
 	historyPath := filepath.Join(filesystem.SessionsDir, sessionID, "history.json")

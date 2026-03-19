@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/joho/godotenv"
+
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -16,6 +18,13 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/sandbox"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
+
+func init() {
+	if err := godotenv.Load(); err != nil {
+		slog.Warn("godotenv.Load",
+			slog.String("error", err.Error()))
+	}
+}
 
 func main() {
 	if err := sandbox.CheckDependence(); err != nil {
