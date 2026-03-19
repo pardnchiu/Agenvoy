@@ -50,6 +50,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		limit = MaxSkillIterations
 	}
 
+	session.Messages, _ = trimMessages(session.Messages, data.Agent.MaxInputTokens())
+
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
 	emptyCount := 0
