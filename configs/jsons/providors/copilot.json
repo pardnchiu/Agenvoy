@@ -1,6 +1,21 @@
 {
   "default": "gpt-4.1",
   "models": {
+    "gpt-5.4": {
+      "input": 1050000,
+      "output": 131072,
+      "description": "OpenAI 最新旗艦模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
+    },
+    "gpt-5.4-mini": {
+      "input": 400000,
+      "output": 131072,
+      "description": "GPT-5.4 高效版，接近旗艦 coding/computer-use 表現，速度為 GPT-5 mini 2x+，適合 subagent executor 與高吞吐工作負載"
+    },
+    "gpt-5.4-nano": {
+      "input": 400000,
+      "output": 131072,
+      "description": "GPT-5.4 最輕量版，僅供 API 使用，適合分類、資料提取、排序與簡單 coding subagent，成本最低"
+    },
     "gpt-5-mini": {
       "input": 400000,
       "output": 131072,
