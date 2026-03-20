@@ -53,24 +53,44 @@ func checkBinary(name string) bool {
 }
 
 var (
-	bwrapOnce  sync.Once
-	isAvaiable bool
+	bwrapOnce    sync.Once
+	isAvailable  bool
+	unshareFlags []string
 )
 
-func checkBwrap() bool {
-	cmd := exec.Command("bwrap", "--ro-bind", "/", "/", "--", "/bin/true")
-	return cmd.Run() == nil
+func checkBwrap() {
+	if exec.Command("bwrap", "--ro-bind", "/", "/", "--", "/bin/true").Run() != nil {
+		return
+	}
+	isAvailable = true
+
+	candidates := []string{
+		"--unshare-user",
+		"--unshare-pid",
+		"--unshare-ipc",
+		"--unshare-uts",
+		"--unshare-cgroup",
+	}
+	for _, flag := range candidates {
+		cmd := exec.Command("bwrap", "--ro-bind", "/", "/", flag, "--", "/bin/true")
+		if cmd.Run() == nil {
+			unshareFlags = append(unshareFlags, flag)
+		} else {
+			slog.Warn("bwrap unavailable",
+				slog.String("flag", flag))
+		}
+	}
 }
 
 func Wrap(binary string, args []string, workDir string) (string, []string, error) {
 	bwrapOnce.Do(func() {
-		isAvaiable = checkBwrap()
-		if !isAvaiable {
+		checkBwrap()
+		if !isAvailable {
 			slog.Warn("bwrap unavailable")
 		}
 	})
 
-	if !isAvaiable {
+	if !isAvailable {
 		return binary, args, nil
 	}
 
@@ -86,9 +106,20 @@ func Wrap(binary string, args []string, workDir string) (string, []string, error
 		"--dev", "/dev",
 		"--proc", "/proc",
 		"--share-net",
+		"--new-session",
 		"--die-with-parent",
-		"--", binary,
 	}
+	bwrapArgs = append(bwrapArgs, unshareFlags...)
+
+	deniedDirs, deniedFiles := deniedPaths(homeDir)
+	for _, d := range deniedDirs {
+		bwrapArgs = append(bwrapArgs, "--tmpfs", d)
+	}
+	for _, f := range deniedFiles {
+		bwrapArgs = append(bwrapArgs, "--ro-bind", "/dev/null", f)
+	}
+
+	bwrapArgs = append(bwrapArgs, "--", binary)
 
 	return "bwrap", append(bwrapArgs, args...), nil
 }

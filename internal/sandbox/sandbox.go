@@ -1,10 +1,13 @@
 package sandbox
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pardnchiu/agenvoy/configs"
 )
 
 func vaildateDir(path string) (string, error) {
@@ -23,4 +26,25 @@ func vaildateDir(path string) (string, error) {
 	}
 
 	return homeDir, nil
+}
+
+type deniedMap struct {
+	Dirs  []string `json:"dirs"`
+	Files []string `json:"files"`
+}
+
+var cachedDenied deniedMap
+
+func init() {
+	_ = json.Unmarshal(configs.DeniedMap, &cachedDenied)
+}
+
+func deniedPaths(homeDir string) (dirs []string, files []string) {
+	for _, d := range cachedDenied.Dirs {
+		dirs = append(dirs, filepath.Join(homeDir, d))
+	}
+	for _, f := range cachedDenied.Files {
+		files = append(files, filepath.Join(homeDir, f))
+	}
+	return
 }
