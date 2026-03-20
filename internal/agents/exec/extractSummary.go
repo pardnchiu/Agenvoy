@@ -12,7 +12,7 @@ import (
 var (
 	trailingJsonRegex = regexp.MustCompile(
 		`(?s)\n*(?:---\s*\n)?(?:\*{0,2}[^\n*]*[Ss]ummary[^\n*]*\*{0,2}\s*\n)?` +
-			"```" + `(?:json|xml)\s*(\{.*?\})\s*` + "```" + `\s*$`,
+			"```" + `(?:json|xml|summary)\s*(\{.*?\})\s*` + "```" + `\s*$`,
 	)
 	timestampHeaderReg = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
 )

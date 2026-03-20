@@ -16,11 +16,6 @@
       "output": 65536,
       "description": "Gemini 3.1 Pro 工具優先版，專為 Agentic 工作流與自訂工具整合優化"
     },
-    "gemini-3-flash-preview": {
-      "input": 1048576,
-      "output": 65536,
-      "description": "Gemini 3 Flash，支援可配置思考深度，適合結構化輸出與工具呼叫"
-    },
     "gemini-2.5-pro": {
       "input": 1048576,
       "output": 65536,
