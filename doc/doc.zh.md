@@ -77,18 +77,18 @@ agenvoy add
 | NVIDIA | API Key（keychain） | `openai/gpt-oss-120b` |
 | Compat | 選填 API Key（keychain） | 使用者指定 |
 
-### 環境變數（Discord Bot 專用）
+### 環境變數
 
 | 變數 | 必要 | 說明 |
 |------|------|------|
-| `DISCORD_TOKEN` | 是 | Discord Bot Token |
+| `DISCORD_TOKEN` | 是（Server 模式） | Discord Bot Token |
 | `DISCORD_GUILD_ID` | 否 | 設定後僅限特定 Guild 接收 Slash Command |
+| `MAX_HISTORY_MESSAGES` | 否 | 傳送至 Agent 的最大歷史訊息數（預設：16） |
 
 建立 `.env` 並填入對應值：
 
 ```bash
-DISCORD_TOKEN=your_token_here
-DISCORD_GUILD_ID=optional_guild_id
+cp .env.example .env
 ```
 
 > 檔名含 `.example` 的檔案（如 `.env.example`）不受環境變數前綴封鎖規則限制，可安全讀取。
@@ -311,8 +311,9 @@ agenvoy remove
 | 特性 | Linux（bwrap） | macOS（sandbox-exec） |
 |------|---------------|----------------------|
 | 檔案系統 | 唯讀根目錄，僅 `$HOME` 可寫 | 預設拒絕，允許 `file-read*`，`file-write*` 限縮至 `$HOME` |
-| PID 隔離 | `--unshare-pid` | 不支援 |
-| Mount 隔離 | `--unshare-mnt` | 不支援 |
+| 敏感路徑封鎖 | `--tmpfs` 覆蓋敏感目錄、`--ro-bind /dev/null` 覆蓋敏感檔案 | Seatbelt `deny file-read*` / `deny file-write*` 規則 |
+| Namespace 隔離 | `--unshare-user/pid/ipc/uts/cgroup`（逐一探測可用性） | 不支援 |
+| Session 隔離 | `--new-session` | 不支援 |
 | 網路 | 允許（`--share-net`） | 允許（`allow network*`） |
 | 孤兒程序防護 | `--die-with-parent` | 不支援 |
 | 路徑驗證 | `filepath.EvalSymlinks` → 超出 `$HOME` 則拒絕 | 相同 |
@@ -336,12 +337,13 @@ agenvoy remove
 ```go
 type Agent interface {
     Name() string
+    MaxInputTokens() int
     Send(ctx context.Context, messages []Message, toolDefs []toolTypes.Tool) (*Output, error)
     Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- Event, allowAll bool) error
 }
 ```
 
-`Send` 處理單次 LLM API 呼叫。`Execute` 管理完整的 Skill 執行迴圈，最多 128 次 Tool Call 迭代，達到上限時自動觸發摘要。
+`Send` 處理單次 LLM API 呼叫。`Execute` 管理完整的 Skill 執行迴圈，最多 128 次 Tool Call 迭代，達到上限時自動觸發摘要。`MaxInputTokens` 回傳模型的最大輸入 token 數，用於 session 層級的 token-budget 裁剪。
 
 ### Provider Registry
 

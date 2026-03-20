@@ -30,39 +30,15 @@
 
 ### 多 Provider LLM 智能路由
 
-Agenvoy 將七個 AI 後端 — GitHub Copilot、Claude、OpenAI、Gemini、Nvidia NIM，以及任意 OpenAI 相容端點（Compat/Ollama）— 統一於單一 `Agent` 介面之後。專屬 Planner LLM 針對每個請求自動選出最適合的 Provider，無需手動切換模型。具名 `compat[{name}]` 實例支援多個本地模型端點並存，各自擁有獨立的 URL 與憑證設定。
+Agenvoy 將七個 AI 後端 — GitHub Copilot、Claude、OpenAI、Gemini、Nvidia NIM，以及任意 OpenAI 相容端點（Compat/Ollama）— 統一於單一 `Agent` 介面之後。專屬 Planner LLM 針對每個請求自動選出最適合的 Provider，並根據模型的 input token 上限進行 token-budget 裁剪，確保歷史訊息不會溢出 context window。Copilot Provider 支援 GPT-5.4 系列的 Responses API 端點，自動偵測模型類型並切換通訊協定。
 
-### Token 用量追蹤
+### 沙箱隔離安全執行
 
-每次請求的 input/output token 用量在 Session 內所有工具呼叫迭代中完整累計。總消耗量與模型名稱一同顯示於 CLI 輸出與 Discord 回覆頁尾，讓六個 Provider 的成本監控即時透明化。
+所有外部指令與腳本在作業系統原生沙箱中執行。Linux 使用 bubblewrap（`bwrap`）搭配動態 namespace 探測（`--unshare-user`、`--unshare-pid` 等逐一驗證可用性），macOS 使用 `sandbox-exec` 搭配 Seatbelt Profile。雙平台均從嵌入式 `denied_map.json` 載入敏感路徑封鎖清單，阻止存取 SSH 金鑰、雲端憑證、Shell 設定檔與私鑰格式。API 金鑰儲存於系統原生 Keychain 而非環境變數，所有路徑解析使用 `filepath.EvalSymlinks` 防止捷徑繞過邊界。
 
-### 沙箱隔離指令執行
+### Skill 驅動的 Agentic 工作流
 
-所有外部指令與腳本在作業系統原生沙箱中執行。Linux 使用 bubblewrap（`bwrap`）建立唯讀根檔案系統、僅 `$HOME` 可寫，搭配 PID/Mount namespace 隔離與 `--die-with-parent` 防止孤兒程序。macOS 使用 `sandbox-exec` 搭配 Seatbelt Profile，預設拒絕所有操作，僅允許檔案讀取與限縮於使用者 Home 目錄的寫入。啟動時自動偵測沙箱依賴，Linux 環境下若未安裝 bubblewrap 將透過系統套件管理器（`apt-get` / `dnf` / `yum` / `pacman` / `apk`）自動安裝。
-
-### Skill 驅動的 Agentic 執行
-
-Skill 是帶有 YAML Frontmatter 的 Markdown 定義檔（`SKILL.md`），描述任務的 System Prompt 與工具允許清單。執行時 Selector LLM 從 9 個標準掃描路徑中挑選最符合的 Skill，隨後驅動最多 128 次迭代的工具呼叫迴圈直至任務完成。達到迭代上限時自動觸發摘要而非回傳錯誤。官方 Skill Extension 由 SyncSkills 在啟動時從 GitHub 自動同步至本地。
-
-### 25+ 跨六大類別的內建工具
-
-執行器內建完整工具鏈：檔案操作（`read_file`、`write_file`、`patch_edit`、`glob_files`、`search_content`）、網路存取（`search_web`、`fetch_page`、`download_page`、`fetch_google_rss`）、排程（`add_task`、`add_cron`、`write_script`）、錯誤記憶（`remember_error`、`search_errors`、`get_tool_error`）、數學計算器，以及任意 HTTP 請求。所有 `rm` 操作均導向 `.Trash`，所有寫入使用先寫 tmp 再 rename 的原子性操作防止部分寫入損毀。
-
-### JSON 驅動的 API Extension 架構
-
-外部 REST API 以 JSON 定義檔放置於 `extensions/apis/` 並由 API 適配器在執行時載入，無需修改 Go 程式碼即可擴充工具。已內嵌 13 個公開 API：Yahoo Finance、CoinGecko、Wikipedia、World Bank、USGS 地震、Nominatim、Open-Meteo、HackerNews、REST Countries、TheMealDB、IP-API 與匯率。自訂端點遵循相同 Schema，工具數量可無限擴充且不需重新編譯。
-
-### Discord Bot 模式與任務排程
-
-`cmd/server` 啟動支援直接訊息與 Slash Command 的持久化 Discord Bot，並維護每個頻道的獨立 Session 狀態。整合排程器支援一次性任務（`+5m` 相對延遲或絕對時間戳）與週期性 Cron 任務（標準 5 欄位表達式，由 `go-scheduler` 在登錄時驗證）。每個任務綁定 Discord 頻道 ID，腳本執行完成後由 Planner Agent 處理 stdout 並自動回傳至對應頻道。`schedule-task` Skill 將自然語言排程意圖自動路由至排程器。
-
-### 跨 Session 持久化記憶
-
-每輪對話結尾，Agent 輸出結構化 JSON 摘要，以欄位層級的去重策略深度合併至先前的 Session 摘要後儲存於 `~/.config/agenvoy/`。後續 Session 注入此摘要以及最近 N 輪對話，使 Agent 無需重播完整歷史即可引用過往決策、限制條件與結論。工具執行錯誤以 SHA-256 金鑰持久化，Agent 可在重試前查詢歷史根因。
-
-### 多層安全防護與 Symlink 安全路徑驗證
-
-API 金鑰儲存於系統原生 Keychain（macOS Keychain、Linux Secret Service）而非 `.env` 檔案，防止憑證意外洩漏。GitHub Copilot 採用 OAuth Device Code Flow 並自動刷新令牌。多層路徑封鎖清單阻止存取 SSH 金鑰、Shell 設定檔、雲端憑證（`.aws`、`.gcloud`、`.docker`）、`.env` 檔案與私鑰格式。所有路徑解析均使用 `filepath.EvalSymlinks` 防止捷徑繞過 Home 目錄邊界。
+Skill 是帶有 YAML Frontmatter 的 Markdown 定義檔，描述任務的 System Prompt 與工具允許清單。執行時 Selector LLM 從 9 個標準掃描路徑中挑選最符合的 Skill，隨後驅動最多 128 次迭代的工具呼叫迴圈直至任務完成。內建 25+ 工具涵蓋檔案操作、網路存取、排程器、錯誤記憶與 13+ JSON 驅動 API Extension，所有 `rm` 導向 `.Trash`、所有寫入使用原子性 tmp-then-rename。Discord Bot 模式支援 Slash Command、per-channel Session 狀態與排程任務回傳。
 
 ## 架構
 
@@ -77,13 +53,13 @@ graph TB
         Run["exec.Run()"]
         SkillSelect["SelectSkill()\n9 個掃描路徑"]
         AgentSelect["SelectAgent()\nProvider 登錄檔"]
+        TrimMsg["trimMessages()\ntoken-budget 裁剪"]
         Execute["exec.Execute()\n≤128 次迭代"]
         Send["Agent.Send()"]
-        Usage["Token 累計\n每次請求 in/out"]
     end
 
     subgraph Providers ["LLM Providers"]
-        Copilot["Copilot"]
+        Copilot["Copilot\nChat + Responses API"]
         OpenAI["OpenAI"]
         Claude["Claude"]
         Gemini["Gemini"]
@@ -93,7 +69,7 @@ graph TB
 
     subgraph Security ["安全層"]
         Sandbox["沙箱\nbwrap / sandbox-exec"]
-        PathGuard["路徑驗證\nEvalSymlinks + denied.json"]
+        DeniedPaths["敏感路徑封鎖\ndenied_map.json"]
         Keychain["OS Keychain\nmacOS / Linux"]
     end
 
@@ -106,7 +82,7 @@ graph TB
     end
 
     subgraph Persistence ["持久化"]
-        Session["Session 摘要\n深度合併 + 去重"]
+        Session["Session 摘要\nXML tag + 深度合併"]
         History["對話歷史\n最近 N 輪"]
     end
 
@@ -116,10 +92,11 @@ graph TB
     Run --> AgentSelect
     SkillSelect --> Execute
     AgentSelect --> Execute
-    Execute --> Send
+    Execute --> TrimMsg
+    TrimMsg --> Send
     Send --> Providers
-    Send --> Usage
     Execute -->|"tool calls"| Security
+    Security --> DeniedPaths
     Security --> Tools
     Tools -->|"results"| Execute
     Scheduler -->|"完成後回傳"| Discord
@@ -134,18 +111,20 @@ agenvoy/
 ├── cmd/
 │   ├── cli/                # CLI：add / remove / list / run
 │   └── server/             # Discord Bot 進入點
-├── configs/                # 內嵌 Prompt 與 Provider JSON 登錄檔
+├── configs/
+│   ├── jsons/              # Provider 模型定義、denied_map、白名單
+│   └── prompts/            # 嵌入式 System Prompt 與選擇器
 ├── extensions/
 │   ├── apis/               # 內嵌 API Extension（13+ JSON）
 │   └── skills/             # 內嵌 Skill Extension（Markdown）
 ├── internal/
 │   ├── agents/
-│   │   ├── exec/           # 核心執行引擎與 Session 迴圈
-│   │   ├── provider/       # 6 個 AI Provider 後端 + 模型登錄檔
+│   │   ├── exec/           # 執行引擎、token 裁剪、摘要擷取
+│   │   ├── provider/       # 6 個 AI Provider 後端 + Responses API
 │   │   └── types/          # Agent 介面 + Message / Usage 類型
 │   ├── discord/            # Discord Slash Command + 檔案附件
 │   ├── filesystem/         # 路徑驗證、Session 管理與 Keychain
-│   ├── sandbox/            # 沙箱隔離（bwrap / sandbox-exec）
+│   ├── sandbox/            # 沙箱隔離 + 敏感路徑封鎖
 │   ├── scheduler/          # 持久化一次性與週期性任務排程器
 │   ├── skill/              # Markdown Skill 掃描器與解析器
 │   └── tools/              # 25+ 自註冊工具 + API Extension 適配器
@@ -155,6 +134,7 @@ agenvoy/
 
 ## 版本歷史
 
+- **v0.15.0** — Copilot Responses API 支援（GPT-5.4 與 Codex 模型自動切換端點）；Session 層級 token-budget 訊息裁剪（依 `MaxInputTokens()` 計算預算，保留 system prompt + summary + 最新使用者訊息）；macOS 與 Linux 沙箱新增敏感路徑存取拒絕規則（從嵌入式 `denied_map.json` 載入）；Linux bwrap 恢復 `--unshare-all` namespace 隔離（含 graceful fallback 探測）與 `--new-session` process 隔離；`MAX_HISTORY_MESSAGES` 環境變數支援；Summary delimiter 改為 XML tag；輕量模型排除於 Agent 選擇
 - **v0.14.0** — 作業系統原生沙箱隔離（Linux bubblewrap 自動安裝、macOS sandbox-exec）；每次請求的 token 用量追蹤（跨所有工具呼叫迭代累計）；工具處理器重構為獨立命名檔案；exclude 邏輯與 file walk/list 移至 `filesystem` package；`GetAbsPath` 新增 symlink 安全路徑解析
 - **v0.13.0** — 自註冊 Tool Registry 取代 switch routing 與嵌入式 JSON 定義；排程器持久化 JSON 儲存含完整 CRUD（tasks 與 crons 的新增/更新/刪除）；Keychain 遷移至 `filesystem` 下；絕對路徑限制僅允許使用者 Home 目錄；裁切歷史加入省略號標記
 - **v0.12.0** — 完整排程子系統（Cron + 一次性任務含 Discord 回呼）；集中 `filesystem` + `configs` 套件；以 `go-scheduler` 取代自製 Cron 解析器；`schedule-task` Skill

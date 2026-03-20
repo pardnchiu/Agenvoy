@@ -77,18 +77,18 @@ Supported providers:
 | NVIDIA | API Key (keychain) | `openai/gpt-oss-120b` |
 | Compat | Optional API Key (keychain) | User-specified |
 
-### Environment Variables (Discord Bot Only)
+### Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DISCORD_TOKEN` | Yes | Discord Bot Token |
+| `DISCORD_TOKEN` | Yes (server mode) | Discord Bot Token |
 | `DISCORD_GUILD_ID` | No | Restricts slash command registration to a specific guild |
+| `MAX_HISTORY_MESSAGES` | No | Max history messages sent to agent (default: 16) |
 
 Create a `.env` file and fill in the values:
 
 ```bash
-DISCORD_TOKEN=your_token_here
-DISCORD_GUILD_ID=optional_guild_id
+cp .env.example .env
 ```
 
 > Files with `.example` in the name (e.g., `.env.example`) bypass the env prefix deny rule and are safe to read.
@@ -311,8 +311,9 @@ All commands executed via `run_command` and scheduler scripts run inside an OS-n
 | Feature | Linux (bwrap) | macOS (sandbox-exec) |
 |---------|---------------|----------------------|
 | Filesystem | Read-only root, writable `$HOME` | Deny-default, `file-read*` allowed, `file-write*` scoped to `$HOME` |
-| PID isolation | `--unshare-pid` | Not available |
-| Mount isolation | `--unshare-mnt` | Not available |
+| Sensitive path denial | `--tmpfs` over sensitive dirs, `--ro-bind /dev/null` over sensitive files | Seatbelt `deny file-read*` / `deny file-write*` rules |
+| Namespace isolation | `--unshare-user/pid/ipc/uts/cgroup` (individually probed for availability) | Not available |
+| Session isolation | `--new-session` | Not available |
 | Network | Allowed (`--share-net`) | Allowed (`allow network*`) |
 | Orphan prevention | `--die-with-parent` | Not available |
 | Path validation | `filepath.EvalSymlinks` → reject if outside `$HOME` | Same |
@@ -336,12 +337,13 @@ When any tool call fails, the error is persisted to `tool_errors/{hash}.json` wi
 ```go
 type Agent interface {
     Name() string
+    MaxInputTokens() int
     Send(ctx context.Context, messages []Message, toolDefs []toolTypes.Tool) (*Output, error)
     Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- Event, allowAll bool) error
 }
 ```
 
-`Send` handles a single LLM API call. `Execute` manages the complete skill execution loop with up to 128 tool call iterations, automatically triggering summarization at the limit.
+`Send` handles a single LLM API call. `Execute` manages the complete skill execution loop with up to 128 tool call iterations, automatically triggering summarization at the limit. `MaxInputTokens` returns the model's maximum input token count, used for session-level token-budget trimming.
 
 ### Provider Registry
 

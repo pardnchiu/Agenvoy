@@ -30,39 +30,15 @@
 
 ### Multi-Provider LLM with Intelligent Routing
 
-Agenvoy integrates seven AI backends — GitHub Copilot, Claude, OpenAI, Gemini, Nvidia NIM, and any OpenAI-compatible endpoint (Compat/Ollama) — behind a unified `Agent` interface. A dedicated planner LLM automatically selects the most appropriate provider for each request, eliminating the need to manually switch models. Named `compat[{name}]` instances allow multiple local model endpoints to coexist, each with independent URL and credential configuration.
+Agenvoy integrates seven AI backends — GitHub Copilot, Claude, OpenAI, Gemini, Nvidia NIM, and any OpenAI-compatible endpoint (Compat/Ollama) — behind a unified `Agent` interface. A dedicated planner LLM automatically selects the most appropriate provider for each request, and applies token-budget trimming based on each model's `MaxInputTokens()` to ensure conversation history never overflows the context window. The Copilot provider supports the GPT-5.4 Responses API endpoint, automatically detecting model type and switching communication protocol.
 
-### Token Usage Tracking
+### Sandbox-Isolated Secure Execution
 
-Every request's input/output token usage is fully accumulated across all tool-call iterations within a session. The total consumption is displayed alongside the model name in both CLI output and Discord reply footers, making cost monitoring transparent and immediate across all six providers.
+All external commands and scripts run inside an OS-native sandbox. Linux uses bubblewrap (`bwrap`) with dynamic namespace probing (`--unshare-user`, `--unshare-pid`, etc. individually verified for availability), and macOS uses `sandbox-exec` with a Seatbelt profile. Both platforms load sensitive path deny rules from an embedded `denied_map.json`, blocking access to SSH keys, cloud credentials, shell configs, and private key formats. API keys are stored in the OS-native keychain rather than environment variables, and all path resolution uses `filepath.EvalSymlinks` to prevent symlink-based boundary escapes.
 
-### Sandbox-Isolated Command Execution
+### Skill-Based Agentic Workflows
 
-All external commands and scripts run inside an OS-native sandbox. Linux uses bubblewrap (`bwrap`) with a read-only root filesystem, writable `$HOME`, PID/mount namespace isolation, and `--die-with-parent` to prevent orphan processes. macOS uses `sandbox-exec` with a Seatbelt profile that denies all by default, allowing only read access to the filesystem and write access scoped to the user's home directory. On startup, sandbox dependencies are automatically detected — on Linux, if bubblewrap is not installed, it will be installed automatically via the system package manager (`apt-get` / `dnf` / `yum` / `pacman` / `apk`).
-
-### Skill-Based Agentic Execution
-
-Skills are declarative Markdown files (`SKILL.md`) that define a task's system prompt and tool allowlist. At runtime, a Selector LLM picks the best matching skill across 9 standard scan paths, then drives a tool-call loop of up to 128 iterations until the task completes. When the iteration limit is reached, the engine automatically triggers summarization rather than returning an error. Skill extensions are auto-synced from GitHub on startup via `SyncSkills`.
-
-### 25+ Built-in Tools Across Six Categories
-
-The executor ships a comprehensive toolchain: filesystem operations (`read_file`, `write_file`, `patch_edit`, `glob_files`, `search_content`), web access (`search_web`, `fetch_page`, `download_page`, `fetch_google_rss`), scheduling (`add_task`, `add_cron`, `write_script`), error memory (`remember_error`, `search_errors`, `get_tool_error`), a math calculator, and arbitrary HTTP requests. Every `rm` is redirected to `.Trash` and all writes use atomic tmp-then-rename to prevent partial file corruption.
-
-### JSON-Driven API Extension Architecture
-
-External REST APIs are defined as JSON files under `extensions/apis/` and loaded at runtime through the API adapter — no Go code required. Thirteen public-domain APIs are bundled out of the box: Yahoo Finance, CoinGecko, Wikipedia, World Bank, USGS Earthquake, Nominatim, Open-Meteo, HackerNews, REST Countries, TheMealDB, IP-API, and exchange rates. Custom endpoints follow the same schema, making the tool surface arbitrarily extensible without recompilation.
-
-### Discord Bot Mode with Task Scheduler
-
-`cmd/server` launches a persistent Discord bot handling both direct messages and slash commands with per-channel session state. The integrated scheduler supports one-time tasks (via `+5m` or absolute timestamps) and recurring cron jobs (standard 5-field expressions validated by `go-scheduler`). Each task is linked to a Discord channel ID: when a script completes, the planner agent processes stdout and posts results back to the originating channel. The `schedule-task` skill routes natural-language timing intent to the scheduler automatically.
-
-### Cross-Session Persistent Memory
-
-At the end of each turn, the agent emits a structured JSON summary that is deep-merged with the previous session summary using field-level deduplication, then stored in `~/.config/agenvoy/`. Subsequent sessions inject this summary alongside the last N conversation turns, allowing the agent to recall decisions, constraints, and conclusions without replaying full history. Tool-execution errors are persisted with SHA-256 keys so the agent can look up past root causes before retrying.
-
-### Multi-Layer Security with Symlink-Safe Path Validation
-
-API keys are stored in the OS-native keychain (macOS Keychain, Linux Secret Service) rather than plain environment variables. GitHub Copilot uses OAuth Device Code Flow with automatic token refresh. A multi-layer path deny-list blocks access to SSH keys, shell configs, cloud credentials (`.aws`, `.gcloud`, `.docker`), `.env` files, and private key formats. All path resolution uses `filepath.EvalSymlinks` to prevent symlink-based escapes from the home directory boundary.
+Skills are declarative Markdown files with YAML frontmatter that define a task's system prompt and tool allowlist. At runtime, a Selector LLM picks the best matching skill across 9 standard scan paths, then drives a tool-call loop of up to 128 iterations until the task completes. The executor ships 25+ built-in tools spanning file operations, web access, scheduling, error memory, and 13+ JSON-driven API extensions — all `rm` redirected to `.Trash`, all writes atomic via tmp-then-rename. Discord bot mode supports slash commands, per-channel session state, and scheduled task callbacks.
 
 ## Architecture
 
@@ -77,13 +53,13 @@ graph TB
         Run["exec.Run()"]
         SkillSelect["SelectSkill()\n9 scan paths"]
         AgentSelect["SelectAgent()\nprovider registry"]
+        TrimMsg["trimMessages()\ntoken-budget trimming"]
         Execute["exec.Execute()\n≤128 iterations"]
         Send["Agent.Send()"]
-        Usage["Token Accumulation\nin/out per request"]
     end
 
     subgraph Providers ["LLM Providers"]
-        Copilot["Copilot"]
+        Copilot["Copilot\nChat + Responses API"]
         OpenAI["OpenAI"]
         Claude["Claude"]
         Gemini["Gemini"]
@@ -93,7 +69,7 @@ graph TB
 
     subgraph Security ["Security Layer"]
         Sandbox["Sandbox\nbwrap / sandbox-exec"]
-        PathGuard["Path Validation\nEvalSymlinks + denied.json"]
+        DeniedPaths["Sensitive Path Denial\ndenied_map.json"]
         Keychain["OS Keychain\nmacOS / Linux"]
     end
 
@@ -106,7 +82,7 @@ graph TB
     end
 
     subgraph Persistence ["Persistence"]
-        Session["Session Summary\ndeep-merge + dedup"]
+        Session["Session Summary\nXML tags + deep-merge"]
         History["Conversation History\nlast N turns"]
     end
 
@@ -116,10 +92,11 @@ graph TB
     Run --> AgentSelect
     SkillSelect --> Execute
     AgentSelect --> Execute
-    Execute --> Send
+    Execute --> TrimMsg
+    TrimMsg --> Send
     Send --> Providers
-    Send --> Usage
     Execute -->|"tool calls"| Security
+    Security --> DeniedPaths
     Security --> Tools
     Tools -->|"results"| Execute
     Scheduler -->|"on complete"| Discord
@@ -134,18 +111,20 @@ agenvoy/
 ├── cmd/
 │   ├── cli/                # CLI: add / remove / list / run
 │   └── server/             # Discord bot entry point
-├── configs/                # Embedded prompts and provider JSON registry
+├── configs/
+│   ├── jsons/              # Provider model defs, denied_map, whitelist
+│   └── prompts/            # Embedded system prompts and selectors
 ├── extensions/
 │   ├── apis/               # Embedded API extensions (13+ JSON)
 │   └── skills/             # Embedded skill extensions (Markdown)
 ├── internal/
 │   ├── agents/
-│   │   ├── exec/           # Core execution engine and session loop
-│   │   ├── provider/       # 6 AI provider backends + model registry
+│   │   ├── exec/           # Execution engine, token trimming, summary extraction
+│   │   ├── provider/       # 6 AI provider backends + Responses API
 │   │   └── types/          # Agent interface + message / usage types
 │   ├── discord/            # Discord slash commands + file attachments
 │   ├── filesystem/         # Path validation, session manager, and keychain
-│   ├── sandbox/            # Sandbox isolation (bwrap / sandbox-exec)
+│   ├── sandbox/            # Sandbox isolation + sensitive path denial
 │   ├── scheduler/          # Persistent one-time and recurring task scheduler
 │   ├── skill/              # Markdown skill scanner and parser
 │   └── tools/              # 25+ self-registering tools + API extension adapter
@@ -155,6 +134,7 @@ agenvoy/
 
 ## Version History
 
+- **v0.15.0** — Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint); session-level token-budget message trimming (budget calculated via `MaxInputTokens()`, preserving system prompt + summary + latest user message); sensitive path denial rules for macOS and Linux sandbox (loaded from embedded `denied_map.json`); Linux bwrap restores `--unshare-all` namespace isolation (with graceful fallback probing) and `--new-session` process isolation; `MAX_HISTORY_MESSAGES` environment variable support; summary delimiter switched to XML tags; lite models excluded from agent selection
 - **v0.14.0** — OS-native sandbox isolation (bubblewrap on Linux with auto-install, sandbox-exec on macOS); per-request token usage tracking accumulated across all tool-call iterations; tool handlers restructured into individually named files; exclude logic and file walk/list moved into `filesystem` package; symlink-safe path resolution in `GetAbsPath`
 - **v0.13.0** — Self-registering tool Registry replacing switch-based routing and embedded JSON definitions; scheduler persistent JSON storage with full CRUD (add/update/delete for tasks and crons); keychain migrated under `filesystem`; absolute path restriction to user home directory; trimmed history ellipsis markers
 - **v0.12.0** — Full scheduler subsystem (cron + one-time tasks with Discord callbacks); centralize `filesystem` + `configs` packages; replace custom cron parser with `go-scheduler`; `schedule-task` skill
