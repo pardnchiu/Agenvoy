@@ -33,12 +33,9 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 	}
 
 	session := &agentTypes.AgentSession{
-		ID:    sessionID,
-		Tools: []agentTypes.Message{},
-		Messages: []agentTypes.Message{
-			{Role: "system", Content: exec.GetSystemPrompt(data)},
-			{Role: "system", Content: configs.DiscordSystemPrompt},
-		},
+		ID:        sessionID,
+		Tools:     []agentTypes.Message{},
+		Messages:  []agentTypes.Message{},
 		Histories: []agentTypes.Message{},
 	}
 
@@ -65,6 +62,11 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 		}
 	}
 	session.Messages = append(session.Messages, oldHistory...)
+
+	session.Messages = append(session.Messages,
+		agentTypes.Message{Role: "system", Content: configs.DiscordSystemPrompt},
+		agentTypes.Message{Role: "system", Content: exec.GetSystemPrompt(data)},
+	)
 
 	if summary := sessionManager.GetSummaryPrompt(sessionID); summary != "" {
 		session.Messages = append(session.Messages, agentTypes.Message{
