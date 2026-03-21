@@ -32,6 +32,7 @@
 | `github.com/joho/godotenv` | `.env` environment variable loading |
 | `github.com/manifoldco/promptui` | Interactive CLI selection menus |
 | `github.com/pardnchiu/go-scheduler` | Cron expression parsing and scheduling |
+| `golang.org/x/image` | WebP image decoding (vision input) |
 | `golang.org/x/net` | HTML tokenizer and network utilities |
 
 ## Installation

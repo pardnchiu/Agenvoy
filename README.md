@@ -12,7 +12,7 @@
 [![license](https://img.shields.io/github/license/pardnchiu/agenvoy)](LICENSE)
 [![version](https://img.shields.io/github/v/tag/pardnchiu/agenvoy?label=release)](https://github.com/pardnchiu/agenvoy/releases)
 
-> Agenvoy is inspired by [OpenClaw](https://openclaw.ai), built on a Go-based architecture with multi-provider intelligent dispatch and a security-first design.
+> A Go multi-provider AI agent framework with intelligent routing, sandbox-isolated execution, and skill-driven workflows
 
 ## Table of Contents
 
@@ -30,15 +30,35 @@
 
 ### Multi-Provider LLM with Intelligent Routing
 
-Agenvoy integrates seven AI backends — GitHub Copilot, Claude, OpenAI, Gemini, Nvidia NIM, and any OpenAI-compatible endpoint (Compat/Ollama) — behind a unified `Agent` interface. A dedicated planner LLM automatically selects the most appropriate provider for each request, and applies token-budget trimming based on each model's `MaxInputTokens()` to ensure conversation history never overflows the context window. The Copilot provider supports the GPT-5.4 Responses API endpoint, automatically detecting model type and switching communication protocol.
+Seven AI backends — GitHub Copilot, Claude, OpenAI, Gemini, Nvidia NIM, and any OpenAI-compatible endpoint (Compat/Ollama) — behind a unified `Agent` interface, with a dedicated planner LLM that automatically selects the best provider per request and token-budget trimming that prevents context window overflow.
 
-### Sandbox-Isolated Secure Execution
+### OS-Native Sandbox Isolation
 
-All external commands and scripts run inside an OS-native sandbox. Linux uses bubblewrap (`bwrap`) with dynamic namespace probing (`--unshare-user`, `--unshare-pid`, etc. individually verified for availability), and macOS uses `sandbox-exec` with a Seatbelt profile. Both platforms load sensitive path deny rules from an embedded `denied_map.json`, blocking access to SSH keys, cloud credentials, shell configs, and private key formats. API keys are stored in the OS-native keychain rather than environment variables, and all path resolution uses `filepath.EvalSymlinks` to prevent symlink-based boundary escapes.
+All commands and scripts execute inside bubblewrap on Linux (with dynamic namespace probing) or `sandbox-exec` on macOS, with sensitive path denial loaded from an embedded deny list, OS keychain credential storage, and symlink-safe path validation restricting access to the user's home directory.
 
-### Skill-Based Agentic Workflows
+### Skill-Driven Agentic Workflows
 
-Skills are declarative Markdown files with YAML frontmatter that define a task's system prompt and tool allowlist. At runtime, a Selector LLM picks the best matching skill across 9 standard scan paths, then drives a tool-call loop of up to 128 iterations until the task completes. The executor ships 25+ built-in tools spanning file operations, web access, scheduling, error memory, and 13+ JSON-driven API extensions — all `rm` redirected to `.Trash`, all writes atomic via tmp-then-rename. Discord bot mode supports slash commands, per-channel session state, and scheduled task callbacks.
+Declarative Markdown skills with YAML frontmatter define task prompts and tool allowlists; a Selector LLM auto-matches the best skill from 9 scan paths, then drives a tool-call loop of up to 128 iterations with hash-based deduplication until the task completes.
+
+### Copilot Dual-Protocol Auto-Switch
+
+The Copilot provider detects model type at runtime — GPT-5.4 and Codex route to the Responses API, all others use Chat Completions — with cross-provider image normalization (all formats re-encoded as JPEG) for universal vision support.
+
+### Declarative JSON API Extensions
+
+13+ embedded public API tools (CoinGecko, Wikipedia, Open-Meteo, Yahoo Finance, etc.) defined as pure JSON, with support for user-defined custom extensions — no Go code required to add new API integrations.
+
+### Persistent Error Memory
+
+Tool failures are SHA-256 indexed per session; the agent can recall past errors via `search_errors` and persist resolution decisions via `remember_error` for cross-session learning.
+
+### Persistent Task Scheduler
+
+Full CRUD for recurring cron tasks and one-time scheduled tasks with JSON storage, auto-restore on restart, and Discord channel callbacks that post results on completion.
+
+### Discord Bot Integration
+
+Slash command support with per-channel session isolation, file attachment handling, inline file-send protocol, and scheduled task result posting — sharing the same execution engine as the CLI.
 
 ## Architecture
 
@@ -134,6 +154,7 @@ agenvoy/
 
 ## Version History
 
+- **v0.15.1** — Fix Copilot Claude/Gemini image validation failure: all uploaded images are decoded and re-encoded as JPEG (`image.Decode` + `jpeg.Encode`, supporting PNG/GIF/WebP sources), `ImageURL` gains `detail` field; summary regex split from one monolithic expression into three independent patterns (fenced block, `<summary>` tag, `[summary]` bracket); system prompts moved after history to improve model instruction adherence; Discord prompt takes priority over base system prompt
 - **v0.15.0** — Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint); session-level token-budget message trimming (budget calculated via `MaxInputTokens()`, preserving system prompt + summary + latest user message); sensitive path denial rules for macOS and Linux sandbox (loaded from embedded `denied_map.json`); Linux bwrap restores `--unshare-all` namespace isolation (with graceful fallback probing) and `--new-session` process isolation; `MAX_HISTORY_MESSAGES` environment variable support; summary delimiter switched to XML tags; lite models excluded from agent selection
 - **v0.14.0** — OS-native sandbox isolation (bubblewrap on Linux with auto-install, sandbox-exec on macOS); per-request token usage tracking accumulated across all tool-call iterations; tool handlers restructured into individually named files; exclude logic and file walk/list moved into `filesystem` package; symlink-safe path resolution in `GetAbsPath`
 - **v0.13.0** — Self-registering tool Registry replacing switch-based routing and embedded JSON definitions; scheduler persistent JSON storage with full CRUD (add/update/delete for tasks and crons); keychain migrated under `filesystem`; absolute path restriction to user home directory; trimmed history ellipsis markers

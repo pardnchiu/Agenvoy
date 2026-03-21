@@ -32,6 +32,7 @@
 | `github.com/joho/godotenv` | `.env` 環境變數載入 |
 | `github.com/manifoldco/promptui` | CLI 互動式選單 |
 | `github.com/pardnchiu/go-scheduler` | Cron 表達式解析與排程 |
+| `golang.org/x/image` | WebP 圖片解碼（Vision 輸入） |
 | `golang.org/x/net` | HTML tokenizer 與網路工具 |
 
 ## 安裝

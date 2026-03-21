@@ -12,7 +12,7 @@
 [![license](https://img.shields.io/github/license/pardnchiu/agenvoy)](LICENSE)
 [![version](https://img.shields.io/github/v/tag/pardnchiu/agenvoy?label=release)](https://github.com/pardnchiu/agenvoy/releases)
 
-> Agenvoy 以 [OpenClaw](https://openclaw.ai) 為靈感，基於 Go 標準庫，專注於多模型智能調度與安全優先的設計理念
+> Go 多 Provider AI Agent 框架，具備智能路由、沙箱隔離執行與 Skill 驅動工作流
 
 ## 目錄
 
@@ -30,15 +30,35 @@
 
 ### 多 Provider LLM 智能路由
 
-Agenvoy 將七個 AI 後端 — GitHub Copilot、Claude、OpenAI、Gemini、Nvidia NIM，以及任意 OpenAI 相容端點（Compat/Ollama）— 統一於單一 `Agent` 介面之後。專屬 Planner LLM 針對每個請求自動選出最適合的 Provider，並根據模型的 input token 上限進行 token-budget 裁剪，確保歷史訊息不會溢出 context window。Copilot Provider 支援 GPT-5.4 系列的 Responses API 端點，自動偵測模型類型並切換通訊協定。
+七個 AI 後端 — GitHub Copilot、Claude、OpenAI、Gemini、Nvidia NIM，以及任意 OpenAI 相容端點（Compat/Ollama）— 統一於單一 `Agent` 介面，搭配專屬 Planner LLM 自動選出最適合的 Provider，並以 token-budget 裁剪防止 context window 溢出。
 
-### 沙箱隔離安全執行
+### 作業系統原生沙箱隔離
 
-所有外部指令與腳本在作業系統原生沙箱中執行。Linux 使用 bubblewrap（`bwrap`）搭配動態 namespace 探測（`--unshare-user`、`--unshare-pid` 等逐一驗證可用性），macOS 使用 `sandbox-exec` 搭配 Seatbelt Profile。雙平台均從嵌入式 `denied_map.json` 載入敏感路徑封鎖清單，阻止存取 SSH 金鑰、雲端憑證、Shell 設定檔與私鑰格式。API 金鑰儲存於系統原生 Keychain 而非環境變數，所有路徑解析使用 `filepath.EvalSymlinks` 防止捷徑繞過邊界。
+所有指令與腳本在 Linux bubblewrap（搭配動態 namespace 探測）或 macOS `sandbox-exec` 中執行，嵌入式敏感路徑封鎖清單、OS Keychain 憑證儲存與 symlink 安全路徑驗證，將存取限制於使用者 Home 目錄內。
 
 ### Skill 驅動的 Agentic 工作流
 
-Skill 是帶有 YAML Frontmatter 的 Markdown 定義檔，描述任務的 System Prompt 與工具允許清單。執行時 Selector LLM 從 9 個標準掃描路徑中挑選最符合的 Skill，隨後驅動最多 128 次迭代的工具呼叫迴圈直至任務完成。內建 25+ 工具涵蓋檔案操作、網路存取、排程器、錯誤記憶與 13+ JSON 驅動 API Extension，所有 `rm` 導向 `.Trash`、所有寫入使用原子性 tmp-then-rename。Discord Bot 模式支援 Slash Command、per-channel Session 狀態與排程任務回傳。
+宣告式 Markdown Skill 搭配 YAML Frontmatter 定義任務 Prompt 與工具允許清單；Selector LLM 從 9 個掃描路徑自動匹配最佳 Skill，隨後驅動最多 128 次迭代的工具呼叫迴圈搭配 hash 去重直至任務完成。
+
+### Copilot 雙協定自動切換
+
+Copilot Provider 在執行時偵測模型類型 — GPT-5.4 與 Codex 路由至 Responses API，其餘使用 Chat Completions — 搭配跨 Provider 圖片正規化（所有格式 re-encode 為 JPEG）確保 Vision 通用支援。
+
+### 宣告式 JSON API Extension
+
+13+ 內嵌公開 API 工具（CoinGecko、Wikipedia、Open-Meteo、Yahoo Finance 等）以純 JSON 定義，支援使用者自訂擴展 — 新增 API 整合無需撰寫 Go 程式碼。
+
+### 持久化錯誤記憶
+
+工具失敗以 SHA-256 索引按 Session 儲存；Agent 可透過 `search_errors` 回溯過去錯誤，並以 `remember_error` 持久化解決方案供跨 Session 學習。
+
+### 持久化任務排程器
+
+完整 CRUD 支援週期性 Cron 任務與一次性排程任務，搭配 JSON 儲存、重啟自動恢復與 Discord Channel 完成回傳。
+
+### Discord Bot 整合
+
+Slash Command 支援搭配 per-channel Session 隔離、檔案附件處理、inline 檔案傳送協定與排程任務結果推送 — 與 CLI 共享同一執行引擎。
 
 ## 架構
 
@@ -134,6 +154,7 @@ agenvoy/
 
 ## 版本歷史
 
+- **v0.15.1** — 修正 Copilot Claude/Gemini 模型的圖片驗證失敗：所有上傳圖片統一 decode 後 re-encode 為 JPEG（`image.Decode` + `jpeg.Encode`，支援 PNG/GIF/WebP 來源），`ImageURL` 新增 `detail` 欄位；Summary regex 從單一表達式拆分為三個獨立 pattern（fenced block、`<summary>` tag、`[summary]` bracket）；System prompt 移至 history 之後以提升模型指令遵循度；Discord prompt 優先於基本 system prompt
 - **v0.15.0** — Copilot Responses API 支援（GPT-5.4 與 Codex 模型自動切換端點）；Session 層級 token-budget 訊息裁剪（依 `MaxInputTokens()` 計算預算，保留 system prompt + summary + 最新使用者訊息）；macOS 與 Linux 沙箱新增敏感路徑存取拒絕規則（從嵌入式 `denied_map.json` 載入）；Linux bwrap 恢復 `--unshare-all` namespace 隔離（含 graceful fallback 探測）與 `--new-session` process 隔離；`MAX_HISTORY_MESSAGES` 環境變數支援；Summary delimiter 改為 XML tag；輕量模型排除於 Agent 選擇
 - **v0.14.0** — 作業系統原生沙箱隔離（Linux bubblewrap 自動安裝、macOS sandbox-exec）；每次請求的 token 用量追蹤（跨所有工具呼叫迭代累計）；工具處理器重構為獨立命名檔案；exclude 邏輯與 file walk/list 移至 `filesystem` package；`GetAbsPath` 新增 symlink 安全路徑解析
 - **v0.13.0** — 自註冊 Tool Registry 取代 switch routing 與嵌入式 JSON 定義；排程器持久化 JSON 儲存含完整 CRUD（tasks 與 crons 的新增/更新/刪除）；Keychain 遷移至 `filesystem` 下；絕對路徑限制僅允許使用者 Home 目錄；裁切歷史加入省略號標記
