@@ -15,6 +15,7 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/usageManager"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 )
@@ -128,6 +129,10 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			return fmt.Errorf("unexpected content type: %T", choice.Message.Content)
 		}
 
+		if err := usageManager.Update(data.Agent.Name(), usage.Input, usage.Output); err != nil {
+			slog.Warn("usageManager.Update",
+				slog.String("error", err.Error()))
+		}
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
 
 		if len(session.Tools) > 0 {
@@ -149,12 +154,20 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		if text, ok := resp.Choices[0].Message.Content.(string); ok && text != "" {
 			cleaned := extractSummary(session.ID, text)
 			events <- agentTypes.Event{Type: agentTypes.EventText, Text: cleaned}
+			if err := usageManager.Update(data.Agent.Name(), usage.Input, usage.Output); err != nil {
+				slog.Warn("usageManager.Update",
+					slog.String("error", err.Error()))
+			}
 			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
 			return nil
 		}
 	}
 
 	events <- agentTypes.Event{Type: agentTypes.EventText, Text: "工具無法取得資料，請稍後再試或改用其他方式查詢。"}
+	if err := usageManager.Update(data.Agent.Name(), usage.Input, usage.Output); err != nil {
+		slog.Warn("usageManager.Update",
+			slog.String("error", err.Error()))
+	}
 	events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
 	return nil
 }

@@ -15,6 +15,7 @@ var (
 	once         sync.Once
 	AgenvoyDir   string
 	ConfigPath   string
+	UsagePath    string
 	SessionsDir  string
 	APIsDir      string
 	ErrorsDir    string
@@ -48,6 +49,7 @@ func Init() error {
 	once.Do(func() {
 		AgenvoyDir = filepath.Join(homeDir, ".config", projectName)
 		ConfigPath = filepath.Join(AgenvoyDir, "config.json")
+		UsagePath = filepath.Join(AgenvoyDir, "usage.json")
 
 		SessionsDir = filepath.Join(AgenvoyDir, "sessions")
 		APIsDir = filepath.Join(AgenvoyDir, "apis")

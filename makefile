@@ -1,4 +1,17 @@
-.PHONY: help discord add remove set-planner cli run reasoning test
+ifneq ($(filter cli run,$(MAKECMDGOALS)),)
+
+cli:
+	@go run ./cmd/cli/ run $(filter-out $@,$(MAKECMDGOALS))
+
+run:
+	@go run ./cmd/cli/ run-allow $(filter-out $@,$(MAKECMDGOALS))
+
+%:
+	@:
+
+else
+
+.PHONY: help discord add remove planner reasoning models skills test
 
 help:
 	@echo "How to use:"
@@ -36,11 +49,4 @@ skills:
 test:
 	go test ./test/... -v -timeout 60s
 
-cli:
-	@go run ./cmd/cli/ run $(filter-out $@,$(MAKECMDGOALS))
-
-run:
-	@go run ./cmd/cli/ run-allow $(filter-out $@,$(MAKECMDGOALS))
-
-%:
-	@:
+endif
