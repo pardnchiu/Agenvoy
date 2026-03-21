@@ -12,6 +12,8 @@ require (
 	golang.org/x/net v0.50.0
 )
 
+require golang.org/x/term v0.41.0 // indirect
+
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
@@ -26,6 +28,6 @@ require (
 	github.com/ysmood/leakless v0.9.0 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/image v0.37.0 // direct
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 )

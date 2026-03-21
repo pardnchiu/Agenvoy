@@ -6,6 +6,16 @@
       "output": 131072,
       "description": "OpenAI 最新旗艦模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
     },
+    "gpt-5.4-mini": {
+      "input": 1050000,
+      "output": 131072,
+      "description": "GPT-5.4 高效版，保留超長上下文與電腦控制能力，速度更快且成本更低"
+    },
+    "gpt-5.4-nano": {
+      "input": 1050000,
+      "output": 131072,
+      "description": "GPT-5.4 最輕量版，超長上下文支援，專為低延遲與高吞吐場景設計"
+    },
     "gpt-5": {
       "input": 400000,
       "output": 131072,

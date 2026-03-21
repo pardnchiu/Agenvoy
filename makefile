@@ -1,4 +1,4 @@
-.PHONY: help discord add remove set-planner cli run reasoning
+.PHONY: help discord add remove set-planner cli run reasoning test
 
 help:
 	@echo "How to use:"
@@ -7,31 +7,34 @@ help:
 	@echo "  make remove             Remove a provider/model"
 	@echo "  make planner            Set planner model"
 	@echo "  make reasoning          Set reasoning level"
-	@echo "  make list               Get model list"
-	@echo "  make skill-list         Get skill list"
+	@echo "  make models             Get model list"
+	@echo "  make skills             Get skill list"
 	@echo "  make cli <input...>     Run agent (requires tool confirmation)"
 	@echo "  make run <input...>     Run agent (allow all tools)"
 
 discord:
-	@go run ./cmd/server/main.go
+	go run ./cmd/server/main.go
 
 add:
-	@go run ./cmd/cli/ add
+	go run ./cmd/cli/ add
 
 remove:
-	@go run ./cmd/cli/ remove
+	go run ./cmd/cli/ remove
 
 planner:
-	@go run ./cmd/cli/ planner
+	go run ./cmd/cli/ planner
 
 reasoning:
-	@go run ./cmd/cli/ reasoning
+	go run ./cmd/cli/ reasoning
 
-list:
-	@go run ./cmd/cli/ list
+models:
+	go run ./cmd/cli/ list
 
-skill-list:
-	@go run ./cmd/cli/ list skill
+skills:
+	go run ./cmd/cli/ list skills
+
+test:
+	go test ./test/... -v -timeout 60s
 
 cli:
 	@go run ./cmd/cli/ run $(filter-out $@,$(MAKECMDGOALS))

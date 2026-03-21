@@ -76,7 +76,7 @@ func main() {
 	}
 
 	if os.Args[1] == "list" {
-		if len(os.Args) > 2 && os.Args[2] == "skills" {
+		if len(os.Args) > 2 && os.Args[2] == "skill" {
 			skill.SyncSkills(context.Background())
 			scanner := skill.NewScanner()
 

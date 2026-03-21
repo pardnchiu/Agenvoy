@@ -36,17 +36,35 @@ func Create(dcBot *discordTypes.DiscordBot, dcSession *discordgo.Session) {
 					},
 				},
 			})
+		case CmdAddGemini:
+			command = append(command, &discordgo.ApplicationCommand{
+				Name:        cmd.Text(),
+				Description: "Add Gemini API key",
+			})
+		case CmdAddOpenAI:
+			command = append(command, &discordgo.ApplicationCommand{
+				Name:        cmd.Text(),
+				Description: "Add OpenAI API key",
+			})
+		case CmdAddClaude:
+			command = append(command, &discordgo.ApplicationCommand{
+				Name:        cmd.Text(),
+				Description: "Add Claude API key",
+			})
+		case CmdAddNim:
+			command = append(command, &discordgo.ApplicationCommand{
+				Name:        cmd.Text(),
+				Description: "Add NIM API key",
+			})
 		}
 	}
 
 	guildID := os.Getenv("DISCORD_GUILD_ID")
-	for _, cmd := range command {
-		command, err := dcSession.ApplicationCommandCreate(dcSession.State.User.ID, guildID, cmd)
-		if err != nil {
-			slog.Warn("failed to register command",
-				slog.String("error", err.Error()))
-			continue
-		}
-		dcBot.Commands = append(dcBot.Commands, command)
+	registered, err := dcSession.ApplicationCommandBulkOverwrite(dcSession.State.User.ID, guildID, command)
+	if err != nil {
+		slog.Warn("failed to register commands",
+			slog.String("error", err.Error()))
+		return
 	}
+	dcBot.Commands = append(dcBot.Commands, registered...)
 }

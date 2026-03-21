@@ -14,6 +14,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
+	"golang.org/x/term"
 )
 
 type Provider struct {
@@ -138,15 +139,19 @@ func addCompat() (string, string) {
 	fmt.Printf("[*] Compat provider %q saved: %s\n", providor, url)
 
 	// * compat is optional, so if empty, skip
-	apiKeyInput := promptui.Prompt{
-		Label: "API Key (leave empty to skip)",
-		Mask:  '*',
-	}
-	apiKey, err := apiKeyInput.Run()
+	fmt.Print("API Key (leave empty to skip): ")
+	keyBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Println()
 	if err != nil {
+		slog.Error("term.ReadPassword", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	apiKey = strings.TrimSpace(apiKey)
+	defer func() {
+		for i := range keyBytes {
+			keyBytes[i] = 0
+		}
+	}()
+	apiKey := strings.TrimSpace(string(keyBytes))
 	if apiKey != "" {
 		keychainKey := "COMPAT_" + providor + "_API_KEY"
 		if err := keychain.Set(keychainKey, apiKey); err != nil {
@@ -181,21 +186,24 @@ func addAPIKey(label, envKey string) {
 		}
 	}
 
-	apiKeyInput := promptui.Prompt{
-		Label: fmt.Sprintf("%s API Key", label),
-		Mask:  '*',
-		Validate: func(s string) error {
-			if strings.TrimSpace(s) == "" {
-				return fmt.Errorf("API key is required")
-			}
-			return nil
-		},
-	}
-	apiKey, err := apiKeyInput.Run()
+	fmt.Printf("%s API Key: ", label)
+	keyBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Println()
 	if err != nil {
+		slog.Error("term.ReadPassword", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	if err := keychain.Set(envKey, strings.TrimSpace(apiKey)); err != nil {
+	defer func() {
+		for i := range keyBytes {
+			keyBytes[i] = 0
+		}
+	}()
+	apiKey := strings.TrimSpace(string(keyBytes))
+	if apiKey == "" {
+		slog.Error("API key is required")
+		os.Exit(1)
+	}
+	if err := keychain.Set(envKey, apiKey); err != nil {
 		slog.Error("keychain.Set",
 			slog.String("error", err.Error()))
 		os.Exit(1)
