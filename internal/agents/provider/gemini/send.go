@@ -156,13 +156,24 @@ func (a *Agent) convertToTools(tools []toolTypes.Tool) []map[string]any {
 }
 
 func (a *Agent) generateRequestBody(messages []Content, prompt string, newTools []map[string]any) map[string]any {
-	generationConfig := map[string]any{
-		"temperature": 0.2,
-	}
-	if strings.Contains(a.model, "2.5-flash") {
+	thinkingConfig := provider.GetThinkingConfig("gemini", a.model)
+	level := provider.GetReasoningLevel()
+
+	generationConfig := map[string]any{}
+	switch thinkingConfig {
+	case "level":
+		// Gemini 3.x: thinkingLevel, keep temperature at default (1.0)
 		generationConfig["thinkingConfig"] = map[string]any{
-			"thinkingBudget": 0,
+			"thinkingLevel": level,
 		}
+	case "budget":
+		// Gemini 2.5: thinkingBudget token count
+		generationConfig["temperature"] = 0.2
+		generationConfig["thinkingConfig"] = map[string]any{
+			"thinkingBudget": provider.ThinkingBudget(level),
+		}
+	default:
+		generationConfig["temperature"] = 0.2
 	}
 	body := map[string]any{
 		"contents":         messages,

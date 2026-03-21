@@ -51,7 +51,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		"Editor-Version": "vscode/1.95.0",
 	}
 
-	if strings.HasPrefix(a.model, "gpt-5.4") || strings.HasSuffix(a.model, "-codex") {
+	if strings.HasPrefix(a.model, "gpt-5.4") || strings.Contains(a.model, "-codex") {
 		result, _, err := utils.POST[copilotResponse.Output](ctx, a.httpClient, responsesAPI, headers, map[string]any{
 			"model": a.model,
 			"input": copilotResponse.ConvertInput(truncated),
@@ -67,12 +67,19 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		return &out, nil
 	}
 
-	result, _, err := utils.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, headers, map[string]any{
-		"model":       a.model,
-		"messages":    truncated,
-		"temperature": 0.2,
-		"tools":       tools,
-	}, "json")
+	body := map[string]any{
+		"model":    a.model,
+		"messages": truncated,
+		"tools":    tools,
+	}
+	if provider.SupportTemperature("copilot", a.model) {
+		body["temperature"] = 0.2
+	}
+	if provider.SupportReasoningEffort("copilot", a.model) {
+		body["reasoning_effort"] = provider.GetReasoningLevel()
+	}
+
+	result, _, err := utils.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, headers, body, "json")
 	if err != nil {
 		return nil, fmt.Errorf("utils.POST: %w", err)
 	}

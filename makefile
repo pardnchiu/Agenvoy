@@ -1,4 +1,4 @@
-.PHONY: help discord add remove set-planner cli run
+.PHONY: help discord add remove set-planner cli run reasoning
 
 help:
 	@echo "How to use:"
@@ -6,6 +6,7 @@ help:
 	@echo "  make add                Add a provider/model"
 	@echo "  make remove             Remove a provider/model"
 	@echo "  make planner            Set planner model"
+	@echo "  make reasoning          Set reasoning level"
 	@echo "  make list               Get model list"
 	@echo "  make skill-list         Get skill list"
 	@echo "  make cli <input...>     Run agent (requires tool confirmation)"
@@ -22,6 +23,9 @@ remove:
 
 planner:
 	@go run ./cmd/cli/ planner
+
+reasoning:
+	@go run ./cmd/cli/ reasoning
 
 list:
 	@go run ./cmd/cli/ list

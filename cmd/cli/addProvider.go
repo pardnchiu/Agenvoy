@@ -283,6 +283,36 @@ func selectModelFromList(prefix, providerName, defaultModel string) (model, desc
 	return prefix + selected.name, selected.info.Description, true
 }
 
+func runReasoning() {
+	cfg, err := sessionManager.Load()
+	if err != nil {
+		slog.Error("sessionManager.Load", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	current := cfg.ReasoningLevel
+	if current == "" {
+		current = "medium"
+	}
+
+	selector := promptui.Select{
+		Label:        fmt.Sprintf("Select reasoning level (current: %s)", current),
+		Items:        []string{"low", "medium", "high"},
+		HideSelected: true,
+	}
+	_, level, err := selector.Run()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	cfg.ReasoningLevel = level
+	if err := sessionManager.Save(cfg); err != nil {
+		slog.Error("sessionManager.Save", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	fmt.Printf("[*] reasoning level set to %q\n", level)
+}
+
 func runPlanner() {
 	cfg, err := sessionManager.Load()
 	if err != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
@@ -50,8 +51,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	if cfg, err := sessionManager.Load(); err == nil {
+		provider.SetReasoningLevel(cfg.ReasoningLevel)
+	}
+
 	if os.Args[1] == "add" {
 		runAdd()
+		return
+	}
+
+	if os.Args[1] == "reasoning" {
+		runReasoning()
 		return
 	}
 

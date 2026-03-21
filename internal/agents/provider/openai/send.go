@@ -3,9 +3,11 @@ package openai
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
+	copilotResponse "github.com/pardnchiu/agenvoy/internal/agents/provider/copilot/response"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -13,7 +15,8 @@ import (
 )
 
 const (
-	chatAPI = "https://api.openai.com/v1/chat/completions"
+	chatAPI      = "https://api.openai.com/v1/chat/completions"
+	responsesAPI = "https://api.openai.com/v1/responses"
 )
 
 func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
@@ -39,6 +42,27 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		}
 	}
 
+	headers := map[string]string{
+		"Authorization": "Bearer " + a.apiKey,
+		"Content-Type":  "application/json",
+	}
+
+	if strings.Contains(a.model, "codex") {
+		result, _, err := utils.POST[copilotResponse.Output](ctx, a.httpClient, responsesAPI, headers, map[string]any{
+			"model": a.model,
+			"input": copilotResponse.ConvertInput(truncated),
+			"tools": copilotResponse.ConvertTools(tools),
+		}, "json")
+		if err != nil {
+			return nil, fmt.Errorf("utils.POST: %w", err)
+		}
+		if result.Error != nil {
+			return nil, fmt.Errorf("utils.POST: %s", result.Error.Message)
+		}
+		out := copilotResponse.ConvertOutput(result)
+		return &out, nil
+	}
+
 	body := map[string]any{
 		"model":    a.model,
 		"messages": truncated,
@@ -47,10 +71,10 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	if provider.SupportTemperature("openai", a.model) {
 		body["temperature"] = 0.2
 	}
-	result, _, err := utils.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, map[string]string{
-		"Authorization": "Bearer " + a.apiKey,
-		"Content-Type":  "application/json",
-	}, body, "json")
+	if provider.SupportReasoningEffort("openai", a.model) {
+		body["reasoning_effort"] = provider.GetReasoningLevel()
+	}
+	result, _, err := utils.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, headers, body, "json")
 	if err != nil {
 		return nil, fmt.Errorf("utils.POST: %w", err)
 	}

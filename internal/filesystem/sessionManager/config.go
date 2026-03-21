@@ -21,10 +21,11 @@ type ModelEntry struct {
 }
 
 type Config struct {
-	SessionID    string        `json:"session_id,omitempty"`
-	PlannerModel string        `json:"planner_model,omitempty"`
-	Models       []ModelEntry  `json:"models,omitempty"`
-	Compats      []CompatEntry `json:"compats,omitempty"`
+	SessionID      string        `json:"session_id,omitempty"`
+	PlannerModel   string        `json:"planner_model,omitempty"`
+	ReasoningLevel string        `json:"reasoning_level,omitempty"`
+	Models         []ModelEntry  `json:"models,omitempty"`
+	Compats        []CompatEntry `json:"compats,omitempty"`
 }
 
 func Load() (*Config, error) {

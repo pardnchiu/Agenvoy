@@ -57,18 +57,40 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	}
 
 	newTools := a.convertToTools(tools)
+
+	thinkingType := provider.GetThinkingType("claude", a.model)
+	level := provider.GetReasoningLevel()
+
+	requestBody := map[string]any{
+		"model":      a.model,
+		"max_tokens": provider.OutputTokens("claude", a.model),
+		"system":     strings.Join(systemParts, "\n---\n"),
+		"messages":   newMessages,
+		"tools":      newTools,
+	}
+	switch thinkingType {
+	case "adaptive":
+		requestBody["thinking"] = map[string]any{"type": "adaptive"}
+		requestBody["output_config"] = map[string]any{"effort": level}
+	case "enabled":
+		// 4-5: budget_tokens required
+		budget := map[string]int{"low": 5000, "high": 32000}[level]
+		if budget == 0 {
+			budget = 10000
+		}
+		requestBody["thinking"] = map[string]any{
+			"type":          "enabled",
+			"budget_tokens": budget,
+		}
+	default:
+		requestBody["temperature"] = 0.2
+	}
+
 	result, _, err := utils.POST[Output](ctx, a.httpClient, messagesAPI, map[string]string{
 		"x-api-key":         a.apiKey,
 		"anthropic-version": "2023-06-01",
 		"Content-Type":      "application/json",
-	}, map[string]any{
-		"model":       a.model,
-		"max_tokens":  provider.OutputTokens("claude", a.model),
-		"temperature": 0.2,
-		"system":      strings.Join(systemParts, "\n---\n"),
-		"messages":    newMessages,
-		"tools":       newTools,
-	}, "json")
+	}, requestBody, "json")
 	if err != nil {
 		return nil, fmt.Errorf("utils.POST: %w", err)
 	}

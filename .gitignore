@@ -7,3 +7,4 @@
 .claude
 
 docker-compose.yml
+test/copilot_token.json

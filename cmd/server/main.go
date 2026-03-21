@@ -11,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/claude"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/compat"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
@@ -43,6 +44,10 @@ func main() {
 		slog.Error("filesystem.Init",
 			slog.String("error", err.Error()))
 		return
+	}
+
+	if cfg, err := sessionManager.Load(); err == nil {
+		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
 
 	registry := buildAgentRegistry()

@@ -3,17 +3,33 @@
   "models": {
     "claude-opus-4-6": {
       "input": 200000,
-      "output": 131072,
-      "description": "最強大的 Claude 模型，適合複雜推理與長篇任務"
+      "output": 128000,
+      "description": "最強大的 Claude 模型，適合複雜推理與長篇任務",
+      "thinking_type": "adaptive"
     },
-    "claude-sonnet-4-6": { "input": 200000, "output": 65536, "description": "效能與速度平衡，適合多數生產環境" },
-    "claude-haiku-4-6": { "input": 200000, "output": 65536, "description": "快速輕量，適合低延遲與高吞吐量場景" },
-    "claude-opus-4-5": { "input": 200000, "output": 131072, "description": "高效能 Claude 模型，適合高要求任務" },
-    "claude-sonnet-4-5": {
+    "claude-sonnet-4-6": {
       "input": 200000,
       "output": 65536,
-      "description": "穩定的中階模型，具備強大程式碼與分析能力"
+      "description": "效能與速度平衡，適合多數生產環境",
+      "thinking_type": "adaptive"
     },
-    "claude-haiku-4-5": { "input": 200000, "output": 65536, "description": "輕量模型，適合簡單任務，延遲極低" }
+    "claude-opus-4-5": {
+      "input": 200000,
+      "output": 64000,
+      "description": "高效能 Claude 模型，適合高要求任務",
+      "thinking_type": "enabled"
+    },
+    "claude-sonnet-4-5": {
+      "input": 200000,
+      "output": 64000,
+      "description": "穩定的中階模型，具備強大程式碼與分析能力",
+      "thinking_type": "enabled"
+    },
+    "claude-haiku-4-5": {
+      "input": 200000,
+      "output": 64000,
+      "description": "輕量模型，適合簡單任務，延遲極低",
+      "thinking_type": "enabled"
+    }
   }
 }
