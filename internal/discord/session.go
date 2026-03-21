@@ -1,16 +1,22 @@
 package discord
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/base64"
 	"fmt"
+	"image"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
 	"io"
 	"log/slog"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
+
+	_ "golang.org/x/image/webp"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/pardnchiu/agenvoy/configs"
@@ -84,7 +90,7 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 			}
 			parts = append(parts, agentTypes.ContentPart{
 				Type:     "image_url",
-				ImageURL: &agentTypes.ImageURL{URL: dataURL},
+				ImageURL: &agentTypes.ImageURL{URL: dataURL, Detail: "auto"},
 			})
 		}
 
@@ -125,34 +131,18 @@ func fetchImageDataURL(ctx context.Context, rawURL string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	contentType := resp.Header.Get("Content-Type")
-	if idx := strings.Index(contentType, ";"); idx != -1 {
-		contentType = contentType[:idx]
-	}
-	contentType = strings.TrimSpace(contentType)
-	if contentType == "" {
-		base := strings.SplitN(rawURL, "?", 2)[0]
-		ext := strings.ToLower(filepath.Ext(base))
-		switch ext {
-		case ".jpg", ".jpeg":
-			contentType = "image/jpeg"
-		case ".png":
-			contentType = "image/png"
-		case ".gif":
-			contentType = "image/gif"
-		case ".webp":
-			contentType = "image/webp"
-		default:
-			contentType = "image/jpeg"
-		}
-	}
-
-	data, err := io.ReadAll(resp.Body)
+	img, _, err := image.Decode(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("io.ReadAll: %w", err)
+		return "", fmt.Errorf("image.Decode: %w", err)
 	}
 
-	return fmt.Sprintf("data:%s;base64,%s", contentType, base64.StdEncoding.EncodeToString(data)), nil
+	// * need to be use jpeg before send in claude/gemini model
+	var buffer bytes.Buffer
+	if err := jpeg.Encode(&buffer, img, &jpeg.Options{Quality: 85}); err != nil {
+		return "", fmt.Errorf("jpeg.Encode: %w", err)
+	}
+
+	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buffer.Bytes()), nil
 }
 
 func fetchFileText(ctx context.Context, rawURL string) (string, error) {

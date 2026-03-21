@@ -2,6 +2,7 @@ package exec
 
 import (
 	"encoding/json"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -10,11 +11,10 @@ import (
 )
 
 var (
-	trailingJsonRegex = regexp.MustCompile(
-		`(?s)\n*(?:---\s*\n)?(?:\*{0,2}[^\n*]*[Ss]ummary[^\n*]*\*{0,2}\s*\n)?` +
-			"```" + `(?:json|xml|summary)\s*(\{.*?\})\s*` + "```" + `\s*$`,
-	)
-	timestampHeaderReg = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
+	fencedBlockRegex     = regexp.MustCompile("(?s)" + "```" + `(?:json|summary)\s*\n(\{.*?\})\s*\n` + "```" + `\s*$`)
+	summaryTagRegex      = regexp.MustCompile(`(?s)<summary>\s*(\{.*?\})\s*</summary>`)
+	summaryBracketRegex  = regexp.MustCompile(`(?s)\[summary\]\s*(\{.*?\})\s*\[/summary\]`)
+	timestampHeaderRegex = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
 )
 
 func isSummaryJSON(m map[string]any) bool {
@@ -31,36 +31,31 @@ func isSummaryJSON(m map[string]any) bool {
 }
 
 func extractSummary(sessionID, value string) string {
-	const summaryStart = "<summary>"
-	const summaryEnd = "</summary>"
-
-	value = timestampHeaderReg.ReplaceAllString(value, "")
+	value = timestampHeaderRegex.ReplaceAllString(value, "")
+	slog.Info("value",
+		slog.String("value", value))
 
 	var jsonData any
 	var cleaned string
 
-	start := strings.Index(value, summaryStart)
-	end := strings.Index(value, summaryEnd)
-	if start != -1 && end != -1 && end > start {
-		jsonPart := strings.TrimSpace(value[start+len(summaryStart) : end])
-		json.Unmarshal([]byte(jsonPart), &jsonData)
-		cleaned = strings.TrimRight(value[:start], " \t\n\r")
-	} else {
-		if start != -1 {
-			cleaned = strings.TrimRight(value[:start], " \t\n\r")
-		}
-
-		if loc := trailingJsonRegex.FindStringSubmatchIndex(value); loc != nil {
+	patterns := []*regexp.Regexp{
+		fencedBlockRegex,
+		summaryTagRegex,
+		summaryBracketRegex,
+	}
+	for _, re := range patterns {
+		if loc := re.FindStringSubmatchIndex(value); loc != nil {
 			jsonPart := value[loc[2]:loc[3]]
 			var m map[string]any
 			if json.Unmarshal([]byte(jsonPart), &m) == nil && isSummaryJSON(m) {
 				jsonData = m
 				cleaned = strings.TrimRight(value[:loc[0]], " \t\n\r")
+				break
 			}
 		}
-		if cleaned == "" {
-			cleaned = value
-		}
+	}
+	if cleaned == "" {
+		cleaned = value
 	}
 
 	if jsonData == nil {

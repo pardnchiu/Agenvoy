@@ -1,15 +1,21 @@
 package exec
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"image"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	_ "golang.org/x/image/webp"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -44,15 +50,14 @@ func buildContent(content string, imageInputs []string, fileInputs []string) any
 	}
 
 	for _, path := range imageInputs {
-		data, err := os.ReadFile(path)
+		b64, err := convertToBase64(path)
 		if err != nil {
 			continue
 		}
-		mime := http.DetectContentType(data)
-		dataURL := fmt.Sprintf("data:%s;base64,%s", mime, base64.StdEncoding.EncodeToString(data))
+		dataURL := "data:image/jpeg;base64," + b64
 		parts = append(parts, agentTypes.ContentPart{
 			Type:     "image_url",
-			ImageURL: &agentTypes.ImageURL{URL: dataURL},
+			ImageURL: &agentTypes.ImageURL{URL: dataURL, Detail: "auto"},
 		})
 	}
 	return parts
@@ -186,4 +191,24 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	session.ID = sessionID
 
 	return &session, nil
+}
+
+func convertToBase64(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("os.Open: %w", err)
+	}
+	defer f.Close()
+
+	img, _, err := image.Decode(f)
+	if err != nil {
+		return "", fmt.Errorf("image.Decode: %w", err)
+	}
+
+	// * need to be use jpeg before send in claude/gemini model
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85}); err != nil {
+		return "", fmt.Errorf("jpeg.Encode: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }

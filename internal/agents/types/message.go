@@ -9,7 +9,8 @@ type ContentPart struct {
 }
 
 type ImageURL struct {
-	URL string `json:"url"`
+	URL    string `json:"url"`
+	Detail string `json:"detail,omitempty"`
 }
 
 type Message struct {
