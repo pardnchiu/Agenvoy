@@ -11,6 +11,7 @@ import (
 	_ "github.com/pardnchiu/agenvoy/internal/tools/apis"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/apis/googleRSS"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/apis/searchWeb"
+	_ "github.com/pardnchiu/agenvoy/internal/tools/apis/youtube"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/browser"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/calculator"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/file"
