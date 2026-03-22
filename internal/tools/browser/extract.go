@@ -18,7 +18,7 @@ type HTMLParser struct {
 	Markdown    string `json:"markdown"`
 }
 
-func extract(href, content string) (*HTMLParser, error) {
+func extract(href, content string, keepLinks bool) (*HTMLParser, error) {
 	parsedUrl, err := url.Parse(href)
 	if err != nil {
 		return nil, fmt.Errorf("url.Parse: %w", err)
@@ -44,7 +44,7 @@ func extract(href, content string) (*HTMLParser, error) {
 		newContent = content
 	}
 
-	parser.Markdown, err = transToMarkdown(newContent, href, true)
+	parser.Markdown, err = transToMarkdown(newContent, href, true, keepLinks)
 	if err != nil {
 		return nil, fmt.Errorf("transToMarkdown: %w", err)
 	}

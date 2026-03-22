@@ -78,7 +78,7 @@ func Download(href, saveTo string) (string, error) {
 			return "", fmt.Errorf("page.HTML: %w", err)
 		}
 
-		data, err := extract(href, html)
+		data, err := extract(href, html, false)
 		if err != nil || strings.TrimSpace(data.Markdown) == "" {
 			addToSkippedMap(href, 0)
 			return skippedMessage(href), nil

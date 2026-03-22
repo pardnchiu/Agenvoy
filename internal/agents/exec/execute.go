@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,11 +21,32 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools"
 )
 
-const (
-	MaxToolIterations  = 16
-	MaxSkillIterations = 128
-	MaxEmptyResponses  = 8
-)
+var MaxToolIterations = func() int {
+	if v := os.Getenv("MAX_TOOL_ITERATIONS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 16
+}()
+
+var MaxSkillIterations = func() int {
+	if v := os.Getenv("MAX_SKILL_ITERATIONS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 128
+}()
+
+var MaxEmptyResponses = func() int {
+	if v := os.Getenv("MAX_EMPTY_RESPONSES"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 8
+}()
 
 type ExecData struct {
 	Agent       agentTypes.Agent

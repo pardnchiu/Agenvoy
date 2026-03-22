@@ -8,7 +8,8 @@ import (
 	"golang.org/x/net/html"
 )
 
-func transToMarkdown(content, href string, pureText bool) (string, error) {
+func transToMarkdown(content, baseURL string, pureText bool, keepLinks bool) (string, error) {
+	href := baseURL
 	node, err := html.Parse(strings.NewReader(content))
 	if err != nil {
 		return "", fmt.Errorf("html.Parse: %w", err)
@@ -102,14 +103,24 @@ func transToMarkdown(content, href string, pureText bool) (string, error) {
 			return
 
 		case "a":
-			if pureText {
+			attrs := attrMap(n)
+			linkHref := attrs["href"]
+
+			if pureText && !keepLinks {
 				for c := n.FirstChild; c != nil; c = c.NextSibling {
 					walk(c)
 				}
 				return
 			}
-			attrs := attrMap(n)
-			href := attrs["href"]
+
+			if pureText && keepLinks && !isSameDomain(linkHref, href) {
+				for c := n.FirstChild; c != nil; c = c.NextSibling {
+					walk(c)
+				}
+				return
+			}
+
+			resolved := resolveLink(linkHref, href)
 			var text strings.Builder
 			origSb := sb
 			sb = text
@@ -118,8 +129,8 @@ func transToMarkdown(content, href string, pureText bool) (string, error) {
 			}
 			sb = origSb
 			t := strings.TrimSpace(text.String())
-			if t != "" && href != "" {
-				fmt.Fprintf(&sb, "[%s](%s)", t, href)
+			if t != "" && resolved != "" {
+				fmt.Fprintf(&sb, "[%s](%s)", t, resolved)
 			} else if t != "" {
 				sb.WriteString(t)
 			}
@@ -165,6 +176,37 @@ func transToMarkdown(content, href string, pureText bool) (string, error) {
 
 	walk(node)
 	return collapse(sb.String()), nil
+}
+
+func isSameDomain(linkHref, baseURL string) bool {
+	if linkHref == "" {
+		return false
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil {
+		return false
+	}
+	ref, err := url.Parse(linkHref)
+	if err != nil {
+		return false
+	}
+	resolved := base.ResolveReference(ref)
+	return resolved.Host == base.Host
+}
+
+func resolveLink(linkHref, baseURL string) string {
+	if linkHref == "" {
+		return ""
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil {
+		return linkHref
+	}
+	ref, err := url.Parse(linkHref)
+	if err != nil {
+		return linkHref
+	}
+	return base.ResolveReference(ref).String()
 }
 
 func isBlock(tag string) bool {

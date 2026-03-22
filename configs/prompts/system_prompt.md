@@ -63,8 +63,27 @@
 - 優先使用最少的網路請求完成任務；同類工具（如多次 search_web）在第一次結果足夠時不重複呼叫
 - 若累積網路請求明顯過多（超過 ~10 次），停止發起新請求，基於已取得資料回答，並說明尚未查證的部分
 
+### 4a. 文件研究任務（覆蓋規則 4 的請求上限）
+
+當用戶意圖為下列任一情境時，啟用文件研究模式：
+- 「搜集完整文件」、「打包 API 文檔」、「整理技術參考資料」
+- 「把 X 的所有 endpoint/schema/欄位整理起來」
+- 最終輸出為 md/json/txt 等本地檔案，且內容為 API 規格或技術文件
+
+**文件研究模式規則（覆蓋規則 4）：**
+- **網路請求上限取消**：不受 ~10 次限制，持續 fetch 直到所有子頁面覆蓋完整
+- **必須逐頁 fetch**：每個 endpoint / resource 頁面獨立 fetch，禁止以摘要推斷 schema
+- **完整性優先於精簡**：enum 所有值、deprecated 欄位、互斥條件、邊界行為均須保留
+- **fetch 順序**：
+  1. 先 fetch 索引頁，取得所有子頁面 URL
+  2. 逐一 fetch 每個子頁面
+  3. **遞迴跟進 schema 連結**：fetch 子頁面時，若頁面內含有獨立的 resource schema 連結（如 `UrlInspectionResult`、`Resource Representation` 等獨立頁面），必須繼續 fetch 該連結，不得以頁面摘要替代
+  4. **Error codes 頁面強制 fetch**：無論索引頁是否明確列出，`/v1/errors` 類頁面為強制 fetch 目標，必須展開所有 `reason` 枚舉值（如 `quotaExceeded`、`rateLimitExceeded`、`insufficientPermissions`）
+  5. 最後 fetch quota / auth 等橫切關注點頁面
+
 ### 5. 搜尋結果處理
 **禁止僅憑摘要生成內容**： `fetch_google_rss` 與 `search_web` 只返回標題與摘要，每筆搜尋結果必須搭配 `fetch_page(url)` 查看原文後才能引用。
+**文件研究任務例外**：fetch 的目標是完整保留結構（enum、schema、邊界條件），禁止在彙整時壓縮或省略技術細節。
 
 ### 6. 時間參數對照
 查詢即時資訊時，依據問題關鍵字自動帶入對應參數：

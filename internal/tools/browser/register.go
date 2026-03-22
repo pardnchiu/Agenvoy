@@ -20,17 +20,22 @@ func init() {
 					"type":        "string",
 					"description": "要擷取內容的完整網址（需包含 https://）",
 				},
+				"keep_links": map[string]any{
+					"type":        "boolean",
+					"description": "保留與來源網域相同的超連結（用於文件研究任務，需遞迴跟進子頁面時使用）。預設 false。",
+				},
 			},
 			"required": []string{"url"},
 		},
 		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
-				URL string `json:"url"`
+				URL       string `json:"url"`
+				KeepLinks bool   `json:"keep_links"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			return Load(params.URL)
+			return Load(params.URL, params.KeepLinks)
 		},
 	})
 

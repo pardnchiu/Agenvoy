@@ -57,28 +57,25 @@ func skippedMessage(href string) string {
 	return sb.String()
 }
 
-func Load(href string) (string, error) {
+func Load(href string, keepLinks bool) (string, error) {
 	if href == "" {
 		return "", fmt.Errorf("href is required")
 	}
 
 	cached5xx := filepath.Join(filesystem.ToolsDir, "browser", "5xx")
-	// if dir, err := utils.GetConfigDir("tools", "browser", "5xx"); err == nil {
-	// 	clean(dir.Home, skippedExpired)
-	// }
 	clean(cached5xx, skippedExpired)
 
 	if isSkipped(href) {
 		return skippedMessage(href), nil
 	}
 
-	hash := sha256.Sum256([]byte(href + "|text"))
+	cacheVariant := "|text"
+	if keepLinks {
+		cacheVariant = "|links"
+	}
+	hash := sha256.Sum256([]byte(href + cacheVariant))
 	cacheKey := hex.EncodeToString(hash[:])
 	cached := filepath.Join(filesystem.ToolsDir, "browser", "cached")
-	// configDir, err := utils.GetConfigDir("tools", "browser", "cached")
-	// if err != nil {
-	// 	return "", fmt.Errorf("utils.GetConfigDir: %w", err)
-	// }
 
 	clean(cached, cacheExpired)
 	cachePath := filepath.Join(cached, cacheKey+".md")
@@ -91,7 +88,7 @@ func Load(href string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	data, err := load(ctx, href)
+	data, err := load(ctx, href, keepLinks)
 	if err != nil {
 		// * use 503 as default, if over 10 sec no data, tag as timeout
 		status := 503
@@ -121,7 +118,7 @@ func Load(href string) (string, error) {
 	return data.Markdown, nil
 }
 
-func load(ctx context.Context, href string) (*HTMLParser, error) {
+func load(ctx context.Context, href string, keepLinks bool) (*HTMLParser, error) {
 	browser, err := newBrowser()
 	if err != nil {
 		return nil, err
@@ -139,7 +136,7 @@ func load(ctx context.Context, href string) (*HTMLParser, error) {
 		return nil, fmt.Errorf("page.HTML: %w", err)
 	}
 
-	result, err := extract(href, html)
+	result, err := extract(href, html, keepLinks)
 	if err != nil {
 		return nil, fmt.Errorf("extract: %w", err)
 	}
