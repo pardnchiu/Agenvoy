@@ -14,51 +14,17 @@
 
 > A Go multi-provider AI agent framework with intelligent routing, sandbox-isolated execution, and skill-driven workflows
 
+Stop wiring each AI provider separately — Agenvoy routes any task to the right model, executes tools inside an OS-native sandbox, and remembers what went wrong across sessions.
+
 ## Table of Contents
 
-- [Features](#features)
 - [Architecture](#architecture)
+- [Features](#features)
 - [File Structure](#file-structure)
 - [Version History](#version-history)
 - [License](#license)
 - [Author](#author)
 - [Stars](#stars)
-
-## Features
-
-> `go install github.com/pardnchiu/agenvoy/cmd/cli@latest` · [Documentation](./doc/doc.md)
-
-### Multi-Provider LLM with Intelligent Routing
-
-Seven AI backends — GitHub Copilot, Claude, OpenAI, Gemini, Nvidia NIM, and any OpenAI-compatible endpoint (Compat/Ollama) — behind a unified `Agent` interface, with a dedicated planner LLM that automatically selects the best provider per request and token-budget trimming that prevents context window overflow.
-
-### OS-Native Sandbox Isolation
-
-All commands and scripts execute inside bubblewrap on Linux (with dynamic namespace probing) or `sandbox-exec` on macOS, with sensitive path denial loaded from an embedded deny list, OS keychain credential storage, and symlink-safe path validation restricting access to the user's home directory.
-
-### Skill-Driven Agentic Workflows
-
-Declarative Markdown skills with YAML frontmatter define task prompts and tool allowlists; a Selector LLM auto-matches the best skill from 9 scan paths, then drives a tool-call loop of up to 128 iterations with hash-based deduplication until the task completes.
-
-### Copilot Dual-Protocol Auto-Switch
-
-The Copilot provider detects model type at runtime — GPT-5.4 and Codex route to the Responses API, all others use Chat Completions — with cross-provider image normalization (all formats re-encoded as JPEG) for universal vision support.
-
-### Declarative JSON API Extensions
-
-13+ embedded public API tools (CoinGecko, Wikipedia, Open-Meteo, Yahoo Finance, etc.) defined as pure JSON, with support for user-defined custom extensions — no Go code required to add new API integrations.
-
-### Persistent Error Memory
-
-Tool failures are SHA-256 indexed per session; the agent can recall past errors via `search_errors` and persist resolution decisions via `remember_error` for cross-session learning.
-
-### Persistent Task Scheduler
-
-Full CRUD for recurring cron tasks and one-time scheduled tasks with JSON storage, auto-restore on restart, and Discord channel callbacks that post results on completion.
-
-### Discord Bot Integration
-
-Slash command support with per-channel session isolation, file attachment handling, inline file-send protocol, and scheduled task result posting — sharing the same execution engine as the CLI.
 
 ## Architecture
 
@@ -96,7 +62,7 @@ graph TB
     subgraph Tools ["Tool Categories"]
         FileOps["File Ops\nread / write / patch / glob"]
         WebAccess["Web Access\nfetch / search / download"]
-        APIExt["API Extensions\n13+ JSON definitions"]
+        APIExt["API Extensions\n14+ JSON definitions"]
         Scheduler["Scheduler\ncron + one-time tasks"]
         ErrorMem["Error Memory\nSHA-256 keyed"]
     end
@@ -124,6 +90,98 @@ graph TB
     Persistence -.->|"inject"| Execute
 ```
 
+## Features
+
+> `go install github.com/pardnchiu/agenvoy/cmd/cli@latest` · [Documentation](./doc/doc.md)
+
+### Multi-Provider LLM with Intelligent Routing
+
+Six backends behind one interface — a dedicated planner LLM picks the right provider per request and trims the context window automatically.
+
+<details>
+<summary>Details</summary>
+
+GitHub Copilot, Claude, OpenAI, Gemini, Nvidia NIM, and any OpenAI-compatible endpoint (Compat/Ollama) — all behind a unified `Agent` interface. A planner LLM automatically selects the best provider per request. Token-budget trimming prevents context window overflow, and per-provider configurable reasoning levels are supported.
+
+</details>
+
+### OS-Native Sandbox Isolation
+
+Commands run inside bubblewrap (Linux) or `sandbox-exec` (macOS) — escaped paths and sensitive files are blocked at the OS level.
+
+<details>
+<summary>Details</summary>
+
+All commands and scripts execute inside bubblewrap on Linux (with dynamic namespace probing) or `sandbox-exec` on macOS. Sensitive path denial is loaded from an embedded deny list, credentials are stored in the OS keychain, and symlink-safe path validation restricts access to the user's home directory only.
+
+</details>
+
+### Skill-Driven Agentic Workflows
+
+Write a Markdown file to define a task; the agent selects the best match from 9 scan paths and runs up to 128 tool iterations until done.
+
+<details>
+<summary>Details</summary>
+
+Declarative Markdown skills with YAML frontmatter define task prompts and tool allowlists. A Selector LLM auto-matches the best skill, then drives a tool-call loop with hash-based deduplication — up to 128 iterations — until the task completes.
+
+</details>
+
+### Copilot Dual-Protocol Auto-Switch
+
+GPT-5.4 and Codex route to the Responses API automatically; all other Copilot models use Chat Completions — no configuration needed.
+
+<details>
+<summary>Details</summary>
+
+The Copilot provider detects model type at runtime. GPT-5.4 and Codex models route to the Responses API; all others use Chat Completions. Cross-provider image normalization re-encodes all formats as JPEG for universal vision support.
+
+</details>
+
+### Declarative JSON API Extensions
+
+Add any HTTP API as a tool by dropping a JSON file — no Go code required.
+
+<details>
+<summary>Details</summary>
+
+14+ embedded public API tools (CoinGecko, Wikipedia, Open-Meteo, Yahoo Finance, YouTube metadata, etc.) are defined as pure JSON. User-defined extensions in `~/.config/agenvoy/apis/` are loaded at startup with no compilation step.
+
+</details>
+
+### Persistent Error Memory
+
+Tool failures are SHA-256 indexed per session; the agent recalls past errors and reuses resolutions across sessions.
+
+<details>
+<summary>Details</summary>
+
+When any tool call fails, the error is persisted to `tool_errors/{hash}.json`. The agent can recall past failures via `search_errors` and persist resolution decisions via `remember_error` — enabling cross-session learning without manual intervention.
+
+</details>
+
+### Persistent Task Scheduler
+
+Full CRUD for cron and one-time tasks — persisted to JSON, restored on restart, with Discord callbacks on completion.
+
+<details>
+<summary>Details</summary>
+
+Recurring cron tasks and one-time scheduled tasks are stored as JSON and restored automatically on restart. When a task completes, its result is posted to the configured Discord channel.
+
+</details>
+
+### Discord Bot Integration
+
+Slash commands share the same execution engine as the CLI, with per-channel session isolation and Modal-based API key setup.
+
+<details>
+<summary>Details</summary>
+
+Per-channel session isolation, file attachment handling, inline file-send protocol, and scheduled task result posting. API keys for all providers can be configured directly in Discord via Modal inputs (`/add-gemini`, `/add-openai`, `/add-claude`, `/add-nim`).
+
+</details>
+
 ## File Structure
 
 ```
@@ -135,7 +193,7 @@ agenvoy/
 │   ├── jsons/              # Provider model defs, denied_map, whitelist
 │   └── prompts/            # Embedded system prompts and selectors
 ├── extensions/
-│   ├── apis/               # Embedded API extensions (13+ JSON)
+│   ├── apis/               # Embedded API extensions (14+ JSON)
 │   └── skills/             # Embedded skill extensions (Markdown)
 ├── internal/
 │   ├── agents/
@@ -143,19 +201,24 @@ agenvoy/
 │   │   ├── provider/       # 6 AI provider backends + Responses API
 │   │   └── types/          # Agent interface + message / usage types
 │   ├── discord/            # Discord slash commands + file attachments
-│   ├── filesystem/         # Path validation, session manager, and keychain
+│   ├── filesystem/         # Path validation, session manager, keychain, and usage tracking
 │   ├── sandbox/            # Sandbox isolation + sensitive path denial
 │   ├── scheduler/          # Persistent one-time and recurring task scheduler
 │   ├── skill/              # Markdown skill scanner and parser
-│   └── tools/              # 25+ self-registering tools + API extension adapter
+│   └── tools/              # 26+ self-registering tools + API extension adapter
 ├── go.mod
 └── LICENSE
 ```
 
 ## Version History
 
+- **v0.15.2** — Add YouTube metadata fetch tool (`analyze_youtube`); Discord Modal-based API key management (`/add-gemini`, `/add-openai`, `/add-claude`, `/add-nim`); per-model token usage tracking via `usageManager`; configurable reasoning level across all providers; browser iteration limits and same-domain link traversal now configurable via `MAX_TOOL_ITERATIONS`, `MAX_SKILL_ITERATIONS`, `MAX_EMPTY_RESPONSES`; fix Makefile pass-through args
 - **v0.15.1** — Fix Copilot Claude/Gemini image validation failure: all uploaded images are decoded and re-encoded as JPEG (`image.Decode` + `jpeg.Encode`, supporting PNG/GIF/WebP sources), `ImageURL` gains `detail` field; summary regex split from one monolithic expression into three independent patterns (fenced block, `<summary>` tag, `[summary]` bracket); system prompts moved after history to improve model instruction adherence; Discord prompt takes priority over base system prompt
 - **v0.15.0** — Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint); session-level token-budget message trimming (budget calculated via `MaxInputTokens()`, preserving system prompt + summary + latest user message); sensitive path denial rules for macOS and Linux sandbox (loaded from embedded `denied_map.json`); Linux bwrap restores `--unshare-all` namespace isolation (with graceful fallback probing) and `--new-session` process isolation; `MAX_HISTORY_MESSAGES` environment variable support; summary delimiter switched to XML tags; lite models excluded from agent selection
+
+<details>
+<summary>Earlier versions</summary>
+
 - **v0.14.0** — OS-native sandbox isolation (bubblewrap on Linux with auto-install, sandbox-exec on macOS); per-request token usage tracking accumulated across all tool-call iterations; tool handlers restructured into individually named files; exclude logic and file walk/list moved into `filesystem` package; symlink-safe path resolution in `GetAbsPath`
 - **v0.13.0** — Self-registering tool Registry replacing switch-based routing and embedded JSON definitions; scheduler persistent JSON storage with full CRUD (add/update/delete for tasks and crons); keychain migrated under `filesystem`; absolute path restriction to user home directory; trimmed history ellipsis markers
 - **v0.12.0** — Full scheduler subsystem (cron + one-time tasks with Discord callbacks); centralize `filesystem` + `configs` packages; replace custom cron parser with `go-scheduler`; `schedule-task` skill
@@ -176,6 +239,8 @@ agenvoy/
 - **v0.3.0** — Multi-agent backend support: OpenAI, Claude, Gemini, Nvidia; unified `Agent` interface; concurrent goroutine skill scanner
 - **v0.2.0** — Add full filesystem toolchain (`list_files`, `glob_files`, `write_file`, `search_content`, `run_command`), command whitelist, interactive confirmation, `--allow` flag
 - **v0.1.0** — Initial release — GitHub Copilot CLI with skill execution loop and automatic token refresh
+
+</details>
 
 ## License
 

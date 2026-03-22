@@ -85,6 +85,9 @@ Supported providers:
 | `DISCORD_TOKEN` | Yes (server mode) | Discord Bot Token |
 | `DISCORD_GUILD_ID` | No | Restricts slash command registration to a specific guild |
 | `MAX_HISTORY_MESSAGES` | No | Max history messages sent to agent (default: 16) |
+| `MAX_TOOL_ITERATIONS` | No | Max tool call iterations per request (default: 16) |
+| `MAX_SKILL_ITERATIONS` | No | Max tool call iterations within a skill execution (default: 128) |
+| `MAX_EMPTY_RESPONSES` | No | Max consecutive empty responses before giving up (default: 8) |
 
 Create a `.env` file and fill in the values:
 
@@ -167,6 +170,7 @@ The following API extensions are bundled and loaded automatically at startup:
 | `exchange-rate` | Finance | Currency exchange rates |
 | `ip-api` | Network | IP geolocation lookup |
 | `open-meteo` | Weather | Open-source weather forecast API |
+| `youtube` | Media | YouTube video metadata (title, description, channel, duration) |
 
 ### Skill Extensions
 
@@ -264,6 +268,7 @@ agenvoy remove
 | `add` | `agenvoy add` | Interactively register an AI provider |
 | `remove` | `agenvoy remove` | Remove a configured provider |
 | `planner` | `agenvoy planner` | Set the planner (router) model |
+| `reasoning` | `agenvoy reasoning` | Configure reasoning level for a provider |
 | `list` | `agenvoy list [skills]` | List configured models or available skills |
 | `run` | `agenvoy run <input...> [flags]` | Execute agentic workflow with interactive confirmation |
 | `run-allow` | `agenvoy run-allow <input...> [flags]` | Execute with all tool calls auto-approved |
@@ -289,6 +294,7 @@ agenvoy remove
 | `get_tool_error` | `hash` | Retrieve full error details for a failed tool call by hash |
 | `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | Persist tool error decisions to error knowledge base |
 | `search_errors` | `keyword` | Retrieve error knowledge base entries |
+| `analyze_youtube` | `url` | YouTube video metadata (title, description, channel, duration, view count) |
 | `fetch_google_rss` | `keyword`, `time`, `lang` | Google News RSS feed with deduplication |
 | `send_http_request` | `method`, `url`, `headers`, `body` | Generic HTTP request |
 | `search_web` | `query`, `time_range` | Concurrent web search (Google + DuckDuckGo) |

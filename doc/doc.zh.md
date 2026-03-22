@@ -85,6 +85,9 @@ agenvoy add
 | `DISCORD_TOKEN` | 是（Server 模式） | Discord Bot Token |
 | `DISCORD_GUILD_ID` | 否 | 設定後僅限特定 Guild 接收 Slash Command |
 | `MAX_HISTORY_MESSAGES` | 否 | 傳送至 Agent 的最大歷史訊息數（預設：16） |
+| `MAX_TOOL_ITERATIONS` | 否 | 每次請求的最大工具呼叫迭代次數（預設：16） |
+| `MAX_SKILL_ITERATIONS` | 否 | Skill 執行中的最大工具呼叫迭代次數（預設：128） |
+| `MAX_EMPTY_RESPONSES` | 否 | 連續空回應的最大次數，超過則中止（預設：8） |
 
 建立 `.env` 並填入對應值：
 
@@ -167,6 +170,7 @@ cp .env.example .env
 | `exchange-rate` | 金融 | 貨幣匯率 |
 | `ip-api` | 網路 | IP 地理位置查詢 |
 | `open-meteo` | 天氣 | 開源天氣預報 API |
+| `youtube` | 媒體 | YouTube 影片 metadata（標題、描述、頻道、時長） |
 
 ### Skill Extension
 
@@ -264,6 +268,7 @@ agenvoy remove
 | `add` | `agenvoy add` | 互動式新增 AI Provider 設定 |
 | `remove` | `agenvoy remove` | 移除已設定的 Provider |
 | `planner` | `agenvoy planner` | 設定 Planner（路由器）模型 |
+| `reasoning` | `agenvoy reasoning` | 設定 Provider 的推理層級（Reasoning Level） |
 | `list` | `agenvoy list [skills]` | 列出已設定的模型或可用 Skill |
 | `run` | `agenvoy run <input...> [flags]` | 以互動確認模式執行 Agentic 工作流 |
 | `run-allow` | `agenvoy run-allow <input...> [flags]` | 自動批准所有 Tool Call |
@@ -289,6 +294,7 @@ agenvoy remove
 | `get_tool_error` | `hash` | 透過 hash 取得失敗工具呼叫的完整錯誤詳情 |
 | `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | 儲存工具錯誤決策至知識庫 |
 | `search_errors` | `keyword` | 檢索錯誤知識庫 |
+| `analyze_youtube` | `url` | YouTube 影片 metadata（標題、描述、頻道、時長、觀看數） |
 | `fetch_google_rss` | `keyword`, `time`, `lang` | Google 新聞 RSS（含去重） |
 | `send_http_request` | `method`, `url`, `headers`, `body` | 通用 HTTP 請求 |
 | `search_web` | `query`, `time_range` | 並行網頁搜尋（Google + DuckDuckGo） |
