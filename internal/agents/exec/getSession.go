@@ -122,8 +122,6 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			}
 			maxHistory = copied
 		}
-		session.Messages = append(session.Messages, maxHistory...)
-
 		session.Messages = append(session.Messages, agentTypes.Message{
 			Role:    "system",
 			Content: prompt,
@@ -136,6 +134,8 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 				Content: summary,
 			})
 		}
+
+		session.Messages = append(session.Messages, maxHistory...)
 
 		userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), trimInput)
 		session.Histories = append(session.Histories, agentTypes.Message{

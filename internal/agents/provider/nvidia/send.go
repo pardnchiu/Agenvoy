@@ -3,6 +3,7 @@ package nvidia
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
@@ -31,8 +32,24 @@ func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput strin
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {
-	truncated := make([]agentTypes.Message, len(messages))
-	copy(truncated, messages)
+	// * do not support mutiple system prompt, merge to one
+	var merged []agentTypes.Message
+	var systemParts []string
+	for _, m := range messages {
+		if m.Role == "system" {
+			if s, ok := m.Content.(string); ok && s != "" {
+				systemParts = append(systemParts, s)
+			}
+		} else {
+			merged = append(merged, m)
+		}
+	}
+	if len(systemParts) > 0 {
+		merged = append([]agentTypes.Message{{Role: "system", Content: strings.Join(systemParts, "\n\n")}}, merged...)
+	}
+
+	truncated := make([]agentTypes.Message, len(merged))
+	copy(truncated, merged)
 	for i := range truncated {
 		if s, ok := truncated[i].Content.(string); ok {
 			truncated[i].Content = utils.TruncateUTF8(s, provider.InputBytes("nvidia", a.model))

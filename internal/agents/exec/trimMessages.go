@@ -119,8 +119,6 @@ func reorder(history []agentTypes.Message, systemPrompt, summary, lastUser *agen
 	}
 	result := make([]agentTypes.Message, 0, size)
 
-	result = append(result, history...)
-
 	if systemPrompt != nil {
 		result = append(result, *systemPrompt)
 	}
@@ -134,6 +132,8 @@ func reorder(history []agentTypes.Message, systemPrompt, summary, lastUser *agen
 			Content: "因內容長度超過模型上限，已自動移除較舊的對話訊息，本次回答可能缺少先前的上下文。",
 		})
 	}
+
+	result = append(result, history...)
 
 	if lastUser != nil {
 		result = append(result, *lastUser)
