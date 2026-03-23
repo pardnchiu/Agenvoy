@@ -79,15 +79,15 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		result, err := tools.Execute(ctx, exec, toolName, json.RawMessage(tool.Function.Arguments))
 		if err != nil {
 			hash := file.SaveToolError(sessionData.ID, toolName, tool.Function.Arguments, err.Error())
-			events <- agentTypes.Event{
-				Type:     agentTypes.EventExecError,
-				ToolName: toolName,
-				ToolID:   toolID,
-				Text:     hash,
-			}
 			if hint := file.SearchErrorMemory(toolName, err.Error(), 3); hint != "" {
 				result = hint
 			} else {
+				events <- agentTypes.Event{
+					Type:     agentTypes.EventExecError,
+					ToolName: toolName,
+					ToolID:   toolID,
+					Text:     hash,
+				}
 				result = fmt.Sprintf("no data: %s", hash)
 			}
 		} else if result == "" || result == "no data" {
