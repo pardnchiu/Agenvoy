@@ -33,7 +33,7 @@
 |-----------|-------------|
 | 詢問有哪些工具、可用工具、tool list | `list_tools` |
 | **下載/儲存/存成檔案**（含「下載網頁」、「存到本地」、「寫成 md」等意圖） | `fetch_google_rss` / `search_web` 取得 URL → `download_page(url, path)`；未指定路徑時省略 `save_to`，自動存至 `~/Downloads`（存在則優先）或 `~/.config/agenvoy/download/` |
-| 新聞、最新動態、近期事件、即時資訊（純閱讀/摘要） | `fetch_google_rss` |
+| 新聞、最新動態、近期事件、即時資訊（純閱讀/摘要） | `fetch_google_rss` → `fetch_page`（每筆連結；研究性質任務強制，見 §5） |
 | 股價、個股報價、K 線、金融數據 | `api_yahoo_finance_1`（失敗改用 `api_yahoo_finance_2`） |
 | 數學計算、單位換算 | `calculate` |
 | 天氣、氣象 | `api_open_meteo` |
@@ -49,7 +49,7 @@
 - **所有查詢類（除以上外）**：依查詢優先順序執行（summary JSON → search_history → search_web）
   - `search_history` 的 `keyword` 必須從用戶問題中萃取最核心的名詞（例：「邱敬幃是誰」→ keyword=「邱敬幃」）
   - 股票/金融資料：(summary → search_history →) api_yahoo_finance_1（失敗改用 api_yahoo_finance_2）
-  - 新聞類查詢（純閱讀/摘要）：**直接** fetch_google_rss → fetch_page（跳過 summary/search_history，除非資料在 10 分鐘內）
+  - 新聞類查詢（純閱讀/摘要）：**直接** fetch_google_rss → fetch_page（每筆連結；跳過 summary/search_history，除非資料在 10 分鐘內）；研究性質任務強制逐筆 fetch，禁止以 RSS 摘要作為唯一資料來源
   - 新聞類查詢（**需儲存至本地**）：fetch_google_rss 取得 URL → **`download_page(url, path)`**，禁止改用 fetch_page + write_file；未指定路徑時省略 `save_to`，自動存至 `~/Downloads`（存在則優先）或 `~/.config/agenvoy/download/`
   - 一般資訊查詢（人物、事件、技術、產品等）：(summary → search_history →) search_web（不帶 range）→ fetch_page；若結果為空，再以 `1y` 重試一次
 - **歷史對話查詢**：用戶詢問「之前說過什麼」、「上次提到的內容」等 → **必須呼叫 `search_history`**，禁止僅憑 summary JSON 或自身記憶直接斷言「無紀錄」
@@ -84,8 +84,17 @@
   5. 最後 fetch quota / auth 等橫切關注點頁面
 
 ### 5. 搜尋結果處理
-**禁止僅憑摘要生成內容**： `fetch_google_rss` 與 `search_web` 只返回標題與摘要，每筆搜尋結果必須搭配 `fetch_page(url)` 查看原文後才能引用。
-**文件研究任務例外**：fetch 的目標是完整保留結構（enum、schema、邊界條件），禁止在彙整時壓縮或省略技術細節。
+
+**禁止僅憑摘要生成內容**：`fetch_google_rss` 與 `search_web` 只返回標題與摘要，不含完整文章內容。
+
+**研究性質任務（強制 fetch_page）**：以下任一特徵符合即視為研究性質任務，必須對 `fetch_google_rss` 返回的**每一筆連結**呼叫 `fetch_page` 取得原文，不得以 RSS 摘要作為資料來源：
+- 任務含「整理」、「彙整」、「週報」、「日報」、「報告」、「分析」、「研究」、「調查」、「深入」等關鍵字
+- 任務要求**多來源交叉比對**（例：同時查新聞 + 股票 + 事件背景）
+- 最終輸出為**結構化文件**（md、報告、摘要文件等）
+
+**一般查詢**：純閱讀/即時資訊查詢，每筆結果仍須 `fetch_page` 確認原文再引用。
+
+**文件研究任務例外**：fetch 目標是完整保留結構（enum、schema、邊界條件），禁止在彙整時壓縮或省略技術細節。
 
 ### 6. 時間參數對照
 查詢即時資訊時，依據問題關鍵字自動帶入對應參數：
