@@ -65,7 +65,13 @@ func Init() error {
 
 		SkillsDir = filepath.Join(AgenvoyDir, "skills")
 		ToolsDir = filepath.Join(AgenvoyDir, "tools")
-		DownloadDir = filepath.Join(AgenvoyDir, "download")
+
+		systemDownloads := filepath.Join(homeDir, "Downloads")
+		if info, statErr := os.Stat(systemDownloads); statErr == nil && info.IsDir() {
+			DownloadDir = systemDownloads
+		} else {
+			DownloadDir = filepath.Join(AgenvoyDir, "download")
+		}
 
 		WorkAgenvoyDir = filepath.Join(workDir, ".config", projectName)
 		WorkAPIToolsDir = filepath.Join(WorkAgenvoyDir, "api_tools")

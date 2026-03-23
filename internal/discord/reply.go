@@ -2,18 +2,21 @@ package discord
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
-
 	"github.com/bwmarrin/discordgo"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
 )
+
 
 const (
 	// * if content over 2000, split into multiple messages
 	replayMax = 2000
 	// * discord attachment limit
 	attachMax = 10
+	// * discord default file size limit (10MB)
+	fileSizeMax = 10 << 20
 )
 
 func Send(bot *discordTypes.DiscordBot, channelID string, reply discordTypes.ReplyMessage) error {
@@ -24,17 +27,12 @@ func Send(bot *discordTypes.DiscordBot, channelID string, reply discordTypes.Rep
 		}
 	}
 
-	var files []*discordgo.File
-	for _, path := range reply.FilePaths {
-		f, err := os.Open(path)
-		if err != nil {
-			continue
+	files, cleanup, fileErrs := openFiles(reply.FilePaths)
+	defer cleanup()
+	if len(fileErrs) > 0 {
+		for _, e := range fileErrs {
+			reply.Content += "\n-# ⚠️ " + e
 		}
-		defer f.Close()
-		files = append(files, &discordgo.File{
-			Name:   filepath.Base(path),
-			Reader: f,
-		})
 	}
 
 	chunks := split(reply.Content)
@@ -85,17 +83,12 @@ func Reply(ctx context.Context, dcReply *discordTypes.DiscordReply, reply discor
 		}
 	}
 
-	var files []*discordgo.File
-	for _, path := range reply.FilePaths {
-		f, err := os.Open(path)
-		if err != nil {
-			continue
+	files, cleanup, fileErrs := openFiles(reply.FilePaths)
+	defer cleanup()
+	if len(fileErrs) > 0 {
+		for _, e := range fileErrs {
+			reply.Content += "\n-# ⚠️ " + e
 		}
-		defer f.Close()
-		files = append(files, &discordgo.File{
-			Name:   filepath.Base(path),
-			Reader: f,
-		})
 	}
 
 	if dcReply.Interaction != nil {
@@ -164,6 +157,39 @@ func Reply(ctx context.Context, dcReply *discordTypes.DiscordReply, reply discor
 	}
 
 	return nil
+}
+
+func openFiles(paths []string) ([]*discordgo.File, func(), []string) {
+	var files []*discordgo.File
+	var handles []*os.File
+	var errs []string
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("`%s`: file not found", filepath.Base(path)))
+			continue
+		}
+		if info.Size() > fileSizeMax {
+			errs = append(errs, fmt.Sprintf("`%s`: %.1fMB exceeds Discord's 10MB limit", filepath.Base(path), float64(info.Size())/1024/1024))
+			continue
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("`%s`: failed to open", filepath.Base(path)))
+			continue
+		}
+		handles = append(handles, f)
+		files = append(files, &discordgo.File{
+			Name:   filepath.Base(path),
+			Reader: f,
+		})
+	}
+	cleanup := func() {
+		for _, f := range handles {
+			f.Close()
+		}
+	}
+	return files, cleanup, errs
 }
 
 func split(s string) []string {

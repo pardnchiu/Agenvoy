@@ -111,7 +111,7 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	replyText = strings.TrimSpace(fileMarker.ReplaceAllString(replyText, ""))
 
 	if len(execErrors) > 0 {
-		replyText = fmt.Sprintf("%s\n-# errors: %s", replyText, strings.Join(execErrors, ", "))
+		replyText = fmt.Sprintf("%s\n-# ⚠️ %s", replyText, strings.Join(execErrors, ", "))
 	}
 	model := doneEvent.Model
 	if model == "" {

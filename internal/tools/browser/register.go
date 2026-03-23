@@ -42,7 +42,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "download_page",
-		Description: "將指定 URL 的網頁內容抓取並直接寫入本地端檔案。【觸發條件】必須同時滿足：(1) 有明確的 URL 來源；(2) 使用者意圖是將該 URL 內容永久存到磁碟（「把這個網頁存成 md」、「下載到本地」、「存到 downloads/」）。【禁止】使用者僅查看、摘要、分析網頁內容時，一律用 fetch_page；禁止用於無 URL 的純檔案生成場景（改用 write_file）。未指定 save_to 時，自動存至 ~/.config/agenvoy/download/<頁面名稱>.md。",
+		Description: "將指定 URL 的網頁內容抓取並直接寫入本地端檔案。【觸發條件】必須同時滿足：(1) 有明確的 URL 來源；(2) 使用者意圖是將該 URL 內容永久存到磁碟（「把這個網頁存成 md」、「下載到本地」、「存到 downloads/」）。【禁止】使用者僅查看、摘要、分析網頁內容時，一律用 fetch_page；禁止用於無 URL 的純檔案生成場景（改用 write_file）。未指定 save_to 時，自動存至 ~/Downloads（存在則優先）或 ~/.config/agenvoy/download/<頁面名稱>.md。",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -52,7 +52,7 @@ func init() {
 				},
 				"save_to": map[string]any{
 					"type":        "string",
-					"description": "要儲存的目標檔案路徑。絕對路徑直接使用；相對路徑以 ~/.config/agenvoy/download/ 為基底。未指定則自動以頁面名稱存至 ~/.config/agenvoy/download/<頁面名稱>.md。",
+					"description": "要儲存的目標檔案路徑。絕對路徑直接使用；相對路徑以 ~/Downloads（存在則優先）或 ~/.config/agenvoy/download/ 為基底。未指定則自動存至該目錄。",
 				},
 			},
 			"required": []string{"href"},

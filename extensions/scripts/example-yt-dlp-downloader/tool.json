@@ -1,0 +1,29 @@
+{
+  "name": "example-yt-dlp-downloader",
+  "description": "使用 yt-dlp 下載 YouTube 或其他支援網站的影片/音訊",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "要下載的影片 URL"
+      },
+      "format": {
+        "type": "string",
+        "description": "下載格式，預設為 best（最佳品質）。可指定 video+audio 組合或音訊格式如 bestaudio",
+        "default": "best"
+      },
+      "output_template": {
+        "type": "string",
+        "description": "輸出檔名模板，預設為 %(title)s.%(ext)s",
+        "default": "%(title)s.%(ext)s"
+      },
+      "path": {
+        "type": "string",
+        "description": "下載目錄路徑，預設為 ~/Downloads",
+        "default": "~/Downloads"
+      }
+    },
+    "required": ["url"]
+  }
+}

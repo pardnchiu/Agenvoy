@@ -14,7 +14,7 @@ import (
 func registWriteFile() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "write_file",
-		Description: "將內容寫入檔案。如果檔案不存在則建立，如果存在則覆寫。寫入 ~/.config/agenvoy/skills 下的檔案時會自動 git commit。未指定目錄時，路徑須以 ~/.config/agenvoy/download/<檔名> 為基底。",
+		Description: "將內容寫入檔案。如果檔案不存在則建立，如果存在則覆寫。寫入 ~/.config/agenvoy/skills 下的檔案時會自動 git commit。未指定目錄時，路徑以 ~/Downloads（存在則優先）或 ~/.config/agenvoy/download 為基底。",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

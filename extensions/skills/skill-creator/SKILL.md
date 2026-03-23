@@ -7,6 +7,8 @@ description: Create, edit, improve, or audit AgentSkills. Use when creating a ne
 
 > **Agenvoy 路徑規則（優先於所有其他路徑設定）**：所有 Skill 一律儲存至 `~/.config/agenvoy/skills/<skill-name>/`。步驟三的 `--path` 參數固定使用 `~/.config/agenvoy/skills`，忽略 SKILL.md 其他段落中提及的任何其他路徑。
 
+> **輸出路徑預設值**：Skill 或其 scripts 若涉及下載、輸出或寫入檔案，當使用者未指定路徑時，依序使用：`~/Downloads`（存在則優先）→ `~/.config/agenvoy/download`（fallback）。在 SKILL.md 中應明確說明此預設行為，並在 scripts 中實作對應邏輯。
+
 此 Skill 提供建立有效 Skill 的完整指引。
 
 ## 關於 Skill
