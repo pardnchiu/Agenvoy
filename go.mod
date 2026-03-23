@@ -12,7 +12,7 @@ require (
 	golang.org/x/net v0.50.0
 )
 
-require golang.org/x/term v0.41.0 // indirect
+require golang.org/x/term v0.41.0 // direct
 
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect

@@ -3,7 +3,7 @@ package toolTypes
 import (
 	"encoding/json"
 
-	apiAdapter "github.com/pardnchiu/agenvoy/internal/tools/apis/adapter"
+	apiAdapter "github.com/pardnchiu/agenvoy/internal/apiTools/adapter"
 )
 
 type Executor struct {

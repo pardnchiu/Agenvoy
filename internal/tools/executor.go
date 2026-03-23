@@ -8,8 +8,8 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/extensions"
+	apiAdapter "github.com/pardnchiu/agenvoy/internal/apiTools/adapter"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	apiAdapter "github.com/pardnchiu/agenvoy/internal/tools/apis/adapter"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
