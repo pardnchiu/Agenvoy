@@ -172,6 +172,64 @@ cp .env.example .env
 | `open-meteo` | 天氣 | 開源天氣預報 API |
 | `youtube` | 媒體 | YouTube 影片 metadata（標題、描述、頻道、時長） |
 
+### Script Tool Extension
+
+在 `~/.config/agenvoy/script_tools/`（或 `<workdir>/.config/agenvoy/script_tools/`）放入包含 `tool.json` + `script.js`/`script.py` 的子目錄，執行器在啟動時自動掃描並以 `script_` 前綴登錄工具。
+
+Script tool 目錄結構：
+
+```
+~/.config/agenvoy/script_tools/
+└── my-tool/
+    ├── tool.json       # 工具描述檔
+    └── script.py       # 或 script.js
+```
+
+`tool.json` 格式：
+
+```json
+{
+  "name": "my_tool",
+  "description": "Agent 選擇工具時看到的說明",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "input": {
+        "type": "string",
+        "description": "輸入值"
+      }
+    },
+    "required": ["input"]
+  }
+}
+```
+
+Script I/O 契約 — 執行器將工具參數以 JSON 透過 stdin 傳入，從 stdout 讀取結果：
+
+```python
+#!/usr/bin/env python3
+import json, sys
+
+params = json.loads(sys.stdin.read() or "{}")
+result = {"output": params.get("input", "").upper()}
+print(json.dumps(result))
+```
+
+```js
+const chunks = [];
+process.stdin.on("data", d => chunks.push(d));
+process.stdin.on("end", () => {
+  const params = JSON.parse(Buffer.concat(chunks).toString() || "{}");
+  console.log(JSON.stringify({ output: (params.input || "").toUpperCase() }));
+});
+```
+
+使用 `script-tool-creator` Skill 自動產生新工具骨架：
+
+```bash
+agenvoy run-allow "建立一個可以查詢城市天氣的 script tool"
+```
+
 ### Skill Extension
 
 Skill Extension 是帶有 YAML Frontmatter 標頭的 Markdown 檔。啟動時 SyncSkills 會從 GitHub 儲存庫的 `extensions/skills` 下載本地尚不存在的 Skill 目錄，儲存至 `~/.config/agenvoy/skills/`。Agent 接著掃描所有 9 個標準路徑以建立可用 Skill 清單。
@@ -308,6 +366,9 @@ agenvoy remove
 | `add_cron` | `cron_expr`, `script`, `channel_id` | 新增週期性 Cron 任務；每次執行結果傳送至指定 Discord 頻道 |
 | `list_crons` | — | 列出所有已登錄的 Cron 任務 |
 | `remove_cron` | `index` | 依序號移除 Cron 任務（多個時須先列出） |
+| `skill_git_commit` | `message` | 以指定訊息提交 Skill 儲存庫的當前變更 |
+| `skill_git_log` | `limit` | 顯示 Skill 儲存庫的近期提交歷史 |
+| `skill_git_rollback` | `commit` | 將 Skill 儲存庫回滾至指定的 commit hash |
 | `list_tools` | — | 列出所有可用工具，含動態載入的 API Extension |
 | `calculate` | `expression` | 數學運算（sqrt、abs、pow、ceil、floor、sin、cos、tan、log） |
 

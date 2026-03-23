@@ -63,6 +63,7 @@ graph TB
         FileOps["File Ops\nread / write / patch / glob"]
         WebAccess["Web Access\nfetch / search / download"]
         APIExt["API Extensions\n14+ JSON definitions"]
+        ScriptExt["Script Extensions\nJS / Python scripts"]
         Scheduler["Scheduler\ncron + one-time tasks"]
         ErrorMem["Error Memory\nSHA-256 keyed"]
     end
@@ -138,6 +139,28 @@ The Copilot provider detects model type at runtime. GPT-5.4 and Codex models rou
 
 </details>
 
+### Script Tool Runtime
+
+Drop a `tool.json` + `script.js` or `script.py` into a directory and the agent discovers and invokes it as a first-class tool — no Go code, no recompilation.
+
+<details>
+<summary>Details</summary>
+
+On startup, the executor scans `~/.config/agenvoy/script_tools/` and `<workdir>/.config/agenvoy/script_tools/` for subdirectories containing a `tool.json` manifest (name, description, parameters schema) paired with an executable `script.js` or `script.py`. Each discovered tool is registered with the `script_` prefix and dispatched via stdin/stdout JSON — identical to the API tool contract. The `script-tool-creator` skill scaffolds new tools automatically.
+
+</details>
+
+### Skill Git Tools
+
+Three tools let agents commit, inspect history, and roll back changes inside skill workflows without leaving the agent loop.
+
+<details>
+<summary>Details</summary>
+
+`skill_git_commit`, `skill_git_log`, and `skill_git_rollback` operate on the skill repository path. They enable skills like `readme-generate` or `script-tool-creator` to version their own output atomically, inspect change history, and undo mistakes — all within a single agent execution.
+
+</details>
+
 ### Declarative JSON API Extensions
 
 Add any HTTP API as a tool by dropping a JSON file — no Go code required.
@@ -194,31 +217,35 @@ agenvoy/
 │   └── prompts/            # Embedded system prompts and selectors
 ├── extensions/
 │   ├── apis/               # Embedded API extensions (14+ JSON)
+│   ├── scripts/            # Example script tools (JS / Python + tool.json)
 │   └── skills/             # Embedded skill extensions (Markdown)
 ├── internal/
 │   ├── agents/
 │   │   ├── exec/           # Execution engine, token trimming, summary extraction
 │   │   ├── provider/       # 6 AI provider backends + Responses API
 │   │   └── types/          # Agent interface + message / usage types
+│   ├── apiAdapter/         # HTTP API tool translation and dispatch
 │   ├── discord/            # Discord slash commands + file attachments
 │   ├── filesystem/         # Path validation, session manager, keychain, and usage tracking
 │   ├── sandbox/            # Sandbox isolation + sensitive path denial
 │   ├── scheduler/          # Persistent one-time and recurring task scheduler
+│   ├── scriptAdapter/      # Script tool scanner, executor, and stdin/stdout JSON bridge
 │   ├── skill/              # Markdown skill scanner and parser
-│   └── tools/              # 26+ self-registering tools + API extension adapter
+│   └── tools/              # 26+ self-registering tools + git / scheduler tools
 ├── go.mod
 └── LICENSE
 ```
 
 ## Version History
 
+- **v0.16.0** — Script tool runtime (`scriptAdapter`): drop a `tool.json` + `script.js`/`script.py` into `~/.config/agenvoy/script_tools/` and it is auto-discovered as a `script_`-prefixed tool; stdin/stdout JSON protocol mirrors API tool contract. Refactor `tools/apis/adapter` → `apiAdapter`, `tools/apis` → `tools/api`. Add `skill_git_commit`, `skill_git_log`, `skill_git_rollback` for skill-internal versioning. Copilot token auto-relogin on 401. Fix Discord file upload failure for non-ASCII filenames; add 10MB pre-upload size guard with user-facing warning.
 - **v0.15.2** — Add YouTube metadata fetch tool (`analyze_youtube`); Discord Modal-based API key management (`/add-gemini`, `/add-openai`, `/add-claude`, `/add-nim`); per-model token usage tracking via `usageManager`; configurable reasoning level across all providers; browser iteration limits and same-domain link traversal now configurable via `MAX_TOOL_ITERATIONS`, `MAX_SKILL_ITERATIONS`, `MAX_EMPTY_RESPONSES`; fix Makefile pass-through args
 - **v0.15.1** — Fix Copilot Claude/Gemini image validation failure: all uploaded images are decoded and re-encoded as JPEG (`image.Decode` + `jpeg.Encode`, supporting PNG/GIF/WebP sources), `ImageURL` gains `detail` field; summary regex split from one monolithic expression into three independent patterns (fenced block, `<summary>` tag, `[summary]` bracket); system prompts moved after history to improve model instruction adherence; Discord prompt takes priority over base system prompt
-- **v0.15.0** — Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint); session-level token-budget message trimming (budget calculated via `MaxInputTokens()`, preserving system prompt + summary + latest user message); sensitive path denial rules for macOS and Linux sandbox (loaded from embedded `denied_map.json`); Linux bwrap restores `--unshare-all` namespace isolation (with graceful fallback probing) and `--new-session` process isolation; `MAX_HISTORY_MESSAGES` environment variable support; summary delimiter switched to XML tags; lite models excluded from agent selection
 
 <details>
 <summary>Earlier versions</summary>
 
+- **v0.15.0** — Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint); session-level token-budget message trimming (budget calculated via `MaxInputTokens()`, preserving system prompt + summary + latest user message); sensitive path denial rules for macOS and Linux sandbox (loaded from embedded `denied_map.json`); Linux bwrap restores `--unshare-all` namespace isolation (with graceful fallback probing) and `--new-session` process isolation; `MAX_HISTORY_MESSAGES` environment variable support; summary delimiter switched to XML tags; lite models excluded from agent selection
 - **v0.14.0** — OS-native sandbox isolation (bubblewrap on Linux with auto-install, sandbox-exec on macOS); per-request token usage tracking accumulated across all tool-call iterations; tool handlers restructured into individually named files; exclude logic and file walk/list moved into `filesystem` package; symlink-safe path resolution in `GetAbsPath`
 - **v0.13.0** — Self-registering tool Registry replacing switch-based routing and embedded JSON definitions; scheduler persistent JSON storage with full CRUD (add/update/delete for tasks and crons); keychain migrated under `filesystem`; absolute path restriction to user home directory; trimmed history ellipsis markers
 - **v0.12.0** — Full scheduler subsystem (cron + one-time tasks with Discord callbacks); centralize `filesystem` + `configs` packages; replace custom cron parser with `go-scheduler`; `schedule-task` skill

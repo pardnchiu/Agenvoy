@@ -172,6 +172,64 @@ The following API extensions are bundled and loaded automatically at startup:
 | `open-meteo` | Weather | Open-source weather forecast API |
 | `youtube` | Media | YouTube video metadata (title, description, channel, duration) |
 
+### Script Tool Extensions
+
+Place a subdirectory containing `tool.json` + `script.js` or `script.py` in `~/.config/agenvoy/script_tools/` (or `<workdir>/.config/agenvoy/script_tools/`). The executor scans both paths on startup and registers each tool with the `script_` prefix.
+
+Script tool directory layout:
+
+```
+~/.config/agenvoy/script_tools/
+└── my-tool/
+    ├── tool.json       # Tool manifest
+    └── script.py       # or script.js
+```
+
+`tool.json` format:
+
+```json
+{
+  "name": "my_tool",
+  "description": "What the agent sees when selecting this tool",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "input": {
+        "type": "string",
+        "description": "Input value"
+      }
+    },
+    "required": ["input"]
+  }
+}
+```
+
+Script I/O contract — the executor pipes the tool parameters as JSON to stdin and reads the result from stdout:
+
+```python
+#!/usr/bin/env python3
+import json, sys
+
+params = json.loads(sys.stdin.read() or "{}")
+result = {"output": params.get("input", "").upper()}
+print(json.dumps(result))
+```
+
+```js
+const chunks = [];
+process.stdin.on("data", d => chunks.push(d));
+process.stdin.on("end", () => {
+  const params = JSON.parse(Buffer.concat(chunks).toString() || "{}");
+  console.log(JSON.stringify({ output: (params.input || "").toUpperCase() }));
+});
+```
+
+Use the `script-tool-creator` skill to scaffold new tools automatically:
+
+```bash
+agenvoy run-allow "create a script tool that fetches weather for a city"
+```
+
 ### Skill Extensions
 
 Skill extensions are Markdown files with a YAML frontmatter header. On startup, SyncSkills fetches any skill directories from `extensions/skills` in the GitHub repository that are not yet present locally, storing them in `~/.config/agenvoy/skills/`. The agent then scans all 9 standard paths to build the available skill list.
@@ -308,6 +366,9 @@ agenvoy remove
 | `add_cron` | `cron_expr`, `script`, `channel_id` | Register a recurring cron task; result is posted to the Discord channel after each run |
 | `list_crons` | — | List all registered cron tasks |
 | `remove_cron` | `index` | Remove a cron task by index (list first if multiple) |
+| `skill_git_commit` | `message` | Commit current changes in the skill repository with the given message |
+| `skill_git_log` | `limit` | Show recent commit history for the skill repository |
+| `skill_git_rollback` | `commit` | Roll back the skill repository to the specified commit hash |
 | `list_tools` | — | List all currently available tools including dynamic API extensions |
 | `calculate` | `expression` | Evaluate math expressions (sqrt, abs, pow, ceil, floor, sin, cos, tan, log) |
 

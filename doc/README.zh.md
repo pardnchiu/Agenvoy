@@ -63,6 +63,7 @@ graph TB
         FileOps["檔案操作\nread / write / patch / glob"]
         WebAccess["網路存取\nfetch / search / download"]
         APIExt["API Extension\n14+ JSON 定義"]
+        ScriptExt["Script Extension\nJS / Python 腳本"]
         Scheduler["排程器\ncron + 一次性任務"]
         ErrorMem["錯誤記憶\nSHA-256 索引"]
     end
@@ -138,6 +139,28 @@ Copilot Provider 在執行時偵測模型類型。GPT-5.4 與 Codex 路由至 Re
 
 </details>
 
+### Script Tool 執行環境
+
+在目錄中放入 `tool.json` + `script.js` 或 `script.py`，Agent 即自動發現並以一等工具身份呼叫 — 無需 Go 程式碼，無需重新編譯。
+
+<details>
+<summary>詳細說明</summary>
+
+啟動時，執行器掃描 `~/.config/agenvoy/script_tools/` 與 `<workdir>/.config/agenvoy/script_tools/` 下的子目錄，找到包含 `tool.json`（name、description、parameters schema）與可執行 `script.js`/`script.py` 的目錄即自動載入。每個工具以 `script_` 前綴註冊並透過 stdin/stdout JSON 協定執行，與 API tool 契約完全一致。`script-tool-creator` Skill 可自動產生新工具骨架。
+
+</details>
+
+### Skill Git 工具
+
+三個工具讓 Agent 在 Skill 工作流程中提交、查看歷史與回滾變更，無需離開執行迴圈。
+
+<details>
+<summary>詳細說明</summary>
+
+`skill_git_commit`、`skill_git_log`、`skill_git_rollback` 作用於 Skill 儲存庫路徑。讓 `readme-generate`、`script-tool-creator` 等 Skill 能原子性地版本控制自己的輸出、查看變更歷史，並在出錯時回滾 — 全程在單次 Agent 執行中完成。
+
+</details>
+
 ### 宣告式 JSON API Extension
 
 放一個 JSON 檔即可新增任意 HTTP API 作為工具 — 無需撰寫 Go 程式碼。
@@ -194,31 +217,35 @@ agenvoy/
 │   └── prompts/            # 嵌入式 System Prompt 與選擇器
 ├── extensions/
 │   ├── apis/               # 內嵌 API Extension（14+ JSON）
+│   ├── scripts/            # Script Tool 範例（JS / Python + tool.json）
 │   └── skills/             # 內嵌 Skill Extension（Markdown）
 ├── internal/
 │   ├── agents/
 │   │   ├── exec/           # 執行引擎、token 裁剪、摘要擷取
 │   │   ├── provider/       # 6 個 AI Provider 後端 + Responses API
 │   │   └── types/          # Agent 介面 + Message / Usage 類型
+│   ├── apiAdapter/         # HTTP API 工具翻譯與 dispatch
 │   ├── discord/            # Discord Slash Command + 檔案附件
 │   ├── filesystem/         # 路徑驗證、Session 管理、Keychain 與用量追蹤
 │   ├── sandbox/            # 沙箱隔離 + 敏感路徑封鎖
 │   ├── scheduler/          # 持久化一次性與週期性任務排程器
+│   ├── scriptAdapter/      # Script Tool 掃描器、執行器與 stdin/stdout JSON 橋接
 │   ├── skill/              # Markdown Skill 掃描器與解析器
-│   └── tools/              # 26+ 自註冊工具 + API Extension 適配器
+│   └── tools/              # 26+ 自註冊工具 + git / 排程工具
 ├── go.mod
 └── LICENSE
 ```
 
 ## 版本歷史
 
+- **v0.16.0** — Script tool 執行環境（`scriptAdapter`）：在 `~/.config/agenvoy/script_tools/` 放入 `tool.json` + `script.js`/`script.py` 即自動載入為 `script_` 前綴工具，stdin/stdout JSON 協定與 API tool 一致。重構 `tools/apis/adapter` → `apiAdapter`，`tools/apis` → `tools/api`。新增 `skill_git_commit`、`skill_git_log`、`skill_git_rollback` 支援 Skill 內部版本控制。Copilot token 過期自動重新登入。修正 Discord 非 ASCII 檔名上傳失敗，新增 10MB 上限前置驗證並回報用戶。
 - **v0.15.2** — 新增 YouTube metadata 擷取工具（`analyze_youtube`）；Discord Modal API Key 設定指令（`/add-gemini`、`/add-openai`、`/add-claude`、`/add-nim`）；逐模型 Token 用量追蹤（`usageManager`）；各 Provider 可設定推理層級（Reasoning Level）；瀏覽器迭代上限與同網域連結追蹤現可透過 `MAX_TOOL_ITERATIONS`、`MAX_SKILL_ITERATIONS`、`MAX_EMPTY_RESPONSES` 設定；修正 Makefile 參數傳遞
 - **v0.15.1** — 修正 Copilot Claude/Gemini 模型的圖片驗證失敗：所有上傳圖片統一 decode 後 re-encode 為 JPEG（`image.Decode` + `jpeg.Encode`，支援 PNG/GIF/WebP 來源），`ImageURL` 新增 `detail` 欄位；Summary regex 從單一表達式拆分為三個獨立 pattern（fenced block、`<summary>` tag、`[summary]` bracket）；System prompt 移至 history 之後以提升模型指令遵循度；Discord prompt 優先於基本 system prompt
-- **v0.15.0** — Copilot Responses API 支援（GPT-5.4 與 Codex 模型自動切換端點）；Session 層級 token-budget 訊息裁剪（依 `MaxInputTokens()` 計算預算，保留 system prompt + summary + 最新使用者訊息）；macOS 與 Linux 沙箱新增敏感路徑存取拒絕規則（從嵌入式 `denied_map.json` 載入）；Linux bwrap 恢復 `--unshare-all` namespace 隔離（含 graceful fallback 探測）與 `--new-session` process 隔離；`MAX_HISTORY_MESSAGES` 環境變數支援；Summary delimiter 改為 XML tag；輕量模型排除於 Agent 選擇
 
 <details>
 <summary>更早版本</summary>
 
+- **v0.15.0** — Copilot Responses API 支援（GPT-5.4 與 Codex 模型自動切換端點）；Session 層級 token-budget 訊息裁剪（依 `MaxInputTokens()` 計算預算，保留 system prompt + summary + 最新使用者訊息）；macOS 與 Linux 沙箱新增敏感路徑存取拒絕規則（從嵌入式 `denied_map.json` 載入）；Linux bwrap 恢復 `--unshare-all` namespace 隔離（含 graceful fallback 探測）與 `--new-session` process 隔離；`MAX_HISTORY_MESSAGES` 環境變數支援；Summary delimiter 改為 XML tag；輕量模型排除於 Agent 選擇
 - **v0.14.0** — 作業系統原生沙箱隔離（Linux bubblewrap 自動安裝、macOS sandbox-exec）；每次請求的 token 用量追蹤（跨所有工具呼叫迭代累計）；工具處理器重構為獨立命名檔案；exclude 邏輯與 file walk/list 移至 `filesystem` package；`GetAbsPath` 新增 symlink 安全路徑解析
 - **v0.13.0** — 自註冊 Tool Registry 取代 switch routing 與嵌入式 JSON 定義；排程器持久化 JSON 儲存含完整 CRUD（tasks 與 crons 的新增/更新/刪除）；Keychain 遷移至 `filesystem` 下；絕對路徑限制僅允許使用者 Home 目錄；裁切歷史加入省略號標記
 - **v0.12.0** — 完整排程子系統（Cron + 一次性任務含 Discord 回呼）；集中 `filesystem` + `configs` 套件；以 `go-scheduler` 取代自製 Cron 解析器；`schedule-task` Skill
