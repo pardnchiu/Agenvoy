@@ -35,7 +35,14 @@ func (c *Agent) refresh(ctx context.Context) error {
 		return fmt.Errorf("utils.GET: %w", err)
 	}
 	if code == http.StatusUnauthorized {
-		return fmt.Errorf("utils.GET: token expired")
+		ctx2, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+		defer cancel()
+		token, err := c.Login(ctx2)
+		if err != nil {
+			return fmt.Errorf("c.Login: %w", err)
+		}
+		c.Token = token
+		return c.refresh(ctx)
 	}
 	if code == http.StatusForbidden || code == http.StatusNotFound {
 		return fmt.Errorf("utils.GET: token refresh failed")

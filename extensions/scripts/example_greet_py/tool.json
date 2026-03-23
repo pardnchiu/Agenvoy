@@ -1,0 +1,14 @@
+{
+  "name": "example_greet_py",
+  "description": "向指定名字的人打招呼，回傳問候訊息（Python 版）",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "要打招呼的名字"
+      }
+    },
+    "required": ["name"]
+  }
+}

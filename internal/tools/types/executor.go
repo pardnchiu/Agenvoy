@@ -1,10 +1,17 @@
 package toolTypes
 
 import (
+	"context"
 	"encoding/json"
 
 	apiAdapter "github.com/pardnchiu/agenvoy/internal/apiAdapter"
 )
+
+type ScriptToolExecutor interface {
+	IsExist(name string) bool
+	Execute(ctx context.Context, name string, args json.RawMessage, workDir string) (string, error)
+	GetTools() []map[string]any
+}
 
 type Executor struct {
 	WorkDir        string
@@ -13,6 +20,7 @@ type Executor struct {
 	AllowedCommand map[string]bool
 	Tools          []Tool
 	APIToolbox     *apiAdapter.Translator
+	ScriptToolbox  ScriptToolExecutor
 }
 
 type Tool struct {

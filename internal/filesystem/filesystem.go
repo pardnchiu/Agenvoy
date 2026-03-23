@@ -12,24 +12,26 @@ import (
 )
 
 var (
-	once         sync.Once
-	AgenvoyDir   string
-	ConfigPath   string
-	UsagePath    string
-	SessionsDir  string
-	APIsDir      string
-	ErrorsDir    string
-	SchedulerDir string
-	TasksPath    string
-	CronsPath    string
-	ScriptsDir   string
-	SkillsDir    string
-	ToolsDir     string
-	DownloadDir  string
+	once           sync.Once
+	AgenvoyDir     string
+	ConfigPath     string
+	UsagePath      string
+	SessionsDir    string
+	APIToolsDir    string
+	ScriptToolsDir string
+	ErrorsDir      string
+	SchedulerDir   string
+	TasksPath      string
+	CronsPath      string
+	ScriptsDir     string
+	SkillsDir      string
+	ToolsDir       string
+	DownloadDir    string
 
-	WorkAgenvoyDir string
-	WorkAPIsDir    string
-	WorkSkillsDir  string
+	WorkAgenvoyDir     string
+	WorkAPIToolsDir    string
+	WorkScriptToolsDir string
+	WorkSkillsDir      string
 )
 
 const (
@@ -53,19 +55,21 @@ func Init() error {
 		UsagePath = filepath.Join(AgenvoyDir, "usage.json")
 
 		SessionsDir = filepath.Join(AgenvoyDir, "sessions")
-		APIsDir = filepath.Join(AgenvoyDir, "apis")
+		APIToolsDir = filepath.Join(AgenvoyDir, "api_tools")
+		ScriptToolsDir = filepath.Join(AgenvoyDir, "script_tools")
 		ErrorsDir = filepath.Join(AgenvoyDir, "errors")
 		SchedulerDir = filepath.Join(AgenvoyDir, "scheduler")
 		TasksPath = filepath.Join(SchedulerDir, "tasks.json")
 		CronsPath = filepath.Join(SchedulerDir, "crons.json")
 		ScriptsDir = filepath.Join(SchedulerDir, "scripts")
 
-		SkillsDir   = filepath.Join(AgenvoyDir, "skills")
-		ToolsDir    = filepath.Join(AgenvoyDir, "tools")
+		SkillsDir = filepath.Join(AgenvoyDir, "skills")
+		ToolsDir = filepath.Join(AgenvoyDir, "tools")
 		DownloadDir = filepath.Join(AgenvoyDir, "download")
 
 		WorkAgenvoyDir = filepath.Join(workDir, ".config", projectName)
-		WorkAPIsDir = filepath.Join(WorkAgenvoyDir, "apis")
+		WorkAPIToolsDir = filepath.Join(WorkAgenvoyDir, "api_tools")
+		WorkScriptToolsDir = filepath.Join(WorkAgenvoyDir, "script_tools")
 		WorkSkillsDir = filepath.Join(WorkAgenvoyDir, "skills")
 	})
 
