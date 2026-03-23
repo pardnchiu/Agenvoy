@@ -110,9 +110,6 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	}
 	replyText = strings.TrimSpace(fileMarker.ReplaceAllString(replyText, ""))
 
-	if len(execErrors) > 0 {
-		replyText = fmt.Sprintf("%s\n-# ⚠️ %s", replyText, strings.Join(execErrors, ", "))
-	}
 	model := doneEvent.Model
 	if model == "" {
 		model = agent.Name()
@@ -122,6 +119,9 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 		footer = fmt.Sprintf("%s | in:%d out:%d", footer, doneEvent.Usage.Input, doneEvent.Usage.Output)
 	}
 	replyText = fmt.Sprintf("%s\n-# %s", replyText, footer)
+	if len(execErrors) > 0 {
+		replyText = fmt.Sprintf("%s\n-# ⚠️ %s", replyText, strings.Join(execErrors, ", "))
+	}
 
 	dr := &discordTypes.DiscordReply{
 		Session:   dcSession,
