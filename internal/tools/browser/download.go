@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +22,7 @@ func Download(href, saveTo string) (string, error) {
 	}
 
 	if saveTo == "" {
-		return "", fmt.Errorf("saveTo is required")
+		saveTo = defaultDownloadPath(href)
 	}
 
 	// if dir, err := utils.GetConfigDir("tools", "browser", "5xx"); err == nil {
@@ -100,4 +101,20 @@ func Download(href, saveTo string) (string, error) {
 	}
 
 	return fmt.Sprintf("Downloaded %d chars to %s", len(content), saveTo), nil
+}
+
+func defaultDownloadPath(href string) string {
+	name := "page"
+	if u, err := url.Parse(href); err == nil {
+		seg := strings.TrimSuffix(filepath.Base(u.Path), "/")
+		if seg != "" && seg != "." {
+			name = seg
+		} else if u.Host != "" {
+			name = u.Host
+		}
+	}
+	if !strings.HasSuffix(name, ".md") {
+		name += ".md"
+	}
+	return filepath.Join(filesystem.DownloadDir, name)
 }

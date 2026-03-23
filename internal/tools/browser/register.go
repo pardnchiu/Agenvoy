@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -12,7 +13,7 @@ import (
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "fetch_page",
-		Description: "使用 Chrome 瀏覽器開啟網頁，等待 JS 完整渲染後擷取主要內容，以純文字 Markdown 格式返回給 agent 閱讀。此工具不會寫入任何檔案，內容僅存在於 agent context 中。【適用情境】查詢、摘要、分析、爬取內容、回答問題、任何需要讀取網頁內容的任務。【禁止情境】使用者明確說「存檔」、「存到本地」、「儲存成檔案」、「下載到 xxx 路徑」時，改用 download_page。",
+		Description: "使用 Chrome 瀏覽器開啟網頁，擷取內容以純文字 Markdown 格式回傳給 agent。此工具不寫入任何檔案，內容僅存在於 agent context。【適用】查詢、摘要、分析、爬取、回答問題等所有「讀取」意圖。【禁止】使用者明確要求將網頁內容寫入本地端檔案（「把這個網頁存成 md」、「下載到本地」、「存到 downloads/」）時，必須改用 download_page；禁止用此工具讀取再自行呼叫 write_file 寫檔。",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -41,7 +42,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "download_page",
-		Description: "【嚴格限制：僅在使用者明確要求將網頁儲存到本地端檔案時使用】使用 Chrome 瀏覽器取得完整網頁內容，直接寫入指定的本地檔案路徑。觸發條件必須同時滿足：(1) 使用者明確提供或要求指定檔案路徑；(2) 意圖是永久保存到磁碟（「存成 xxx.md」、「儲存到 downloads/」、「下載到本地」）。若使用者只是要查看、摘要、分析、爬取內容，一律使用 fetch_page。",
+		Description: "將指定 URL 的網頁內容抓取並直接寫入本地端檔案。【觸發條件】必須同時滿足：(1) 有明確的 URL 來源；(2) 使用者意圖是將該 URL 內容永久存到磁碟（「把這個網頁存成 md」、「下載到本地」、「存到 downloads/」）。【禁止】使用者僅查看、摘要、分析網頁內容時，一律用 fetch_page；禁止用於無 URL 的純檔案生成場景（改用 write_file）。未指定 save_to 時，自動存至 ~/.config/agenvoy/download/<頁面名稱>.md。",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -51,12 +52,12 @@ func init() {
 				},
 				"save_to": map[string]any{
 					"type":        "string",
-					"description": "要儲存的目標檔案路徑（絕對路徑或相對於專案根目錄），例如 ./downloads/page.md",
+					"description": "要儲存的目標檔案路徑。絕對路徑直接使用；相對路徑以 ~/.config/agenvoy/download/ 為基底。未指定則自動以頁面名稱存至 ~/.config/agenvoy/download/<頁面名稱>.md。",
 				},
 			},
-			"required": []string{"href", "save_to"},
+			"required": []string{"href"},
 		},
-		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Href   string `json:"href"`
 				SaveTo string `json:"save_to"`
@@ -64,7 +65,15 @@ func init() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			return Download(params.Href, params.SaveTo)
+			saveTo := params.SaveTo
+			if saveTo != "" {
+				abs, err := filesystem.GetAbsPath(filesystem.DownloadDir, saveTo)
+				if err != nil {
+					return "", fmt.Errorf("filesystem.GetAbsPath: %w", err)
+				}
+				saveTo = abs
+			}
+			return Download(params.Href, saveTo)
 		},
 	})
 }

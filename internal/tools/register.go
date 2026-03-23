@@ -15,6 +15,7 @@ import (
 	_ "github.com/pardnchiu/agenvoy/internal/tools/browser"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/calculator"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/file"
+	_ "github.com/pardnchiu/agenvoy/internal/tools/git"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/schedulerTools"
 )
 

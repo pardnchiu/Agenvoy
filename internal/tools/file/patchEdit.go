@@ -33,7 +33,7 @@ func registPatchEdit() {
 			},
 			"required": []string{"path", "old_string", "new_string"},
 		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Path      string `json:"path"`
 				OldString string `json:"old_string"`
@@ -56,6 +56,14 @@ func registPatchEdit() {
 			if err := filesystem.WriteFile(absPath, newContent, 0644); err != nil {
 				return "", fmt.Errorf("filesystem.WriteFile: %w", err)
 			}
+
+			if filesystem.IsSkillsDir(absPath) {
+				skillName := filesystem.GetSkillName(absPath)
+				if err := filesystem.CheckSkillsGit(ctx); err == nil {
+					_ = filesystem.CommitSkills(ctx, "update", skillName)
+				}
+			}
+
 			return fmt.Sprintf("successfully updated %s", absPath), nil
 		},
 	})

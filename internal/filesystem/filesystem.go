@@ -25,6 +25,7 @@ var (
 	ScriptsDir   string
 	SkillsDir    string
 	ToolsDir     string
+	DownloadDir  string
 
 	WorkAgenvoyDir string
 	WorkAPIsDir    string
@@ -59,16 +60,19 @@ func Init() error {
 		CronsPath = filepath.Join(SchedulerDir, "crons.json")
 		ScriptsDir = filepath.Join(SchedulerDir, "scripts")
 
-		SkillsDir = filepath.Join(AgenvoyDir, "skills")
-		ToolsDir = filepath.Join(AgenvoyDir, "tools")
+		SkillsDir   = filepath.Join(AgenvoyDir, "skills")
+		ToolsDir    = filepath.Join(AgenvoyDir, "tools")
+		DownloadDir = filepath.Join(AgenvoyDir, "download")
 
 		WorkAgenvoyDir = filepath.Join(workDir, ".config", projectName)
 		WorkAPIsDir = filepath.Join(WorkAgenvoyDir, "apis")
 		WorkSkillsDir = filepath.Join(WorkAgenvoyDir, "skills")
 	})
 
-	if err = os.MkdirAll(AgenvoyDir, 0755); err != nil {
-		return fmt.Errorf("os.MkdirAll: %w", err)
+	for _, dir := range []string{AgenvoyDir, DownloadDir} {
+		if err = os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("os.MkdirAll: %w", err)
+		}
 	}
 
 	return nil

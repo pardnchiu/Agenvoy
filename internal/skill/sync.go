@@ -28,19 +28,14 @@ func SyncSkills(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// dir, err := utils.GetConfigDir("skills")
-	// if err != nil {
-	// 	slog.Error("utils.GetConfigDir",
-	// 		slog.String("error", err.Error()))
-	// 	return
-	// }
-
 	entries, err := listGitHub(ctx, apiGithubSkills)
 	if err != nil {
 		slog.Error("listGitHub",
 			slog.String("error", err.Error()))
 		return
 	}
+
+	var added []string
 
 	for _, entry := range entries {
 		if entry.Type != "dir" {
@@ -61,6 +56,22 @@ func SyncSkills(ctx context.Context) {
 			slog.Warn("downloadDir",
 				slog.String("error", err.Error()))
 			os.Remove(path)
+			continue
+		}
+
+		added = append(added, entry.Name)
+	}
+
+	if err := filesystem.CheckSkillsGit(ctx); err != nil {
+		slog.Warn("filesystem.CheckSkillsGit",
+			slog.String("error", err.Error()))
+		return
+	}
+
+	for _, name := range added {
+		if err := filesystem.CommitSkills(ctx, "add", name); err != nil {
+			slog.Warn("filesystem.CommitSkills",
+				slog.String("error", err.Error()))
 		}
 	}
 }
