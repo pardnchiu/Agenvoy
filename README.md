@@ -20,6 +20,7 @@ Stop wiring each AI provider separately — Agenvoy routes any task to the right
 
 - [Architecture](#architecture)
 - [Features](#features)
+- [Concepts](#concepts)
 - [File Structure](#file-structure)
 - [Version History](#version-history)
 - [License](#license)
@@ -204,6 +205,18 @@ Slash commands share the same execution engine as the CLI, with per-channel sess
 Per-channel session isolation, file attachment handling, inline file-send protocol, and scheduled task result posting. API keys for all providers can be configured directly in Discord via Modal inputs (`/add-gemini`, `/add-openai`, `/add-claude`, `/add-nim`).
 
 </details>
+
+## Concepts
+
+Two prior projects from the same author directly informed Agenvoy's architecture:
+
+### Script Tool as FaaS — [pardnchiu/go-faas](https://github.com/pardnchiu/go-faas)
+
+[pardnchiu/go-faas](https://github.com/pardnchiu/go-faas) is a lightweight Function-as-a-Service platform that accepts Python, JavaScript, and TypeScript code via HTTP, executes each function inside a Bubblewrap sandbox with full Linux namespace isolation, and streams results. Agenvoy's script tool subsystem (`scriptAdapter`) adopts this model directly: each script tool is a stateless function invoked via stdin/stdout JSON, isolated to its own process, with the agent acting as the caller rather than an HTTP client.
+
+### Cognitive Imperfect Memory — [pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype)
+
+[pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype) argues that perfect memory is a cognitive burden — based on research showing multi-turn LLM performance drops 39% when full conversation history is replayed verbatim ([LLMs Get Lost In Multi-Turn Conversation](https://arxiv.org/abs/2505.06120)). The system maintains a structured rolling summary and retrieves relevant fragments via fuzzy search only when triggered, mirroring how humans selectively recall rather than replay. Agenvoy's session layer reflects this directly: `trimMessages()` enforces a token budget rather than replaying full history, `summary` is persisted and deep-merged across turns, and `search_history` provides keyword-triggered recall rather than injecting all past context.
 
 ## File Structure
 
