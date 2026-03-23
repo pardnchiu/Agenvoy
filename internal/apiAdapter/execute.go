@@ -15,11 +15,11 @@ func (t *Translator) Execute(name string, params map[string]any) (string, error)
 	key := strings.TrimPrefix(name, "api_")
 	doc, ok := t.apis[key]
 	if !ok {
-		return "", fmt.Errorf("not found: %s", name)
+		return "", fmt.Errorf("api tool not found: %s", name)
 	}
 
 	if err := t.checkRequireds(doc, params); err != nil {
-		return "", err
+		return "", fmt.Errorf("t.checkRequireds: %w", err)
 	}
 
 	result, err := t.send(doc, params)

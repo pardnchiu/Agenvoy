@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -72,9 +73,9 @@ func readFile(e *toolTypes.Executor, path string) (string, string, error) {
 		return "", absPath, fmt.Errorf("filesystem.IsExclude: %s", path)
 	}
 
-	data, err := filesystem.ReadFile(absPath)
+	data, err := os.ReadFile(absPath)
 	if err != nil {
-		return "", absPath, fmt.Errorf("filesystem.ReadFile: %w", err)
+		return "", absPath, fmt.Errorf("os.ReadFile: %w", err)
 	}
-	return data, absPath, nil
+	return string(data), absPath, nil
 }

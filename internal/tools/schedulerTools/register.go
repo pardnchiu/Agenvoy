@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -302,11 +303,11 @@ func init() {
 			if filepath.Base(params.Name) != params.Name {
 				return "", fmt.Errorf("must not contain path separator")
 			}
-			data, err := filesystem.ReadFile(filepath.Join(filesystem.ScriptsDir, params.Name))
+			data, err := os.ReadFile(filepath.Join(filesystem.ScriptsDir, params.Name))
 			if err != nil {
-				return "", fmt.Errorf("filesystem.ReadFile: %w", err)
+				return "", fmt.Errorf("os.ReadFile: %w", err)
 			}
-			return data, nil
+			return string(data), nil
 		},
 	})
 

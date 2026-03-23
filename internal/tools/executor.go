@@ -8,7 +8,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/extensions"
-	apiAdapter "github.com/pardnchiu/agenvoy/internal/apiTools/adapter"
+	apiAdapter "github.com/pardnchiu/agenvoy/internal/apiAdapter"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -82,6 +82,7 @@ func normalizeArgs(args json.RawMessage) json.RawMessage {
 
 func Execute(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
 	args = normalizeArgs(args)
+
 	if strings.HasPrefix(name, "api_") && e.APIToolbox != nil && e.APIToolbox.IsExist(name) {
 		var params map[string]any
 		if err := json.Unmarshal(args, &params); err != nil {

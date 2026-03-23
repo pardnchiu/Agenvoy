@@ -78,15 +78,6 @@ func Init() error {
 	return nil
 }
 
-func ReadFile(path string) (string, error) {
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("os.ReadFile: %w", err)
-	}
-
-	return string(bytes), nil
-}
-
 func ReadFileSlice(path string) ([]string, error) {
 	file, err := os.Open(path)
 	if err != nil {

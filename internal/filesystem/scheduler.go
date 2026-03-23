@@ -17,7 +17,7 @@ type CronItem struct {
 }
 
 func GetCrons() ([]CronItem, error) {
-	data, err := ReadFile(CronsPath)
+	data, err := os.ReadFile(CronsPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
@@ -25,7 +25,7 @@ func GetCrons() ([]CronItem, error) {
 		return nil, err
 	}
 	var items []CronItem
-	if err := json.Unmarshal([]byte(data), &items); err != nil {
+	if err := json.Unmarshal(data, &items); err != nil {
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 	return items, nil
@@ -51,7 +51,7 @@ type TaskItem struct {
 }
 
 func GetTasks() ([]TaskItem, error) {
-	data, err := ReadFile(TasksPath)
+	data, err := os.ReadFile(TasksPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
@@ -59,7 +59,7 @@ func GetTasks() ([]TaskItem, error) {
 		return nil, err
 	}
 	var items []TaskItem
-	if err := json.Unmarshal([]byte(data), &items); err != nil {
+	if err := json.Unmarshal(data, &items); err != nil {
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 	return items, nil
