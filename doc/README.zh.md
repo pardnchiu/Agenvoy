@@ -2,16 +2,28 @@
 > 此 README 由 [SKILL](https://github.com/pardnchiu/skill-readme-generate) 生成，英文版請參閱 [這裡](../README.md)。<br>
 > 測試由 [SKILL](https://github.com/pardnchiu/skill-coverage-generate) 生成。
 
-![cover](./cover.png)
+*** 
+
+<p align="center">
+<picture>
+<img src="./logo.svg" alt="Agenvoy" width="500">
+</picture>
+</p>
+
+<p align="center">
+  <strong>BUILD YOUR OWN OPENCLAW WITH AGENVOY!</strong>
+</p>
+
+<p align="center">
+<a href="https://pkg.go.dev/github.com/pardnchiu/agenvoy"><img src="https://img.shields.io/badge/GO-REFERENCE-blue?include_prereleases&style=for-the-badge" alt="Go Reference"></a>
+<a href="https://app.codecov.io/github/pardnchiu/agenvoy/tree/master"><img src="https://img.shields.io/codecov/c/github/pardnchiu/agenvoy/master?include_prereleases&style=for-the-badge" alt="Coverage"></a>
+<a href="../LICENSE"><img src="https://img.shields.io/github/v/tag/pardnchiu/agenvoy?include_prereleases&style=for-the-badge" alt="License"></a>
+<a href="https://github.com/pardnchiu/agenvoy/releases"><img src="https://img.shields.io/github/license/pardnchiu/agenvoy?include_prereleases&style=for-the-badge" alt="GitHub release"></a>
+</p>
+
+***
 
 # Agenvoy
-
-[![pkg](https://pkg.go.dev/badge/github.com/pardnchiu/agenvoy.svg)](https://pkg.go.dev/github.com/pardnchiu/agenvoy)
-[![card](https://goreportcard.com/badge/github.com/pardnchiu/agenvoy)](https://goreportcard.com/report/github.com/pardnchiu/agenvoy)
-[![codecov](https://img.shields.io/codecov/c/github/pardnchiu/agenvoy/master)](https://app.codecov.io/github/pardnchiu/agenvoy/tree/master)
-[![license](https://img.shields.io/github/license/pardnchiu/agenvoy)](LICENSE)
-[![version](https://img.shields.io/github/v/tag/pardnchiu/agenvoy?label=release)](https://github.com/pardnchiu/agenvoy/releases)
-
 > Go 多 Provider AI Agent 框架，具備智能路由、沙箱隔離執行與 Skill 驅動工作流
 
 不再為每個 AI Provider 單獨接線 — Agenvoy 將任務路由至最適模型、在 OS 原生沙箱中執行工具，並跨 Session 記住失敗原因。
@@ -29,65 +41,43 @@
 
 ## 架構
 
+> 各子系統詳細圖表：[architecture.zh.md](./architecture.zh.md)
+
 ```mermaid
 graph TB
     subgraph Entry ["進入點"]
         CLI["cmd/cli"]
-        Discord["cmd/server\nDiscord Bot"]
+        Discord["cmd/server · Discord Bot"]
     end
 
-    subgraph Core ["執行引擎"]
+    subgraph Engine ["執行引擎"]
         Run["exec.Run()"]
-        SkillSelect["SelectSkill()\n9 個掃描路徑"]
-        AgentSelect["SelectAgent()\nProvider 登錄檔"]
-        TrimMsg["trimMessages()\ntoken-budget 裁剪"]
         Execute["exec.Execute()\n≤128 次迭代"]
-        Send["Agent.Send()"]
     end
 
     subgraph Providers ["LLM Providers"]
-        Copilot["Copilot\nChat + Responses API"]
-        OpenAI["OpenAI"]
-        Claude["Claude"]
-        Gemini["Gemini"]
-        Nvidia["Nvidia"]
-        Compat["Compat\nOllama"]
+        P["Copilot · OpenAI · Claude\nGemini · Nvidia · Compat"]
     end
 
     subgraph Security ["安全層"]
-        Sandbox["沙箱\nbwrap / sandbox-exec"]
-        DeniedPaths["敏感路徑封鎖\ndenied_map.json"]
-        Keychain["OS Keychain\nmacOS / Linux"]
+        S["沙箱 · 敏感路徑封鎖 · Keychain"]
     end
 
-    subgraph Tools ["工具類別"]
-        FileOps["檔案操作\nread / write / patch / glob"]
-        WebAccess["網路存取\nfetch / search / download"]
-        APIExt["API Extension\n14+ JSON 定義"]
-        ScriptExt["Script Extension\nJS / Python 腳本"]
-        Scheduler["排程器\ncron + 一次性任務"]
-        ErrorMem["錯誤記憶\nSHA-256 索引"]
+    subgraph Tools ["工具子系統"]
+        T["檔案 · 網路 · API · Script\n排程器 · 錯誤記憶"]
     end
 
     subgraph Persistence ["持久化"]
-        Session["Session 摘要\nXML tag + 深度合併"]
-        History["對話歷史\n最近 N 輪"]
+        PS["Session 摘要 · 對話歷史"]
     end
 
     CLI --> Run
     Discord --> Run
-    Run --> SkillSelect
-    Run --> AgentSelect
-    SkillSelect --> Execute
-    AgentSelect --> Execute
-    Execute --> TrimMsg
-    TrimMsg --> Send
-    Send --> Providers
+    Run --> Execute
+    Execute -->|"Agent.Send()"| Providers
     Execute -->|"tool calls"| Security
-    Security --> DeniedPaths
     Security --> Tools
     Tools -->|"results"| Execute
-    Scheduler -->|"完成後回傳"| Discord
     Execute --> Persistence
     Persistence -.->|"注入"| Execute
 ```
