@@ -1,5 +1,5 @@
 {
-  "dirs": [".ssh", ".aws", ".gcloud", ".gnupg", ".gpg", ".docker"],
+  "dirs": [".ssh", ".aws", ".gcloud", ".gnupg", ".gpg", ".docker", "Library"],
   "files": [
     "id_rsa",
     "id_rsa.pub",

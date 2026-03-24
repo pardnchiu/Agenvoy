@@ -17,6 +17,7 @@ type Exclude struct {
 	Negate bool
 }
 
+// * not ban, just skipped the folder that package manager install
 func IsExclude(workDir, absPath string) bool {
 	excludes := listExcludes(workDir)
 	excluded := false

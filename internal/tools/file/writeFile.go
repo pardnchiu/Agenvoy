@@ -46,7 +46,7 @@ func registWriteFile() {
 			if baseDir == "" {
 				baseDir = filesystem.DownloadDir
 			}
-			absPath, err := filesystem.GetAbsPath(baseDir, params.Path)
+			absPath, err := filesystem.AbsPath(baseDir, params.Path)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.GetAbsPath: %w", err)
 			}
