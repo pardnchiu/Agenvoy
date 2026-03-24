@@ -4,6 +4,7 @@ package sandbox
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -25,6 +26,8 @@ func seatbeltProfile(home string) string {
 		fmt.Fprintf(&deny, "(deny file-write* (literal %q))\n", f)
 	}
 
+	keychainDir := filepath.Join(home, "Library", "Keychains")
+
 	return fmt.Sprintf(`(version 1)
 (deny default)
 (allow process-exec)
@@ -36,6 +39,10 @@ func seatbeltProfile(home string) string {
 
 ;; deny sensitive paths
 %s
+;; re-allow keychain access (required for keyring/Security framework)
+(allow file-read* (subpath %q))
+(allow file-write* (subpath %q))
+
 ;; read-only filesystem
 (allow file-read*)
 
@@ -45,7 +52,7 @@ func seatbeltProfile(home string) string {
 
 ;; allow network
 (allow network*)
-`, deny.String(), home)
+`, deny.String(), keychainDir, keychainDir, home)
 }
 
 func Wrap(binary string, args []string, workDir string) (string, []string, error) {
