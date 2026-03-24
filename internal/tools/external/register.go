@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	apiAdapter "github.com/pardnchiu/agenvoy/internal/adapter/api"
+	apiAdapter "github.com/pardnchiu/agenvoy/internal/toolAdapter/api"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
