@@ -82,6 +82,14 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			if hint := file.SearchErrorMemory(toolName, err.Error(), 3); hint != "" {
 				result = hint
 			} else {
+				if strings.HasPrefix(toolName, "api_") {
+					_, _ = file.SaveErrorMemory(sessionData.ID, file.ErrorMemory{
+						ToolName: toolName,
+						Keywords: []string{toolName},
+						Symptom:  err.Error(),
+						Action:   "工具呼叫失敗，若有備援工具（例如 api_*_1 ↔ api_*_2）請改用；否則回報無法取得資料",
+					})
+				}
 				events <- agentTypes.Event{
 					Type:     agentTypes.EventExecError,
 					ToolName: toolName,

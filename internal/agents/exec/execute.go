@@ -73,7 +73,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		limit = MaxSkillIterations
 	}
 
-	session.Messages, _ = trimMessages(session.Messages, data.Agent.MaxInputTokens())
+	maxInputTokens := data.Agent.MaxInputTokens()
 
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
@@ -82,6 +82,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		if i > 0 {
 			time.Sleep(300 * time.Millisecond)
 		}
+		session.Messages, _ = trimMessages(session.Messages, maxInputTokens)
 		resp, err := data.Agent.Send(ctx, session.Messages, exec.Tools)
 		if err != nil {
 			slog.Warn("data.Agent.Send",
