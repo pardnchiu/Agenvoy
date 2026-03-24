@@ -1,5 +1,5 @@
 {
-  "name": "example-yt-dlp-downloader",
+  "name": "yt-dlp-downloader",
   "description": "使用 yt-dlp 下載 YouTube 或其他支援網站的影片/音訊",
   "parameters": {
     "type": "object",

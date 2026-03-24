@@ -6,7 +6,7 @@
 
 <p align="center">
 <picture>
-<img src="./doc/logo.svg" alt="Agenvoy" width="500">
+<img src="./doc/logo.svg" alt="Agenvoy">
 </picture>
 </p>
 

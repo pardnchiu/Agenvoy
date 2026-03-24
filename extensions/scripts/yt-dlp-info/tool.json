@@ -1,5 +1,5 @@
 {
-  "name": "example-yt-dlp-info",
+  "name": "yt-dlp-info",
   "description": "查詢影片 metadata（標題、頻道、時長、縮圖、上傳日期）及可用下載格式，不實際下載。在呼叫 yt-dlp-downloader 前先用此工具確認格式選項。",
   "parameters": {
     "type": "object",
