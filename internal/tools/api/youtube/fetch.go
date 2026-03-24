@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/usageManager"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -75,7 +75,7 @@ func Fetch(ctx context.Context, videoURL, prompt string) (string, error) {
 		return "", fmt.Errorf("empty response")
 	}
 
-	if err := usageManager.Update("gemini@gemini-3-flash-preview",
+	if err := filesystem.UpdateUsage("gemini@gemini-3-flash-preview",
 		resp.UsageMetadata.PromptTokenCount,
 		resp.UsageMetadata.CandidatesTokenCount,
 	); err != nil {

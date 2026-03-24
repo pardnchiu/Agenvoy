@@ -19,7 +19,7 @@ import (
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
+	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 
 type IndexData struct {

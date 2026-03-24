@@ -13,7 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
+	"github.com/pardnchiu/agenvoy/internal/session"
 	"golang.org/x/term"
 )
 
@@ -131,7 +131,7 @@ func addCompat() (string, string) {
 		url = "http://localhost:11434"
 	}
 
-	if err := sessionManager.UpsertCompat(providor, url); err != nil {
+	if err := session.UpsertCompat(providor, url); err != nil {
 		slog.Error(" keychain.UpsertCompat",
 			slog.String("error", err.Error()))
 		os.Exit(1)
@@ -292,9 +292,9 @@ func selectModelFromList(prefix, providerName, defaultModel string) (model, desc
 }
 
 func runReasoning() {
-	cfg, err := sessionManager.Load()
+	cfg, err := session.Load()
 	if err != nil {
-		slog.Error("sessionManager.Load", slog.String("error", err.Error()))
+		slog.Error("session.Load", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
@@ -314,15 +314,15 @@ func runReasoning() {
 	}
 
 	cfg.ReasoningLevel = level
-	if err := sessionManager.Save(cfg); err != nil {
-		slog.Error("sessionManager.Save", slog.String("error", err.Error()))
+	if err := session.Save(cfg); err != nil {
+		slog.Error("session.Save", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 	fmt.Printf("[*] reasoning level set to %q\n", level)
 }
 
 func runPlanner() {
-	cfg, err := sessionManager.Load()
+	cfg, err := session.Load()
 	if err != nil {
 		slog.Error("keychain.Load",
 			slog.String("error", err.Error()))
@@ -354,7 +354,7 @@ func runPlanner() {
 	}
 
 	cfg.PlannerModel = cfg.Models[idx].Name
-	if err := sessionManager.Save(cfg); err != nil {
+	if err := session.Save(cfg); err != nil {
 		slog.Error("keychain.Save",
 			slog.String("error", err.Error()))
 		os.Exit(1)
@@ -377,7 +377,7 @@ func upsertModel(name, defaultDesc string) {
 		description = defaultDesc
 	}
 
-	cfg, err := sessionManager.Load()
+	cfg, err := session.Load()
 	if err != nil {
 		slog.Error("keychain.Load",
 			slog.String("error", err.Error()))
@@ -385,7 +385,7 @@ func upsertModel(name, defaultDesc string) {
 	}
 
 	seen := make(map[string]struct{})
-	deduped := make([]sessionManager.ModelEntry, 0, len(cfg.Models))
+	deduped := make([]session.ModelEntry, 0, len(cfg.Models))
 	found := false
 	for _, m := range cfg.Models {
 		if _, ok := seen[m.Name]; ok {
@@ -400,7 +400,7 @@ func upsertModel(name, defaultDesc string) {
 	}
 	cfg.Models = deduped
 	if !found {
-		cfg.Models = append(cfg.Models, sessionManager.ModelEntry{
+		cfg.Models = append(cfg.Models, session.ModelEntry{
 			Name:        name,
 			Description: description,
 		})
@@ -410,7 +410,7 @@ func upsertModel(name, defaultDesc string) {
 		cfg.PlannerModel = name
 	}
 
-	if err := sessionManager.Save(cfg); err != nil {
+	if err := session.Save(cfg); err != nil {
 		slog.Error("keychain.Save",
 			slog.String("error", err.Error()))
 		os.Exit(1)

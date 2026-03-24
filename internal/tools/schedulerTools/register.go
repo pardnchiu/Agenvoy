@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
+	"github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -47,7 +47,7 @@ func init() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 			if params.ChannelID == "" {
-				channelID, err := sessionManager.GetChannelID(e.SessionID)
+				channelID, err := session.GetChannelID(e.SessionID)
 				if err != nil {
 					return "", fmt.Errorf("GetChannelID: %w", err)
 				}
@@ -143,7 +143,7 @@ func init() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 			if params.ChannelID == "" {
-				channelID, err := sessionManager.GetChannelID(e.SessionID)
+				channelID, err := session.GetChannelID(e.SessionID)
 				if err != nil {
 					return "", fmt.Errorf("GetChannelID: %w", err)
 				}

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
+	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
 var (
@@ -78,13 +78,13 @@ func extractSummary(sessionID, value string) string {
 	}
 
 	if newMap, ok := jsonData.(map[string]any); ok {
-		_, oldMap := sessionManager.GetSummary(sessionID)
+		_, oldMap := session.GetSummary(sessionID)
 		if oldMap != nil {
 			newMap = mergeSummary(oldMap, newMap)
 		}
 		jsonData = newMap
 	}
-	sessionManager.SaveSummary(sessionID, jsonData)
+	session.SaveSummary(sessionID, jsonData)
 	return cleaned
 }
 

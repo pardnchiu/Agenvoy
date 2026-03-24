@@ -286,3 +286,7 @@ func IsMatch(patterns, parts []string) bool {
 	}
 	return IsMatch(patterns[1:], parts[1:])
 }
+
+func HistoryPath(sessionID string) string {
+	return filepath.Join(SessionsDir, sessionID, "history.md")
+}

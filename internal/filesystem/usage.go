@@ -1,12 +1,10 @@
-package usageManager
+package filesystem
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 	"syscall"
-
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 type Usage struct {
@@ -14,12 +12,12 @@ type Usage struct {
 	Output int `json:"output"`
 }
 
-func Update(model string, input, output int) error {
+func UpdateUsage(model string, input, output int) error {
 	if model == "" || (input == 0 && output == 0) {
 		return nil
 	}
 
-	lockPath := filesystem.UsagePath + ".lock"
+	lockPath := UsagePath + ".lock"
 	lock, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return fmt.Errorf("os.OpenFile: %w", err)
@@ -32,7 +30,7 @@ func Update(model string, input, output int) error {
 	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 
 	usageMap := make(map[string]Usage)
-	if bytes, err := os.ReadFile(filesystem.UsagePath); err == nil {
+	if bytes, err := os.ReadFile(UsagePath); err == nil {
 		_ = json.Unmarshal(bytes, &usageMap)
 	}
 
@@ -47,8 +45,8 @@ func Update(model string, input, output int) error {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
 
-	if err := filesystem.WriteFile(filesystem.UsagePath, string(bytes), 0644); err != nil {
-		return fmt.Errorf("filesystem.WriteFile: %w", err)
+	if err := WriteFile(UsagePath, string(bytes), 0644); err != nil {
+		return fmt.Errorf("WriteFile: %w", err)
 	}
 
 	return nil

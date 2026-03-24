@@ -15,8 +15,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 	"github.com/pardnchiu/agenvoy/internal/sandbox"
+	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
@@ -51,7 +51,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if cfg, err := sessionManager.Load(); err == nil {
+	if cfg, err := session.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
 
@@ -104,9 +104,9 @@ func main() {
 			return
 		}
 
-		cfg, err := sessionManager.Load()
+		cfg, err := session.Load()
 		if err != nil {
-			slog.Error("keychain.Load", slog.String("error", err.Error()))
+			slog.Error("session.Load", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
 
@@ -154,7 +154,7 @@ func main() {
 		defer cancel()
 
 		var selectorBot agentTypes.Agent
-		if cfg, err := sessionManager.Load(); err == nil && cfg.PlannerModel != "" {
+		if cfg, err := session.Load(); err == nil && cfg.PlannerModel != "" {
 			selectorBot = newAgentFromModel(cfg.PlannerModel)
 		}
 		if selectorBot == nil {

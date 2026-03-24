@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
+	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
 var (
@@ -70,7 +70,7 @@ func searchHistory(sessionID, keyword, timeRange string) (string, error) {
 	var matches []messageHistory
 
 	// * skip static history messages
-	startIdx := len(histories) - sessionManager.MaxHistoryMessages - 1
+	startIdx := len(histories) - session.MaxHistoryMessages - 1
 	if startIdx < 0 {
 		return "not much history to search", nil
 	}

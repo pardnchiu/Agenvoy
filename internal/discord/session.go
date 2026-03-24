@@ -23,7 +23,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
+	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 
 func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, channelID, userID, currentMessageID, input string, imageInputs []string, fileInputs []discordTypes.FileInput, data exec.ExecData) (*agentTypes.AgentSession, error) {

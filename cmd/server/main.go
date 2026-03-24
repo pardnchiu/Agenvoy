@@ -21,8 +21,8 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 	"github.com/pardnchiu/agenvoy/internal/sandbox"
+	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
@@ -46,7 +46,7 @@ func main() {
 		return
 	}
 
-	if cfg, err := sessionManager.Load(); err == nil {
+	if cfg, err := session.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
 
@@ -55,7 +55,7 @@ func main() {
 	scanner := skill.NewScanner()
 
 	var selectorBot agentTypes.Agent
-	if cfg, err := sessionManager.Load(); err == nil && cfg.PlannerModel != "" {
+	if cfg, err := session.Load(); err == nil && cfg.PlannerModel != "" {
 		if a, ok := registry.Registry[cfg.PlannerModel]; ok {
 			selectorBot = a
 		}
