@@ -21,10 +21,6 @@ func ListDir(dirs ...string) ([]string, error) {
 		return nil, fmt.Errorf("AbsPath: %w", err)
 	}
 
-	if isExclude(workDir, absPath) {
-		return nil, nil
-	}
-
 	entries, err := os.ReadDir(absPath)
 	if err != nil {
 		return nil, fmt.Errorf("os.ReadDir: %w", err)

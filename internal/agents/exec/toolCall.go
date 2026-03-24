@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/tools"
@@ -15,7 +16,7 @@ import (
 func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string) (*agentTypes.AgentSession, map[string]string, error) {
 	sessionData.Messages = append(sessionData.Messages, choice.Message)
 
-	for _, tool := range choice.Message.ToolCalls {
+	for i, tool := range choice.Message.ToolCalls {
 		toolID := strings.TrimSpace(tool.ID)
 		toolArg := strings.TrimSpace(tool.Function.Arguments)
 		toolName := strings.TrimSpace(tool.Function.Name)
@@ -74,6 +75,14 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			Type:     agentTypes.EventToolCallStart,
 			ToolName: toolName,
 			ToolID:   toolID,
+		}
+
+		if i > 0 && strings.HasPrefix(toolName, "api_") {
+			select {
+			case <-time.After(300 * time.Millisecond):
+			case <-ctx.Done():
+				return sessionData, alreadyCall, ctx.Err()
+			}
 		}
 
 		result, err := tools.Execute(ctx, exec, toolName, json.RawMessage(tool.Function.Arguments))

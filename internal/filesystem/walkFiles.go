@@ -23,10 +23,6 @@ func WalkFiles(dirs ...string) ([]string, error) {
 		return nil, fmt.Errorf("AbsPath: %w", err)
 	}
 
-	if isExclude(workDir, absPath) {
-		return nil, nil
-	}
-
 	var files []string
 	err = filepath.WalkDir(absPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
