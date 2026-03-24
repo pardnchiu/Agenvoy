@@ -4,15 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strconv"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/sessionManager"
 )
 
-type historyEntry struct {
+var (
+	timeRegex = regexp.MustCompile(`(---\n)*當前時間: (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})`)
+)
+
+type messageHistory struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
@@ -24,49 +28,37 @@ var historyTimeRanges = map[string]time.Duration{
 	"1y": 365 * 24 * time.Hour,
 }
 
-func extractSec(content string) (int64, string) {
-	if !strings.HasPrefix(content, "ts:") {
-		return 0, content
+func getTimestamp(content string) (int64, string) {
+	matches := timeRegex.FindStringSubmatch(content)
+	if len(matches) >= 2 {
+		if t, err := time.ParseInLocation("2006-01-02 15:04:05", matches[2], time.Local); err == nil {
+			return t.Unix(), matches[2]
+		}
 	}
-	rest := content[3:]
-	idx := strings.IndexByte(rest, '\n')
-	if idx < 0 {
-		return 0, content
-	}
-	ts, err := strconv.ParseInt(rest[:idx], 10, 64)
-	if err != nil {
-		return 0, content
-	}
-	return ts, rest[idx+1:]
+	return 0, content
 }
 
 func searchHistory(sessionID, keyword, timeRange string) (string, error) {
-	const limit = 10
-	if keyword == "" {
-		return "", fmt.Errorf("keyword is required")
-	}
+	const limit = 8
 	if sessionID == "" {
 		return "", fmt.Errorf("sessionID is required")
 	}
+	if keyword == "" {
+		return "", fmt.Errorf("keyword is required")
+	}
 
-	// configDir, err := utils.GetConfigDir("sessions")
-	// if err != nil {
-	// 	return "", fmt.Errorf("utils.ConfigDir: %w", err)
-	// }
-
-	historyPath := filepath.Join(filesystem.SessionsDir, sessionID, "history.json")
-
+	historyPath := filesystem.HistoryPath(sessionID)
 	data, err := os.ReadFile(historyPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "No history found for current session", nil
+			return "no history found for current session", nil
 		}
-		return "", fmt.Errorf("failed to read history file (%s): %w", historyPath, err)
+		return "", fmt.Errorf("failed to read %s: %w", historyPath, err)
 	}
 
-	var entries []historyEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
-		return "", fmt.Errorf("failed to parse history file: %w", err)
+	var histories []messageHistory
+	if err := json.Unmarshal(data, &histories); err != nil {
+		return "", fmt.Errorf("failed to parse %s: %w", historyPath, err)
 	}
 
 	var after int64
@@ -75,11 +67,17 @@ func searchHistory(sessionID, keyword, timeRange string) (string, error) {
 	}
 
 	lower := strings.ToLower(keyword)
-	var matches []historyEntry
+	var matches []messageHistory
 
-	for i := len(entries) - 5; i >= 0; i-- {
-		entry := entries[i]
-		ts, body := extractSec(entry.Content)
+	// * skip static history messages
+	startIdx := len(histories) - sessionManager.MaxHistoryMessages - 1
+	if startIdx < 0 {
+		return "not much history to search", nil
+	}
+
+	for i := startIdx; i >= 0; i-- {
+		entry := histories[i]
+		ts, body := getTimestamp(entry.Content)
 		if after > 0 && ts > 0 && ts < after {
 			continue
 		}
@@ -92,12 +90,12 @@ func searchHistory(sessionID, keyword, timeRange string) (string, error) {
 	}
 
 	if len(matches) == 0 {
-		return fmt.Sprintf("No matches found for keyword: %s", keyword), nil
+		return fmt.Sprintf("no matches with keyword: %s", keyword), nil
 	}
 
-	var result strings.Builder
+	var sb strings.Builder
 	for _, m := range matches {
-		result.WriteString(fmt.Sprintf("[%s] %s\n", m.Role, m.Content))
+		sb.WriteString(fmt.Sprintf("[%s] %s\n", m.Role, m.Content))
 	}
-	return result.String(), nil
+	return sb.String(), nil
 }
