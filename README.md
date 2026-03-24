@@ -141,6 +141,17 @@ On startup, the executor scans `~/.config/agenvoy/script_tools/` and `<workdir>/
 
 </details>
 
+### Bundled Extension Script Tools
+
+Threads API (publish text/image/carousel, quota check, token refresh) and yt-dlp (video info, download with sanitized filenames) ship as ready-to-install extensions with cross-platform install scripts.
+
+<details>
+<summary>Details</summary>
+
+`install_threads.sh` and `install_youtube.sh` detect the OS, check Python dependencies, and copy the tools into `~/.config/agenvoy/script_tools/` in one command. The Threads tools enforce the 500-character limit pre-publish, signal token expiry distinctly from API errors, and support two-step container/publish flow. The yt-dlp tools normalize filenames to NFC, strip non-ASCII characters, and support configurable format selection and output path.
+
+</details>
+
 ### Skill Git Tools
 
 Three tools let agents commit, inspect history, and roll back changes inside skill workflows without leaving the agent loop.
@@ -220,20 +231,24 @@ agenvoy/
 │   └── prompts/            # Embedded system prompts and selectors
 ├── extensions/
 │   ├── apis/               # Embedded API extensions (14+ JSON)
-│   ├── scripts/            # Example script tools (JS / Python + tool.json)
+│   ├── scripts/            # Bundled script tools (Threads, yt-dlp + install scripts)
 │   └── skills/             # Embedded skill extensions (Markdown)
+├── install_threads.sh      # Cross-platform installer for Threads script tools
+├── install_youtube.sh      # Cross-platform installer for yt-dlp script tools
 ├── internal/
 │   ├── agents/
 │   │   ├── exec/           # Execution engine, token trimming, summary extraction
 │   │   ├── provider/       # 6 AI provider backends + Responses API
 │   │   └── types/          # Agent interface + message / usage types
-│   ├── apiAdapter/         # HTTP API tool translation and dispatch
 │   ├── discord/            # Discord slash commands + file attachments
-│   ├── filesystem/         # Path validation, session manager, keychain, and usage tracking
+│   ├── filesystem/         # Path validation, keychain, and usage tracking
 │   ├── sandbox/            # Sandbox isolation + sensitive path denial
 │   ├── scheduler/          # Persistent one-time and recurring task scheduler
-│   ├── scriptAdapter/      # Script tool scanner, executor, and stdin/stdout JSON bridge
+│   ├── session/            # Session state, config, and rolling summary
 │   ├── skill/              # Markdown skill scanner and parser
+│   ├── toolAdapter/
+│   │   ├── api/            # HTTP API tool translation and dispatch
+│   │   └── script/         # Script tool executor and stdin/stdout JSON bridge
 │   └── tools/              # 26+ self-registering tools + git / scheduler tools
 ├── go.mod
 └── LICENSE
@@ -241,13 +256,14 @@ agenvoy/
 
 ## Version History
 
+- **v0.16.1** — Bundled Threads (publish text/image/carousel, quota, token refresh) and yt-dlp (video info, download) script tool extensions with cross-platform `install_threads.sh` / `install_youtube.sh`. Refactor `toolAdapter` into `api/` and `script/` sub-packages; move session management to `internal/session`; split filesystem into single-responsibility files. Fix Darwin sandbox keychain directory access. Restrict tool call throttle to `api_` prefix; improve `AbsPath` tilde expansion and exclude logic deduplication.
 - **v0.16.0** — Script tool runtime (`scriptAdapter`): drop a `tool.json` + `script.js`/`script.py` into `~/.config/agenvoy/script_tools/` and it is auto-discovered as a `script_`-prefixed tool; stdin/stdout JSON protocol mirrors API tool contract. Refactor `tools/apis/adapter` → `apiAdapter`, `tools/apis` → `tools/api`. Add `skill_git_commit`, `skill_git_log`, `skill_git_rollback` for skill-internal versioning. Copilot token auto-relogin on 401. Fix Discord file upload failure for non-ASCII filenames; add 10MB pre-upload size guard with user-facing warning.
 - **v0.15.2** — Add YouTube metadata fetch tool (`analyze_youtube`); Discord Modal-based API key management (`/add-gemini`, `/add-openai`, `/add-claude`, `/add-nim`); per-model token usage tracking via `usageManager`; configurable reasoning level across all providers; browser iteration limits and same-domain link traversal now configurable via `MAX_TOOL_ITERATIONS`, `MAX_SKILL_ITERATIONS`, `MAX_EMPTY_RESPONSES`; fix Makefile pass-through args
-- **v0.15.1** — Fix Copilot Claude/Gemini image validation failure: all uploaded images are decoded and re-encoded as JPEG (`image.Decode` + `jpeg.Encode`, supporting PNG/GIF/WebP sources), `ImageURL` gains `detail` field; summary regex split from one monolithic expression into three independent patterns (fenced block, `<summary>` tag, `[summary]` bracket); system prompts moved after history to improve model instruction adherence; Discord prompt takes priority over base system prompt
 
 <details>
 <summary>Earlier versions</summary>
 
+- **v0.15.1** — Fix Copilot Claude/Gemini image validation failure: all uploaded images are decoded and re-encoded as JPEG (`image.Decode` + `jpeg.Encode`, supporting PNG/GIF/WebP sources), `ImageURL` gains `detail` field; summary regex split from one monolithic expression into three independent patterns (fenced block, `<summary>` tag, `[summary]` bracket); system prompts moved after history to improve model instruction adherence; Discord prompt takes priority over base system prompt
 - **v0.15.0** — Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint); session-level token-budget message trimming (budget calculated via `MaxInputTokens()`, preserving system prompt + summary + latest user message); sensitive path denial rules for macOS and Linux sandbox (loaded from embedded `denied_map.json`); Linux bwrap restores `--unshare-all` namespace isolation (with graceful fallback probing) and `--new-session` process isolation; `MAX_HISTORY_MESSAGES` environment variable support; summary delimiter switched to XML tags; lite models excluded from agent selection
 - **v0.14.0** — OS-native sandbox isolation (bubblewrap on Linux with auto-install, sandbox-exec on macOS); per-request token usage tracking accumulated across all tool-call iterations; tool handlers restructured into individually named files; exclude logic and file walk/list moved into `filesystem` package; symlink-safe path resolution in `GetAbsPath`
 - **v0.13.0** — Self-registering tool Registry replacing switch-based routing and embedded JSON definitions; scheduler persistent JSON storage with full CRUD (add/update/delete for tasks and crons); keychain migrated under `filesystem`; absolute path restriction to user home directory; trimmed history ellipsis markers

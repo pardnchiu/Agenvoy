@@ -176,6 +176,30 @@ The following API extensions are bundled and loaded automatically at startup:
 
 Place a subdirectory containing `tool.json` + `script.js` or `script.py` in `~/.config/agenvoy/script_tools/` (or `<workdir>/.config/agenvoy/script_tools/`). The executor scans both paths on startup and registers each tool with the `script_` prefix.
 
+#### Bundled Extension Installers
+
+The repository ships ready-to-use script tool extensions with cross-platform install scripts:
+
+```bash
+# Install Threads API tools (publish text/image/carousel, quota check, token refresh)
+bash install_threads.sh
+
+# Install yt-dlp tools (video info, download with sanitized filenames)
+bash install_youtube.sh
+```
+
+Both scripts detect the OS, verify Python and required packages, and copy the tools to `~/.config/agenvoy/script_tools/`. After installation, the tools are auto-registered as `script_`-prefixed tools on the next agent startup.
+
+| Bundled Tool | Script | Description |
+|---|---|---|
+| `script_threads_get_quota` | Python | Fetch Threads API usage quota |
+| `script_threads_publish_text` | Python | Publish a text post (500-char pre-validation) |
+| `script_threads_publish_image` | Python | Publish an image post with caption |
+| `script_threads_publish_carousel` | Python | Publish a multi-image carousel post |
+| `script_threads_refresh_token` | Python | Refresh a long-lived Threads access token |
+| `script_yt_dlp_info` | JS / Python | Fetch video metadata without downloading |
+| `script_yt_dlp_downloader` | Python | Download video with NFC filename sanitization |
+
 Script tool directory layout:
 
 ```

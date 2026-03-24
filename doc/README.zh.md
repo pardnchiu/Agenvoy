@@ -141,6 +141,17 @@ Copilot Provider 在執行時偵測模型類型。GPT-5.4 與 Codex 路由至 Re
 
 </details>
 
+### 內建 Extension Script Tool 範例
+
+Threads API（發布文字/圖片/輪播、配額查詢、Token 刷新）與 yt-dlp（影片資訊、下載含檔名正規化）隨附跨平台安裝腳本，一行指令即可完成部署。
+
+<details>
+<summary>詳細說明</summary>
+
+`install_threads.sh` 與 `install_youtube.sh` 自動偵測作業系統、檢查 Python 相依套件，並將工具複製至 `~/.config/agenvoy/script_tools/`。Threads 工具在發布前本地驗證 500 字元上限、以獨立錯誤碼回報 Token 過期，並支援兩步驟容器/發布流程。yt-dlp 工具將檔名正規化為 NFC 並移除非 ASCII 字元，支援可設定的格式選擇與輸出路徑。
+
+</details>
+
 ### Skill Git 工具
 
 三個工具讓 Agent 在 Skill 工作流程中提交、查看歷史與回滾變更，無需離開執行迴圈。
@@ -220,20 +231,24 @@ agenvoy/
 │   └── prompts/            # 嵌入式 System Prompt 與選擇器
 ├── extensions/
 │   ├── apis/               # 內嵌 API Extension（14+ JSON）
-│   ├── scripts/            # Script Tool 範例（JS / Python + tool.json）
+│   ├── scripts/            # 內建 Script Tool（Threads、yt-dlp + 安裝腳本）
 │   └── skills/             # 內嵌 Skill Extension（Markdown）
+├── install_threads.sh      # Threads Script Tool 跨平台安裝腳本
+├── install_youtube.sh      # yt-dlp Script Tool 跨平台安裝腳本
 ├── internal/
 │   ├── agents/
 │   │   ├── exec/           # 執行引擎、token 裁剪、摘要擷取
 │   │   ├── provider/       # 6 個 AI Provider 後端 + Responses API
 │   │   └── types/          # Agent 介面 + Message / Usage 類型
-│   ├── apiAdapter/         # HTTP API 工具翻譯與 dispatch
 │   ├── discord/            # Discord Slash Command + 檔案附件
-│   ├── filesystem/         # 路徑驗證、Session 管理、Keychain 與用量追蹤
+│   ├── filesystem/         # 路徑驗證、Keychain 與用量追蹤
 │   ├── sandbox/            # 沙箱隔離 + 敏感路徑封鎖
 │   ├── scheduler/          # 持久化一次性與週期性任務排程器
-│   ├── scriptAdapter/      # Script Tool 掃描器、執行器與 stdin/stdout JSON 橋接
+│   ├── session/            # Session 狀態、設定與滾動摘要
 │   ├── skill/              # Markdown Skill 掃描器與解析器
+│   ├── toolAdapter/
+│   │   ├── api/            # HTTP API 工具翻譯與 dispatch
+│   │   └── script/         # Script Tool 執行器與 stdin/stdout JSON 橋接
 │   └── tools/              # 26+ 自註冊工具 + git / 排程工具
 ├── go.mod
 └── LICENSE
@@ -241,13 +256,14 @@ agenvoy/
 
 ## 版本歷史
 
+- **v0.16.1** — 內建 Threads（發布文字/圖片/輪播、配額、Token 刷新）與 yt-dlp（影片資訊、下載）Script Tool Extension，附跨平台 `install_threads.sh` / `install_youtube.sh`。重構 `toolAdapter` 為 `api/` 與 `script/` 子套件；Session 管理移至 `internal/session`；Filesystem 套件拆分為單一職責檔案。修正 Darwin 沙箱 Keychain 目錄存取。限制工具呼叫節流至 `api_` 前綴；改善 `AbsPath` tilde 展開與排除邏輯去重。
 - **v0.16.0** — Script tool 執行環境（`scriptAdapter`）：在 `~/.config/agenvoy/script_tools/` 放入 `tool.json` + `script.js`/`script.py` 即自動載入為 `script_` 前綴工具，stdin/stdout JSON 協定與 API tool 一致。重構 `tools/apis/adapter` → `apiAdapter`，`tools/apis` → `tools/api`。新增 `skill_git_commit`、`skill_git_log`、`skill_git_rollback` 支援 Skill 內部版本控制。Copilot token 過期自動重新登入。修正 Discord 非 ASCII 檔名上傳失敗，新增 10MB 上限前置驗證並回報用戶。
 - **v0.15.2** — 新增 YouTube metadata 擷取工具（`analyze_youtube`）；Discord Modal API Key 設定指令（`/add-gemini`、`/add-openai`、`/add-claude`、`/add-nim`）；逐模型 Token 用量追蹤（`usageManager`）；各 Provider 可設定推理層級（Reasoning Level）；瀏覽器迭代上限與同網域連結追蹤現可透過 `MAX_TOOL_ITERATIONS`、`MAX_SKILL_ITERATIONS`、`MAX_EMPTY_RESPONSES` 設定；修正 Makefile 參數傳遞
-- **v0.15.1** — 修正 Copilot Claude/Gemini 模型的圖片驗證失敗：所有上傳圖片統一 decode 後 re-encode 為 JPEG（`image.Decode` + `jpeg.Encode`，支援 PNG/GIF/WebP 來源），`ImageURL` 新增 `detail` 欄位；Summary regex 從單一表達式拆分為三個獨立 pattern（fenced block、`<summary>` tag、`[summary]` bracket）；System prompt 移至 history 之後以提升模型指令遵循度；Discord prompt 優先於基本 system prompt
 
 <details>
 <summary>更早版本</summary>
 
+- **v0.15.1** — 修正 Copilot Claude/Gemini 模型的圖片驗證失敗：所有上傳圖片統一 decode 後 re-encode 為 JPEG（`image.Decode` + `jpeg.Encode`，支援 PNG/GIF/WebP 來源），`ImageURL` 新增 `detail` 欄位；Summary regex 從單一表達式拆分為三個獨立 pattern（fenced block、`<summary>` tag、`[summary]` bracket）；System prompt 移至 history 之後以提升模型指令遵循度；Discord prompt 優先於基本 system prompt
 - **v0.15.0** — Copilot Responses API 支援（GPT-5.4 與 Codex 模型自動切換端點）；Session 層級 token-budget 訊息裁剪（依 `MaxInputTokens()` 計算預算，保留 system prompt + summary + 最新使用者訊息）；macOS 與 Linux 沙箱新增敏感路徑存取拒絕規則（從嵌入式 `denied_map.json` 載入）；Linux bwrap 恢復 `--unshare-all` namespace 隔離（含 graceful fallback 探測）與 `--new-session` process 隔離；`MAX_HISTORY_MESSAGES` 環境變數支援；Summary delimiter 改為 XML tag；輕量模型排除於 Agent 選擇
 - **v0.14.0** — 作業系統原生沙箱隔離（Linux bubblewrap 自動安裝、macOS sandbox-exec）；每次請求的 token 用量追蹤（跨所有工具呼叫迭代累計）；工具處理器重構為獨立命名檔案；exclude 邏輯與 file walk/list 移至 `filesystem` package；`GetAbsPath` 新增 symlink 安全路徑解析
 - **v0.13.0** — 自註冊 Tool Registry 取代 switch routing 與嵌入式 JSON 定義；排程器持久化 JSON 儲存含完整 CRUD（tasks 與 crons 的新增/更新/刪除）；Keychain 遷移至 `filesystem` 下；絕對路徑限制僅允許使用者 Home 目錄；裁切歷史加入省略號標記

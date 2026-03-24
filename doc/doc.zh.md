@@ -176,6 +176,30 @@ cp .env.example .env
 
 在 `~/.config/agenvoy/script_tools/`（或 `<workdir>/.config/agenvoy/script_tools/`）放入包含 `tool.json` + `script.js`/`script.py` 的子目錄，執行器在啟動時自動掃描並以 `script_` 前綴登錄工具。
 
+#### 內建 Extension 安裝腳本
+
+本儲存庫附帶跨平台安裝腳本，可一行指令完成 Script Tool 部署：
+
+```bash
+# 安裝 Threads API 工具（發布文字/圖片/輪播、配額查詢、Token 刷新）
+bash install_threads.sh
+
+# 安裝 yt-dlp 工具（影片資訊、下載含檔名正規化）
+bash install_youtube.sh
+```
+
+兩支腳本均自動偵測作業系統、驗證 Python 及相依套件，並將工具複製至 `~/.config/agenvoy/script_tools/`，下次啟動後即自動登錄。
+
+| 內建工具 | 語言 | 說明 |
+|---|---|---|
+| `script_threads_get_quota` | Python | 查詢 Threads API 使用配額 |
+| `script_threads_publish_text` | Python | 發布文字貼文（含 500 字元前置驗證） |
+| `script_threads_publish_image` | Python | 發布圖片貼文附說明文字 |
+| `script_threads_publish_carousel` | Python | 發布多圖輪播貼文 |
+| `script_threads_refresh_token` | Python | 刷新 Threads 長效存取 Token |
+| `script_yt_dlp_info` | JS / Python | 不下載直接擷取影片 metadata |
+| `script_yt_dlp_downloader` | Python | 下載影片並 NFC 正規化檔名 |
+
 Script tool 目錄結構：
 
 ```
