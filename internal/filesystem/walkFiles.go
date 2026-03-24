@@ -18,9 +18,13 @@ func WalkFiles(dirs ...string) ([]string, error) {
 		subDir = dirs[1]
 	}
 
-	absPath, err := AbsPath(workDir, subDir)
+	absPath, err := AbsPath(workDir, subDir, false)
 	if err != nil {
-		return nil, fmt.Errorf("GetAbsPath: %w", err)
+		return nil, fmt.Errorf("AbsPath: %w", err)
+	}
+
+	if isExclude(workDir, absPath) {
+		return nil, nil
 	}
 
 	var files []string
@@ -31,7 +35,7 @@ func WalkFiles(dirs ...string) ([]string, error) {
 			return nil
 		}
 
-		if IsExclude(workDir, path) {
+		if isExclude(workDir, path) {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}

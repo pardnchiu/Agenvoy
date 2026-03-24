@@ -16,9 +16,13 @@ func ListDir(dirs ...string) ([]string, error) {
 		subDir = dirs[1]
 	}
 
-	absPath, err := AbsPath(workDir, subDir)
+	absPath, err := AbsPath(workDir, subDir, false)
 	if err != nil {
-		return nil, fmt.Errorf("GetAbsPath: %w", err)
+		return nil, fmt.Errorf("AbsPath: %w", err)
+	}
+
+	if isExclude(workDir, absPath) {
+		return nil, nil
 	}
 
 	entries, err := os.ReadDir(absPath)
@@ -29,7 +33,7 @@ func ListDir(dirs ...string) ([]string, error) {
 	var files []string
 	for _, entry := range entries {
 		newPath := filepath.Join(absPath, entry.Name())
-		if IsExclude(workDir, newPath) {
+		if isExclude(workDir, newPath) {
 			continue
 		}
 

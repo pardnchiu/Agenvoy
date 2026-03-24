@@ -67,9 +67,9 @@ func init() {
 			}
 			saveTo := params.SaveTo
 			if saveTo != "" {
-				abs, err := filesystem.AbsPath(filesystem.DownloadDir, saveTo)
+				abs, err := filesystem.AbsPath(filesystem.DownloadDir, saveTo, false)
 				if err != nil {
-					return "", fmt.Errorf("filesystem.GetAbsPath: %w", err)
+					return "", fmt.Errorf("filesystem.AbsPath: %w", err)
 				}
 				saveTo = abs
 			}

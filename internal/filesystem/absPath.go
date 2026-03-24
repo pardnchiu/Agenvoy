@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func AbsPath(dir, path string) (string, error) {
+func AbsPath(workDir, path string, needExclude bool) (string, error) {
 	// * expand ~ to home directory
 	if path == "~" || strings.HasPrefix(path, "~/") {
 		homeDir, err := os.UserHomeDir()
@@ -20,8 +20,8 @@ func AbsPath(dir, path string) (string, error) {
 
 	// * format the path to abs path
 	if !filepath.IsAbs(path) {
-		if dir != "" {
-			path = filepath.Join(dir, path)
+		if workDir != "" {
+			path = filepath.Join(workDir, path)
 		} else {
 			var err error
 			path, err = filepath.Abs(path)
@@ -48,6 +48,10 @@ func AbsPath(dir, path string) (string, error) {
 
 	if isDenied(realPath) {
 		return "", fmt.Errorf("access denied: %s", path)
+	}
+
+	if needExclude && isExclude(workDir, realPath) {
+		return "", fmt.Errorf("path is excluded: %s", path)
 	}
 
 	return realPath, nil

@@ -22,7 +22,7 @@ var (
 )
 
 // * not ban, just skipped the folder that package manager install
-func IsExclude(workDir, absPath string) bool {
+func isExclude(workDir, absPath string) bool {
 	relPath, err := filepath.Rel(workDir, absPath)
 	if err != nil {
 		relPath = absPath
