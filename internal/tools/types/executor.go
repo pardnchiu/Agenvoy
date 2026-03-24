@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	apiAdapter "github.com/pardnchiu/agenvoy/internal/apiAdapter"
+	apiAdapter "github.com/pardnchiu/agenvoy/internal/adapter/api"
 )
 
 type ScriptToolExecutor interface {
