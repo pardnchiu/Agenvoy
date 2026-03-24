@@ -1,0 +1,8 @@
+{
+  "name": "threads-refresh-token",
+  "description": "刷新 Threads Long-Lived Access Token 並自動更新 Keychain。當其他 Threads 工具回傳 token_expired: true，或距 token 到期小於 7 天時呼叫。",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}

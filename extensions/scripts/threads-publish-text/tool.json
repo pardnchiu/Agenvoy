@@ -1,0 +1,14 @@
+{
+  "name": "threads-publish-text",
+  "description": "在 Threads 發布純文字貼文，上限 500 字元。",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string",
+        "description": "貼文內容，上限 500 字元"
+      }
+    },
+    "required": ["text"]
+  }
+}

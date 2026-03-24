@@ -1,0 +1,18 @@
+{
+  "name": "threads-publish-image",
+  "description": "在 Threads 發布單張圖片貼文。圖片需為公開 URL，格式 JPEG/PNG，大小 ≤ 8MB。",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "image_url": {
+        "type": "string",
+        "description": "圖片的公開 URL（JPEG 或 PNG，≤ 8MB）"
+      },
+      "text": {
+        "type": "string",
+        "description": "貼文說明文字（選填，上限 500 字元）"
+      }
+    },
+    "required": ["image_url"]
+  }
+}

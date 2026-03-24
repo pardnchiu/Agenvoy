@@ -1,0 +1,35 @@
+{
+  "name": "threads-publish-carousel",
+  "description": "在 Threads 發布輪播貼文（2–20 張圖片或影片）。",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "items": {
+        "type": "array",
+        "description": "輪播項目清單，2–20 個，每個項目需包含 media_type 與對應 URL",
+        "items": {
+          "type": "object",
+          "properties": {
+            "media_type": {
+              "type": "string",
+              "enum": ["IMAGE", "VIDEO"],
+              "description": "媒體類型"
+            },
+            "url": {
+              "type": "string",
+              "description": "圖片或影片的公開 URL"
+            }
+          },
+          "required": ["media_type", "url"]
+        },
+        "minItems": 2,
+        "maxItems": 20
+      },
+      "text": {
+        "type": "string",
+        "description": "貼文說明文字（選填，上限 500 字元）"
+      }
+    },
+    "required": ["items"]
+  }
+}
