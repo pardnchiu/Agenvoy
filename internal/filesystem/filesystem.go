@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	once           sync.Once
+	filesystemOnce sync.Once
 	AgenvoyDir     string
 	ConfigPath     string
 	UsagePath      string
@@ -45,7 +45,7 @@ func Init() error {
 		return fmt.Errorf("os.Getwd: %w", err)
 	}
 
-	once.Do(func() {
+	filesystemOnce.Do(func() {
 		AgenvoyDir = filepath.Join(homeDir, ".config", projectName)
 		ConfigPath = filepath.Join(AgenvoyDir, "config.json")
 		UsagePath = filepath.Join(AgenvoyDir, "usage.json")
