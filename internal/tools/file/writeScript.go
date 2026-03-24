@@ -16,7 +16,7 @@ import (
 func registWriteScript() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "write_script",
-		Description: "在 ~/.config/agenvoy/scheduler/scripts/ 建立腳本檔案（.sh 或 .py）。回傳值為實際儲存的檔名（含 UTC timestamp 後綴，例如 notify_1741569300.sh），必須將此回傳檔名傳給 add_task 或 add_cron 的 script 參數。腳本須以 #!/bin/sh 或 #!/usr/bin/env python3 開頭。",
+		Description: "在 ~/.config/agenvoy/scheduler/scripts/ 建立腳本檔案（.sh 或 .py）。回傳值為實際儲存的檔名（含 UTC timestamp 後綴，例如 notify_1741569300.sh），必須將此回傳檔名傳給 add_task 或 add_cron 的 script 參數。腳本須以 #!/bin/sh 或 #!/usr/bin/env python3 開頭。**同一個回傳檔名可重複傳給多個 add_cron 呼叫**（例如建立三個不同時間點的 cron 只需寫一次腳本，將同一檔名分別傳給三次 add_cron）。",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

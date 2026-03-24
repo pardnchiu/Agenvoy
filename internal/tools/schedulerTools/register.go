@@ -18,7 +18,7 @@ import (
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "add_cron",
-		Description: "新增重複性定時任務（recurring cron job）。使用標準 cron 表達式（`* * * * *`，依序為 分 時 日 月 週），每次到達排程時間即執行腳本。任務持久保存，重啟後仍會繼續執行。【必須先呼叫 write_script，將回傳的實際檔名填入 script】若設定 discord_channel_id，每次執行完畢後會將輸出傳送到指定 Discord 頻道。回傳結果包含 task ID。",
+		Description: "新增重複性定時任務（recurring cron job）。使用標準 cron 表達式（`* * * * *`，依序為 分 時 日 月 週），每次到達排程時間即執行腳本。任務持久保存，重啟後仍會繼續執行。【必須先呼叫 write_script，將回傳的實際檔名填入 script；多個不同時間的 cron 可共用同一個 script 檔名，無需重複呼叫 write_script】若設定 discord_channel_id，每次執行完畢後會將輸出傳送到指定 Discord 頻道。回傳結果包含 task ID。",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -83,7 +83,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "remove_cron",
-		Description: "移除指定 ID 的重複性 cron 任務。流程：1. 先呼叫 list_crons；2. 若只有一個任務，直接移除；3. 若有多個任務，必須將列表回覆給使用者並詢問要移除哪一個，等待使用者明確指定後才呼叫此工具。",
+		Description: "移除指定 ID 的重複性 cron 任務。**僅限使用者明確要求刪除排程時才可呼叫，禁止在建立排程流程中主動呼叫。** 若使用者未指定 ID：先呼叫 list_crons 取得列表，若只有一筆直接移除，若有多筆必須將列表回覆使用者並等待確認。",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -179,7 +179,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "remove_task",
-		Description: "取消並移除指定 ID 的一次性定時任務，同時刪除對應的腳本檔案。流程：1. 先呼叫 list_tasks；2. 若只有一個任務，直接移除；3. 若有多個任務，必須將列表回覆給使用者並詢問要移除哪一個，等待使用者明確指定後才呼叫此工具。",
+		Description: "取消並移除指定 ID 的一次性定時任務，同時刪除對應的腳本檔案。**僅限使用者明確要求刪除排程時才可呼叫，禁止在建立排程流程中主動呼叫。** 若使用者未指定 ID：先呼叫 list_tasks 取得列表，若只有一筆直接移除，若有多筆必須將列表回覆使用者並等待確認。",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
