@@ -33,18 +33,10 @@ func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput strin
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {
-	truncated := make([]agentTypes.Message, len(messages))
-	copy(truncated, messages)
-	for i := range truncated {
-		if s, ok := truncated[i].Content.(string); ok {
-			truncated[i].Content = utils.TruncateUTF8(s, provider.InputBytes("gemini", a.model))
-		}
-	}
-
 	var systemPrompt string
 	var newMessages []Content
 
-	for _, msg := range truncated {
+	for _, msg := range messages {
 		if msg.Role == "system" {
 			if content, ok := msg.Content.(string); ok {
 				systemPrompt = content

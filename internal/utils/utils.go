@@ -9,19 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"unicode/utf8"
 )
-
-func TruncateUTF8(s string, maxBytes int) string {
-	if len(s) <= maxBytes {
-		return s
-	}
-	end := maxBytes
-	for end > 0 && !utf8.Valid([]byte(s[:end])) {
-		end--
-	}
-	return s[:end] + "\n...(truncated)"
-}
 
 func GET[T any](ctx context.Context, client *http.Client, api string, header map[string]string) (T, int, error) {
 	var result T

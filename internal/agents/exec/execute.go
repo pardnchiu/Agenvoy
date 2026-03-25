@@ -82,7 +82,13 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		if i > 0 {
 			time.Sleep(300 * time.Millisecond)
 		}
-		session.Messages, _ = trimMessages(session.Messages, maxInputTokens)
+		trimmed, err := trimMessages(session.Messages, maxInputTokens)
+		if err != nil {
+			events <- agentTypes.Event{Type: agentTypes.EventText, Text: "訊息內容超出模型可接受的 token 上限，請縮短輸入後再試。"}
+			events <- agentTypes.Event{Type: agentTypes.EventDone}
+			return nil
+		}
+		session.Messages = trimmed
 		resp, err := data.Agent.Send(ctx, session.Messages, exec.Tools)
 		if err != nil {
 			slog.Warn("data.Agent.Send",

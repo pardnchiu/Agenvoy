@@ -34,14 +34,6 @@ func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput strin
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {
-	truncated := make([]agentTypes.Message, len(messages))
-	copy(truncated, messages)
-	for i := range truncated {
-		if s, ok := truncated[i].Content.(string); ok {
-			truncated[i].Content = utils.TruncateUTF8(s, provider.InputBytes("openai", a.model))
-		}
-	}
-
 	headers := map[string]string{
 		"Authorization": "Bearer " + a.apiKey,
 		"Content-Type":  "application/json",
@@ -50,7 +42,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	if strings.Contains(a.model, "codex") {
 		result, _, err := utils.POST[copilotResponse.Output](ctx, a.httpClient, responsesAPI, headers, map[string]any{
 			"model": a.model,
-			"input": copilotResponse.ConvertInput(truncated),
+			"input": copilotResponse.ConvertInput(messages),
 			"tools": copilotResponse.ConvertTools(tools),
 		}, "json")
 		if err != nil {
@@ -65,7 +57,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 
 	body := map[string]any{
 		"model":    a.model,
-		"messages": truncated,
+		"messages": messages,
 		"tools":    tools,
 	}
 	if provider.SupportTemperature("openai", a.model) {

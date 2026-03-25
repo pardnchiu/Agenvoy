@@ -25,41 +25,33 @@ func calculateTokens(message agentTypes.Message) int {
 	}
 }
 
-func trimMessages(messages []agentTypes.Message, maxTokens int) ([]agentTypes.Message, bool) {
+func trimMessages(messages []agentTypes.Message, maxTokens int) ([]agentTypes.Message, error) {
 	if maxTokens <= 0 {
-		return messages, false
+		return messages, nil
 	}
 
-	var systemPrompt *agentTypes.Message
-	var summary *agentTypes.Message
+	var systemMessages []agentTypes.Message
 	var lastUser *agentTypes.Message
 	var history []agentTypes.Message
 
-	systemCount := 0
 	lastUserIndex := -1
 	for i := len(messages) - 1; i >= 0; i-- {
 		if messages[i].Role == "user" && lastUserIndex == -1 {
 			lastUserIndex = i
+			break
 		}
 	}
 
 	for i, message := range messages {
-		if i == lastUserIndex {
+		switch {
+		case i == lastUserIndex:
 			msg := message
 			lastUser = &msg
-			continue
+		case message.Role == "system":
+			systemMessages = append(systemMessages, message)
+		default:
+			history = append(history, message)
 		}
-		if message.Role == "system" {
-			m := message
-			if systemCount == 0 {
-				systemPrompt = &m
-			} else {
-				summary = &m
-			}
-			systemCount++
-			continue
-		}
-		history = append(history, message)
 	}
 
 	total := 0
@@ -67,15 +59,12 @@ func trimMessages(messages []agentTypes.Message, maxTokens int) ([]agentTypes.Me
 		total += calculateTokens(msg)
 	}
 	if total <= maxTokens {
-		return reorder(history, systemPrompt, summary, lastUser, false), false
+		return reorder(history, systemMessages, lastUser, false), nil
 	}
 
 	reserved := 0
-	if systemPrompt != nil {
-		reserved += calculateTokens(*systemPrompt)
-	}
-	if summary != nil {
-		reserved += calculateTokens(*summary)
+	for _, m := range systemMessages {
+		reserved += calculateTokens(m)
 	}
 	if lastUser != nil {
 		reserved += calculateTokens(*lastUser)
@@ -83,7 +72,7 @@ func trimMessages(messages []agentTypes.Message, maxTokens int) ([]agentTypes.Me
 
 	budget := maxTokens - reserved
 	if budget <= 0 {
-		return reorder(history, systemPrompt, summary, lastUser, true), true
+		return nil, fmt.Errorf("single message exceeds token limit (%d tokens)", reserved)
 	}
 
 	kept := make([]agentTypes.Message, 0, len(history))
@@ -109,22 +98,13 @@ func trimMessages(messages []agentTypes.Message, maxTokens int) ([]agentTypes.Me
 		}
 	}
 
-	return reorder(kept, systemPrompt, summary, lastUser, trimmed), trimmed
+	return reorder(kept, systemMessages, lastUser, trimmed), nil
 }
 
-func reorder(history []agentTypes.Message, systemPrompt, summary, lastUser *agentTypes.Message, trimmed bool) []agentTypes.Message {
-	size := len(history) + 3
-	if trimmed {
-		size++
-	}
-	result := make([]agentTypes.Message, 0, size)
+func reorder(history []agentTypes.Message, systemMessages []agentTypes.Message, lastUser *agentTypes.Message, trimmed bool) []agentTypes.Message {
+	result := make([]agentTypes.Message, 0, len(systemMessages)+len(history)+2)
 
-	if systemPrompt != nil {
-		result = append(result, *systemPrompt)
-	}
-	if summary != nil {
-		result = append(result, *summary)
-	}
+	result = append(result, systemMessages...)
 
 	if trimmed {
 		result = append(result, agentTypes.Message{

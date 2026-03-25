@@ -61,8 +61,6 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 			})
 		}
 	}
-	session.Messages = append(session.Messages, oldHistory...)
-
 	session.Messages = append(session.Messages,
 		agentTypes.Message{Role: "system", Content: configs.DiscordSystemPrompt},
 		agentTypes.Message{Role: "system", Content: exec.GetSystemPrompt(data)},
@@ -74,6 +72,8 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 			Content: summary,
 		})
 	}
+
+	session.Messages = append(session.Messages, oldHistory...)
 
 	userText := fmt.Sprintf("當前時間: %s\n當前頻道 ID: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), channelID, strings.TrimSpace(input))
 

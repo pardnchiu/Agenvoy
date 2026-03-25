@@ -49,38 +49,38 @@
       "reasoning_effort": true
     },
     "gpt-4.1": {
-      "input": 1047576,
-      "output": 32768,
+      "input": 128000,
+      "output": 16384,
       "description": "非推理旗艦模型，指令遵循與工具呼叫最佳化，低延遲快速推理"
     },
     "gpt-4o": { "input": 128000, "output": 16384, "description": "多模態旗艦模型，支援文字、圖像與音訊輸入" },
     "claude-sonnet-4.6": {
-      "input": 1048576,
+      "input": 168000,
       "output": 32768,
       "description": "效能與速度平衡，適合多數生產環境",
       "no_temperature": true
     },
     "claude-opus-4.6": {
       "input": 200000,
-      "output": 131072,
+      "output": 32000,
       "description": "最強大的 Claude 模型，適合複雜推理與長篇任務",
       "no_temperature": true
     },
     "claude-opus-4.5": {
       "input": 200000,
-      "output": 131072,
+      "output": 32000,
       "description": "高效能 Claude 模型，適合高要求任務",
       "no_temperature": true
     },
     "claude-sonnet-4.5": {
       "input": 200000,
-      "output": 65536,
+      "output": 32000,
       "description": "穩定的中階模型，具備強大程式碼與分析能力",
       "no_temperature": true
     },
     "claude-haiku-4.5": {
-      "input": 200000,
-      "output": 65536,
+      "input": 136000,
+      "output": 64000,
       "description": "輕量模型，適合簡單任務，延遲極低",
       "no_temperature": true
     },
@@ -97,7 +97,7 @@
       "no_temperature": true
     },
     "gemini-2.5-pro": {
-      "input": 1048576,
+      "input": 128000,
       "output": 65536,
       "description": "Google 最強大的多模態模型，支援超長上下文與深度推理"
     },
