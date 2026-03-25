@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -202,6 +203,37 @@ func hasDisplay() bool {
 	return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
 }
 
+func chromePath() string {
+	switch runtime.GOOS {
+	case "darwin":
+		candidates := []string{
+			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+			"/Applications/Chromium.app/Contents/MacOS/Chromium",
+		}
+		for _, p := range candidates {
+			if _, err := os.Stat(p); err == nil {
+				return p
+			}
+		}
+	case "linux":
+		for _, name := range []string{"google-chrome", "google-chrome-stable", "chromium", "chromium-browser"} {
+			if p, err := exec.LookPath(name); err == nil {
+				return p
+			}
+		}
+	case "windows":
+		for _, p := range []string{
+			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
+			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
+		} {
+			if _, err := os.Stat(p); err == nil {
+				return p
+			}
+		}
+	}
+	return ""
+}
+
 func newBrowser() (*rod.Browser, error) {
 	newLauncher := launcher.New().
 		Headless(!hasDisplay()).
@@ -211,6 +243,10 @@ func newBrowser() (*rod.Browser, error) {
 		Set("disable-dev-shm-usage", "").
 		Set("window-size", "1280,960").
 		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+
+	if chromePath := chromePath(); chromePath != "" {
+		newLauncher = newLauncher.Bin(chromePath)
+	}
 
 	url, err := newLauncher.Launch()
 	if err != nil {

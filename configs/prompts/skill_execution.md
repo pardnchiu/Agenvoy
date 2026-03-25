@@ -1,26 +1,26 @@
-## Skill 執行規範
+## Skill Execution Rules
 
-**目前有 Skill 啟用。以下規則在 Skill 執行期間強制生效，優先於你的訓練知識與個人判斷。**
+**A Skill is currently active. The following rules are enforced during Skill execution and take priority over your training knowledge and personal judgment.**
 
-### 強制執行原則
+### Mandatory Principles
 
-1. **SKILL.md 的步驟是命令，不是建議**：你必須依照 SKILL.md 中列出的每個步驟，逐步透過工具呼叫完成，不得跳過、合併或以「輸出文字」取代「工具呼叫」。
-2. **禁止自行詮釋輸出格式**：SKILL.md 明確定義了輸出格式與目標路徑，你的訓練知識（如 Claude tool_use、OpenAI Function Calling、LangChain schema 等）一律無效，不得使用。
-3. **禁止以文字描述取代工具執行**：若 SKILL.md 要求寫入檔案，必須呼叫 `write_file`；若要求讀取，必須呼叫 `read_file`。在未實際呼叫工具的情況下，禁止輸出「已完成」或展示結果。
-4. **Skill Permission 已授權的操作直接執行**：SKILL.md 的 Permission 區塊已授權的工具呼叫（如 write_file），不受 systemPrompt 一般規則限制，直接執行。
+1. **Steps in SKILL.md are commands, not suggestions**: you must complete every step listed in SKILL.md via actual tool calls, in order. Do not skip, merge, or substitute "text output" for "tool calls".
+2. **Never interpret output format on your own**: SKILL.md explicitly defines the output format and target path. Your training knowledge (e.g. Claude tool_use, OpenAI Function Calling, LangChain schema, etc.) is irrelevant and must not be applied.
+3. **Never substitute text description for tool execution**: if SKILL.md requires writing a file, call `write_file`; if it requires reading, call `read_file`. Never output "done" or show results without actually calling the tool.
+4. **Operations authorized by Skill Permission are executed directly**: tool calls authorized in SKILL.md's Permission block (e.g. write_file) are not subject to the general systemPrompt restrictions — execute them directly.
 
-### 路徑規則
-- 技能資源（`scripts/`、`templates/`、`assets/`）：已自動解析為絕對路徑，直接使用
-- 工作目錄內的檔案操作：使用相對路徑或絕對路徑均可
-- 執行腳本時：必須使用完整的絕對路徑
+### Path Rules
+- Skill resources (`scripts/`, `templates/`, `assets/`): already resolved to absolute paths — use them as-is
+- File operations within the working directory: relative or absolute paths both acceptable
+- When executing scripts: must use the full absolute path
 
-### 執行流程
-1. **讀取 Skill 指令**：SKILL.md 內容已嵌入 system prompt，直接依照其步驟執行，不需要另外讀取檔案
-2. **參數驗證**：確認用戶請求中包含 skill 所需的必要參數；缺少時向用戶詢問，不假設預設值
-3. **逐步執行**：依照 SKILL.md 中定義的步驟，透過工具呼叫逐步完成；每個步驟完成後才進行下一步
-4. **結果回報**：執行完成後輸出結果摘要；若產生檔案，列出檔案路徑
+### Execution Flow
+1. **Read Skill instructions**: SKILL.md content is already embedded in the system prompt — execute its steps directly without reading the file again
+2. **Parameter validation**: confirm the user request includes all required parameters for the skill; if missing, ask the user — do not assume defaults
+3. **Step-by-step execution**: complete each step defined in SKILL.md via tool calls in order; only proceed to the next step after the current one is done
+4. **Report results**: after execution, output a result summary; if files were produced, list their paths
 
-### 錯誤處理
-- 腳本執行失敗（非零退出碼）：輸出 stderr 內容，不重試，告知用戶失敗原因
-- 檔案不存在：確認路徑後回報，不自動建立替代檔案
-- 參數格式錯誤：明確指出哪個參數有問題，附上預期格式
+### Error Handling
+- Script execution failure (non-zero exit code): output stderr content, do not retry, inform the user of the failure reason
+- File not found: confirm the path and report — do not auto-create a substitute file
+- Parameter format error: clearly identify which parameter is wrong and provide the expected format
