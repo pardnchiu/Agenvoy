@@ -124,13 +124,13 @@ func load(ctx context.Context, href string, keepLinks bool) (*HTMLParser, error)
 	if err != nil {
 		return nil, err
 	}
-	defer browser.MustClose()
+	defer func() { _ = browser.Close() }()
 
 	page, err := fetch(ctx, browser, href)
 	if err != nil {
 		return nil, err
 	}
-	defer page.MustClose()
+	defer func() { _ = page.Close() }()
 
 	html, err := page.HTML()
 	if err != nil {

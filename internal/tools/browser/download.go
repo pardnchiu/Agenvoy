@@ -60,7 +60,7 @@ func Download(href, saveTo string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		defer browser.MustClose()
+		defer func() { _ = browser.Close() }()
 
 		page, err := fetch(ctx, browser, href)
 		if err != nil {
@@ -72,7 +72,7 @@ func Download(href, saveTo string) (string, error) {
 			addToSkippedMap(href, status)
 			return skippedMessage(href), nil
 		}
-		defer page.MustClose()
+		defer func() { _ = page.Close() }()
 
 		html, err := page.HTML()
 		if err != nil {

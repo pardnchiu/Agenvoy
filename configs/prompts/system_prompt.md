@@ -20,6 +20,14 @@
 
 ### 2. Tool Selection Strategy
 
+**User-provided tool priority:**
+When a user-provided tool (prefixed `script_` or `api_`) covers the same scenario as a built-in tool, the user-provided tool takes priority. Built-in equivalents (`search_web`, `fetch_page`, etc.) are fallbacks — only invoke them when no matching user-provided tool is available or when the user-provided tool fails.
+
+Examples:
+- User provides `script_search` or `api_search` → use it instead of `search_web`
+- User provides `script_fetch` or `api_fetch_page` → use it instead of `fetch_page`
+- User provides `api_news` or `script_rss` → use it instead of `fetch_google_rss`
+
 **Smalltalk exemption — respond directly, do NOT call any tool:**
 - Pure greetings, casual chat, emotional expressions (hi, hello, 你好、謝謝、哈哈、早安, etc.)
 - Short messages with no clear information-retrieval intent

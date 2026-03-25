@@ -59,17 +59,30 @@ func AbsPath(workDir, path string, needExclude bool) (string, error) {
 
 // * prevent symlinks to the path not under home
 func realPath(path string) (string, error) {
-	realPath, err := filepath.EvalSymlinks(path)
-	if errors.Is(err, os.ErrNotExist) {
-		realParent, parentErr := filepath.EvalSymlinks(filepath.Dir(path))
-		if parentErr != nil {
-			return "", fmt.Errorf("filepath.EvalSymlinks: %w", parentErr)
-		}
-		realPath = filepath.Join(realParent, filepath.Base(path))
-		err = nil
+	resolved, err := filepath.EvalSymlinks(path)
+	if err == nil {
+		return resolved, nil
 	}
-	if err != nil {
+	if !errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("filepath.EvalSymlinks: %w", err)
 	}
-	return realPath, nil
+
+	// * walk up until path is found, then reconstruct
+	suffix := []string{filepath.Base(path)}
+	dir := filepath.Dir(path)
+	for {
+		if dir == filepath.Dir(dir) {
+			return "", fmt.Errorf("filepath.EvalSymlinks: no existing path for %s", path)
+		}
+		realAncestor, parentErr := filepath.EvalSymlinks(dir)
+		if parentErr == nil {
+			parts := append([]string{realAncestor}, suffix...)
+			return filepath.Join(parts...), nil
+		}
+		if !errors.Is(parentErr, os.ErrNotExist) {
+			return "", fmt.Errorf("filepath.EvalSymlinks: %w", parentErr)
+		}
+		suffix = append([]string{filepath.Base(dir)}, suffix...)
+		dir = filepath.Dir(dir)
+	}
 }
