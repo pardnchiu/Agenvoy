@@ -44,7 +44,7 @@ func (t TimeRange) valid() bool {
 	return false
 }
 
-const cacheExpiry = 1 * time.Hour
+const cacheExpiry = 5 * time.Minute
 
 func Search(ctx context.Context, query string, timeRange TimeRange) (string, error) {
 	if strings.TrimSpace(query) == "" {
@@ -57,9 +57,7 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (string, err
 	hash := sha256.Sum256([]byte(query + "|" + string(timeRange)))
 	cacheKey := hex.EncodeToString(hash[:])
 
-	// configDir, err := utils.GetConfigDir("tools", "search_web", "cached")
-	cachedDir := filepath.Join(filesystem.ToolsDir, "search_web", "cached")
-	// if err == nil {
+	cachedDir := filepath.Join(filesystem.ToolSearchWeb, "cached")
 	cleanCache(cachedDir, cacheExpiry)
 	cachePath := filepath.Join(cachedDir, cacheKey+".json")
 	if info, err := os.Stat(cachePath); err == nil {
@@ -88,20 +86,6 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (string, err
 			slog.String("path", err.Error()))
 	}
 	return string(out), nil
-	// }
-
-	// ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	// defer cancel()
-
-	// results, err := fetchDDG(ctx, query, timeRange)
-	// if err != nil {
-	// 	return "", err
-	// }
-	// out, err := json.Marshal(results)
-	// if err != nil {
-	// 	return "", fmt.Errorf("json.Marshal: %w", err)
-	// }
-	// return string(out), nil
 }
 
 func cleanCache(dir string, ttl time.Duration) {

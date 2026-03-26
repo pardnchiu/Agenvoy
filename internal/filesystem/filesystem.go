@@ -29,7 +29,9 @@ var (
 	WorkScriptToolsDir string
 	WorkSkillsDir      string
 
-	ToolFetchPage string
+	ToolFetchPage      string
+	ToolSearchWeb      string
+	ToolFetchGoogleRSS string
 )
 
 const (
@@ -64,6 +66,8 @@ func Init() error {
 		SkillsDir = filepath.Join(AgenvoyDir, "skills")
 		ToolsDir = filepath.Join(AgenvoyDir, "tools")
 		ToolFetchPage = filepath.Join(ToolsDir, "fetch_page")
+		ToolSearchWeb = filepath.Join(ToolsDir, "search_web")
+		ToolFetchGoogleRSS = filepath.Join(ToolsDir, "google_rss")
 
 		systemDownloads := filepath.Join(homeDir, "Downloads")
 		if info, statErr := os.Stat(systemDownloads); statErr == nil && info.IsDir() {

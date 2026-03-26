@@ -2,18 +2,25 @@ package googleRSS
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/url"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 const (
-	apiPath = "https://news.google.com/rss/search"
+	apiPath     = "https://news.google.com/rss/search"
+	cacheExpiry = 5 * time.Minute
 )
 
 var timeRanges = []string{
@@ -69,6 +76,20 @@ func Fetch(keyword, timeRange, language string) (string, error) {
 		url.QueryEscape(language),
 	)
 
+	hash := sha256.Sum256([]byte(keyword + "|" + timeRange + "|" + language))
+	cacheKey := hex.EncodeToString(hash[:])
+	cachedDir := filepath.Join(filesystem.ToolFetchGoogleRSS, "cached")
+
+	cleanCache(cachedDir, cacheExpiry)
+	cachePath := filepath.Join(cachedDir, cacheKey+".json")
+	if info, err := os.Stat(cachePath); err == nil {
+		if time.Since(info.ModTime()) < cacheExpiry {
+			if cached, err := os.ReadFile(cachePath); err == nil {
+				return string(cached), nil
+			}
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -77,7 +98,31 @@ func Fetch(keyword, timeRange, language string) (string, error) {
 		return "", fmt.Errorf("failed to fetch: %w", err)
 	}
 
+	if err = filesystem.WriteFile(cachePath, items, 0644); err != nil {
+		slog.Warn("failed to write cache file", slog.String("path", err.Error()))
+	}
+
 	return items, nil
+}
+
+func cleanCache(dir string, ttl time.Duration) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	now := time.Now()
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		if now.Sub(info.ModTime()) > ttl {
+			_ = os.Remove(filepath.Join(dir, entry.Name()))
+		}
+	}
 }
 
 func fetch(ctx context.Context, path string) (string, error) {
