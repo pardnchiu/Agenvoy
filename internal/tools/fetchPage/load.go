@@ -1,4 +1,4 @@
-package browser
+package fetchPage
 
 import (
 	"context"
@@ -63,7 +63,7 @@ func Load(href string, keepLinks bool) (string, error) {
 		return "", fmt.Errorf("href is required")
 	}
 
-	cached5xx := filepath.Join(filesystem.ToolsDir, "browser", "5xx")
+	cached5xx := filepath.Join(filesystem.ToolFetchPage, "5xx")
 	clean(cached5xx, skippedExpired)
 
 	if isSkipped(href) {
@@ -76,7 +76,7 @@ func Load(href string, keepLinks bool) (string, error) {
 	}
 	hash := sha256.Sum256([]byte(href + cacheVariant))
 	cacheKey := hex.EncodeToString(hash[:])
-	cached := filepath.Join(filesystem.ToolsDir, "browser", "cached")
+	cached := filepath.Join(filesystem.ToolFetchPage, "cached")
 
 	clean(cached, cacheExpired)
 	cachePath := filepath.Join(cached, cacheKey+".md")

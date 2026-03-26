@@ -1,4 +1,4 @@
-package browser
+package fetchPage
 
 import (
 	"crypto/sha256"
@@ -24,11 +24,7 @@ func isSkipped(href string) bool {
 }
 
 func skippedPath(folder, href string) (string, string, error) {
-	cached := filepath.Join(filesystem.ToolsDir, "browser", folder)
-	// configDir, err := utils.GetConfigDir("tools", "browser", folder)
-	// if err != nil {
-	// 	return "", "", err
-	// }
+	cached := filepath.Join(filesystem.ToolFetchPage, folder)
 	hash := sha256.Sum256([]byte(href))
 	name := hex.EncodeToString(hash[:])
 	return cached, filepath.Join(cached, name), nil

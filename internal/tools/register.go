@@ -8,12 +8,12 @@ import (
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 
-	_ "github.com/pardnchiu/agenvoy/internal/tools/browser"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/calculator"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/external"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/external/googleRSS"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/external/searchWeb"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/external/youtube"
+	_ "github.com/pardnchiu/agenvoy/internal/tools/fetchPage"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/file"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/git"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/schedulerTools"

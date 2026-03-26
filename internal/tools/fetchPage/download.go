@@ -1,4 +1,4 @@
-package browser
+package fetchPage
 
 import (
 	"context"
@@ -25,10 +25,7 @@ func Download(href, saveTo string) (string, error) {
 		saveTo = defaultDownloadPath(href)
 	}
 
-	// if dir, err := utils.GetConfigDir("tools", "browser", "5xx"); err == nil {
-	// 	clean(dir.Home, skippedExpired)
-	// }
-	cached5xxDir := filepath.Join(filesystem.ToolsDir, "browser", "5xx")
+	cached5xxDir := filepath.Join(filesystem.ToolFetchPage, "5xx")
 	clean(cached5xxDir, skippedExpired)
 
 	if isSkipped(href) {
@@ -37,11 +34,7 @@ func Download(href, saveTo string) (string, error) {
 
 	hash := sha256.Sum256([]byte(href + "|download"))
 	cacheKey := hex.EncodeToString(hash[:])
-	// configDir, err := utils.GetConfigDir("tools", "browser", "cached")
-	// if err != nil {
-	// 	return "", fmt.Errorf("utils.GetConfigDir: %w", err)
-	// }
-	cached := filepath.Join(filesystem.ToolsDir, "browser", "cached")
+	cached := filepath.Join(filesystem.ToolFetchPage, "cached")
 
 	clean(cached, cacheExpired)
 	cachePath := filepath.Join(cached, cacheKey+".md")
