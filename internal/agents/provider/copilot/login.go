@@ -6,13 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -122,18 +120,12 @@ func (c *Agent) getAccessToken(ctx context.Context, client *http.Client, deviceC
 			Scope:       accessToken.Scope,
 		}
 
-		path := filepath.Dir(c.tokenDir)
-		if err := os.MkdirAll(path, 0700); err != nil {
-			return nil, fmt.Errorf("os.MkdirAll: %w", err)
-		}
-
 		data, err := json.Marshal(token)
 		if err != nil {
 			return nil, fmt.Errorf("json.Marshal: %w", err)
 		}
-
-		if err := filesystem.WriteFile(c.tokenDir, string(data), 0600); err != nil {
-			return nil, fmt.Errorf("utils.WriteFile: %w", err)
+		if err := keychain.Set(tokenKey, string(data)); err != nil {
+			return nil, fmt.Errorf("keychain.Set: %w", err)
 		}
 		return token, nil
 

@@ -8,3 +8,4 @@
 
 docker-compose.yml
 test/copilot_token.json
+app

@@ -31,9 +31,6 @@ func GetAgent() []agentTypes.AgentEntry {
 	}
 	if cfg.DefaultModel == "" {
 		cfg.DefaultModel = cfg.Models[0].Name
-		if saved, err := json.Marshal(cfg); err == nil {
-			_ = filesystem.WriteFile(filesystem.ConfigPath, string(saved), 0644)
-		}
 	} else {
 		for i, m := range cfg.Models {
 			// * move default model to first be fallback
