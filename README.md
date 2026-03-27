@@ -25,9 +25,13 @@
 ***
 
 # Agenvoy
-> A Go multi-provider AI agent framework with intelligent routing, sandbox-isolated execution, and skill-driven workflows
+> A Go AI agent framework with self-improving error memory, intelligent multi-provider routing, Python/JS/REST API tool extensions, and OS-native sandbox execution
 
-Stop wiring each AI provider separately — Agenvoy routes any task to the right model, executes tools inside an OS-native sandbox, and remembers what went wrong across sessions.
+The agent learns from past failures across sessions, routes each task to the right LLM provider automatically, and lets you extend its toolset by dropping a script or JSON file — all running inside an OS-native sandbox.
+
+![TUI Dashboard](./doc/tui.png)
+
+> Currently implemented: filesystem browser, session content viewer, and live log stream. REST API endpoint and Discord bot integration are pending (WIP).
 
 ## Table of Contents
 
@@ -47,8 +51,12 @@ Stop wiring each AI provider separately — Agenvoy routes any task to the right
 ```mermaid
 graph TB
     subgraph Entry ["Entry Points"]
-        CLI["cmd/cli"]
-        Discord["cmd/server · Discord Bot"]
+        App["cmd/app · TUI Dashboard · WIP"]
+        subgraph Managed ["Will be managed by cmd/app"]
+            CLI["cmd/cli"]
+            Discord["cmd/server · Discord Bot"]
+            API["REST API · HTTP Endpoint · WIP"]
+        end
     end
 
     subgraph Engine ["Execution Engine"]
@@ -72,8 +80,12 @@ graph TB
         PS["Session Summary · History"]
     end
 
+    App --> CLI
+    App --> Discord
+    App --> API
     CLI --> Run
     Discord --> Run
+    API --> Run
     Run --> Execute
     Execute -->|"Agent.Send()"| Providers
     Execute -->|"tool calls"| Security
@@ -87,6 +99,10 @@ graph TB
 
 > `go install github.com/pardnchiu/agenvoy/cmd/cli@latest` · [Documentation](./doc/doc.md)
 
+### TUI Dashboard (WIP)
+
+A terminal UI that consolidates CLI execution, Discord bot management, and the REST API endpoint into a single local interface — browse config files, view session content, and stream logs from one window.
+
 ### Multi-Provider LLM with Intelligent Routing
 
 Six backends behind one interface — a dedicated planner LLM picks the right provider per request and trims the context window automatically.
@@ -95,6 +111,19 @@ Six backends behind one interface — a dedicated planner LLM picks the right pr
 <summary>Details</summary>
 
 GitHub Copilot, Claude, OpenAI, Gemini, Nvidia NIM, and any OpenAI-compatible endpoint (Compat/Ollama) — all behind a unified `Agent` interface. A planner LLM automatically selects the best provider per request. Token-budget trimming prevents context window overflow, and per-provider configurable reasoning levels are supported.
+
+</details>
+
+### Script & API Tool Extensions
+
+Drop a `tool.json` + `script.js`/`script.py` to register a custom script tool, or a JSON file to add any HTTP API as a tool — no Go code, no recompilation required.
+
+<details>
+<summary>Details</summary>
+
+**Script tools:** On startup, the executor scans `~/.config/agenvoy/script_tools/` for subdirectories containing a `tool.json` manifest paired with an executable script. Each tool is registered with the `script_` prefix and dispatched via stdin/stdout JSON.
+
+**API tools:** 14+ embedded public API tools (CoinGecko, Wikipedia, Open-Meteo, Yahoo Finance, etc.) are defined as pure JSON. User-defined extensions in `~/.config/agenvoy/apis/` are loaded at startup with no compilation step.
 
 </details>
 
@@ -109,72 +138,6 @@ All commands and scripts execute inside bubblewrap on Linux (with dynamic namesp
 
 </details>
 
-### Skill-Driven Agentic Workflows
-
-Write a Markdown file to define a task; the agent selects the best match from 9 scan paths and runs up to 128 tool iterations until done.
-
-<details>
-<summary>Details</summary>
-
-Declarative Markdown skills with YAML frontmatter define task prompts and tool allowlists. A Selector LLM auto-matches the best skill, then drives a tool-call loop with hash-based deduplication — up to 128 iterations — until the task completes.
-
-</details>
-
-### Copilot Dual-Protocol Auto-Switch
-
-GPT-5.4 and Codex route to the Responses API automatically; all other Copilot models use Chat Completions — no configuration needed.
-
-<details>
-<summary>Details</summary>
-
-The Copilot provider detects model type at runtime. GPT-5.4 and Codex models route to the Responses API; all others use Chat Completions. Cross-provider image normalization re-encodes all formats as JPEG for universal vision support.
-
-</details>
-
-### Script Tool Runtime
-
-Drop a `tool.json` + `script.js` or `script.py` into a directory and the agent discovers and invokes it as a first-class tool — no Go code, no recompilation.
-
-<details>
-<summary>Details</summary>
-
-On startup, the executor scans `~/.config/agenvoy/script_tools/` and `<workdir>/.config/agenvoy/script_tools/` for subdirectories containing a `tool.json` manifest (name, description, parameters schema) paired with an executable `script.js` or `script.py`. Each discovered tool is registered with the `script_` prefix and dispatched via stdin/stdout JSON — identical to the API tool contract. The `script-tool-creator` skill scaffolds new tools automatically.
-
-</details>
-
-### Bundled Extension Script Tools
-
-Threads API (publish text/image/carousel, quota check, token refresh) and yt-dlp (video info, download with sanitized filenames) ship as ready-to-install extensions with cross-platform install scripts.
-
-<details>
-<summary>Details</summary>
-
-`install_threads.sh` and `install_youtube.sh` detect the OS, check Python dependencies, and copy the tools into `~/.config/agenvoy/script_tools/` in one command. The Threads tools enforce the 500-character limit pre-publish, signal token expiry distinctly from API errors, and support two-step container/publish flow. The yt-dlp tools normalize filenames to NFC, strip non-ASCII characters, and support configurable format selection and output path.
-
-</details>
-
-### Skill Git Tools
-
-Three tools let agents commit, inspect history, and roll back changes inside skill workflows without leaving the agent loop.
-
-<details>
-<summary>Details</summary>
-
-`skill_git_commit`, `skill_git_log`, and `skill_git_rollback` operate on the skill repository path. They enable skills like `readme-generate` or `script-tool-creator` to version their own output atomically, inspect change history, and undo mistakes — all within a single agent execution.
-
-</details>
-
-### Declarative JSON API Extensions
-
-Add any HTTP API as a tool by dropping a JSON file — no Go code required.
-
-<details>
-<summary>Details</summary>
-
-14+ embedded public API tools (CoinGecko, Wikipedia, Open-Meteo, Yahoo Finance, YouTube metadata, etc.) are defined as pure JSON. User-defined extensions in `~/.config/agenvoy/apis/` are loaded at startup with no compilation step.
-
-</details>
-
 ### Persistent Error Memory
 
 Tool failures are SHA-256 indexed per session; the agent recalls past errors and reuses resolutions across sessions.
@@ -183,28 +146,6 @@ Tool failures are SHA-256 indexed per session; the agent recalls past errors and
 <summary>Details</summary>
 
 When any tool call fails, the error is persisted to `tool_errors/{hash}.json`. The agent can recall past failures via `search_errors` and persist resolution decisions via `remember_error` — enabling cross-session learning without manual intervention.
-
-</details>
-
-### Persistent Task Scheduler
-
-Full CRUD for cron and one-time tasks — persisted to JSON, restored on restart, with Discord callbacks on completion.
-
-<details>
-<summary>Details</summary>
-
-Recurring cron tasks and one-time scheduled tasks are stored as JSON and restored automatically on restart. When a task completes, its result is posted to the configured Discord channel.
-
-</details>
-
-### Discord Bot Integration
-
-Slash commands share the same execution engine as the CLI, with per-channel session isolation and Modal-based API key setup.
-
-<details>
-<summary>Details</summary>
-
-Per-channel session isolation, file attachment handling, inline file-send protocol, and scheduled task result posting. API keys for all providers can be configured directly in Discord via Modal inputs (`/add-gemini`, `/add-openai`, `/add-claude`, `/add-nim`).
 
 </details>
 
@@ -225,6 +166,7 @@ Two prior projects from the same author directly informed Agenvoy's architecture
 ```
 agenvoy/
 ├── cmd/
+│   ├── app/                # TUI dashboard entry point (WIP)
 │   ├── cli/                # CLI: add / remove / list / run
 │   └── server/             # Discord bot entry point
 ├── configs/
@@ -243,6 +185,9 @@ agenvoy/
 │   │   └── types/          # Agent interface + message / usage types
 │   ├── discord/            # Discord slash commands + file attachments
 │   ├── filesystem/         # Path validation, keychain, and usage tracking
+│   ├── routes/             # HTTP REST API routing (Gin)
+│   ├── store/              # Session persistence, search, atomic writes
+│   ├── tui/                # Terminal UI (rivo/tview) — file browser, logs, content viewer
 │   ├── sandbox/            # Sandbox isolation + sensitive path denial
 │   ├── scheduler/          # Persistent one-time and recurring task scheduler
 │   ├── session/            # Session state, config, and rolling summary
