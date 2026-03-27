@@ -125,3 +125,18 @@ func POST[T any](ctx context.Context, client *http.Client, api string, header ma
 	}
 	return result, statusCode, nil
 }
+
+func FormatInt(number int) string {
+	s := fmt.Sprintf("%d", number)
+	if len(s) <= 3 {
+		return s
+	}
+	var result []byte
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			result = append(result, ',')
+		}
+		result = append(result, byte(c))
+	}
+	return string(result)
+}
