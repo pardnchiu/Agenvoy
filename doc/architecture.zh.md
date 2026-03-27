@@ -9,8 +9,12 @@
 ```mermaid
 graph TB
     subgraph Entry ["進入點"]
-        CLI["cmd/cli"]
-        Discord["cmd/server · Discord Bot"]
+        App["cmd/app · TUI 管理介面 · WIP"]
+        subgraph Managed ["由 cmd/app 統一管理"]
+            CLI["cmd/cli · will deprecate"]
+            Discord["Discord Bot"]
+            API["REST API · HTTP Endpoint · WIP"]
+        end
     end
 
     subgraph Engine ["執行引擎"]
@@ -34,8 +38,12 @@ graph TB
         PS["Session 摘要 · 對話歷史"]
     end
 
+    App --> CLI
+    App --> Discord
+    App --> API
     CLI --> Run
     Discord --> Run
+    API --> Run
     Run --> Execute
     Execute -->|"Agent.Send()"| Providers
     Execute -->|"tool calls"| Security

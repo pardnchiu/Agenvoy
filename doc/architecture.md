@@ -9,8 +9,12 @@ High-level data flow across all major subsystems.
 ```mermaid
 graph TB
     subgraph Entry ["Entry Points"]
-        CLI["cmd/cli"]
-        Discord["cmd/server · Discord Bot"]
+        App["cmd/app · TUI Dashboard · WIP"]
+        subgraph Managed ["Managed by cmd/app"]
+            CLI["cmd/cli · will deprecate"]
+            Discord["Discord Bot"]
+            API["REST API · HTTP Endpoint · WIP"]
+        end
     end
 
     subgraph Engine ["Execution Engine"]
@@ -34,8 +38,12 @@ graph TB
         PS["Session Summary · History"]
     end
 
+    App --> CLI
+    App --> Discord
+    App --> API
     CLI --> Run
     Discord --> Run
+    API --> Run
     Run --> Execute
     Execute -->|"Agent.Send()"| Providers
     Execute -->|"tool calls"| Security

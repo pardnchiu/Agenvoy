@@ -28,8 +28,15 @@ func readFile(path string) string {
 	}
 
 	if strings.HasPrefix(path, filesystem.SessionsDir+string(filepath.Separator)) {
-
 		switch base {
+		case "history.json":
+			if s := format.History(data, width); s != "" {
+				return s
+			}
+		case "summary.json":
+			if s := format.Summary(data, width); s != "" {
+				return s
+			}
 		default:
 			if strings.Contains(path, string(filepath.Separator)+"tool_calls"+string(filepath.Separator)) {
 				if s := format.ToolCalls(data, width); s != "" {

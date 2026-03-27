@@ -52,9 +52,9 @@ The agent learns from past failures across sessions, routes each task to the rig
 graph TB
     subgraph Entry ["Entry Points"]
         App["cmd/app · TUI Dashboard · WIP"]
-        subgraph Managed ["Will be managed by cmd/app"]
-            CLI["cmd/cli"]
-            Discord["cmd/server · Discord Bot"]
+        subgraph Managed ["Managed by cmd/app"]
+            CLI["cmd/cli · will deprecate"]
+            Discord["Discord Bot"]
             API["REST API · HTTP Endpoint · WIP"]
         end
     end
