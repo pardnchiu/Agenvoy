@@ -16,6 +16,18 @@ ok()   { echo -e "  ${GREEN}✓${NC} $*"; }
 warn() { echo -e "  ${YELLOW}!${NC} $*"; }
 err()  { echo -e "  ${RED}✗${NC} $*"; exit 1; }
 
+AGENVOY_API="http://localhost:17989"
+
+# ── Preflight: check Agenvoy is running ─────────────────────────────────────
+echo ""
+echo "  ┌─ 檢查 Agenvoy 服務 (port 17989)..."
+# curl without -f: exits 0 on any HTTP response (including 4xx), non-zero only on connection failure
+if curl -s --connect-timeout 3 --max-time 3 "${AGENVOY_API}/v1/key?key=__ping__" -o /dev/null 2>&1; then
+    ok "Agenvoy 已啟動"
+else
+    err "Agenvoy 尚未啟動，請先執行：go run ./cmd/app"
+fi
+
 urlencode() {
     python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$1"
 }
@@ -30,33 +42,9 @@ json_nested_get() {
     echo "$1" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('$2',{}).get('$3',''))"
 }
 
-install_keyring() {
-    if [ "$OS" = "Darwin" ]; then
-        python3 -m pip install keyring --quiet --user --break-system-packages
-    elif command -v apt-get &>/dev/null; then
-        sudo apt-get install -y python3-keyring
-    elif command -v dnf &>/dev/null; then
-        sudo dnf install -y python3-keyring
-    elif command -v pacman &>/dev/null; then
-        sudo pacman -S --noconfirm python-keyring
-    else
-        python3 -m pip install keyring --quiet --user --break-system-packages
-    fi
-}
-
-# ── Step 1: Install keyring ──────────────────────────────────────────────────
+# ── Step 1: Install script tools ────────────────────────────────────────────
 echo ""
-echo "  ┌─ Step 1: 安裝 Python 依賴"
-if python3 -c "import keyring" &>/dev/null; then
-    ok "keyring 已安裝"
-else
-    warn "keyring 未安裝，安裝中..."
-    install_keyring && ok "keyring 安裝完成" || err "keyring 安裝失敗"
-fi
-
-# ── Step 2: Install script tools ────────────────────────────────────────────
-echo ""
-echo "  ┌─ Step 2: 安裝 Threads 工具到 $INSTALL_DIR"
+echo "  ┌─ Step 1: 安裝 Threads 工具到 $INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
 count=0
 for dir in "$SCRIPT_DIR"/threads*/; do
@@ -68,9 +56,9 @@ for dir in "$SCRIPT_DIR"/threads*/; do
 done
 [ "$count" -gt 0 ] || err "找不到 extensions/scripts/threads* 目錄，請確認從專案根目錄執行此腳本"
 
-# ── Step 3: Collect app credentials ─────────────────────────────────────────
+# ── Step 2: Collect app credentials ─────────────────────────────────────────
 echo ""
-echo "  ┌─ Step 3: Threads 設定"
+echo "  ┌─ Step 2: Threads 設定"
 echo "  │  請至 https://developers.facebook.com/apps 準備以下資訊："
 echo "  │  App ID 與 App Secret 可在應用程式設定頁面找到"
 echo "  │  Short-lived token 請至 Graph API Explorer 產生："
@@ -84,7 +72,7 @@ echo ""
 
 # ── Request 1: short-lived → long-lived token ────────────────────────────────
 echo ""
-echo "  ┌─ [1/3] 換取 Long-Lived Token..."
+echo "  ┌─ [1/2] 換取 Long-Lived Token..."
 R2=$(curl -sf "${GRAPH}/access_token?grant_type=th_exchange_token&client_id=$(urlencode "$APP_ID")&client_secret=$(urlencode "$APP_SECRET")&access_token=$(urlencode "$SHORT_TOKEN")") \
     || err "請求失敗"
 
@@ -96,7 +84,7 @@ ok "Long-lived token 取得成功（有效約 ${DAYS} 天）"
 
 # ── Request 2: get user_id ───────────────────────────────────────────────────
 echo ""
-echo "  ┌─ [2/3] 取得 User ID..."
+echo "  ┌─ [2/2] 取得 User ID..."
 R3=$(curl -sf "${GRAPH}/me?access_token=$(urlencode "$LONG_TOKEN")") || err "請求失敗"
 
 USER_ID=$(json_get "$R3" "id")
@@ -104,20 +92,24 @@ USERNAME=$(json_get "$R3" "username")
 [ -n "$USER_ID" ] || err "無法取得 User ID：$R3"
 ok "User ID: ${USER_ID}$( [ -n "$USERNAME" ] && echo " (@${USERNAME})" || true )"
 
-# ── Request 3: save to keychain ─────────────────────────────────────────────
+# ── Save credentials via Agenvoy API ────────────────────────────────────────
 echo ""
-echo "  ┌─ [3/3] 儲存憑證至 Keychain..."
-python3 - <<PYEOF
-import keyring, sys
-try:
-    keyring.set_password("${SERVICE}", "access_token", """${LONG_TOKEN}""")
-    keyring.set_password("${SERVICE}", "app_secret",   """${APP_SECRET}""")
-    keyring.set_password("${SERVICE}", "user_id",      """${USER_ID}""")
-except Exception as e:
-    print(f"  Keychain 寫入失敗: {e}")
-    sys.exit(1)
-PYEOF
-ok "憑證已安全儲存至系統 Keychain"
+echo "  ┌─ 儲存憑證至 Agenvoy ($AGENVOY_API)..."
+store_key() {
+    local key="$1" value="$2"
+    local payload resp
+    payload=$(python3 -c "import json,sys; print(json.dumps({'key':sys.argv[1],'value':sys.argv[2]}))" "$key" "$value")
+    resp=$(curl -sf -X POST "${AGENVOY_API}/v1/key" \
+        -H "Content-Type: application/json" \
+        -d "$payload") \
+        || err "無法連線至 Agenvoy (${AGENVOY_API})，請確認服務已啟動"
+    echo "$resp" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('ok') else 1)" \
+        || err "儲存 ${key} 失敗：${resp}"
+}
+store_key "agenvoy.threads.access_token" "${LONG_TOKEN}"
+store_key "agenvoy.threads.app_secret"   "${APP_SECRET}"
+store_key "agenvoy.threads.user_id"      "${USER_ID}"
+ok "憑證已儲存至 Agenvoy Keychain"
 
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo ""

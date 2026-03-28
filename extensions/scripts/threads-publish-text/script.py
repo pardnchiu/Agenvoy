@@ -5,18 +5,20 @@ import sys
 import urllib.parse
 import urllib.request
 
-import keyring
-
-SERVICE = "agenvoy.threads"
+AGENVOY_API = "http://localhost:17989"
 BASE_URL = "https://graph.threads.net"
 
 
 def get_credential(account: str) -> str:
-    val = keyring.get_password(SERVICE, account)
+    key = f"agenvoy.threads.{account}"
+    url = f"{AGENVOY_API}/v1/key?key={urllib.parse.quote(key)}"
+    try:
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            val = json.loads(resp.read().decode()).get("value", "")
+    except Exception:
+        val = ""
     if not val:
-        raise RuntimeError(
-            f"Missing keychain entry: {SERVICE}/{account}. Run install_threads.sh first."
-        )
+        raise RuntimeError(f"Missing key: {key}. Run install_threads.sh first.")
     return val
 
 

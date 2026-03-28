@@ -12,6 +12,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discordgo.Session, dcMessageCreate *discordgo.MessageCreate, receiveMessage *discordTypes.ReceiveMessage) error {
@@ -43,6 +44,7 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	if err != nil {
 		return fmt.Errorf("loadDiscordSession: %w", err)
 	}
+	utils.EventLog("[Discord]", agentTypes.Event{}, session.ID, strings.TrimSpace(regexp.MustCompile(`<[^>]+>`).ReplaceAllString(receiveMessage.Content, "")))
 
 	interactionMax := 128
 	if skill == nil {
@@ -63,31 +65,25 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	var execErrors []string
 	var doneEvent agentTypes.Event
 	for e := range events {
+		utils.EventLog("[Discord]", e, session.ID, "")
 		switch e.Type {
-		case agentTypes.EventSkillResult:
-			slog.Info("EventSkillSelect",
-				slog.Any("skill", e))
-		case agentTypes.EventAgentResult:
-			slog.Info("EventAgentResult",
-				slog.Any("agent", e))
 		case agentTypes.EventText:
-			slog.Info("EventText",
-				slog.Any("text", e.Text))
 			replyText = e.Text
+
 		case agentTypes.EventExecError:
 			slog.Warn("EventExecError",
 				slog.String("tool", e.ToolName),
 				slog.String("hash", e.Text))
 			execErrors = append(execErrors, fmt.Sprintf("`%s` → `%s`", e.ToolName, e.Text))
 
-		case agentTypes.EventToolCall:
-			slog.Info("EventToolCall",
-				slog.Any("tool", e.ToolName))
 		case agentTypes.EventDone:
 			doneEvent = e
 		// * use full name for remindering
 		case agentTypes.EventSkillSelect,
+			agentTypes.EventSkillResult,
 			agentTypes.EventAgentSelect,
+			agentTypes.EventAgentResult,
+			agentTypes.EventToolCall,
 			agentTypes.EventToolCallStart,
 			agentTypes.EventToolCallEnd,
 			agentTypes.EventToolConfirm,

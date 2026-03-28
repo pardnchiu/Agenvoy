@@ -78,13 +78,6 @@ func messageCreate(bot *discordTypes.DiscordBot, dcSession *discordgo.Session, d
 		return
 	}
 
-	slog.Info("message received",
-		slog.String("user", message.AuthorName),
-		slog.String("content", message.Content),
-		slog.Int("images", len(imageInputs)),
-		slog.Int("files", len(fileInputs)),
-		slog.Bool("is_channel", message.IsChannel))
-
 	// * without timeout, to ensure the message will be processed like command
 	ctx := context.Background()
 	if message.Cmd == "" && bot.PlannerAgent != nil {
