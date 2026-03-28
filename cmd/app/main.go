@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 
@@ -21,6 +23,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/routes"
 	"github.com/pardnchiu/agenvoy/internal/sandbox"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
@@ -74,12 +77,34 @@ func main() {
 
 	bot, err := discord.New(selectorBot, registry, scanner)
 	if err != nil {
-		slog.Error("discord.New", slog.String("error", err.Error()))
+		slog.Error("discord.New",
+			slog.String("error", err.Error()))
 		return
 	}
 	if bot == nil {
 		slog.Warn("DISCORD_TOKEN not set, bot disabled")
 	}
+
+	route := routes.New(selectorBot, registry, scanner)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "17989"
+	}
+
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: route,
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server.ListenAndServe",
+				slog.String("error", err.Error()))
+		}
+	}()
+	slog.Info("server started",
+		slog.String("port", port))
 
 	go tui.FileMonitor()
 
@@ -97,6 +122,10 @@ func main() {
 	if bot != nil {
 		discord.Close(bot)
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = server.Shutdown(ctx)
 }
 
 func buildAgentRegistry() agentTypes.AgentRegistry {

@@ -13,6 +13,7 @@ import (
 	_ "github.com/pardnchiu/agenvoy/internal/tools/external/googleRSS"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/external/searchWeb"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/external/youtube"
+	_ "github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/fetchPage"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/file"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/git"
@@ -63,20 +64,6 @@ func init() {
 					Name:        t.Function.Name,
 					Description: t.Function.Description,
 				})
-			}
-
-			if e.APIToolbox != nil {
-				for _, raw := range e.APIToolbox.GetTools() {
-					fn, _ := raw["function"].(map[string]any)
-					if fn == nil {
-						continue
-					}
-					name, _ := fn["name"].(string)
-					desc, _ := fn["description"].(string)
-					if name != "" {
-						list = append(list, entry{Name: name, Description: desc})
-					}
-				}
 			}
 
 			out, err := json.Marshal(list)

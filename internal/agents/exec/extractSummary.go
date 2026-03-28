@@ -2,7 +2,6 @@ package exec
 
 import (
 	"encoding/json"
-	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -32,8 +31,6 @@ func isSummaryJSON(m map[string]any) bool {
 
 func extractSummary(sessionID, value string) string {
 	value = timestampHeaderRegex.ReplaceAllString(value, "")
-	slog.Info("value",
-		slog.String("value", value))
 
 	var jsonData any
 	var cleaned string

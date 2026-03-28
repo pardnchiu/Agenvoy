@@ -139,12 +139,12 @@ func fetchImageDataURL(ctx context.Context, rawURL string) (string, error) {
 	}
 
 	// * need to be use jpeg before send in claude/gemini model
-	var buffer bytes.Buffer
-	if err := jpeg.Encode(&buffer, img, &jpeg.Options{Quality: 85}); err != nil {
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85}); err != nil {
 		return "", fmt.Errorf("jpeg.Encode: %w", err)
 	}
 
-	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buffer.Bytes()), nil
+	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
 func fetchFileText(ctx context.Context, rawURL string) (string, error) {

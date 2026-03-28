@@ -1,0 +1,22 @@
+package routes
+
+import (
+	"github.com/gin-gonic/gin"
+
+	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/routes/handler"
+	"github.com/pardnchiu/agenvoy/internal/skill"
+)
+
+func New(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+
+	r := gin.New()
+	r.Use(gin.Recovery())
+
+	r.POST("/v1/send", handler.Send(bot, registry, scanner))
+	r.POST("/v1/key", handler.SaveKey())
+	r.GET("/v1/key", handler.GetKey())
+
+	return r
+}

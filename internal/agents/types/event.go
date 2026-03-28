@@ -1,13 +1,19 @@
 package agentTypes
 
+import "encoding/json"
+
 type EventType int
+
+func (e EventType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(e.String())
+}
 
 const (
 	EventText EventType = iota
-	EventAgentSelect
-	EventAgentResult
 	EventSkillSelect
 	EventSkillResult
+	EventAgentSelect
+	EventAgentResult
 	EventToolCall
 	EventToolCallStart
 	EventToolCallText
@@ -19,6 +25,43 @@ const (
 	EventError
 	EventDone
 )
+
+func (e EventType) String() string {
+	switch e {
+	case EventText:
+		return "EventText"
+	case EventSkillSelect:
+		return "EventSkillSelect"
+	case EventSkillResult:
+		return "EventSkillResult"
+	case EventAgentSelect:
+		return "EventAgentSelect"
+	case EventAgentResult:
+		return "EventAgentResult"
+	case EventToolCall:
+		return "EventToolCall"
+	case EventToolCallStart:
+		return "EventToolCallStart"
+	case EventToolCallText:
+		return "EventToolCallText"
+	case EventToolCallEnd:
+		return "EventToolCallEnd"
+	case EventToolResult:
+		return "EventToolResult"
+	case EventToolSkipped:
+		return "EventToolSkipped"
+	case EventToolConfirm:
+		return "EventToolConfirm"
+	case EventExecError:
+		return "EventExecError"
+	case EventError:
+		return "EventError"
+	case EventDone:
+		return "EventDone"
+	default:
+		return "EventUnknown"
+	}
+}
 
 type Event struct {
 	Type     EventType `json:"type"`

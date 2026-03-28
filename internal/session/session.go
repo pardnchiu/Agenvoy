@@ -31,7 +31,7 @@ func SaveToToolCall(sessionID, content string) {
 	}
 }
 
-func CreateSession() (string, error) {
+func CreateSession(prefix string) (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		return "", fmt.Errorf("rand.Read: %w", err)
@@ -40,7 +40,8 @@ func CreateSession() (string, error) {
 	b[8] = (b[8] & 0x3f) | 0x80
 	h := hex.EncodeToString(b)
 
-	sessionID := h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:]
+	uuid := h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:]
+	sessionID := prefix + uuid
 	err := os.MkdirAll(filepath.Join(filesystem.SessionsDir, sessionID), 0755)
 	if err != nil {
 		return "", fmt.Errorf("os.MkdirAll: %w", err)
@@ -90,7 +91,7 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 	}
 	sum := sha256.Sum256([]byte(key))
 
-	sessionID := hex.EncodeToString(sum[:])
+	sessionID := "dc-" + hex.EncodeToString(sum[:])
 	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
 	configPath := filepath.Join(sessionDir, "config.json")
 

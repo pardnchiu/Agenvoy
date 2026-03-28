@@ -88,7 +88,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			return nil, fmt.Errorf("json.Unmarshal: %w", err)
 		}
 		if indexData.SessionID == "" {
-			newID, err := sessionManager.CreateSession()
+			newID, err := sessionManager.CreateSession("cli-")
 			if err != nil {
 				return nil, fmt.Errorf("newSessionID: %w", err)
 			}
@@ -149,7 +149,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 
 	case os.IsNotExist(configErr):
 		// * config is not exist
-		sessionID, err := sessionManager.CreateSession()
+		sessionID, err := sessionManager.CreateSession("cli-")
 		if err != nil {
 			return nil, fmt.Errorf("newSessionID: %w", err)
 		}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -26,6 +27,7 @@ type Config struct {
 	ReasoningLevel string        `json:"reasoning_level,omitempty"`
 	Models         []ModelEntry  `json:"models,omitempty"`
 	Compats        []CompatEntry `json:"compats,omitempty"`
+	Keys           []string      `json:"keys,omitempty"`
 }
 
 func Load() (*Config, error) {
@@ -92,6 +94,26 @@ func UpsertCompat(provider, url string) error {
 		URL:      url,
 	})
 	return Save(cfg)
+}
+
+func SaveKey(key string) error {
+	cfg, err := Load()
+	if err != nil {
+		return err
+	}
+	if slices.Contains(cfg.Keys, key) {
+		return nil
+	}
+	cfg.Keys = append(cfg.Keys, key)
+	return Save(cfg)
+}
+
+func IsKeyExist(key string) bool {
+	cfg, err := Load()
+	if err != nil {
+		return false
+	}
+	return slices.Contains(cfg.Keys, key)
 }
 
 func GetCompatURL(provider string) string {
