@@ -1,6 +1,6 @@
 # Agenvoy — 架構參考
 
-六張 Mermaid 圖，涵蓋從進入點到各子系統的完整系統結構。
+七張 Mermaid 圖，涵蓋從進入點到各子系統的完整系統結構。
 
 ## 1. 系統概覽
 
@@ -9,11 +9,11 @@
 ```mermaid
 graph TB
     subgraph Entry ["進入點"]
-        App["cmd/app · TUI 管理介面 · WIP"]
+        App["cmd/app · TUI 管理介面"]
         subgraph Managed ["由 cmd/app 統一管理"]
             CLI["cmd/cli · will deprecate"]
             Discord["Discord Bot"]
-            API["REST API · HTTP Endpoint · WIP"]
+            API["REST API · /v1/send · /v1/tools · /v1/tool/:name · /v1/key"]
         end
     end
 
@@ -202,7 +202,7 @@ flowchart TD
     end
 
     subgraph WebTools ["網路存取"]
-        WT["fetch_page · 無頭 Chrome + stealth JS\nsearch_web · Brave + DDG 並行\ndownload_page · SHA-256 快取 1h TTL\nanalyze_youtube · metadata 擷取"]
+        WT["fetch_page · 無頭 Chrome + stealth JS · Chrome 自動偵測\nsearch_web · Brave + DDG 並行 · SHA-256 快取 5 分鐘 TTL\ngoogle_rss · RSS 訂閱擷取 · 5 分鐘快取\ndownload_page · 原始頁面下載\nanalyze_youtube · metadata 擷取"]
     end
 
     subgraph APITools ["API Extension · apiAdapter"]
@@ -281,4 +281,57 @@ flowchart TD
     ErrHash --> ErrStore
     ErrStore --> ErrRecall
     ErrRecall --> ErrResolve
+```
+
+---
+
+## 7. REST API 層
+
+HTTP 端點路由、Handler dispatch，以及 SSE 與非 SSE 回應路徑。
+
+```mermaid
+flowchart TD
+    Client["外部呼叫端\n（script tool · skill · 瀏覽器）"]
+
+    subgraph Router ["Gin Router · internal/routes"]
+        R1["GET  /v1/tools"]
+        R2["POST /v1/tool/:name"]
+        R3["POST /v1/send"]
+        R4["GET  /v1/key"]
+        R5["POST /v1/key"]
+    end
+
+    subgraph Handlers ["Handlers · internal/routes/handler"]
+        H1["ListTools()\n列舉已註冊工具\nname · description · parameters"]
+        H2["CallTool()\n驗證工具存在\n透過 tools.Execute() 執行"]
+        H3SSE["SendSSE()\nstreaming token 輸出\nContent-Type: text/event-stream"]
+        H3JSON["Send()\n收集完整回應\n回傳 JSON {text}"]
+        H4["GetKey()\n從 OS Keychain 讀取"]
+        H5["SaveKey()\n寫入 OS Keychain"]
+    end
+
+    subgraph Core ["核心層"]
+        Executor["tools.NewExecutor()\n載入所有已註冊工具"]
+        Execute["tools.Execute()\n執行單一工具呼叫"]
+        Run["exec.Run()\n完整 Agent 執行迴圈"]
+        KC["OS Keychain\nmacOS Keychain / Linux secret-service"]
+    end
+
+    SSECheck{"sse: true?"}
+
+    Client --> R1 & R2 & R3 & R4 & R5
+    R1 --> H1
+    R2 --> H2
+    R3 --> SSECheck
+    SSECheck -->|"是"| H3SSE
+    SSECheck -->|"否"| H3JSON
+    R4 --> H4
+    R5 --> H5
+
+    H1 --> Executor
+    H2 --> Executor --> Execute
+    H3SSE --> Run
+    H3JSON --> Run
+    H4 --> KC
+    H5 --> KC
 ```

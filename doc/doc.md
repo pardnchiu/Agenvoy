@@ -27,13 +27,18 @@
 | Package | Purpose |
 |---------|---------|
 | `github.com/bwmarrin/discordgo` | Discord Bot API |
+| `github.com/gin-gonic/gin` | REST API server (HTTP routing) |
 | `github.com/go-rod/rod` | Headless Chrome browser automation |
 | `github.com/go-shiori/go-readability` | HTML content extraction and cleanup |
 | `github.com/joho/godotenv` | `.env` environment variable loading |
 | `github.com/manifoldco/promptui` | Interactive CLI selection menus |
 | `github.com/pardnchiu/go-scheduler` | Cron expression parsing and scheduling |
+| `github.com/rivo/tview` | Terminal UI framework |
+| `github.com/gdamore/tcell/v2` | Terminal cell and event library |
+| `github.com/fsnotify/fsnotify` | Filesystem event monitoring (TUI file watcher) |
 | `golang.org/x/image` | WebP image decoding (vision input) |
 | `golang.org/x/net` | HTML tokenizer and network utilities |
+| `golang.org/x/term` | Terminal state and raw mode control |
 
 ## Installation
 
@@ -51,7 +56,13 @@ cd agenvoy
 go build -o agenvoy ./cmd/cli
 ```
 
-### From Source (Discord Bot)
+### From Source (Unified App: TUI + Discord + REST API)
+
+```bash
+go build -o agenvoy-app ./cmd/app
+```
+
+### From Source (Discord Bot only)
 
 ```bash
 go build -o agenvoy-server ./cmd/server
@@ -84,6 +95,7 @@ Supported providers:
 |----------|----------|-------------|
 | `DISCORD_TOKEN` | Yes (server mode) | Discord Bot Token |
 | `DISCORD_GUILD_ID` | No | Restricts slash command registration to a specific guild |
+| `PORT` | No | REST API server listen port (default: `17989`) |
 | `MAX_HISTORY_MESSAGES` | No | Max history messages sent to agent (default: 16) |
 | `MAX_TOOL_ITERATIONS` | No | Max tool call iterations per request (default: 16) |
 | `MAX_SKILL_ITERATIONS` | No | Max tool call iterations within a skill execution (default: 128) |
@@ -278,6 +290,114 @@ Scan paths (in priority order):
 | 1 | `~/.config/agenvoy/skills/` (synced from GitHub + user-defined) |
 | 2–9 | XDG config dirs, home dir, and project-local paths |
 
+## REST API
+
+Start the unified app to expose the REST API on `PORT` (default: `17989`):
+
+```bash
+./agenvoy-app
+# or: go run ./cmd/app
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/send` | Execute agent and return response (SSE or JSON) |
+| `GET` | `/v1/tools` | List all registered tools |
+| `POST` | `/v1/tool/:name` | Invoke a single tool directly |
+| `GET` | `/v1/key` | Retrieve a stored credential from the OS Keychain |
+| `POST` | `/v1/key` | Save a credential to the OS Keychain |
+
+### POST /v1/send
+
+Run the full agent execution loop. Set `"sse": true` to receive token chunks as a Server-Sent Events stream.
+
+**Request:**
+```json
+{ "content": "summarize today's news", "sse": false }
+```
+
+**Response (non-SSE):**
+```json
+{ "text": "..." }
+```
+
+**Response (SSE):** `Content-Type: text/event-stream` — each `data:` line is a token chunk; the stream closes when the agent finishes.
+
+### GET /v1/tools
+
+Returns all registered tools (built-in, API extensions, and script tools).
+
+**Response:**
+```json
+{
+  "tools": [
+    { "name": "search_web", "description": "...", "parameters": { ... } }
+  ]
+}
+```
+
+### POST /v1/tool/:name
+
+Invoke a single tool by name. The request body is passed directly as the tool arguments.
+
+**Request:**
+```json
+{ "query": "Bitcoin price", "time_range": "1d" }
+```
+
+**Response:**
+```json
+{ "result": "..." }
+```
+
+### GET /v1/key · POST /v1/key
+
+Read or write a credential entry in the OS Keychain. Script tools should use these endpoints instead of accessing the keychain directly.
+
+**POST request:**
+```json
+{ "service": "my-service", "key": "secret-value" }
+```
+
+**GET request:** `?service=my-service`
+
+**GET response:**
+```json
+{ "key": "secret-value" }
+```
+
+### Calling the API from script tools
+
+Script tools running inside scheduled tasks can call the API via `localhost`:
+
+```python
+import json, urllib.request, os
+
+BASE = f"http://localhost:{os.environ.get('PORT', '17989')}"
+
+def call_tool(name, args):
+    payload = json.dumps(args).encode()
+    req = urllib.request.Request(
+        f"{BASE}/v1/tool/{name}",
+        data=payload, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    with urllib.request.urlopen(req) as resp:
+        return json.load(resp).get("result", "")
+
+def send(prompt):
+    payload = json.dumps({"content": prompt, "sse": False}).encode()
+    req = urllib.request.Request(
+        f"{BASE}/v1/send",
+        data=payload, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    with urllib.request.urlopen(req) as resp:
+        return json.load(resp).get("text", "")
+```
+
+---
+
 ## Usage
 
 ### Using Make
@@ -286,7 +406,8 @@ From the project root (requires source clone):
 
 | Target | Command | Description |
 |--------|---------|-------------|
-| `make discord` | `go run ./cmd/server/main.go` | Start the Discord bot server |
+| `make app` | `go run ./cmd/app/main.go` | Start unified app (TUI + Discord + REST API) |
+| `make discord` | `go run ./cmd/server/main.go` | Start Discord bot server (legacy) |
 | `make add` | `go run ./cmd/cli/ add` | Interactively add a provider/model |
 | `make remove` | `go run ./cmd/cli/ remove` | Remove a configured provider |
 | `make planner` | `go run ./cmd/cli/ planner` | Set the planner model |
@@ -383,7 +504,7 @@ agenvoy remove
 | `fetch_page` | `url` | JS-rendered page content as Markdown (headless Chrome) |
 | `download_page` | `href`, `save_to` | JS-rendered page saved to a local file |
 | `run_command` | `command` | Execute whitelisted shell commands in sandbox (300s timeout) |
-| `write_script` | `name`, `content` | Create a `.sh` or `.py` script under the scheduler directory |
+| `write_script` | `name`, `content` | Create a `.py` script under the scheduler directory |
 | `add_task` | `at`, `script`, `channel_id` | Schedule a one-time task; result is posted to the Discord channel on completion |
 | `list_tasks` | — | List all pending one-time tasks |
 | `remove_task` | `index` | Cancel and remove a one-time task (list first if multiple) |

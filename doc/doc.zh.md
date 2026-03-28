@@ -27,13 +27,18 @@
 | 套件 | 用途 |
 |------|------|
 | `github.com/bwmarrin/discordgo` | Discord Bot API |
+| `github.com/gin-gonic/gin` | REST API 伺服器（HTTP 路由） |
 | `github.com/go-rod/rod` | Headless Chrome 瀏覽器自動化 |
 | `github.com/go-shiori/go-readability` | HTML 內容擷取與清理 |
 | `github.com/joho/godotenv` | `.env` 環境變數載入 |
 | `github.com/manifoldco/promptui` | CLI 互動式選單 |
 | `github.com/pardnchiu/go-scheduler` | Cron 表達式解析與排程 |
+| `github.com/rivo/tview` | Terminal UI 框架 |
+| `github.com/gdamore/tcell/v2` | Terminal cell 與事件函式庫 |
+| `github.com/fsnotify/fsnotify` | 檔案系統事件監聽（TUI 檔案監視器） |
 | `golang.org/x/image` | WebP 圖片解碼（Vision 輸入） |
 | `golang.org/x/net` | HTML tokenizer 與網路工具 |
+| `golang.org/x/term` | Terminal 狀態與原始模式控制 |
 
 ## 安裝
 
@@ -51,7 +56,13 @@ cd agenvoy
 go build -o agenvoy ./cmd/cli
 ```
 
-### 從原始碼建置（Discord Bot）
+### 從原始碼建置（統一進入點：TUI + Discord + REST API）
+
+```bash
+go build -o agenvoy-app ./cmd/app
+```
+
+### 從原始碼建置（僅 Discord Bot）
 
 ```bash
 go build -o agenvoy-server ./cmd/server
@@ -84,6 +95,7 @@ agenvoy add
 |------|------|------|
 | `DISCORD_TOKEN` | 是（Server 模式） | Discord Bot Token |
 | `DISCORD_GUILD_ID` | 否 | 設定後僅限特定 Guild 接收 Slash Command |
+| `PORT` | 否 | REST API 伺服器監聽埠（預設：`17989`） |
 | `MAX_HISTORY_MESSAGES` | 否 | 傳送至 Agent 的最大歷史訊息數（預設：16） |
 | `MAX_TOOL_ITERATIONS` | 否 | 每次請求的最大工具呼叫迭代次數（預設：16） |
 | `MAX_SKILL_ITERATIONS` | 否 | Skill 執行中的最大工具呼叫迭代次數（預設：128） |
@@ -278,6 +290,114 @@ description: 顯示給 Agent 選擇時的一行摘要
 | 1 | `~/.config/agenvoy/skills/`（從 GitHub 同步 + 使用者自訂） |
 | 2–9 | XDG config 目錄、home 目錄與專案本地路徑 |
 
+## REST API
+
+啟動統一進入點後，REST API 監聽於 `PORT`（預設：`17989`）：
+
+```bash
+./agenvoy-app
+# 或：go run ./cmd/app
+```
+
+### 端點
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| `POST` | `/v1/send` | 執行 Agent 並回傳回應（SSE 或 JSON） |
+| `GET` | `/v1/tools` | 列出所有已登錄的工具 |
+| `POST` | `/v1/tool/:name` | 直接呼叫單一工具 |
+| `GET` | `/v1/key` | 從 OS Keychain 取得儲存的憑證 |
+| `POST` | `/v1/key` | 儲存憑證至 OS Keychain |
+
+### POST /v1/send
+
+執行完整的 Agent 迭代迴圈。設定 `"sse": true` 以 Server-Sent Events 串流接收 token。
+
+**請求：**
+```json
+{ "content": "幫我整理今天的新聞", "sse": false }
+```
+
+**回應（非 SSE）：**
+```json
+{ "text": "..." }
+```
+
+**回應（SSE）：** `Content-Type: text/event-stream`，每行 `data:` 為一個 token chunk；Agent 完成後串流關閉。
+
+### GET /v1/tools
+
+回傳所有已登錄的工具（內建、API Extension、Script Tool）。
+
+**回應：**
+```json
+{
+  "tools": [
+    { "name": "search_web", "description": "...", "parameters": { ... } }
+  ]
+}
+```
+
+### POST /v1/tool/:name
+
+依工具名稱直接呼叫工具，request body 直接作為工具參數傳入。
+
+**請求：**
+```json
+{ "query": "Bitcoin 價格", "time_range": "1d" }
+```
+
+**回應：**
+```json
+{ "result": "..." }
+```
+
+### GET /v1/key · POST /v1/key
+
+讀取或寫入 OS Keychain 中的憑證。Script Tool 應透過此端點存取憑證，而非直接操作 Keychain。
+
+**POST 請求：**
+```json
+{ "service": "my-service", "key": "secret-value" }
+```
+
+**GET 請求：** `?service=my-service`
+
+**GET 回應：**
+```json
+{ "key": "secret-value" }
+```
+
+### 在 Script Tool 中呼叫 API
+
+排程任務內執行的腳本可直接透過 `localhost` 呼叫：
+
+```python
+import json, urllib.request, os
+
+BASE = f"http://localhost:{os.environ.get('PORT', '17989')}"
+
+def call_tool(name, args):
+    payload = json.dumps(args).encode()
+    req = urllib.request.Request(
+        f"{BASE}/v1/tool/{name}",
+        data=payload, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    with urllib.request.urlopen(req) as resp:
+        return json.load(resp).get("result", "")
+
+def send(prompt):
+    payload = json.dumps({"content": prompt, "sse": False}).encode()
+    req = urllib.request.Request(
+        f"{BASE}/v1/send",
+        data=payload, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    with urllib.request.urlopen(req) as resp:
+        return json.load(resp).get("text", "")
+```
+
+---
+
 ## 使用方式
 
 ### 使用 Make
@@ -286,7 +406,8 @@ description: 顯示給 Agent 選擇時的一行摘要
 
 | Target | 實際指令 | 說明 |
 |--------|---------|------|
-| `make discord` | `go run ./cmd/server/main.go` | 啟動 Discord Bot Server |
+| `make app` | `go run ./cmd/app/main.go` | 啟動統一進入點（TUI + Discord + REST API） |
+| `make discord` | `go run ./cmd/server/main.go` | 啟動 Discord Bot Server（舊版） |
 | `make add` | `go run ./cmd/cli/ add` | 互動式新增 Provider／模型 |
 | `make remove` | `go run ./cmd/cli/ remove` | 移除已設定的 Provider |
 | `make planner` | `go run ./cmd/cli/ planner` | 設定 Planner 模型 |
@@ -383,7 +504,7 @@ agenvoy remove
 | `fetch_page` | `url` | 無頭 Chrome 渲染頁面轉 Markdown（唯讀） |
 | `download_page` | `href`, `save_to` | JS 渲染頁面儲存至本地檔案 |
 | `run_command` | `command` | 於沙箱中執行白名單內的 Shell 指令（300 秒逾時） |
-| `write_script` | `name`, `content` | 在排程器目錄建立 `.sh` 或 `.py` 腳本 |
+| `write_script` | `name`, `content` | 在排程器目錄建立 `.py` 腳本 |
 | `add_task` | `at`, `script`, `channel_id` | 設定一次性定時任務；執行結果傳送至指定 Discord 頻道 |
 | `list_tasks` | — | 列出所有待執行的一次性任務 |
 | `remove_task` | `index` | 依序號取消一次性任務（多個時須先列出） |

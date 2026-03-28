@@ -11,11 +11,12 @@ run:
 
 else
 
-.PHONY: help discord add remove planner reasoning models skills test
+.PHONY: help app discord add remove planner reasoning models skills test
 
 help:
 	@echo "How to use:"
-	@echo "  make discord            Start Discord bot server"
+	@echo "  make app                Start unified app (TUI + Discord + REST API)"
+	@echo "  make discord            Start Discord bot server (legacy)"
 	@echo "  make add                Add a provider/model"
 	@echo "  make remove             Remove a provider/model"
 	@echo "  make planner            Set planner model"
@@ -24,6 +25,9 @@ help:
 	@echo "  make skills             Get skill list"
 	@echo "  make cli <input...>     Run agent (requires tool confirmation)"
 	@echo "  make run <input...>     Run agent (allow all tools)"
+
+app:
+	go run ./cmd/app/main.go
 
 discord:
 	go run ./cmd/server/main.go

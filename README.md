@@ -31,7 +31,7 @@ The agent learns from past failures across sessions, routes each task to the rig
 
 ![TUI Dashboard](./doc/tui.png)
 
-> Currently implemented: filesystem browser, session content viewer, and live log stream. REST API endpoint and Discord bot integration are pending (WIP).
+> Terminal UI consolidating CLI, Discord bot, and REST API into a single local interface — filesystem browser, session content viewer, and live log stream.
 
 ## Table of Contents
 
@@ -51,11 +51,11 @@ The agent learns from past failures across sessions, routes each task to the rig
 ```mermaid
 graph TB
     subgraph Entry ["Entry Points"]
-        App["cmd/app · TUI Dashboard · WIP"]
+        App["cmd/app · TUI Dashboard"]
         subgraph Managed ["Managed by cmd/app"]
             CLI["cmd/cli · will deprecate"]
             Discord["Discord Bot"]
-            API["REST API · HTTP Endpoint · WIP"]
+            API["REST API · HTTP Endpoint"]
         end
     end
 
@@ -99,7 +99,7 @@ graph TB
 
 > `go install github.com/pardnchiu/agenvoy/cmd/cli@latest` · [Documentation](./doc/doc.md)
 
-### TUI Dashboard (WIP)
+### TUI Dashboard
 
 A terminal UI that consolidates CLI execution, Discord bot management, and the REST API endpoint into a single local interface — browse config files, view session content, and stream logs from one window.
 
@@ -166,7 +166,7 @@ Two prior projects from the same author directly informed Agenvoy's architecture
 ```
 agenvoy/
 ├── cmd/
-│   ├── app/                # TUI dashboard entry point (WIP)
+│   ├── app/                # Unified entry point: TUI dashboard + Discord bot + REST API
 │   ├── cli/                # CLI: add / remove / list / run
 │   └── server/             # Discord bot entry point
 ├── configs/
@@ -202,13 +202,14 @@ agenvoy/
 
 ## Version History
 
+- **v0.17.0** — Full REST API layer with `/v1/send` (SSE + non-SSE), `/v1/key`, `/v1/tools`, `/v1/tool/:name` endpoints. TUI dashboard complete with file browser, session viewer, and live log stream. Discord bot and REST API unified under `cmd/app`. Copilot token migrated to system keychain. Renamed `browser` package to `fetchPage`. Updated `schedule-task` and `script-tool-creator` skills to invoke tools via Agenvoy API instead of direct external calls.
 - **v0.16.1** — Bundled Threads (publish text/image/carousel, quota, token refresh) and yt-dlp (video info, download) script tool extensions with cross-platform `install_threads.sh` / `install_youtube.sh`. Refactor `toolAdapter` into `api/` and `script/` sub-packages; move session management to `internal/session`; split filesystem into single-responsibility files. Fix Darwin sandbox keychain directory access. Restrict tool call throttle to `api_` prefix; improve `AbsPath` tilde expansion and exclude logic deduplication.
 - **v0.16.0** — Script tool runtime (`scriptAdapter`): drop a `tool.json` + `script.js`/`script.py` into `~/.config/agenvoy/script_tools/` and it is auto-discovered as a `script_`-prefixed tool; stdin/stdout JSON protocol mirrors API tool contract. Refactor `tools/apis/adapter` → `apiAdapter`, `tools/apis` → `tools/api`. Add `skill_git_commit`, `skill_git_log`, `skill_git_rollback` for skill-internal versioning. Copilot token auto-relogin on 401. Fix Discord file upload failure for non-ASCII filenames; add 10MB pre-upload size guard with user-facing warning.
-- **v0.15.2** — Add YouTube metadata fetch tool (`analyze_youtube`); Discord Modal-based API key management (`/add-gemini`, `/add-openai`, `/add-claude`, `/add-nim`); per-model token usage tracking via `usageManager`; configurable reasoning level across all providers; browser iteration limits and same-domain link traversal now configurable via `MAX_TOOL_ITERATIONS`, `MAX_SKILL_ITERATIONS`, `MAX_EMPTY_RESPONSES`; fix Makefile pass-through args
 
 <details>
 <summary>Earlier versions</summary>
 
+- **v0.15.2** — Add YouTube metadata fetch tool (`analyze_youtube`); Discord Modal-based API key management (`/add-gemini`, `/add-openai`, `/add-claude`, `/add-nim`); per-model token usage tracking via `usageManager`; configurable reasoning level across all providers; browser iteration limits and same-domain link traversal now configurable via `MAX_TOOL_ITERATIONS`, `MAX_SKILL_ITERATIONS`, `MAX_EMPTY_RESPONSES`; fix Makefile pass-through args
 - **v0.15.1** — Fix Copilot Claude/Gemini image validation failure: all uploaded images are decoded and re-encoded as JPEG (`image.Decode` + `jpeg.Encode`, supporting PNG/GIF/WebP sources), `ImageURL` gains `detail` field; summary regex split from one monolithic expression into three independent patterns (fenced block, `<summary>` tag, `[summary]` bracket); system prompts moved after history to improve model instruction adherence; Discord prompt takes priority over base system prompt
 - **v0.15.0** — Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint); session-level token-budget message trimming (budget calculated via `MaxInputTokens()`, preserving system prompt + summary + latest user message); sensitive path denial rules for macOS and Linux sandbox (loaded from embedded `denied_map.json`); Linux bwrap restores `--unshare-all` namespace isolation (with graceful fallback probing) and `--new-session` process isolation; `MAX_HISTORY_MESSAGES` environment variable support; summary delimiter switched to XML tags; lite models excluded from agent selection
 - **v0.14.0** — OS-native sandbox isolation (bubblewrap on Linux with auto-install, sandbox-exec on macOS); per-request token usage tracking accumulated across all tool-call iterations; tool handlers restructured into individually named files; exclude logic and file walk/list moved into `filesystem` package; symlink-safe path resolution in `GetAbsPath`

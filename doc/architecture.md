@@ -9,11 +9,11 @@ High-level data flow across all major subsystems.
 ```mermaid
 graph TB
     subgraph Entry ["Entry Points"]
-        App["cmd/app · TUI Dashboard · WIP"]
+        App["cmd/app · TUI Dashboard"]
         subgraph Managed ["Managed by cmd/app"]
             CLI["cmd/cli · will deprecate"]
             Discord["Discord Bot"]
-            API["REST API · HTTP Endpoint · WIP"]
+            API["REST API · /v1/send · /v1/tools · /v1/tool/:name · /v1/key"]
         end
     end
 
@@ -202,7 +202,7 @@ flowchart TD
     end
 
     subgraph WebTools ["Web Access"]
-        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Brave + DDG concurrent\ndownload_page · SHA-256 cache 1h TTL\nanalyze_youtube · metadata fetch"]
+        WT["fetch_page · headless Chrome + stealth JS · Chrome auto-detect\nsearch_web · Brave + DDG concurrent · SHA-256 cache 5min TTL\ngoogle_rss · RSS feed fetch · 5min cache\ndownload_page · raw page download\nanalyze_youtube · metadata fetch"]
     end
 
     subgraph APITools ["API Extensions · apiAdapter"]
@@ -281,4 +281,57 @@ flowchart TD
     ErrHash --> ErrStore
     ErrStore --> ErrRecall
     ErrRecall --> ErrResolve
+```
+
+---
+
+## 7. REST API Layer
+
+HTTP endpoint routing, handler dispatch, and SSE vs. non-SSE response paths.
+
+```mermaid
+flowchart TD
+    Client["External Client\n(script tool · skill · browser)"]
+
+    subgraph Router ["Gin Router · internal/routes"]
+        R1["GET  /v1/tools"]
+        R2["POST /v1/tool/:name"]
+        R3["POST /v1/send"]
+        R4["GET  /v1/key"]
+        R5["POST /v1/key"]
+    end
+
+    subgraph Handlers ["Handlers · internal/routes/handler"]
+        H1["ListTools()\nenumerate registered tools\nname · description · parameters"]
+        H2["CallTool()\nvalidate tool exists\ndispatch via tools.Execute()"]
+        H3SSE["SendSSE()\nstream token chunks\nContent-Type: text/event-stream"]
+        H3JSON["Send()\ncollect full response\nreturn JSON {text}"]
+        H4["GetKey()\nread from OS Keychain"]
+        H5["SaveKey()\nwrite to OS Keychain"]
+    end
+
+    subgraph Core ["Core Layer"]
+        Executor["tools.NewExecutor()\nload all registered tools"]
+        Execute["tools.Execute()\nrun single tool call"]
+        Run["exec.Run()\nfull agent execution loop"]
+        KC["OS Keychain\nmacOS Keychain / Linux secret-service"]
+    end
+
+    SSECheck{"sse: true?"}
+
+    Client --> R1 & R2 & R3 & R4 & R5
+    R1 --> H1
+    R2 --> H2
+    R3 --> SSECheck
+    SSECheck -->|"yes"| H3SSE
+    SSECheck -->|"no"| H3JSON
+    R4 --> H4
+    R5 --> H5
+
+    H1 --> Executor
+    H2 --> Executor --> Execute
+    H3SSE --> Run
+    H3JSON --> Run
+    H4 --> KC
+    H5 --> KC
 ```
