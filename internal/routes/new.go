@@ -17,6 +17,8 @@ func New(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill
 	r.POST("/v1/send", handler.Send(bot, registry, scanner))
 	r.POST("/v1/key", handler.SaveKey())
 	r.GET("/v1/key", handler.GetKey())
+	r.GET("/v1/tools", handler.ListTools())
+	r.POST("/v1/tool/:tool_name", handler.CallTool())
 
 	return r
 }

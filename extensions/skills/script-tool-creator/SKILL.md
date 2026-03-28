@@ -73,9 +73,139 @@ params = json.loads(sys.stdin.read() or "{}")
 print(json.dumps({"result": "..."}))
 ```
 
+## 呼叫現有工具
+
+Script tool 內部可直接透過 Agenvoy API 呼叫現有工具，避免重複實作已有功能。
+
+### 查詢可用工具
+
+建立前先確認是否有現成工具可直接組合：
+
+```bash
+python3 -c "
+import urllib.request, json, os
+base = 'http://localhost:' + os.environ.get('AGENVOY_PORT', '17989')
+with urllib.request.urlopen(base + '/v1/tools') as r:
+    for t in json.load(r)['tools']:
+        print(t['name'], '|', t['description'][:80])
+"
+```
+
+回傳 `tools[]` 包含每個工具的 `name`、`description`、`parameters`。
+
+### 腳本內呼叫工具（Python）
+
+```python
+import json, sys, urllib.request, os
+
+BASE = f"http://localhost:{os.environ.get('AGENVOY_PORT', '17989')}"
+
+def call_tool(name, args):
+    payload = json.dumps(args).encode()
+    req = urllib.request.Request(
+        f"{BASE}/v1/tool/{name}",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    with urllib.request.urlopen(req) as resp:
+        return json.load(resp).get("result", "")
+
+def send(prompt):
+    payload = json.dumps({"content": prompt, "sse": False}).encode()
+    req = urllib.request.Request(
+        f"{BASE}/v1/send",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    with urllib.request.urlopen(req) as resp:
+        return json.load(resp).get("text", "")
+
+params = json.loads(sys.stdin.read() or "{}")
+
+# 呼叫現有工具取資料
+raw = call_tool("search_web", {"query": params["query"]})
+
+# 需要 AI 格式化時走 /v1/send，否則直接 print
+print(json.dumps({"result": send(f"整理以下資料：\n{raw}")}))
+```
+
+### 腳本內呼叫工具（JavaScript）
+
+```js
+const https = require("http");
+
+const BASE = `http://localhost:${process.env.AGENVOY_PORT || 17989}`;
+
+function callTool(name, args) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify(args);
+    const req = https.request(`${BASE}/v1/tool/${name}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+    }, (res) => {
+      let data = "";
+      res.on("data", (d) => (data += d));
+      res.on("end", () => resolve(JSON.parse(data).result ?? ""));
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+function send(prompt) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({ content: prompt, sse: false });
+    const req = https.request(`${BASE}/v1/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+    }, (res) => {
+      let data = "";
+      res.on("data", (d) => (data += d));
+      res.on("end", () => resolve(JSON.parse(data).text ?? ""));
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+const chunks = [];
+process.stdin.on("data", (d) => chunks.push(d));
+process.stdin.on("end", async () => {
+  const params = JSON.parse(Buffer.concat(chunks).toString() || "{}");
+  const raw = await callTool("search_web", { query: params.query });
+  const text = await send(`整理以下資料：\n${raw}`);
+  console.log(JSON.stringify({ result: text }));
+});
+```
+
+**使用原則**：
+- `call_tool` 對應 `POST /v1/tool/{name}`，只需傳必填參數
+- `send` 對應 `POST /v1/send`，需要 AI 格式化輸出才呼叫，純資料處理不需要
+- 呼叫前先用 `GET /v1/tools` 確認工具存在與參數格式
+
+---
+
 ## 建立流程
 
-### 步驟一：初始化
+### 步驟一：查詢現有工具
+
+執行 `run_command` 確認是否已有可直接組合的工具，避免重複實作：
+
+```bash
+python3 -c "
+import urllib.request, json, os
+base = 'http://localhost:' + os.environ.get('AGENVOY_PORT', '17989')
+with urllib.request.urlopen(base + '/v1/tools') as r:
+    for t in json.load(r)['tools']:
+        print(t['name'], '|', t['description'][:80])
+"
+```
+
+### 步驟二：初始化
 
 執行 `init_script_tool.py` 建立目錄與模板：
 
@@ -90,19 +220,19 @@ python3 scripts/init_script_tool.py fetch_weather --lang javascript
 python3 scripts/init_script_tool.py parse_csv --lang python
 ```
 
-### 步驟二：編輯 tool.json
+### 步驟三：編輯 tool.json
 
 填入正確的 `description` 與 `parameters` schema。description 決定 agent 何時呼叫此工具，需清楚且完整。
 
-### 步驟三：實作腳本
+### 步驟四：實作腳本
 
-實作 `script.js` 或 `script.py` 的業務邏輯。完成後測試：
+實作 `script.js` 或 `script.py` 的業務邏輯。若任務需要現有工具，直接使用上方「呼叫現有工具」章節的 `call_tool` / `send` 模板組合，而非重新實作相同邏輯。完成後測試：
 
 ```bash
 echo '{"city":"Taipei"}' | node ~/.config/agenvoy/script_tools/fetch_weather/script.js
 echo '{"city":"Taipei"}' | python3 ~/.config/agenvoy/script_tools/fetch_weather/script.py
 ```
 
-### 步驟四：重啟 agent
+### 步驟五：重啟 agent
 
 新增 script tool 後需重啟 agent 才會載入。
