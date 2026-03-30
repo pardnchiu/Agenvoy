@@ -51,7 +51,18 @@ func registVerifyWithExternalAgent() {
 				return sb.String(), nil
 			}
 
-			prompt := buildCheckPrompt(params.Input, params.Result)
+			prompt := fmt.Sprintf(
+				`請審查以下任務的執行結果，指出具體問題並給出改進方向。若結果已完整正確，請明確回應「通過」。
+
+## 任務輸入
+%s
+
+## 當前結果
+%s
+
+請直接指出問題（如有），或確認通過。`,
+				params.Input, params.Result,
+			)
 			results := runParallel(ctx, agents, prompt)
 			output := formatFeedback(results)
 			if len(errors) > 0 {
@@ -78,21 +89,6 @@ func checkUsefulAgents() ([]string, map[string]error) {
 		}
 	}
 	return agents, errors
-}
-
-func buildCheckPrompt(input, result string) string {
-	return fmt.Sprintf(
-		`請審查以下任務的執行結果，指出具體問題並給出改進方向。若結果已完整正確，請明確回應「通過」。
-
-## 任務輸入
-%s
-
-## 當前結果
-%s
-
-請直接指出問題（如有），或確認通過。`,
-		input, result,
-	)
 }
 
 func runParallel(ctx context.Context, agents []string, prompt string) []agentResult {

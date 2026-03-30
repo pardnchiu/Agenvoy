@@ -39,6 +39,10 @@ Examples:
 - `{{.ExternalAgents}}` 區塊為空（無宣告外部 agent）時，禁止呼叫 `verify_with_external_agent` 與 `call_external_agent`
 - 外部 agent 無法使用本專案 tool，結果由外部獨立環境生成
 
+**內部審查 vs 外部驗證：**
+- `review_result`：由內部優先序模型（claude-opus > gpt-5.4 > gemini-3.1-pro > claude-sonnet）執行一次完整性審查；觸發條件：用戶要求「review」、「審查」、「有沒有遺漏」、「完整性確認」、「檢查結果」等，**不依賴外部 agent 宣告**
+- `verify_with_external_agent`：將結果送交所有可用外部 agent 並行交叉確認；觸發條件：用戶**明確指定**「外部驗證」、「多方驗證」、「交叉驗證」、「多角度驗證」、「多源驗證」、「cross-check」、「second opinion」、「交叉比對」、「多重確認」，且 `{{.ExternalAgents}}` 已宣告；若無宣告則 fallback 到 `review_result`。「驗證結果」、「驗證後回傳」等不含外部／多方語意的用語一律路由到 `review_result`
+
 **Forced routing — must call the specified tool directly. Never output JSON text or an empty response:**
 
 | Query type | Required tool |
@@ -53,8 +57,9 @@ Examples:
 | Source code, config files, project documents | `read_file` / `list_files` / `glob_files` |
 | General knowledge query, technical documentation | `search_web` → `fetch_page` |
 | remember、memory、記住、記錄、紀錄、記一下、記錄一下、紀錄一下、錯誤記憶、記錄經驗、記錄這個 (with error/tool/anomaly/strategy description) | `remember_error` |
-| 用戶明確要求驗證、審查、交叉確認、second opinion，並提供當前結果 | `verify_with_external_agent` |
-| 用戶在生成報告／結果的同時要求驗證（如「驗證是否正確」、「確認對不對」、「交叉驗證」、「飽含驗證」、「多方驗證」、「多源驗證」、「多角度驗證」、「交叉比對」、「多重確認」、"verify"、"double check"、"cross-check"、"cross-validate"），且 `{{.ExternalAgents}}` 已宣告可用 agent | **禁止直接輸出文字報告**。正確流程：① 用各工具蒐集完所有資料 ② 將組裝好的草稿報告作為 `result` 參數，呼叫 `verify_with_external_agent`（tool call，非文字輸出）③ 收到驗證結果後，才輸出最終整合文字。跳過 ② 直接輸出文字視為違規。 |
+| 用戶要求「驗證結果」、「驗證後回傳」、「確認後再給我」、「review」、「審查」、「完整性確認」、「有沒有遺漏」、「結果正確嗎」，且**未明確指定外部／多方／交叉** | **禁止直接輸出文字**。正確流程：① 用各工具蒐集完所有資料 ② 將組裝好的草稿作為 `result` 參數，呼叫 `review_result`（tool call，非文字輸出）③ 收到審查結果後，才輸出最終整合文字。跳過 ② 直接輸出文字視為違規。 |
+| 用戶**明確指定**「外部驗證」、「多方驗證」、「交叉驗證」、「多角度驗證」、「多源驗證」、「cross-check」、「second opinion」、「交叉比對」、「多重確認」，且 `{{.ExternalAgents}}` 已宣告可用 agent | **禁止直接輸出文字**。正確流程：① 用各工具蒐集完所有資料 ② 將草稿作為 `result` 參數，呼叫 `verify_with_external_agent`（tool call，非文字輸出）③ 收到驗證結果後，才輸出最終整合文字。跳過 ② 直接輸出文字視為違規。 |
+| 同上外部驗證情境但 `{{.ExternalAgents}}` 為空 | 同上流程，但步驟 ② 改呼叫 `review_result` |
 | 請求超出現有 tool 支援範圍，需外部 agent 直接生成結果 | `call_external_agent`（選擇 agent 參數）|
 
 **All other queries** — follow priority order:

@@ -20,6 +20,7 @@ type Request struct {
 	Content   string `json:"content"`
 	SSE       bool   `json:"sse"`
 	SessionID string `json:"session_id"`
+	Model     string `json:"model,omitempty"`
 }
 
 func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner) gin.HandlerFunc {
@@ -56,7 +57,15 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 			}
 
 			events <- agentTypes.Event{Type: agentTypes.EventAgentSelect}
-			agent := exec.SelectAgent(ctx, bot, registry, trimContent, skill != nil)
+			var agent agentTypes.Agent
+			if req.Model != "" {
+				if a, ok := registry.Registry[req.Model]; ok {
+					agent = a
+				}
+			}
+			if agent == nil {
+				agent = exec.SelectAgent(ctx, bot, registry, trimContent, skill != nil)
+			}
 			events <- agentTypes.Event{Type: agentTypes.EventAgentResult, Text: agent.Name()}
 
 			workDir, _ := os.UserHomeDir()

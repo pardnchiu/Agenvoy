@@ -17,6 +17,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 
 	hasExternalAgent := false
+	hasReviewResult := false
 	for i, tool := range choice.Message.ToolCalls {
 		toolID := strings.TrimSpace(tool.ID)
 		toolArg := strings.TrimSpace(tool.Function.Arguments)
@@ -151,14 +152,21 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			ToolCallID: toolID,
 		})
 
-		if toolName == "call_external_agent" {
+		switch toolName {
+		case "verify_with_external_agent":
 			hasExternalAgent = true
+		case "review_result":
+			hasReviewResult = true
 		}
 	}
 
-	if hasExternalAgent {
+	if hasExternalAgent || hasReviewResult {
 		sessionData.OldHistories = nil
-		sessionData.ToolHistories = trimMessageContext(sessionData.ToolHistories)
+		if hasExternalAgent {
+			sessionData.ToolHistories = trimMessageContext(sessionData.ToolHistories)
+		} else {
+			sessionData.ToolHistories = trimReviewContext(sessionData.ToolHistories)
+		}
 	}
 	return sessionData, alreadyCall, nil
 }
@@ -204,6 +212,52 @@ func trimMessageContext(toolCall []agentTypes.Message) []agentTypes.Message {
 		compact = append(compact, agentTypes.Message{
 			Role:    "user",
 			Content: "以下是外部驗證回饋，請針對指出的每個問題，**重新呼叫工具查詢**以修正錯誤或補充缺漏，完成後再輸出最終結果：\n\n" + feedback,
+		})
+	}
+	return compact
+}
+
+func trimReviewContext(toolCall []agentTypes.Message) []agentTypes.Message {
+	var draft, feedback string
+
+	for _, m := range toolCall {
+		if m.Role != "assistant" || len(m.ToolCalls) == 0 {
+			continue
+		}
+		for _, tc := range m.ToolCalls {
+			if tc.Function.Name != "review_result" {
+				continue
+			}
+
+			var params struct {
+				Result string `json:"result"`
+			}
+			if err := json.Unmarshal([]byte(tc.Function.Arguments), &params); err == nil {
+				draft = params.Result
+			}
+
+			for _, tm := range toolCall {
+				if tm.Role == "tool" && tm.ToolCallID == tc.ID {
+					if s, ok := tm.Content.(string); ok {
+						feedback = strings.TrimPrefix(s, "[內部審查 · ")
+					}
+					break
+				}
+			}
+		}
+	}
+
+	compact := make([]agentTypes.Message, 0, 2)
+	if draft != "" {
+		compact = append(compact, agentTypes.Message{
+			Role:    "assistant",
+			Content: draft,
+		})
+	}
+	if feedback != "" {
+		compact = append(compact, agentTypes.Message{
+			Role:    "user",
+			Content: "以下是內部審查回饋，請針對指出的每個問題修正後輸出最終結果：\n\n" + feedback,
 		})
 	}
 	return compact
