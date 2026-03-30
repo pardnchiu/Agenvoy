@@ -26,8 +26,11 @@ type AgentEntry struct {
 }
 
 type AgentSession struct {
-	ID        string
-	Tools     []Message
-	Messages  []Message
-	Histories []Message
+	ID            string
+	SystemPrompts []Message
+	OldHistories  []Message
+	UserInput     Message
+	ToolHistories []Message
+	Tools         []Message
+	Histories     []Message
 }

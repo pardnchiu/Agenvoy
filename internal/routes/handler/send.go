@@ -90,17 +90,12 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 	session := &agentTypes.AgentSession{
 		ID:        sessionID,
 		Tools:     []agentTypes.Message{},
-		Messages:  []agentTypes.Message{},
 		Histories: []agentTypes.Message{},
 	}
 
-	session.Messages = append(session.Messages, agentTypes.Message{
-		Role:    "system",
-		Content: exec.GetSystemPrompt(data),
-	})
-
+	session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: exec.GetSystemPrompt(data)}}
 	if summary := sessionManager.GetSummaryPrompt(sessionID); summary != "" {
-		session.Messages = append(session.Messages, agentTypes.Message{
+		session.SystemPrompts = append(session.SystemPrompts, agentTypes.Message{
 			Role:    "system",
 			Content: summary,
 		})
@@ -108,14 +103,12 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 
 	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 	session.Histories = oldHistory
-	session.Messages = append(session.Messages, maxHistory...)
+	session.OldHistories = maxHistory
+	session.ToolHistories = []agentTypes.Message{}
 
 	userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s",
 		time.Now().Format("2006-01-02 15:04:05"), data.Content)
-	session.Messages = append(session.Messages, agentTypes.Message{
-		Role:    "user",
-		Content: userText,
-	})
+	session.UserInput = agentTypes.Message{Role: "user", Content: userText}
 	session.Histories = append(session.Histories, agentTypes.Message{
 		Role:    "user",
 		Content: userText,

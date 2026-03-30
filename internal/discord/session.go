@@ -35,11 +35,10 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 	session := &agentTypes.AgentSession{
 		ID:        sessionID,
 		Tools:     []agentTypes.Message{},
-		Messages:  []agentTypes.Message{},
 		Histories: []agentTypes.Message{},
 	}
 
-	var oldHistory []agentTypes.Message
+	var channelHistory []agentTypes.Message
 	if msgs, err := dcSession.ChannelMessages(channelID, 16, currentMessageID, "", ""); err == nil {
 		botID := dcSession.State.User.ID
 		for i := len(msgs) - 1; i >= 0; i-- {
@@ -55,25 +54,26 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 					content = content[:idx]
 				}
 			}
-			oldHistory = append(oldHistory, agentTypes.Message{
+			channelHistory = append(channelHistory, agentTypes.Message{
 				Role:    role,
 				Content: content,
 			})
 		}
 	}
-	session.Messages = append(session.Messages,
-		agentTypes.Message{Role: "system", Content: configs.DiscordSystemPrompt},
-		agentTypes.Message{Role: "system", Content: exec.GetSystemPrompt(data)},
-	)
 
+	session.SystemPrompts = []agentTypes.Message{
+		{Role: "system", Content: configs.DiscordSystemPrompt},
+		{Role: "system", Content: exec.GetSystemPrompt(data)},
+	}
 	if summary := sessionManager.GetSummaryPrompt(sessionID); summary != "" {
-		session.Messages = append(session.Messages, agentTypes.Message{
+		session.SystemPrompts = append(session.SystemPrompts, agentTypes.Message{
 			Role:    "system",
 			Content: summary,
 		})
 	}
 
-	session.Messages = append(session.Messages, oldHistory...)
+	session.OldHistories = channelHistory
+	session.ToolHistories = []agentTypes.Message{}
 
 	userText := fmt.Sprintf("當前時間: %s\n當前頻道 ID: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), channelID, strings.TrimSpace(input))
 
@@ -113,10 +113,10 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 		userContent = userText
 	}
 
-	session.Messages = append(session.Messages, agentTypes.Message{
+	session.UserInput = agentTypes.Message{
 		Role:    "user",
 		Content: userContent,
-	})
+	}
 
 	return session, nil
 }

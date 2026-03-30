@@ -73,26 +73,24 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		limit = MaxSkillIterations
 	}
 
-	maxInputTokens := data.Agent.MaxInputTokens()
-
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
 	emptyCount := 0
+	trimmedToolCalls := false
 	for i := 0; i < limit; i++ {
 		if i > 0 {
 			time.Sleep(300 * time.Millisecond)
 		}
-		trimmed, err := trimMessages(session.Messages, maxInputTokens)
+		assembled := assembleMessages(session.SystemPrompts, session.OldHistories, session.UserInput, session.ToolHistories)
+		resp, err := data.Agent.Send(ctx, assembled, exec.Tools)
 		if err != nil {
-			events <- agentTypes.Event{Type: agentTypes.EventText, Text: "訊息內容超出模型可接受的 token 上限，請縮短輸入後再試。"}
-			events <- agentTypes.Event{Type: agentTypes.EventDone}
-			return nil
-		}
-		session.Messages = trimmed
-		resp, err := data.Agent.Send(ctx, session.Messages, exec.Tools)
-		if err != nil {
-			slog.Warn("data.Agent.Send",
-				slog.String("error", err.Error()))
+			if isContextLengthError(err) {
+				trimmedToolCalls = trimmedToolCalls || trimOnContextExceeded(&session.OldHistories, &session.ToolHistories)
+				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange")
+			} else {
+				slog.Warn("data.Agent.Send",
+					slog.String("error", err.Error()))
+			}
 			continue
 		}
 
@@ -135,13 +133,17 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 			emptyCount = 0
 
+			responseText := cleaned
+			if trimmedToolCalls {
+				responseText += "\n\n> 因超過模型 max input，部分工具查詢資料已被裁減，建議使用更大 context window 的模型再試一次。"
+			}
 			events <- agentTypes.Event{
 				Type: agentTypes.EventText,
-				Text: cleaned,
+				Text: responseText,
 			}
 
 			choice.Message.Content = fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), cleaned)
-			session.Messages = append(session.Messages, choice.Message)
+			session.ToolHistories = append(session.ToolHistories, choice.Message)
 
 			if err := saveNewHistory(choice, session); err != nil {
 				slog.Warn("writeHistory",
@@ -172,7 +174,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		return nil
 	}
 
-	summaryMessages := append(session.Messages, agentTypes.Message{
+	assembled := assembleMessages(session.SystemPrompts, session.OldHistories, session.UserInput, session.ToolHistories)
+	summaryMessages := append(assembled, agentTypes.Message{
 		Role:    "user",
 		Content: "請根據以上工具查詢結果，整理並總結回答原始問題。",
 	})

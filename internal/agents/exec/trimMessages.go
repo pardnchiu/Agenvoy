@@ -1,123 +1,71 @@
 package exec
 
 import (
-	"fmt"
+	"strings"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
-func calculateTokens(message agentTypes.Message) int {
-	switch v := message.Content.(type) {
-	case string:
-		return len(v) / 4
-	case []agentTypes.ContentPart:
-		total := 0
-		for _, part := range v {
-			if part.Type == "text" {
-				total += len(part.Text) / 4
-			} else if part.Type == "image_url" {
-				total += 1000
-			}
-		}
-		return total
-	default:
-		return 0
-	}
-}
-
-func trimMessages(messages []agentTypes.Message, maxTokens int) ([]agentTypes.Message, error) {
-	if maxTokens <= 0 {
-		return messages, nil
-	}
-
-	var systemMessages []agentTypes.Message
-	var lastUser *agentTypes.Message
-	var history []agentTypes.Message
-
-	lastUserIndex := -1
-	for i := len(messages) - 1; i >= 0; i-- {
-		if messages[i].Role == "user" && lastUserIndex == -1 {
-			lastUserIndex = i
-			break
-		}
-	}
-
-	for i, message := range messages {
-		switch {
-		case i == lastUserIndex:
-			msg := message
-			lastUser = &msg
-		case message.Role == "system":
-			systemMessages = append(systemMessages, message)
-		default:
-			history = append(history, message)
-		}
-	}
-
-	total := 0
-	for _, msg := range messages {
-		total += calculateTokens(msg)
-	}
-	if total <= maxTokens {
-		return reorder(history, systemMessages, lastUser, false), nil
-	}
-
-	reserved := 0
-	for _, m := range systemMessages {
-		reserved += calculateTokens(m)
-	}
-	if lastUser != nil {
-		reserved += calculateTokens(*lastUser)
-	}
-
-	budget := maxTokens - reserved
-	if budget <= 0 {
-		return nil, fmt.Errorf("single message exceeds token limit (%d tokens)", reserved)
-	}
-
-	kept := make([]agentTypes.Message, 0, len(history))
-	used := 0
-	for i := len(history) - 1; i >= 0; i-- {
-		cost := calculateTokens(history[i])
-		if used+cost > budget {
-			break
-		}
-		used += cost
-		kept = append(kept, history[i])
-	}
-
-	for i, j := 0, len(kept)-1; i < j; i, j = i+1, j-1 {
-		kept[i], kept[j] = kept[j], kept[i]
-	}
-
-	trimmed := len(kept) < len(history)
-
-	if trimmed && len(kept) > 0 {
-		if text, ok := kept[0].Content.(string); ok {
-			kept[0].Content = fmt.Sprintf("...\n%s", text)
-		}
-	}
-
-	return reorder(kept, systemMessages, lastUser, trimmed), nil
-}
-
-func reorder(history []agentTypes.Message, systemMessages []agentTypes.Message, lastUser *agentTypes.Message, trimmed bool) []agentTypes.Message {
-	result := make([]agentTypes.Message, 0, len(systemMessages)+len(history)+2)
-
-	result = append(result, systemMessages...)
-
-	if trimmed {
-		result = append(result, agentTypes.Message{
-			Role:    "system",
-			Content: "因內容長度超過模型上限，已自動移除較舊的對話訊息，本次回答可能缺少先前的上下文。",
-		})
-	}
-
-	result = append(result, history...)
-
-	if lastUser != nil {
-		result = append(result, *lastUser)
-	}
-
+func assembleMessages(systemPart []agentTypes.Message, oldHistory []agentTypes.Message, userInput agentTypes.Message, toolCall []agentTypes.Message) []agentTypes.Message {
+	result := make([]agentTypes.Message, 0, len(systemPart)+len(oldHistory)+1+len(toolCall))
+	result = append(result, systemPart...)
+	result = append(result, oldHistory...)
+	result = append(result, userInput)
+	result = append(result, toolCall...)
 	return result
+}
+
+func trimOnContextExceeded(oldHistory *[]agentTypes.Message, toolCall *[]agentTypes.Message) bool {
+	if len(*oldHistory) > 0 {
+		n := 2
+		if len(*oldHistory) < 2 {
+			n = 1
+		}
+		*oldHistory = (*oldHistory)[n:]
+		return false
+	}
+
+	if len(*toolCall) == 0 {
+		return false
+	}
+
+	firstToolCall := -1
+	for i, message := range *toolCall {
+		if message.Role == "assistant" && len(message.ToolCalls) > 0 {
+			firstToolCall = i
+			break
+		}
+	}
+
+	if firstToolCall == -1 {
+		*toolCall = (*toolCall)[1:]
+		return false
+	}
+
+	ids := make(map[string]bool, len((*toolCall)[firstToolCall].ToolCalls))
+	for _, tool := range (*toolCall)[firstToolCall].ToolCalls {
+		ids[tool.ID] = true
+	}
+
+	kept := make([]agentTypes.Message, 0, len(*toolCall))
+	for i, m := range *toolCall {
+		if i == firstToolCall {
+			continue
+		}
+		if m.ToolCallID != "" && ids[m.ToolCallID] {
+			continue
+		}
+		kept = append(kept, m)
+	}
+	*toolCall = kept
+	return true
+}
+
+func isContextLengthError(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "context_length_exceeded") ||
+		strings.Contains(msg, "maximum context length") ||
+		strings.Contains(msg, "prompt is too long") ||
+		(strings.Contains(msg, "token count") && strings.Contains(msg, "exceeds")) ||
+		strings.Contains(msg, "exceeds the maximum number of tokens")
 }

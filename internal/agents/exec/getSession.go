@@ -68,7 +68,6 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	trimInput := strings.TrimSpace(execData.Content)
 	session := agentTypes.AgentSession{
 		Tools:     []agentTypes.Message{},
-		Messages:  []agentTypes.Message{},
 		Histories: []agentTypes.Message{},
 	}
 
@@ -113,39 +112,28 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 
 		oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 		session.Histories = oldHistory
-		if len(oldHistory) > len(maxHistory) && len(maxHistory) > 0 {
-			copied := make([]agentTypes.Message, len(maxHistory))
-			copy(copied, maxHistory)
-			if text, ok := copied[0].Content.(string); ok {
-				// * for agent to know thie content is cut
-				copied[0].Content = "...\n" + text
-			}
-			maxHistory = copied
-		}
-		session.Messages = append(session.Messages, agentTypes.Message{
-			Role:    "system",
-			Content: prompt,
-		})
 
+		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: prompt}}
 		// * insert summary prompt every time
 		if summary := sessionManager.GetSummaryPrompt(sessionID); summary != "" {
-			session.Messages = append(session.Messages, agentTypes.Message{
+			session.SystemPrompts = append(session.SystemPrompts, agentTypes.Message{
 				Role:    "system",
 				Content: summary,
 			})
 		}
 
-		session.Messages = append(session.Messages, maxHistory...)
+		session.OldHistories = maxHistory
+		session.ToolHistories = []agentTypes.Message{}
 
 		userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), trimInput)
 		session.Histories = append(session.Histories, agentTypes.Message{
 			Role:    "user",
 			Content: userText,
 		})
-		session.Messages = append(session.Messages, agentTypes.Message{
+		session.UserInput = agentTypes.Message{
 			Role:    "user",
 			Content: buildContent(userText, execData.ImageInputs, execData.FileInputs),
-		})
+		}
 
 	case os.IsNotExist(configErr):
 		// * config is not exist
@@ -154,20 +142,19 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			return nil, fmt.Errorf("newSessionID: %w", err)
 		}
 
-		session.Messages = append(session.Messages, agentTypes.Message{
-			Role:    "system",
-			Content: prompt,
-		})
+		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: prompt}}
+		session.OldHistories = []agentTypes.Message{}
+		session.ToolHistories = []agentTypes.Message{}
 
 		userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), trimInput)
 		session.Histories = append(session.Histories, agentTypes.Message{
 			Role:    "user",
 			Content: userText,
 		})
-		session.Messages = append(session.Messages, agentTypes.Message{
+		session.UserInput = agentTypes.Message{
 			Role:    "user",
 			Content: buildContent(userText, execData.ImageInputs, execData.FileInputs),
-		})
+		}
 
 		indexDataBytes, err := json.Marshal(IndexData{SessionID: sessionID})
 		if err != nil {

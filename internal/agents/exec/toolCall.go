@@ -14,8 +14,9 @@ import (
 )
 
 func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string) (*agentTypes.AgentSession, map[string]string, error) {
-	sessionData.Messages = append(sessionData.Messages, choice.Message)
+	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 
+	hasExternalAgent := false
 	for i, tool := range choice.Message.ToolCalls {
 		toolID := strings.TrimSpace(tool.ID)
 		toolArg := strings.TrimSpace(tool.Function.Arguments)
@@ -26,7 +27,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 
 		hash := fmt.Sprintf("%v|%v", toolName, toolArg)
 		if cached, ok := alreadyCall[hash]; ok && cached != "" {
-			sessionData.Messages = append(sessionData.Messages, agentTypes.Message{
+			sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
 				Role:       "tool",
 				Content:    strings.TrimSpace(cached),
 				ToolCallID: toolID,
@@ -62,7 +63,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 					Content:    "Skipped by user",
 					ToolCallID: toolID,
 				})
-				sessionData.Messages = append(sessionData.Messages, agentTypes.Message{
+				sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
 					Role:       "tool",
 					Content:    "Skipped by user",
 					ToolCallID: toolID,
@@ -144,7 +145,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			Content:    content,
 			ToolCallID: toolID,
 		})
-		sessionData.Messages = append(sessionData.Messages, agentTypes.Message{
+		sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
 			Role:       "tool",
 			Content:    content,
 			ToolCallID: toolID,
