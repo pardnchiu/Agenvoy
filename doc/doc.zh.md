@@ -100,6 +100,9 @@ agenvoy add
 | `MAX_TOOL_ITERATIONS` | 否 | 每次請求的最大工具呼叫迭代次數（預設：16） |
 | `MAX_SKILL_ITERATIONS` | 否 | Skill 執行中的最大工具呼叫迭代次數（預設：128） |
 | `MAX_EMPTY_RESPONSES` | 否 | 連續空回應的最大次數，超過則中止（預設：8） |
+| `EXTERNAL_COPILOT` | 否 | GitHub Copilot 外部 Agent 端點（供 `verify_with_external_agent` / `call_external_agent` 使用） |
+| `EXTERNAL_CLAUDE` | 否 | Claude 外部 Agent 端點（供 `verify_with_external_agent` / `call_external_agent` 使用） |
+| `EXTERNAL_CODEX` | 否 | Codex 外部 Agent 端點（供 `verify_with_external_agent` / `call_external_agent` 使用） |
 
 建立 `.env` 並填入對應值：
 
@@ -318,6 +321,12 @@ description: 顯示給 Agent 選擇時的一行摘要
 { "content": "幫我整理今天的新聞", "sse": false }
 ```
 
+使用選填的 `model` 欄位可略過自動 Agent 選擇，直接路由至指定模型（格式：`provider@model-name`）：
+
+```json
+{ "content": "幫我整理今天的新聞", "sse": false, "model": "claude@claude-opus-4-6" }
+```
+
 **回應（非 SSE）：**
 ```json
 { "text": "..." }
@@ -516,6 +525,9 @@ agenvoy remove
 | `skill_git_rollback` | `commit` | 將 Skill 儲存庫回滾至指定的 commit hash |
 | `list_tools` | — | 列出所有可用工具，含動態載入的 API Extension |
 | `calculate` | `expression` | 數學運算（sqrt、abs、pow、ceil、floor、sin、cos、tan、log） |
+| `call_external_agent` | `agent`, `input` | 將整個任務委派至指定外部 Agent（`copilot` / `claude` / `codex`） |
+| `verify_with_external_agent` | `input`, `result` | 並行交叉驗證：將當前結果派發至所有已宣告外部 Agent 並整合回饋；無 Agent 宣告時 fallback 至 `review_result` |
+| `review_result` | `input`, `result` | 內部完整性審查，自動選擇最高優先序可用模型（claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet）；審查後 context 裁剪為草稿 + 回饋 |
 
 ### 沙箱隔離
 

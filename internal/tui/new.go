@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	projectVersion = "v0.16.1"
+	projectVersion = "v0.17.2"
 )
 
 type tuiWriter struct {

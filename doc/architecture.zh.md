@@ -69,7 +69,9 @@ flowchart TD
     end
 
     subgraph Loop ["迭代迴圈 · exec.Execute()"]
-        Trim["trimMessages()\ntoken-budget 強制執行\n（保留 system + summary + 最新訊息）"]
+        Assemble["assembleMessages()\n四個固定段：\nSystemPrompts · OldHistories · UserInput · ToolHistories"]
+        ReactTrim{"Context 超限？"}
+        TrimOld["裁剪 OldHistories\n或 ToolHistories\n（錯誤觸發，reactive）"]
         Send["Agent.Send()\n統一 Provider 介面"]
         Parse["解析回應\n擷取 tool_calls"]
         Dispatch["Dispatch tool calls\n並行執行"]
@@ -84,13 +86,15 @@ flowchart TD
     Run --> AgentScan
     SkillScan -->|"注入 Skill prompt"| Loop
     AgentScan -->|"Provider 已選定"| Loop
-    Trim --> Send
+    Assemble --> ReactTrim
+    ReactTrim -->|"是"| TrimOld --> Assemble
+    ReactTrim -->|"否"| Send
     Send --> Parse
     Parse --> Dispatch
     Dispatch --> Dedup
     Dedup --> Accum
     Accum --> Check
-    Check -->|"繼續"| Trim
+    Check -->|"繼續"| Assemble
     Check -->|"完成"| Done
 ```
 
@@ -229,6 +233,10 @@ flowchart TD
         EMT["工具呼叫失敗 →\n持久化至 tool_errors/{SHA-256}.json\nsearch_errors · 回溯過去失敗\nremember_error · 持久化解決方案\n跨 Session 學習"]
     end
 
+    subgraph ExternalAgentTools ["外部 Agent 工具"]
+        EAT["call_external_agent · 委派任務至指定外部 Agent\nverify_with_external_agent · 並行交叉驗證（所有已宣告 Agent）\nreview_result · 內部優先序模型審查\n（claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet）"]
+    end
+
     Registry --> FileTools
     Registry --> WebTools
     Registry --> APITools
@@ -236,6 +244,7 @@ flowchart TD
     Registry --> SkillTools
     Registry --> SchedulerTools
     Registry --> ErrorMemTools
+    Registry --> ExternalAgentTools
 
     AT --> UserAPI
     ST --> Manifest
@@ -305,7 +314,7 @@ flowchart TD
         H1["ListTools()\n列舉已註冊工具\nname · description · parameters"]
         H2["CallTool()\n驗證工具存在\n透過 tools.Execute() 執行"]
         H3SSE["SendSSE()\nstreaming token 輸出\nContent-Type: text/event-stream"]
-        H3JSON["Send()\n收集完整回應\n回傳 JSON {text}"]
+        H3JSON["Send()\n收集完整回應\n回傳 JSON {text}\n（model 欄位設定時略過 SelectAgent）"]
         H4["GetKey()\n從 OS Keychain 讀取"]
         H5["SaveKey()\n寫入 OS Keychain"]
     end

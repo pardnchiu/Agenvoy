@@ -100,6 +100,9 @@ Supported providers:
 | `MAX_TOOL_ITERATIONS` | No | Max tool call iterations per request (default: 16) |
 | `MAX_SKILL_ITERATIONS` | No | Max tool call iterations within a skill execution (default: 128) |
 | `MAX_EMPTY_RESPONSES` | No | Max consecutive empty responses before giving up (default: 8) |
+| `EXTERNAL_COPILOT` | No | External agent endpoint for GitHub Copilot (used by `verify_with_external_agent` / `call_external_agent`) |
+| `EXTERNAL_CLAUDE` | No | External agent endpoint for Claude (used by `verify_with_external_agent` / `call_external_agent`) |
+| `EXTERNAL_CODEX` | No | External agent endpoint for Codex (used by `verify_with_external_agent` / `call_external_agent`) |
 
 Create a `.env` file and fill in the values:
 
@@ -318,6 +321,12 @@ Run the full agent execution loop. Set `"sse": true` to receive token chunks as 
 { "content": "summarize today's news", "sse": false }
 ```
 
+Use the optional `model` field to bypass automatic agent selection and route directly to a specific model (key format: `provider@model-name`):
+
+```json
+{ "content": "summarize today's news", "sse": false, "model": "claude@claude-opus-4-6" }
+```
+
 **Response (non-SSE):**
 ```json
 { "text": "..." }
@@ -516,6 +525,9 @@ agenvoy remove
 | `skill_git_rollback` | `commit` | Roll back the skill repository to the specified commit hash |
 | `list_tools` | — | List all currently available tools including dynamic API extensions |
 | `calculate` | `expression` | Evaluate math expressions (sqrt, abs, pow, ceil, floor, sin, cos, tan, log) |
+| `call_external_agent` | `agent`, `input` | Delegate the entire task to a named external agent (`copilot` / `claude` / `codex`) |
+| `verify_with_external_agent` | `input`, `result` | Parallel cross-validation: dispatch current result to all declared external agents and merge feedback; falls back to `review_result` when no agents are declared |
+| `review_result` | `input`, `result` | Internal completeness review using the highest-priority available model (claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet); context is trimmed to draft + feedback after review |
 
 ### Sandbox Isolation
 

@@ -69,7 +69,9 @@ flowchart TD
     end
 
     subgraph Loop ["Iteration Loop · exec.Execute()"]
-        Trim["trimMessages()\ntoken-budget enforcement\n(preserves system + summary + latest)"]
+        Assemble["assembleMessages()\n4 fixed segments:\nSystemPrompts · OldHistories · UserInput · ToolHistories"]
+        ReactTrim{"Context length\nexceeded?"}
+        TrimOld["Trim OldHistories\nor ToolHistories\n(reactive, on error)"]
         Send["Agent.Send()\nunified provider interface"]
         Parse["Parse response\nextract tool_calls"]
         Dispatch["Dispatch tool calls\nparallel execution"]
@@ -84,13 +86,15 @@ flowchart TD
     Run --> AgentScan
     SkillScan -->|"skill prompt injected"| Loop
     AgentScan -->|"provider selected"| Loop
-    Trim --> Send
+    Assemble --> ReactTrim
+    ReactTrim -->|"yes"| TrimOld --> Assemble
+    ReactTrim -->|"no"| Send
     Send --> Parse
     Parse --> Dispatch
     Dispatch --> Dedup
     Dedup --> Accum
     Accum --> Check
-    Check -->|"continue"| Trim
+    Check -->|"continue"| Assemble
     Check -->|"done"| Done
 ```
 
@@ -229,6 +233,10 @@ flowchart TD
         EMT["Tool call fails →\npersist to tool_errors/{SHA-256}.json\nsearch_errors · recall past failures\nremember_error · persist resolution\ncross-session learning"]
     end
 
+    subgraph ExternalAgentTools ["External Agent Tools"]
+        EAT["call_external_agent · delegate task to named external agent\nverify_with_external_agent · parallel cross-validation across all declared agents\nreview_result · internal priority-model review\n(claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet)"]
+    end
+
     Registry --> FileTools
     Registry --> WebTools
     Registry --> APITools
@@ -236,6 +244,7 @@ flowchart TD
     Registry --> SkillTools
     Registry --> SchedulerTools
     Registry --> ErrorMemTools
+    Registry --> ExternalAgentTools
 
     AT --> UserAPI
     ST --> Manifest
@@ -305,7 +314,7 @@ flowchart TD
         H1["ListTools()\nenumerate registered tools\nname · description · parameters"]
         H2["CallTool()\nvalidate tool exists\ndispatch via tools.Execute()"]
         H3SSE["SendSSE()\nstream token chunks\nContent-Type: text/event-stream"]
-        H3JSON["Send()\ncollect full response\nreturn JSON {text}"]
+        H3JSON["Send()\ncollect full response\nreturn JSON {text}\n(model field → bypass SelectAgent if set)"]
         H4["GetKey()\nread from OS Keychain"]
         H5["SaveKey()\nwrite to OS Keychain"]
     end

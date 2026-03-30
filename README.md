@@ -149,6 +149,21 @@ When any tool call fails, the error is persisted to `tool_errors/{hash}.json`. T
 
 </details>
 
+### External Agent Verification & Internal Review
+
+Three tools let the agent cross-check its own output before returning it — either using a priority-ordered internal model or dispatching in parallel to all declared external agents.
+
+<details>
+<summary>Details</summary>
+
+**`review_result`** — internal completeness review. Automatically selects the highest-priority available model (claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet) and runs a one-shot quality check. Triggered by user phrases like "review", "any omissions", "completeness check" — no external agent declaration required. After review, the context is trimmed to draft + feedback so the agent can apply corrections directly.
+
+**`verify_with_external_agent`** — parallel cross-validation. Dispatches the current result to all declared external agents simultaneously and merges their feedback. Triggered only when the user explicitly requests "external verification", "cross-check", "second opinion", or similar multi-source language, and at least one external agent is declared (`EXTERNAL_COPILOT` / `EXTERNAL_CLAUDE` / `EXTERNAL_CODEX`). Falls back to `review_result` when no external agents are available.
+
+**`call_external_agent`** — direct delegation. Routes the entire task to a specific named external agent when the request exceeds the current tool set or requires a different execution environment.
+
+</details>
+
 ## Concepts
 
 Two prior projects from the same author directly informed Agenvoy's architecture:
@@ -195,20 +210,23 @@ agenvoy/
 │   ├── toolAdapter/
 │   │   ├── api/            # HTTP API tool translation and dispatch
 │   │   └── script/         # Script tool executor and stdin/stdout JSON bridge
-│   └── tools/              # 26+ self-registering tools + git / scheduler tools
+│   ├── tools/              # 29+ self-registering tools + git / scheduler tools
+│   │   └── externalAgent/  # External agent delegation + internal review tools
 ├── go.mod
 └── LICENSE
 ```
 
 ## Version History
 
+- **v0.17.2** — Add `call_external_agent`, `verify_with_external_agent`, and `review_result` tools for external delegation and internal priority-model review. Refactor session message assembly into 4 fixed segments (SystemPrompts / OldHistories / UserInput / ToolHistories) with reactive context trimming on context-length errors. Add `model` field to `/v1/send` request to bypass automatic agent selection.
+- **v0.17.1** — Fix build break caused by importing the missing `externalAgent` package before it existed in the repository.
 - **v0.17.0** — Full REST API layer with `/v1/send` (SSE + non-SSE), `/v1/key`, `/v1/tools`, `/v1/tool/:name` endpoints. TUI dashboard complete with file browser, session viewer, and live log stream. Discord bot and REST API unified under `cmd/app`. Copilot token migrated to system keychain. Renamed `browser` package to `fetchPage`. Updated `schedule-task` and `script-tool-creator` skills to invoke tools via Agenvoy API instead of direct external calls.
-- **v0.16.1** — Bundled Threads (publish text/image/carousel, quota, token refresh) and yt-dlp (video info, download) script tool extensions with cross-platform `install_threads.sh` / `install_youtube.sh`. Refactor `toolAdapter` into `api/` and `script/` sub-packages; move session management to `internal/session`; split filesystem into single-responsibility files. Fix Darwin sandbox keychain directory access. Restrict tool call throttle to `api_` prefix; improve `AbsPath` tilde expansion and exclude logic deduplication.
-- **v0.16.0** — Script tool runtime (`scriptAdapter`): drop a `tool.json` + `script.js`/`script.py` into `~/.config/agenvoy/script_tools/` and it is auto-discovered as a `script_`-prefixed tool; stdin/stdout JSON protocol mirrors API tool contract. Refactor `tools/apis/adapter` → `apiAdapter`, `tools/apis` → `tools/api`. Add `skill_git_commit`, `skill_git_log`, `skill_git_rollback` for skill-internal versioning. Copilot token auto-relogin on 401. Fix Discord file upload failure for non-ASCII filenames; add 10MB pre-upload size guard with user-facing warning.
 
 <details>
 <summary>Earlier versions</summary>
 
+- **v0.16.1** — Bundled Threads (publish text/image/carousel, quota, token refresh) and yt-dlp (video info, download) script tool extensions with cross-platform `install_threads.sh` / `install_youtube.sh`. Refactor `toolAdapter` into `api/` and `script/` sub-packages; move session management to `internal/session`; split filesystem into single-responsibility files. Fix Darwin sandbox keychain directory access. Restrict tool call throttle to `api_` prefix; improve `AbsPath` tilde expansion and exclude logic deduplication.
+- **v0.16.0** — Script tool runtime (`scriptAdapter`): drop a `tool.json` + `script.js`/`script.py` into `~/.config/agenvoy/script_tools/` and it is auto-discovered as a `script_`-prefixed tool; stdin/stdout JSON protocol mirrors API tool contract. Refactor `tools/apis/adapter` → `apiAdapter`, `tools/apis` → `tools/api`. Add `skill_git_commit`, `skill_git_log`, `skill_git_rollback` for skill-internal versioning. Copilot token auto-relogin on 401. Fix Discord file upload failure for non-ASCII filenames; add 10MB pre-upload size guard with user-facing warning.
 - **v0.15.2** — Add YouTube metadata fetch tool (`analyze_youtube`); Discord Modal-based API key management (`/add-gemini`, `/add-openai`, `/add-claude`, `/add-nim`); per-model token usage tracking via `usageManager`; configurable reasoning level across all providers; browser iteration limits and same-domain link traversal now configurable via `MAX_TOOL_ITERATIONS`, `MAX_SKILL_ITERATIONS`, `MAX_EMPTY_RESPONSES`; fix Makefile pass-through args
 - **v0.15.1** — Fix Copilot Claude/Gemini image validation failure: all uploaded images are decoded and re-encoded as JPEG (`image.Decode` + `jpeg.Encode`, supporting PNG/GIF/WebP sources), `ImageURL` gains `detail` field; summary regex split from one monolithic expression into three independent patterns (fenced block, `<summary>` tag, `[summary]` bracket); system prompts moved after history to improve model instruction adherence; Discord prompt takes priority over base system prompt
 - **v0.15.0** — Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint); session-level token-budget message trimming (budget calculated via `MaxInputTokens()`, preserving system prompt + summary + latest user message); sensitive path denial rules for macOS and Linux sandbox (loaded from embedded `denied_map.json`); Linux bwrap restores `--unshare-all` namespace isolation (with graceful fallback probing) and `--new-session` process isolation; `MAX_HISTORY_MESSAGES` environment variable support; summary delimiter switched to XML tags; lite models excluded from agent selection

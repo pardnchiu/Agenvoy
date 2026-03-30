@@ -150,6 +150,21 @@ GitHub Copilot、Claude、OpenAI、Gemini、Nvidia NIM，以及任意 OpenAI 相
 
 </details>
 
+### 外部 Agent 驗證與內部審查
+
+三個工具讓 Agent 在回傳結果前交叉核查自身輸出 — 可使用優先序內部模型審查，或並行派發至所有已宣告的外部 Agent。
+
+<details>
+<summary>詳細說明</summary>
+
+**`review_result`** — 內部完整性審查。自動選擇可用的最高優先序模型（claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet）執行一次性品質檢查。觸發語句包含「review」、「有沒有遺漏」、「完整性確認」等，不需宣告外部 Agent。審查完成後，context 裁剪為草稿 + 回饋，Agent 可直接針對問題修正。
+
+**`verify_with_external_agent`** — 並行交叉驗證。同時將當前結果派發至所有已宣告外部 Agent 並整合回饋。僅在使用者明確要求「外部驗證」、「交叉驗證」、「cross-check」、「second opinion」等多源語意，且已宣告 `EXTERNAL_COPILOT` / `EXTERNAL_CLAUDE` / `EXTERNAL_CODEX` 時觸發。無外部 Agent 時 fallback 至 `review_result`。
+
+**`call_external_agent`** — 直接委派。當請求超出當前工具集或需要不同執行環境時，將整個任務路由至指定的外部 Agent。
+
+</details>
+
 ## 概念來源
 
 以下兩個同作者的前置專案直接奠定了 Agenvoy 的架構設計：
@@ -196,20 +211,23 @@ agenvoy/
 │   ├── toolAdapter/
 │   │   ├── api/            # HTTP API 工具翻譯與 dispatch
 │   │   └── script/         # Script Tool 執行器與 stdin/stdout JSON 橋接
-│   └── tools/              # 26+ 自註冊工具 + git / 排程工具
+│   ├── tools/              # 29+ 自註冊工具 + git / 排程工具
+│   │   └── externalAgent/  # 外部 Agent 委派 + 內部審查工具
 ├── go.mod
 └── LICENSE
 ```
 
 ## 版本歷史
 
+- **v0.17.2** — 新增 `call_external_agent`、`verify_with_external_agent`、`review_result` 三個工具，支援外部委派與內部優先序模型審查。重構 Session 訊息組裝為四個固定段（SystemPrompts / OldHistories / UserInput / ToolHistories），在 context 超限時觸發 reactive trimming。`/v1/send` 新增 `model` 欄位，允許略過自動 Agent 選擇。
+- **v0.17.1** — 修正因提前匯入尚未存在的 `externalAgent` 套件導致的編譯失敗。
 - **v0.17.0** — 完整 REST API 層，包含 `/v1/send`（SSE 與非 SSE）、`/v1/key`、`/v1/tools`、`/v1/tool/:name` 端點。TUI 管理介面正式完成，含檔案瀏覽器、Session 檢視器與即時 Log 串流。Discord Bot 與 REST API 統一整合至 `cmd/app`。Copilot token 遷移至系統金鑰鏈。`browser` 套件重新命名為 `fetchPage`。更新 `schedule-task` 與 `script-tool-creator` 技能，改用 Agenvoy API 呼叫工具取代直接外部呼叫。
-- **v0.16.1** — 內建 Threads（發布文字/圖片/輪播、配額、Token 刷新）與 yt-dlp（影片資訊、下載）Script Tool Extension，附跨平台 `install_threads.sh` / `install_youtube.sh`。重構 `toolAdapter` 為 `api/` 與 `script/` 子套件；Session 管理移至 `internal/session`；Filesystem 套件拆分為單一職責檔案。修正 Darwin 沙箱 Keychain 目錄存取。限制工具呼叫節流至 `api_` 前綴；改善 `AbsPath` tilde 展開與排除邏輯去重。
-- **v0.16.0** — Script tool 執行環境（`scriptAdapter`）：在 `~/.config/agenvoy/script_tools/` 放入 `tool.json` + `script.js`/`script.py` 即自動載入為 `script_` 前綴工具，stdin/stdout JSON 協定與 API tool 一致。重構 `tools/apis/adapter` → `apiAdapter`，`tools/apis` → `tools/api`。新增 `skill_git_commit`、`skill_git_log`、`skill_git_rollback` 支援 Skill 內部版本控制。Copilot token 過期自動重新登入。修正 Discord 非 ASCII 檔名上傳失敗，新增 10MB 上限前置驗證並回報用戶。
 
 <details>
 <summary>更早版本</summary>
 
+- **v0.16.1** — 內建 Threads（發布文字/圖片/輪播、配額、Token 刷新）與 yt-dlp（影片資訊、下載）Script Tool Extension，附跨平台 `install_threads.sh` / `install_youtube.sh`。重構 `toolAdapter` 為 `api/` 與 `script/` 子套件；Session 管理移至 `internal/session`；Filesystem 套件拆分為單一職責檔案。修正 Darwin 沙箱 Keychain 目錄存取。限制工具呼叫節流至 `api_` 前綴；改善 `AbsPath` tilde 展開與排除邏輯去重。
+- **v0.16.0** — Script tool 執行環境（`scriptAdapter`）：在 `~/.config/agenvoy/script_tools/` 放入 `tool.json` + `script.js`/`script.py` 即自動載入為 `script_` 前綴工具，stdin/stdout JSON 協定與 API tool 一致。重構 `tools/apis/adapter` → `apiAdapter`，`tools/apis` → `tools/api`。新增 `skill_git_commit`、`skill_git_log`、`skill_git_rollback` 支援 Skill 內部版本控制。Copilot token 過期自動重新登入。修正 Discord 非 ASCII 檔名上傳失敗，新增 10MB 上限前置驗證並回報用戶。
 - **v0.15.2** — 新增 YouTube metadata 擷取工具（`analyze_youtube`）；Discord Modal API Key 設定指令（`/add-gemini`、`/add-openai`、`/add-claude`、`/add-nim`）；逐模型 Token 用量追蹤（`usageManager`）；各 Provider 可設定推理層級（Reasoning Level）；瀏覽器迭代上限與同網域連結追蹤現可透過 `MAX_TOOL_ITERATIONS`、`MAX_SKILL_ITERATIONS`、`MAX_EMPTY_RESPONSES` 設定；修正 Makefile 參數傳遞
 - **v0.15.1** — 修正 Copilot Claude/Gemini 模型的圖片驗證失敗：所有上傳圖片統一 decode 後 re-encode 為 JPEG（`image.Decode` + `jpeg.Encode`，支援 PNG/GIF/WebP 來源），`ImageURL` 新增 `detail` 欄位；Summary regex 從單一表達式拆分為三個獨立 pattern（fenced block、`<summary>` tag、`[summary]` bracket）；System prompt 移至 history 之後以提升模型指令遵循度；Discord prompt 優先於基本 system prompt
 - **v0.15.0** — Copilot Responses API 支援（GPT-5.4 與 Codex 模型自動切換端點）；Session 層級 token-budget 訊息裁剪（依 `MaxInputTokens()` 計算預算，保留 system prompt + summary + 最新使用者訊息）；macOS 與 Linux 沙箱新增敏感路徑存取拒絕規則（從嵌入式 `denied_map.json` 載入）；Linux bwrap 恢復 `--unshare-all` namespace 隔離（含 graceful fallback 探測）與 `--new-session` process 隔離；`MAX_HISTORY_MESSAGES` 環境變數支援；Summary delimiter 改為 XML tag；輕量模型排除於 Agent 選擇
