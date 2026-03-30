@@ -13,6 +13,7 @@ import (
 	_ "github.com/pardnchiu/agenvoy/internal/tools/external/googleRSS"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/external/searchWeb"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/external/youtube"
+	_ "github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/fetchPage"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/file"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/git"

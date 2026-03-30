@@ -19,6 +19,7 @@ import (
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
 )
 
 var MaxToolIterations = func() int {
@@ -234,6 +235,7 @@ func GetSystemPrompt(data ExecData) string {
 		"{{.SkillPath}}", skillPath,
 		"{{.SkillExt}}", skillExt,
 		"{{.Content}}", content,
+		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
 	).Replace(configs.SystemPrompt)
 }
 
@@ -272,4 +274,21 @@ func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSe
 		return fmt.Errorf("sessionManager.SaveHistory: %w", err)
 	}
 	return nil
+}
+
+func buildExternalAgentsPrompt() string {
+	agents := externalAgent.GetAgents()
+	if len(agents) == 0 {
+		return `## 外部 Agent
+目前無宣告的外部 agent，禁止呼叫 verify_with_external_agent 與 call_external_agent。`
+	}
+	return fmt.Sprintf(
+		`## 外部 Agent
+已宣告（呼叫時仍即時驗證安裝與登入）：%s
+- verify_with_external_agent：所有可用 agent 並行驗證，回傳獨立回饋供主 agent 參考修正
+- call_external_agent：指定單一 agent 直接生成結果
+
+未列出的 agent 禁止使用。`,
+		strings.Join(agents, "、"),
+	)
 }

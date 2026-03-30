@@ -150,6 +150,61 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			Content:    content,
 			ToolCallID: toolID,
 		})
+
+		if toolName == "call_external_agent" {
+			hasExternalAgent = true
+		}
+	}
+
+	if hasExternalAgent {
+		sessionData.OldHistories = nil
+		sessionData.ToolHistories = trimMessageContext(sessionData.ToolHistories)
 	}
 	return sessionData, alreadyCall, nil
+}
+
+func trimMessageContext(toolCall []agentTypes.Message) []agentTypes.Message {
+	var firstVersion, feedback string
+
+	for _, m := range toolCall {
+		if m.Role != "assistant" || len(m.ToolCalls) == 0 {
+			continue
+		}
+		for _, tc := range m.ToolCalls {
+			if tc.Function.Name != "call_external_agent" {
+				continue
+			}
+
+			var params struct {
+				Result string `json:"result"`
+			}
+			if err := json.Unmarshal([]byte(tc.Function.Arguments), &params); err == nil {
+				firstVersion = params.Result
+			}
+
+			for _, tm := range toolCall {
+				if tm.Role == "tool" && tm.ToolCallID == tc.ID {
+					if s, ok := tm.Content.(string); ok {
+						feedback = strings.TrimPrefix(s, "[call_external_agent] ")
+					}
+					break
+				}
+			}
+		}
+	}
+
+	compact := make([]agentTypes.Message, 0, 2)
+	if firstVersion != "" {
+		compact = append(compact, agentTypes.Message{
+			Role:    "assistant",
+			Content: firstVersion,
+		})
+	}
+	if feedback != "" {
+		compact = append(compact, agentTypes.Message{
+			Role:    "user",
+			Content: "以下是外部驗證回饋，請針對指出的每個問題，**重新呼叫工具查詢**以修正錯誤或補充缺漏，完成後再輸出最終結果：\n\n" + feedback,
+		})
+	}
+	return compact
 }
