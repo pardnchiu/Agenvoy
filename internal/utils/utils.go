@@ -33,7 +33,7 @@ func EventLog(tag string, event agentTypes.Event, sessionID string, input string
 	if input != "" {
 		inputLog := input
 		if len(inputLog) > 32 {
-			inputLog = inputLog[:29] + "…"
+			inputLog = inputLog[:31] + "…"
 		}
 		slog.Info(tag,
 			slog.String("session", sessionLog),
@@ -68,7 +68,7 @@ func EventLog(tag string, event agentTypes.Event, sessionID string, input string
 	case agentTypes.EventText:
 		text := event.Text
 		if len(text) > 32 {
-			text = text[:29] + "…"
+			text = text[:31] + "…"
 		}
 		slog.Info(tag,
 			slog.String("session", sessionLog),

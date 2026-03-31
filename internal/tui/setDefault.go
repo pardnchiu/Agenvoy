@@ -108,11 +108,51 @@ func setDefault() string {
 				models = append(models, usage)
 			}
 			sort.Strings(models)
-			sb.WriteString(fmt.Sprintf("[gray]  %-40s %16s %16s[-]\n", "Model", "Input", "Output"))
-			sb.WriteString("[gray]  " + strings.Repeat("─", 74) + "[-]\n")
+
+			sb.WriteString(fmt.Sprintf("[gray]  %-32s %12s %12s[-]\n", "Model", "Input", "Output"))
+			sb.WriteString("[gray]  " + strings.Repeat("─", 58) + "[-]\n")
 			for _, model := range models {
 				u := usages[model]
-				sb.WriteString(fmt.Sprintf("[gray]  %-40s %16s %16s[-]\n", model, utils.FormatInt(u.Input), utils.FormatInt(u.Output)))
+				label := model
+				if len(model) > 32 {
+					label = model[:31] + "…"
+				}
+				sb.WriteString(fmt.Sprintf("[gray]  %-32s %12s %12s[-]\n", label, utils.FormatInt(u.Input), utils.FormatInt(u.Output)))
+			}
+			sb.WriteString(seperate + "\n")
+
+			hasCached := false
+			for _, model := range models {
+				u := usages[model]
+				if u.CacheCreate > 0 || u.CacheRead > 0 {
+					hasCached = true
+					break
+				}
+			}
+			if hasCached {
+				sb.WriteString("\n CACHED USAGE\n")
+				sb.WriteString(seperate + "\n")
+				sb.WriteString(fmt.Sprintf("[gray]  %-32s %12s %12s[-]\n", "Model", "Create", "Read"))
+				sb.WriteString("[gray]  " + strings.Repeat("─", 58) + "[-]\n")
+				for _, model := range models {
+					u := usages[model]
+					if u.CacheCreate == 0 && u.CacheRead == 0 {
+						continue
+					}
+					cacheCreate := "-"
+					cacheRead := "-"
+					if u.CacheCreate > 0 {
+						cacheCreate = utils.FormatInt(u.CacheCreate)
+					}
+					if u.CacheRead > 0 {
+						cacheRead = utils.FormatInt(u.CacheRead)
+					}
+					label := model
+					if len(model) > 32 {
+						label = model[:31] + "…"
+					}
+					sb.WriteString(fmt.Sprintf("[gray]  %-32s %12s %12s[-]\n", label, cacheCreate, cacheRead))
+				}
 			}
 		} else {
 			sb.WriteString("[gray]  (format error)[-]\n")
@@ -120,7 +160,7 @@ func setDefault() string {
 	} else {
 		sb.WriteString("  (not found)\n")
 	}
-	sb.WriteString("\n" + seperate + "\n")
+	sb.WriteString(seperate + "\n")
 
 	return sb.String()
 }

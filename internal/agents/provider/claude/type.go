@@ -8,8 +8,10 @@ type Output struct {
 	Model      string    `json:"model"`
 	StopReason string    `json:"stop_reason"`
 	Usage      struct {
-		InputTokens  int `json:"input_tokens"`
-		OutputTokens int `json:"output_tokens"`
+		InputTokens              int `json:"input_tokens"`
+		OutputTokens             int `json:"output_tokens"`
+		CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+		CacheReadInputTokens     int `json:"cache_read_input_tokens"`
 	} `json:"usage"`
 	Error *struct {
 		Type    string `json:"type"`

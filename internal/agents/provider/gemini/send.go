@@ -195,8 +195,9 @@ func (a *Agent) convertToOutput(resp *Output) *agentTypes.Output {
 
 	if resp.UsageMetadata != nil {
 		output.Usage = agentTypes.Usage{
-			Input:  resp.UsageMetadata.PromptTokenCount,
-			Output: resp.UsageMetadata.CandidatesTokenCount,
+			Input:     resp.UsageMetadata.PromptTokenCount - resp.UsageMetadata.CachedContentTokenCount,
+			Output:    resp.UsageMetadata.CandidatesTokenCount,
+			CacheRead: resp.UsageMetadata.CachedContentTokenCount,
 		}
 	}
 

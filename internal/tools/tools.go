@@ -25,7 +25,6 @@ func runCommand(ctx context.Context, e *toolTypes.Executor, command string) (str
 		return "", fmt.Errorf("failed to run command: command is empty")
 	}
 
-	// block access to sensitive paths via whitelisted commands (e.g. cat, grep, find)
 	for _, dir := range file.DeniedConfig.Dirs {
 		if strings.Contains(command, "/"+dir+"/") || strings.Contains(command, "/"+dir) || strings.Contains(command, dir+"/") {
 			return "", fmt.Errorf("access denied: %s", dir)

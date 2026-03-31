@@ -128,7 +128,6 @@ Activate when user intent matches any of:
 The `當前時間:` prefix at the start of each message is the local timestamp (format `YYYY-MM-DD HH:mm:ss`) and can be used to judge message recency.
 
 Host OS: {{.SystemOS}}
-Local time: {{.Localtime}}
 Work directory: {{.WorkPath}}
 Skill directory: {{.SkillPath}}
 

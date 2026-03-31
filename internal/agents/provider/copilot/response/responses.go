@@ -22,8 +22,11 @@ type Output struct {
 		Arguments string `json:"arguments,omitempty"`
 	} `json:"output"`
 	Usage struct {
-		InputTokens  int `json:"input_tokens"`
-		OutputTokens int `json:"output_tokens"`
+		InputTokens       int `json:"input_tokens"`
+		OutputTokens      int `json:"output_tokens"`
+		InputTokensDetails struct {
+			CachedTokens int `json:"cached_tokens"`
+		} `json:"input_tokens_details"`
 	} `json:"usage"`
 	Error *struct {
 		Message string `json:"message"`
@@ -167,8 +170,9 @@ func ConvertOutput(r Output) agentTypes.Output {
 			{Message: msg, FinishReason: finishReason},
 		},
 		Usage: agentTypes.Usage{
-			Input:  r.Usage.InputTokens,
-			Output: r.Usage.OutputTokens,
+			Input:     r.Usage.InputTokens - r.Usage.InputTokensDetails.CachedTokens,
+			Output:    r.Usage.OutputTokens,
+			CacheRead: r.Usage.InputTokensDetails.CachedTokens,
 		},
 	}
 }

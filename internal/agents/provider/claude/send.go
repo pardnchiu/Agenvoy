@@ -33,19 +33,26 @@ func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput strin
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {
-	var systemParts []string
+	var systemPrompts []map[string]any
 	var newMessages []map[string]any
 
 	for _, msg := range messages {
 		if msg.Role == "system" {
 			if content, ok := msg.Content.(string); ok && content != "" {
-				systemParts = append(systemParts, content)
+				systemPrompts = append(systemPrompts, map[string]any{
+					"type": "text",
+					"text": content,
+				})
 			}
 			continue
 		}
 
 		message := a.convertToMessage(msg)
 		newMessages = append(newMessages, message)
+	}
+
+	if len(systemPrompts) > 0 {
+		systemPrompts[len(systemPrompts)-1]["cache_control"] = map[string]any{"type": "ephemeral"}
 	}
 
 	newTools := a.convertToTools(tools)
@@ -56,7 +63,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	requestBody := map[string]any{
 		"model":      a.model,
 		"max_tokens": provider.OutputTokens("claude", a.model),
-		"system":     strings.Join(systemParts, "\n---\n"),
+		"system":     systemPrompts,
 		"messages":   newMessages,
 		"tools":      newTools,
 	}
@@ -81,6 +88,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	result, _, err := utils.POST[Output](ctx, a.httpClient, messagesAPI, map[string]string{
 		"x-api-key":         a.apiKey,
 		"anthropic-version": "2023-06-01",
+		"anthropic-beta":    "prompt-caching-2024-07-31",
 		"Content-Type":      "application/json",
 	}, requestBody, "json")
 	if err != nil {
@@ -187,6 +195,9 @@ func (a *Agent) convertToTools(tools []toolTypes.Tool) []map[string]any {
 			"input_schema": json.RawMessage(tool.Function.Parameters),
 		}
 	}
+	if len(newTools) > 0 {
+		newTools[len(newTools)-1]["cache_control"] = map[string]any{"type": "ephemeral"}
+	}
 	return newTools
 }
 
@@ -194,8 +205,10 @@ func (a *Agent) convertToOutput(resp *Output) *agentTypes.Output {
 	output := &agentTypes.Output{
 		Choices: make([]agentTypes.OutputChoices, 1),
 		Usage: agentTypes.Usage{
-			Input:  resp.Usage.InputTokens,
-			Output: resp.Usage.OutputTokens,
+			Input:       resp.Usage.InputTokens,
+			Output:      resp.Usage.OutputTokens,
+			CacheCreate: resp.Usage.CacheCreationInputTokens,
+			CacheRead:   resp.Usage.CacheReadInputTokens,
 		},
 	}
 

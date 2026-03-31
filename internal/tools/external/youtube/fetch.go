@@ -30,8 +30,9 @@ type geminiResponse struct {
 		} `json:"content"`
 	} `json:"candidates"`
 	UsageMetadata struct {
-		PromptTokenCount     int `json:"promptTokenCount"`
-		CandidatesTokenCount int `json:"candidatesTokenCount"`
+		PromptTokenCount        int `json:"promptTokenCount"`
+		CandidatesTokenCount    int `json:"candidatesTokenCount"`
+		CachedContentTokenCount int `json:"cachedContentTokenCount"`
 	} `json:"usageMetadata"`
 }
 
@@ -76,8 +77,9 @@ func Fetch(ctx context.Context, videoURL, prompt string) (string, error) {
 	}
 
 	if err := filesystem.UpdateUsage("gemini@gemini-3-flash-preview",
-		resp.UsageMetadata.PromptTokenCount,
+		resp.UsageMetadata.PromptTokenCount-resp.UsageMetadata.CachedContentTokenCount,
 		resp.UsageMetadata.CandidatesTokenCount,
+		0, resp.UsageMetadata.CachedContentTokenCount,
 	); err != nil {
 		slog.Warn("usageManager.Update",
 			slog.String("error", err.Error()))

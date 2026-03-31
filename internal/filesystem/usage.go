@@ -8,12 +8,14 @@ import (
 )
 
 type Usage struct {
-	Input  int `json:"input"`
-	Output int `json:"output"`
+	Input       int `json:"input"`
+	Output      int `json:"output"`
+	CacheCreate int `json:"cache_create,omitempty"`
+	CacheRead   int `json:"cache_read,omitempty"`
 }
 
-func UpdateUsage(model string, input, output int) error {
-	if model == "" || (input == 0 && output == 0) {
+func UpdateUsage(model string, input, output, cacheCreate, cacheRead int) error {
+	if model == "" {
 		return nil
 	}
 
@@ -36,8 +38,10 @@ func UpdateUsage(model string, input, output int) error {
 
 	prev := usageMap[model]
 	usageMap[model] = Usage{
-		Input:  prev.Input + input,
-		Output: prev.Output + output,
+		Input:       prev.Input + input,
+		Output:      prev.Output + output,
+		CacheCreate: prev.CacheCreate + cacheCreate,
+		CacheRead:   prev.CacheRead + cacheRead,
 	}
 
 	bytes, err := json.Marshal(usageMap)

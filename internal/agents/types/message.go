@@ -47,21 +47,31 @@ type OutputChoices struct {
 }
 
 type Usage struct {
-	Input  int `json:"input_tokens"`
-	Output int `json:"output_tokens"`
+	Input       int `json:"input_tokens"`
+	Output      int `json:"output_tokens"`
+	CacheCreate int `json:"cache_creation_input_tokens,omitempty"`
+	CacheRead   int `json:"cache_read_input_tokens,omitempty"`
 }
 
 func (u *Usage) UnmarshalJSON(data []byte) error {
 	var raw struct {
-		InputTokens      int `json:"input_tokens"`
-		OutputTokens     int `json:"output_tokens"`
-		PromptTokens     int `json:"prompt_tokens"`
-		CompletionTokens int `json:"completion_tokens"`
+		InputTokens              int `json:"input_tokens"`
+		OutputTokens             int `json:"output_tokens"`
+		PromptTokens             int `json:"prompt_tokens"`
+		CompletionTokens         int `json:"completion_tokens"`
+		CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+		CacheReadInputTokens     int `json:"cache_read_input_tokens"`
+		PromptTokensDetails      struct {
+			CachedTokens int `json:"cached_tokens"`
+		} `json:"prompt_tokens_details"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
-	u.Input = raw.InputTokens + raw.PromptTokens
+	cached := raw.CacheReadInputTokens + raw.PromptTokensDetails.CachedTokens
+	u.Input = raw.InputTokens + raw.PromptTokens - raw.PromptTokensDetails.CachedTokens
 	u.Output = raw.OutputTokens + raw.CompletionTokens
+	u.CacheCreate = raw.CacheCreationInputTokens
+	u.CacheRead = cached
 	return nil
 }

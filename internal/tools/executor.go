@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/configs"
@@ -72,6 +73,11 @@ func NewExecutor(workPath, sessionID string) (*toolTypes.Executor, error) {
 		}
 		tools = append(tools, t)
 	}
+
+	// * order fixed, for cache hit
+	sort.Slice(tools, func(i, j int) bool {
+		return tools[i].Function.Name < tools[j].Function.Name
+	})
 
 	return &toolTypes.Executor{
 		WorkDir:        workPath,

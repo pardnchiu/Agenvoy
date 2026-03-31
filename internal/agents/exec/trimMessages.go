@@ -6,10 +6,13 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
-func assembleMessages(systemPart []agentTypes.Message, oldHistory []agentTypes.Message, userInput agentTypes.Message, toolCall []agentTypes.Message) []agentTypes.Message {
-	result := make([]agentTypes.Message, 0, len(systemPart)+len(oldHistory)+1+len(toolCall))
+func assembleMessages(systemPart []agentTypes.Message, oldHistory []agentTypes.Message, summaryMessage agentTypes.Message, userInput agentTypes.Message, toolCall []agentTypes.Message) []agentTypes.Message {
+	result := make([]agentTypes.Message, 0, len(systemPart)+len(oldHistory)+2+len(toolCall))
 	result = append(result, systemPart...)
 	result = append(result, oldHistory...)
+	if summaryMessage.Role != "" {
+		result = append(result, summaryMessage)
+	}
 	result = append(result, userInput)
 	result = append(result, toolCall...)
 	return result

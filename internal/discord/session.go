@@ -66,10 +66,7 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 		{Role: "system", Content: exec.GetSystemPrompt(data)},
 	}
 	if summary := sessionManager.GetSummaryPrompt(sessionID); summary != "" {
-		session.SystemPrompts = append(session.SystemPrompts, agentTypes.Message{
-			Role:    "system",
-			Content: summary,
-		})
+		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
 
 	session.OldHistories = channelHistory

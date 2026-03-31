@@ -114,12 +114,8 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		session.Histories = oldHistory
 
 		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: prompt}}
-		// * insert summary prompt every time
 		if summary := sessionManager.GetSummaryPrompt(sessionID); summary != "" {
-			session.SystemPrompts = append(session.SystemPrompts, agentTypes.Message{
-				Role:    "system",
-				Content: summary,
-			})
+			session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 		}
 
 		session.OldHistories = maxHistory
