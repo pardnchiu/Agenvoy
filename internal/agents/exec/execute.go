@@ -75,6 +75,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		for _, name := range data.ExcludeTools {
 			excluded[name] = true
 		}
+		exec.ExcludeTools = excluded
+
 		filtered := exec.Tools[:0]
 		for _, t := range exec.Tools {
 			if !excluded[t.Function.Name] {
@@ -82,6 +84,10 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 		}
 		exec.Tools = filtered
+
+		for name := range excluded {
+			delete(exec.StubTools, name)
+		}
 	}
 
 	limit := MaxToolIterations

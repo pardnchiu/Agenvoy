@@ -25,6 +25,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 
 	hasExternalAgent := false
 	hasReviewResult := false
+	var pendingHints []string
 	for i, tool := range choice.Message.ToolCalls {
 		toolID := strings.TrimSpace(tool.ID)
 		toolArg := strings.TrimSpace(tool.Function.Arguments)
@@ -142,16 +143,12 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 				for _, a := range priorFails {
 					failedArgs = append(failedArgs, a.args)
 				}
-				hint := fmt.Sprintf(
+				pendingHints = append(pendingHints, fmt.Sprintf(
 					"[system hint] Tool %q previously failed with args: %s — succeeded with: %s. Call remember_error to record this pattern.",
 					toolName,
 					strings.Join(failedArgs, " → "),
 					toolArg,
-				)
-				sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
-					Role:    "user",
-					Content: hint,
-				})
+				))
 				failedAttempts = remaining
 			}
 		}
@@ -197,6 +194,13 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		case "review_result":
 			hasReviewResult = true
 		}
+	}
+
+	for _, hint := range pendingHints {
+		sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
+			Role:    "user",
+			Content: hint,
+		})
 	}
 
 	if hasExternalAgent || hasReviewResult {

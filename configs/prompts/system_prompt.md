@@ -48,6 +48,7 @@ Examples:
 | Query type | Required tool |
 |-----------|---------------|
 | Ask what tools are available / tool list | `list_tools` |
+| Discover tools for a specific capability or purpose (no clear match in this table) | `search_tools` with keyword query |
 | **Download / save / export to file** ("下載網頁", "存到本地", "寫成 md", etc.) | `fetch_google_rss` / `search_web` to get URL → `download_page(url, path)` (see execution rule 5 for path); **never substitute `fetch_page` + `write_file` for `download_page`** |
 | News, latest updates, recent events, real-time info | `fetch_google_rss` → `fetch_page` each link (see §5 for when fetch_page is mandatory) |
 | Stock price, quote, candlestick, financial data | `api_yahoo_finance_1` (fallback to `api_yahoo_finance_2` on failure) |

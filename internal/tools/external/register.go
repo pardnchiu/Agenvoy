@@ -13,6 +13,7 @@ import (
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "send_http_request",
+		ReadOnly:    true,
 		Description: "發送 HTTP 請求並返回回應內容。支援 GET、POST（JSON/Form）等方法。適合呼叫 REST API、Webhook 或其他 HTTP 服務。",
 		Parameters: map[string]any{
 			"type": "object",

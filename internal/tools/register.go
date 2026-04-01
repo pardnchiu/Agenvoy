@@ -18,6 +18,7 @@ import (
 	_ "github.com/pardnchiu/agenvoy/internal/tools/file"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/git"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/schedulerTools"
+	_ "github.com/pardnchiu/agenvoy/internal/tools/searchTools"
 )
 
 func init() {

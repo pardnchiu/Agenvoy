@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -42,38 +43,37 @@ func init() {
 }
 
 func main() {
-	if err := sandbox.CheckDependence(); err != nil {
-		slog.Error("sandbox.CheckDependence",
-			slog.String("error", err.Error()))
-		return
-	}
-
 	if err := filesystem.Init(); err != nil {
 		slog.Error("filesystem.Init",
 			slog.String("error", err.Error()))
 		return
 	}
 
+	tui.New()
+	tui.SetSlog()
+
+	if err := sandbox.CheckDependence(); err != nil {
+		slog.Error("sandbox.CheckDependence",
+			slog.String("error", err.Error()))
+	}
+
 	if err := scheduler.New(); err != nil {
 		slog.Error("scheduler.New",
 			slog.String("error", err.Error()))
-		return
-	}
-	if err := tasks.Setup(scheduler.Get()); err != nil {
-		slog.Warn("tasks.Setup",
-			slog.String("error", err.Error()))
-	}
-	if err := crons.Setup(scheduler.Get()); err != nil {
-		slog.Warn("crons.Setup",
-			slog.String("error", err.Error()))
+	} else {
+		if err := tasks.Setup(scheduler.Get()); err != nil {
+			slog.Warn("tasks.Setup",
+				slog.String("error", err.Error()))
+		}
+		if err := crons.Setup(scheduler.Get()); err != nil {
+			slog.Warn("crons.Setup",
+				slog.String("error", err.Error()))
+		}
 	}
 
 	if cfg, err := session.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
-
-	tui.New()
-	tui.SetSlog()
 
 	registry := buildAgentRegistry()
 	go skill.SyncSkills(context.Background(), extensions.Skills)
@@ -89,40 +89,53 @@ func main() {
 		selectorBot = registry.Fallback
 	}
 
-	slog.Info("agent registry built",
-		slog.Int("entries", len(registry.Entries)),
-		slog.String("fallback", registry.Fallback.Name()))
+	if selectorBot != nil {
+		slog.Info("agent registry built",
+			slog.Int("entries", len(registry.Entries)),
+			slog.String("fallback", selectorBot.Name()))
 
-	bot, err := discord.New(selectorBot, registry, scanner)
-	if err != nil {
-		slog.Error("discord.New",
-			slog.String("error", err.Error()))
-		return
-	}
-	if bot == nil {
-		slog.Warn("DISCORD_TOKEN not set, bot disabled")
-	}
-
-	route := routes.New(selectorBot, registry, scanner)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "17989"
-	}
-
-	server := &http.Server{
-		Addr:    ":" + port,
-		Handler: route,
-	}
-
-	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("server.ListenAndServe",
+		bot, err := discord.New(selectorBot, registry, scanner)
+		if err != nil {
+			slog.Error("discord.New",
 				slog.String("error", err.Error()))
+		} else if bot == nil {
+			slog.Warn("DISCORD_TOKEN not set, bot disabled")
 		}
-	}()
-	slog.Info("server started",
-		slog.String("port", port))
+
+		route := routes.New(selectorBot, registry, scanner)
+
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "17989"
+		}
+
+		server := &http.Server{
+			Addr:    ":" + port,
+			Handler: route,
+		}
+
+		go func() {
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				slog.Error("server.ListenAndServe",
+					slog.String("error", err.Error()))
+			}
+		}()
+		slog.Info("server started",
+			slog.String("port", port))
+
+		defer func() {
+			scheduler.Stop()
+			if bot != nil {
+				discord.Close(bot)
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_ = server.Shutdown(ctx)
+		}()
+	} else {
+		slog.Warn("no agents configured, server and discord disabled")
+		defer scheduler.Stop()
+	}
 
 	go tui.FileMonitor()
 
@@ -134,18 +147,8 @@ func main() {
 	}()
 
 	if err := tui.Set(); err != nil {
-		slog.Error("tui.Set", slog.String("error", err.Error()))
+		fmt.Fprintf(os.Stderr, "tui.Set error: %v\n", err)
 	}
-
-	scheduler.Stop()
-
-	if bot != nil {
-		discord.Close(bot)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	_ = server.Shutdown(ctx)
 }
 
 func buildAgentRegistry() agentTypes.AgentRegistry {
@@ -185,8 +188,7 @@ func buildAgentRegistry() agentTypes.AgentRegistry {
 	}
 
 	if registry.Fallback == nil {
-		slog.Error("please check API keys")
-		os.Exit(1)
+		slog.Error("no agents initialized, please check API keys")
 	}
 
 	return registry

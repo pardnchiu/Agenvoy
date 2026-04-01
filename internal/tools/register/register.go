@@ -18,11 +18,13 @@ type Def struct {
 	Parameters  map[string]any
 	Handler     Handler
 	ReadOnly    bool
+	AlwaysLoad  bool
 }
 
 var handlerMap = map[string]Handler{}
 var defList []toolTypes.Tool
 var readOnlySet = map[string]bool{}
+var alwaysLoadSet = map[string]bool{}
 
 func Regist(d Def) {
 	params, _ := json.Marshal(d.Parameters)
@@ -39,6 +41,13 @@ func Regist(d Def) {
 	if d.ReadOnly {
 		readOnlySet[d.Name] = true
 	}
+	if d.AlwaysLoad {
+		alwaysLoadSet[d.Name] = true
+	}
+}
+
+func IsAlwaysLoad(name string) bool {
+	return alwaysLoadSet[name]
 }
 
 func IsReadOnly(name string) bool {

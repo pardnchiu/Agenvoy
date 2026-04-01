@@ -5,5 +5,5 @@ import "embed"
 //go:embed apis/*.json
 var APIs embed.FS
 
-//go:embed skills/*/SKILL.md
+//go:embed skills
 var Skills embed.FS

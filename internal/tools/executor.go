@@ -79,11 +79,33 @@ func NewExecutor(workPath, sessionID string) (*toolTypes.Executor, error) {
 		return tools[i].Function.Name < tools[j].Function.Name
 	})
 
+	// * use claude code idea, use one tool to search and insert
+	stubParams := json.RawMessage(`{"type":"object","properties":{}}`)
+	stubTools := make(map[string]bool, len(tools))
+	initial := make([]toolTypes.Tool, 0, len(tools))
+	for _, t := range tools {
+		if toolRegister.IsAlwaysLoad(t.Function.Name) {
+			initial = append(initial, t)
+		} else {
+			stubTools[t.Function.Name] = true
+			initial = append(initial, toolTypes.Tool{
+				Type: t.Type,
+				Function: toolTypes.ToolFunction{
+					Name:        t.Function.Name,
+					Description: t.Function.Description,
+					Parameters:  stubParams,
+				},
+			})
+		}
+	}
+
 	return &toolTypes.Executor{
 		WorkDir:        workPath,
 		SessionID:      sessionID,
 		AllowedCommand: allowedCommand,
-		Tools:          tools,
+		Tools:          initial,
+		AllTools:       tools,
+		StubTools:      stubTools,
 		APIToolbox:     apiToolbox,
 		ScriptToolbox:  scriptToolbox,
 	}, nil
@@ -110,6 +132,13 @@ func normalizeArgs(args json.RawMessage) json.RawMessage {
 
 func Execute(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
 	args = normalizeArgs(args)
+
+	if e.StubTools[name] {
+		activateArgs, _ := json.Marshal(map[string]any{"query": "select:" + name})
+		_, _ = toolRegister.Dispatch(ctx, e, "search_tools", activateArgs)
+		delete(e.StubTools, name)
+		return `{"status":"schema_activated","message":"Tool schema has been loaded. Please call this tool again with the correct parameters based on the updated schema."}`, nil
+	}
 
 	if strings.HasPrefix(name, "api_") && e.APIToolbox != nil && e.APIToolbox.IsExist(name) {
 		var params map[string]any

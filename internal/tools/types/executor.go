@@ -19,6 +19,9 @@ type Executor struct {
 	Allowed        []string // * limit to these folders to use
 	AllowedCommand map[string]bool
 	Tools          []Tool
+	AllTools       []Tool
+	StubTools      map[string]bool
+	ExcludeTools   map[string]bool
 	APIToolbox     *apiAdapter.Translator
 	ScriptToolbox  ScriptToolExecutor
 }
