@@ -71,7 +71,7 @@ def call_tool(name, args):
         return json.load(resp).get("result", "")
 
 def send(prompt):
-    payload = json.dumps({"content": prompt, "sse": False}).encode()
+    payload = json.dumps({"content": prompt, "sse": False, "exclude_tools": ["add_task", "add_cron"]}).encode()
     req = urllib.request.Request(
         f"{BASE}/v1/send",
         data=payload,

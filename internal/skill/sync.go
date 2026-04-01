@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	apiGithubSkills = "https://api.github.com/repos/pardnchiu/agenvoy/contents/extensions/skills"
+	apiGithubSkills = "https://skill-agenvoy.pardn.workers.dev"
 )
 
 type ghEntry struct {

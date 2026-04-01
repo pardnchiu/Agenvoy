@@ -10,6 +10,8 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
+	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
+	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -47,17 +49,15 @@ func init() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 			if params.ChannelID == "" {
-				channelID, err := session.GetChannelID(e.SessionID)
-				if err != nil {
-					return "", fmt.Errorf("GetChannelID: %w", err)
+				if id, err := session.GetChannelID(e.SessionID); err == nil {
+					params.ChannelID = id
 				}
-				params.ChannelID = channelID
 			}
 			mgr := scheduler.Get()
 			if mgr == nil {
-				return "", fmt.Errorf("scheduler not initialized")
+				return crons.AddToFile(params.CronExpr, params.Script, params.ChannelID)
 			}
-			return mgr.AddCron(params.CronExpr, params.Script, params.ChannelID)
+			return crons.Add(mgr, params.CronExpr, params.Script, params.ChannelID)
 		},
 	})
 
@@ -74,11 +74,61 @@ func init() {
 			if mgr == nil {
 				return "", fmt.Errorf("scheduler not initialized")
 			}
-			tasks := mgr.ListCrons()
-			if len(tasks) == 0 {
+			results := crons.List(mgr)
+			if len(results) == 0 {
 				return "no cron tasks", nil
 			}
-			return strings.Join(tasks, "\n"), nil
+			return strings.Join(results, "\n"), nil
+		},
+	})
+
+	toolRegister.Regist(toolRegister.Def{
+		Name:        "get_cron",
+		ReadOnly:    true,
+		Description: "查詢指定 ID 的 cron 任務設定與最後一次執行狀態（completed/failed）、執行時間、輸出結果與錯誤訊息。",
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"id": map[string]any{
+					"type":        "string",
+					"description": "cron 任務 ID（由 add_cron 或 list_crons 回傳）",
+				},
+			},
+			"required": []string{"id"},
+		},
+		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
+			var params struct {
+				ID string `json:"id"`
+			}
+			if err := json.Unmarshal(args, &params); err != nil {
+				return "", fmt.Errorf("json.Unmarshal: %w", err)
+			}
+			mgr := scheduler.Get()
+			if mgr == nil {
+				return "", fmt.Errorf("scheduler not initialized")
+			}
+			c, r, ok := crons.GetCron(mgr, params.ID)
+			if !ok {
+				return "", fmt.Errorf("not found: %s", params.ID)
+			}
+			lines := []string{
+				fmt.Sprintf("id: %s", c.ID),
+				fmt.Sprintf("expression: %s", c.Expression),
+				fmt.Sprintf("script: %s", c.Script),
+			}
+			if r != nil {
+				if r.RunAt != nil {
+					lines = append(lines, fmt.Sprintf("last_run_at: %s", r.RunAt.Local().Format("2006-01-02 15:04:05")))
+				}
+				lines = append(lines, fmt.Sprintf("last_run_status: %s", r.Status))
+				if r.Output != "" {
+					lines = append(lines, fmt.Sprintf("last_run_output: %s", r.Output))
+				}
+				if r.Err != "" {
+					lines = append(lines, fmt.Sprintf("last_run_err: %s", r.Err))
+				}
+			}
+			return strings.Join(lines, "\n"), nil
 		},
 	})
 
@@ -106,7 +156,7 @@ func init() {
 			if mgr == nil {
 				return "", fmt.Errorf("scheduler not initialized")
 			}
-			if err := mgr.DeleteCron(params.ID); err != nil {
+			if err := crons.Delete(mgr, params.ID); err != nil {
 				return "", err
 			}
 			return fmt.Sprintf("cron task %s removed", params.ID), nil
@@ -144,17 +194,15 @@ func init() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 			if params.ChannelID == "" {
-				channelID, err := session.GetChannelID(e.SessionID)
-				if err != nil {
-					return "", fmt.Errorf("GetChannelID: %w", err)
+				if id, err := session.GetChannelID(e.SessionID); err == nil {
+					params.ChannelID = id
 				}
-				params.ChannelID = channelID
 			}
 			mgr := scheduler.Get()
 			if mgr == nil {
-				return "", fmt.Errorf("scheduler not initialized")
+				return tasks.AddToFile(params.At, params.Script, params.ChannelID)
 			}
-			return mgr.AddTask(params.At, params.Script, params.ChannelID)
+			return tasks.Add(mgr, params.At, params.Script, params.ChannelID)
 		},
 	})
 
@@ -171,11 +219,62 @@ func init() {
 			if mgr == nil {
 				return "", fmt.Errorf("scheduler not initialized")
 			}
-			tasks := mgr.ListTasks()
-			if len(tasks) == 0 {
+			results := tasks.ListTasks(mgr)
+			if len(results) == 0 {
 				return "no onetime tasks", nil
 			}
-			return strings.Join(tasks, "\n"), nil
+			return strings.Join(results, "\n"), nil
+		},
+	})
+
+	toolRegister.Regist(toolRegister.Def{
+		Name:        "get_task",
+		ReadOnly:    true,
+		Description: "查詢指定 ID 的一次性任務狀態（pending/running/completed/failed）、執行時間、輸出結果與錯誤訊息。",
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"id": map[string]any{
+					"type":        "string",
+					"description": "任務 ID（由 add_task 或 list_tasks 回傳）",
+				},
+			},
+			"required": []string{"id"},
+		},
+		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
+			var params struct {
+				ID string `json:"id"`
+			}
+			if err := json.Unmarshal(args, &params); err != nil {
+				return "", fmt.Errorf("json.Unmarshal: %w", err)
+			}
+			mgr := scheduler.Get()
+			if mgr == nil {
+				return "", fmt.Errorf("scheduler not initialized")
+			}
+			t, ok := tasks.GetTask(mgr, params.ID)
+			if !ok {
+				return "", fmt.Errorf("not found: %s", params.ID)
+			}
+			lines := []string{
+				fmt.Sprintf("id: %s", t.ID),
+				fmt.Sprintf("status: %s", t.Status),
+				fmt.Sprintf("scheduled_at: %s", t.At.Local().Format("2006-01-02 15:04:05")),
+				fmt.Sprintf("script: %s", t.Script),
+			}
+			if t.StartedAt != nil {
+				lines = append(lines, fmt.Sprintf("started_at: %s", t.StartedAt.Local().Format("2006-01-02 15:04:05")))
+			}
+			if t.FinishedAt != nil {
+				lines = append(lines, fmt.Sprintf("finished_at: %s", t.FinishedAt.Local().Format("2006-01-02 15:04:05")))
+			}
+			if t.Output != "" {
+				lines = append(lines, fmt.Sprintf("output: %s", t.Output))
+			}
+			if t.Err != "" {
+				lines = append(lines, fmt.Sprintf("error: %s", t.Err))
+			}
+			return strings.Join(lines, "\n"), nil
 		},
 	})
 
@@ -203,7 +302,7 @@ func init() {
 			if mgr == nil {
 				return "", fmt.Errorf("scheduler not initialized")
 			}
-			if err := mgr.DeleteTask(params.ID); err != nil {
+			if err := tasks.Delete(mgr, params.ID); err != nil {
 				return "", err
 			}
 			return fmt.Sprintf("onetime task %s removed", params.ID), nil
@@ -239,7 +338,7 @@ func init() {
 			if mgr == nil {
 				return "", fmt.Errorf("scheduler not initialized")
 			}
-			if err := mgr.UpdateCron(params.ID, params.CronExpr); err != nil {
+			if err := crons.Update(mgr, params.ID, params.CronExpr); err != nil {
 				return "", err
 			}
 			return fmt.Sprintf("cron %s updated: %s", params.ID, params.CronExpr), nil
@@ -275,7 +374,7 @@ func init() {
 			if mgr == nil {
 				return "", fmt.Errorf("scheduler not initialized")
 			}
-			if err := mgr.UpdateTask(params.ID, params.At); err != nil {
+			if err := tasks.Update(mgr, params.ID, params.At); err != nil {
 				return "", err
 			}
 			return fmt.Sprintf("task %s updated: scheduled at %s", params.ID, params.At), nil

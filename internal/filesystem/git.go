@@ -39,13 +39,20 @@ func CommitSkills(ctx context.Context, act, skillName string) error {
 		return fmt.Errorf("add.CombinedOutput: %w: %s", err, strings.TrimSpace(string(out)))
 	}
 
+	status := exec.CommandContext(ctx, "git", "status", "--porcelain")
+	status.Dir = SkillsDir
+	statusOut, err := status.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("status.CombinedOutput: %w: %s", err, strings.TrimSpace(string(statusOut)))
+	}
+	if strings.TrimSpace(string(statusOut)) == "" {
+		return nil
+	}
+
 	cmd = exec.CommandContext(ctx, "git", "commit", "-m", message)
 	cmd.Dir = SkillsDir
 	if out, err := cmd.CombinedOutput(); err != nil {
-		if strings.Contains(string(out), "nothing to commit") {
-			return nil
-		}
-		return fmt.Errorf("cmd.CombinedOutput: %w: %s", err, strings.TrimSpace(string(out)))
+		return fmt.Errorf("commit.CombinedOutput: %w: %s", err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }

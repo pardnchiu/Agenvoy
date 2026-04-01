@@ -17,10 +17,12 @@ var (
 	APIToolsDir    string
 	ScriptToolsDir string
 	ErrorsDir      string
-	SchedulerDir   string
-	TasksPath      string
-	CronsPath      string
-	ScriptsDir     string
+	SchedulerDir        string
+	SchedulerStateDir   string
+	SchedulerRecordsDir string
+	TasksPath           string
+	CronsPath           string
+	ScriptsDir          string
 	SkillsDir      string
 	ToolsDir       string
 	DownloadDir    string
@@ -61,6 +63,8 @@ func Init() error {
 		ScriptToolsDir = filepath.Join(AgenvoyDir, "script_tools")
 		ErrorsDir = filepath.Join(AgenvoyDir, "errors")
 		SchedulerDir = filepath.Join(AgenvoyDir, "scheduler")
+		SchedulerStateDir = filepath.Join(SchedulerDir, "state")
+		SchedulerRecordsDir = filepath.Join(SchedulerDir, "cron_records")
 		TasksPath = filepath.Join(SchedulerDir, "tasks.json")
 		CronsPath = filepath.Join(SchedulerDir, "crons.json")
 		ScriptsDir = filepath.Join(SchedulerDir, "scripts")

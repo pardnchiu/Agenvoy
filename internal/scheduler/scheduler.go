@@ -2,36 +2,29 @@ package scheduler
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
-	"log/slog"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/sandbox"
 	goCron "github.com/pardnchiu/go-scheduler"
 )
 
-type cronEngine interface {
+type Scheduler struct {
+	Mu          sync.Mutex
+	Timers      map[string]*time.Timer
+	Tasks       []filesystem.TaskItem
+	TaskResults map[string]filesystem.TaskResult
+	Crons       []filesystem.CronItem
+	CronResults map[string]filesystem.CronResult
+	Cron        schedulerCron
+	OnCompleted OnCompletedFn
+}
+
+type schedulerCron interface {
 	Start()
 	Stop() context.Context
 	Add(spec string, action any, arg ...any) (int64, error)
 	Remove(id int64)
-}
-
-type Scheduler struct {
-	mu          sync.Mutex
-	timers      map[string]*time.Timer
-	tasks       []filesystem.TaskItem
-	crons       []filesystem.CronItem
-	cron        cronEngine
-	OnCompleted OnCompletedFn
 }
 
 type OnCompletedFn func(channelID, output string)
@@ -53,8 +46,10 @@ func New() error {
 		c.Start()
 		mu.Lock()
 		scheduler = &Scheduler{
-			timers: make(map[string]*time.Timer),
-			cron:   c,
+			Timers:      make(map[string]*time.Timer),
+			TaskResults: make(map[string]filesystem.TaskResult),
+			CronResults: make(map[string]filesystem.CronResult),
+			Cron:        c,
 		}
 		mu.Unlock()
 	})
@@ -76,62 +71,11 @@ func Stop() {
 		return
 	}
 
-	s.mu.Lock()
-	for _, timer := range s.timers {
+	s.Mu.Lock()
+	for _, timer := range s.Timers {
 		timer.Stop()
 	}
-	s.mu.Unlock()
+	s.Mu.Unlock()
 
-	s.cron.Stop()
-}
-
-func newID(parts ...string) string {
-	h := sha256.Sum256([]byte(strings.Join(parts, "|") + fmt.Sprint(time.Now().UnixNano())))
-	return hex.EncodeToString(h[:])[:8]
-}
-
-func runScript(caller, scriptPath string) string {
-	var binary string
-	switch strings.ToLower(filepath.Ext(scriptPath)) {
-	case ".py":
-		binary = "python3"
-	default:
-		binary = "sh"
-	}
-
-	workDir := filepath.Dir(scriptPath)
-	wrappedBin, wrappedArgs, err := sandbox.Wrap(binary, []string{scriptPath}, workDir)
-	if err != nil {
-		slog.Error(caller,
-			slog.String("script", filepath.Base(scriptPath)),
-			slog.String("error", err.Error()))
-		return fmt.Sprintf("error: %s", err.Error())
-	}
-
-	cmd := exec.Command(wrappedBin, wrappedArgs...)
-	cmd.Env = append(os.Environ(),
-		"PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin",
-	)
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		output := strings.TrimSpace(string(out))
-		slog.Error(caller,
-			slog.String("script", filepath.Base(scriptPath)),
-			slog.String("error", err.Error()),
-			slog.String("output", output))
-		if output != "" {
-			return fmt.Sprintf("error: %s\n%s", err.Error(), output)
-		}
-		return fmt.Sprintf("error: %s", err.Error())
-	}
-	return strings.TrimSpace(string(out))
-}
-
-func removeScript(scriptPath string) {
-	if err := os.Remove(scriptPath); err != nil && !os.IsNotExist(err) {
-		slog.Warn("os.Remove",
-			slog.String("script", scriptPath),
-			slog.String("error", err.Error()))
-	}
+	s.Cron.Stop()
 }

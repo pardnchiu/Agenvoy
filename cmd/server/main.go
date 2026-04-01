@@ -22,6 +22,9 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/discord"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/sandbox"
+	"github.com/pardnchiu/agenvoy/internal/scheduler"
+	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
+	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
@@ -46,12 +49,28 @@ func main() {
 		return
 	}
 
+	if err := scheduler.New(); err != nil {
+		slog.Error("scheduler.New",
+			slog.String("error", err.Error()))
+		return
+	}
+
+	if err := tasks.Setup(scheduler.Get()); err != nil {
+		slog.Warn("tasks.Setup",
+			slog.String("error", err.Error()))
+	}
+
+	if err := crons.Setup(scheduler.Get()); err != nil {
+		slog.Warn("crons.Setup",
+			slog.String("error", err.Error()))
+	}
+
 	if cfg, err := session.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
 
 	registry := buildAgentRegistry()
-	skill.SyncSkills(context.Background())
+	go skill.SyncSkills(context.Background())
 	scanner := skill.NewScanner()
 
 	var selectorBot agentTypes.Agent
@@ -77,7 +96,6 @@ func main() {
 	}
 	if bot == nil {
 		slog.Warn("DISCORD_TOKEN not set, bot disabled")
-		return
 	}
 
 	quit := make(chan os.Signal, 1)
@@ -85,6 +103,7 @@ func main() {
 	<-quit
 
 	slog.Info("signal received, shutting down")
+	scheduler.Stop()
 }
 
 func buildAgentRegistry() agentTypes.AgentRegistry {

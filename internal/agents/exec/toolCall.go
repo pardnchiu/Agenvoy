@@ -103,7 +103,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			})
 			errHash := file.SaveToolError(sessionData.ID, toolName, tool.Function.Arguments, err.Error())
 			if hint := file.SearchErrorMemory(toolName, err.Error(), 3); hint != "" {
-				result = hint
+				result = fmt.Sprintf("error: %s\nrelated_errors: %s", err.Error(), hint)
 			} else {
 				if strings.HasPrefix(toolName, "api_") {
 					_, _ = file.SaveErrorMemory(sessionData.ID, file.ErrorMemory{

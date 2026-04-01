@@ -25,6 +25,9 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/routes"
 	"github.com/pardnchiu/agenvoy/internal/sandbox"
+	"github.com/pardnchiu/agenvoy/internal/scheduler"
+	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
+	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tui"
@@ -48,6 +51,20 @@ func main() {
 		slog.Error("filesystem.Init",
 			slog.String("error", err.Error()))
 		return
+	}
+
+	if err := scheduler.New(); err != nil {
+		slog.Error("scheduler.New",
+			slog.String("error", err.Error()))
+		return
+	}
+	if err := tasks.Setup(scheduler.Get()); err != nil {
+		slog.Warn("tasks.Setup",
+			slog.String("error", err.Error()))
+	}
+	if err := crons.Setup(scheduler.Get()); err != nil {
+		slog.Warn("crons.Setup",
+			slog.String("error", err.Error()))
 	}
 
 	if cfg, err := session.Load(); err == nil {
@@ -118,6 +135,8 @@ func main() {
 	if err := tui.Set(); err != nil {
 		slog.Error("tui.Set", slog.String("error", err.Error()))
 	}
+
+	scheduler.Stop()
 
 	if bot != nil {
 		discord.Close(bot)

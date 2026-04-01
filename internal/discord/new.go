@@ -27,20 +27,6 @@ func New(plannerAgent agentTypes.Agent, agentRegistry agentTypes.AgentRegistry, 
 		return nil, fmt.Errorf("create discord session: %w", err)
 	}
 
-	if err := scheduler.New(); err != nil {
-		slog.Warn("scheduler.New",
-			slog.String("error", err.Error()))
-	} else {
-		if err := scheduler.Get().SetupTasks(); err != nil {
-			slog.Warn("scheduler.Get().LoadTasks",
-				slog.String("error", err.Error()))
-		}
-		if err := scheduler.Get().SetupCrons(); err != nil {
-			slog.Warn("scheduler.Get().SetupCrons",
-				slog.String("error", err.Error()))
-		}
-	}
-
 	bot := &discordTypes.DiscordBot{
 		Session:       session,
 		PlannerAgent:  plannerAgent,
@@ -126,7 +112,6 @@ func wrapScriptOutput(agent agentTypes.Agent, output string) string {
 
 func Close(b *discordTypes.DiscordBot) error {
 	slog.Info("shutting down")
-	scheduler.Stop()
 	if b.Session == nil {
 		return nil
 	}
