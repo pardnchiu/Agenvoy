@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -15,13 +16,13 @@ import (
 func registGlobFiles() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "glob_files",
-		Description: "尋找符合 glob 模式的檔案。用於尋找特定檔案類型（例如 '**/*.go' 表示所有 Go 檔案）。",
+		Description: "Find files matching a glob pattern. Use to locate specific file types (e.g. '**/*.go' for all Go files).",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"pattern": map[string]any{
 					"type":        "string",
-					"description": "用於比對檔案的 Glob 模式（例如 '**/*.go'、'src/**/*.ts'、'*.md'）",
+					"description": "Glob pattern to match files against (e.g. '**/*.go', 'src/**/*.ts', '*.md')",
 				},
 			},
 			"required": []string{"pattern"},
@@ -44,9 +45,15 @@ func registGlobFiles() {
 			var sb strings.Builder
 			for _, file := range files {
 				parts := strings.Split(file, "/")
-				if filesystem.IsMatch(patterns, parts) {
-					sb.WriteString(file + "\n")
+				if !filesystem.IsMatch(patterns, parts) {
+					continue
 				}
+				sb.WriteString(file)
+				if info, err := os.Stat(filepath.Join(e.WorkDir, file)); err == nil {
+					sb.WriteString(" / ")
+					sb.WriteString(info.ModTime().Format("2006-01-02 15:04"))
+				}
+				sb.WriteByte('\n')
 			}
 
 			if sb.Len() == 0 {

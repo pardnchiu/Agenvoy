@@ -2,17 +2,35 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/sandbox"
-	"github.com/pardnchiu/agenvoy/internal/tools/file"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
+
+type deniedConfig struct {
+	Dirs       []string `json:"dirs"`
+	Files      []string `json:"files"`
+	Prefixes   []string `json:"prefixes"`
+	Extensions []string `json:"extensions"`
+}
+
+var DeniedConfig = func() deniedConfig {
+	var cfg deniedConfig
+	if err := json.Unmarshal(configs.DeniedMap, &cfg); err != nil {
+		slog.Warn("json.Unmarshal",
+			slog.String("error", err.Error()))
+	}
+	return cfg
+}()
 
 var (
 // * template allow all for testing
@@ -25,12 +43,12 @@ func runCommand(ctx context.Context, e *toolTypes.Executor, command string) (str
 		return "", fmt.Errorf("failed to run command: command is empty")
 	}
 
-	for _, dir := range file.DeniedConfig.Dirs {
+	for _, dir := range DeniedConfig.Dirs {
 		if strings.Contains(command, "/"+dir+"/") || strings.Contains(command, "/"+dir) || strings.Contains(command, dir+"/") {
 			return "", fmt.Errorf("access denied: %s", dir)
 		}
 	}
-	for _, f := range file.DeniedConfig.Files {
+	for _, f := range DeniedConfig.Files {
 		if strings.Contains(command, f) {
 			return "", fmt.Errorf("access denied: %s", f)
 		}

@@ -14,17 +14,17 @@ import (
 func registListFiles() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "list_files",
-		Description: "列出指定路徑的檔案和目錄。用於探索專案結構。",
+		Description: "List files and directories at the specified path. Use for exploring project structure.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "要列出的目錄路徑（相對於專案根目錄或絕對路徑）。使用 '.' 表示目前目錄。",
+					"description": "Directory path to list (relative to project root or absolute). Use '.' for the current directory.",
 				},
 				"recursive": map[string]any{
 					"type":        "boolean",
-					"description": "如果為 true，則遞迴列出檔案。預設為 false。",
+					"description": "If true, list files recursively. Defaults to false.",
 				},
 			},
 			"required": []string{"path"},
@@ -38,20 +38,44 @@ func registListFiles() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			var files []string
-			var err error
+			var sb strings.Builder
+
 			if params.Recursive {
-				files, err = filesystem.WalkFiles(e.WorkDir, params.Path)
+				files, err := filesystem.WalkFiles(e.WorkDir, params.Path)
 				if err != nil {
 					return "", fmt.Errorf("filesystem.WalkFiles: %w", err)
 				}
+				for _, f := range files {
+					sb.WriteString("[file] ")
+					sb.WriteString(f)
+					sb.WriteByte('\n')
+				}
 			} else {
-				files, err = filesystem.ListDir(e.WorkDir, params.Path)
+				entries, err := filesystem.ListDir(e.WorkDir, params.Path)
 				if err != nil {
 					return "", fmt.Errorf("filesystem.ListDir: %w", err)
 				}
+				for _, entry := range entries {
+					info, err := entry.Info()
+					if err != nil {
+						continue
+					}
+					if entry.IsDir() {
+						sb.WriteString("[dir] ")
+					} else {
+						sb.WriteString("[file] ")
+					}
+					sb.WriteString(entry.Name())
+					sb.WriteString(" / ")
+					sb.WriteString(info.ModTime().Format("2006-01-02 15:04"))
+					sb.WriteByte('\n')
+				}
 			}
-			return fmt.Sprintf("[%s]", strings.Join(files, ",")), nil
+
+			if sb.Len() == 0 {
+				return fmt.Sprintf("%s no files found", params.Path), nil
+			}
+			return sb.String(), nil
 		},
 	})
 }

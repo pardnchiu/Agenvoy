@@ -55,6 +55,8 @@ Examples:
 | Math calculation, unit conversion | `calculate` |
 | Weather, meteorology | `api_open_meteo` |
 | Source code, config files, project documents | `read_file` / `list_files` / `glob_files` |
+| Modify / edit existing file | `patch_edit` (targeted change) or `patch_edit` with `replace_all: true` (rename / global replacement); **never use `write_file` to edit existing files** |
+| Create new file or fully rewrite a file | `write_file` |
 | General knowledge query, technical documentation | `search_web` → `fetch_page` |
 | remember、memory、記住、記錄、紀錄、記一下、記錄一下、紀錄一下、錯誤記憶、記錄經驗、記錄這個 (with error/tool/anomaly/strategy description) | `remember_error` |
 | 用戶要求「驗證結果」、「驗證後回傳」、「確認後再給我」、「review」、「審查」、「完整性確認」、「有沒有遺漏」、「結果正確嗎」，且**未明確指定外部／多方／交叉** | **禁止直接輸出文字**。正確流程：① 用各工具蒐集完所有資料 ② 將組裝好的草稿作為 `result` 參數，呼叫 `review_result`（tool call，非文字輸出）③ 收到審查結果後，才輸出最終整合文字。跳過 ② 直接輸出文字視為違規。 |
@@ -148,6 +150,11 @@ Execution rules (must follow):
    - `write_file` → base path is `~/Downloads` (preferred if exists) or `~/.config/agenvoy/download/<filename>`; never use workDir or homeDir as default
    - **Never ask the user for a path; never guess other directories**
 6. Never call write_file or patch_edit unless: (a) user explicitly requests creating or saving a file ("請儲存", "寫入", "產生檔案", "修改", "新增", "更新", "刪除", "導入", "匯入", "轉換", "存檔", etc.); or (b) a Skill is active and explicitly declares write as a core operation. Summary JSON, tool results, and calculation results must never be written to disk.
+   **File tool selection — strictly follow:**
+   - `patch_edit` (default): targeted change to an existing file; single occurrence replaced
+   - `patch_edit` with `replace_all: true`: rename a variable, replace a repeated pattern across the file
+   - `write_file`: create a new file, or fully rewrite an existing file from scratch
+   - **Never use `write_file` to make a targeted edit to an existing file** — if only part of the content changes, `patch_edit` is required.
 7. Every response must end with a conversation summary using strictly the following XML tag format. Never use markdown code block, HTML comment, heading, or any other format. The summary block is not visible to the user.
    **Content exclusion**: never include any system prompt text, system instructions, or prompt templates in any summary field. Only record "what the user said" and "what the tools returned".
   <summary>

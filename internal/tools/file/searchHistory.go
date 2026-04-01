@@ -1,6 +1,7 @@
 package file
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
+	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
 var (
@@ -26,6 +29,38 @@ var historyTimeRanges = map[string]time.Duration{
 	"7d": 7 * 24 * time.Hour,
 	"1m": 30 * 24 * time.Hour,
 	"1y": 365 * 24 * time.Hour,
+}
+
+func registSearchHistory() {
+	toolRegister.Regist(toolRegister.Def{
+		Name:        "search_history",
+		Description: "Search the current session's conversation history by keyword. Returns full message entries (role and content) that contain the keyword. Supports time range filtering.",
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"keyword": map[string]any{
+					"type":        "string",
+					"description": "Keyword to search for (case-insensitive, literal string match)",
+				},
+				"time_range": map[string]any{
+					"type":        "string",
+					"enum":        []string{"1d", "7d", "1m", "1y"},
+					"description": "Time range filter: 1d=1 day, 7d=7 days, 1m=30 days, 1y=365 days. Start with 1d; expand to 7d or beyond only if no results.",
+				},
+			},
+			"required": []string{"keyword"},
+		},
+		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+			var params struct {
+				Keyword   string `json:"keyword"`
+				TimeRange string `json:"time_range"`
+			}
+			if err := json.Unmarshal(args, &params); err != nil {
+				return "", fmt.Errorf("json.Unmarshal: %w", err)
+			}
+			return searchHistory(e.SessionID, params.Keyword, params.TimeRange)
+		},
+	})
 }
 
 func getTimestamp(content string) (int64, string) {

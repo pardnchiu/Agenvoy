@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -14,32 +17,54 @@ import (
 func registWriteFile() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "write_file",
-		Description: "將內容寫入檔案。如果檔案不存在則建立，如果存在則覆寫。寫入 ~/.config/agenvoy/skills 下的檔案時會自動 git commit。未指定目錄時，路徑以 ~/Downloads（存在則優先）或 ~/.config/agenvoy/download 為基底。",
+		Description: "Write content to a file. Creates the file if it does not exist, or overwrites it entirely if it does. Use for new files or full rewrites only — for targeted edits to existing files, use patch_edit instead. Auto git-commits when writing to the skills directory. Set executable: true to save a scheduler script (.sh or .py) — the file is stored in the scripts directory with a timestamp suffix and the returned filename must be passed to add_task or add_cron.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "要寫入的檔案路徑（相對於專案根目錄或絕對路徑）",
+					"description": "Path to the file (relative to project root or absolute). When executable is true, provide only the filename (e.g. 'notify.sh') — path components are ignored.",
 				},
 				"content": map[string]any{
 					"type":        "string",
-					"description": "要寫入檔案的內容",
+					"description": "Content to write to the file",
+				},
+				"executable": map[string]any{
+					"type":        "boolean",
+					"description": "If true, saves as an executable script (.sh or .py) to the scheduler scripts directory with a UTC timestamp suffix (e.g. notify_1741569300.sh). The returned filename must be passed to add_task or add_cron.",
 				},
 			},
 			"required": []string{"path", "content"},
 		},
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
-				Path    string `json:"path"`
-				Content string `json:"content"`
+				Path       string `json:"path"`
+				Content    string `json:"content"`
+				Executable bool   `json:"executable"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
+			if params.Path == "" {
+				return "", fmt.Errorf("path is required")
+			}
 			if params.Content == "" {
 				return "", fmt.Errorf("content is required")
+			}
+
+			if params.Executable {
+				ext := strings.ToLower(filepath.Ext(params.Path))
+				if ext != ".sh" && ext != ".py" {
+					return "", fmt.Errorf("executable scripts only support .sh or .py")
+				}
+				base := strings.TrimSuffix(filepath.Base(params.Path), ext)
+				uniqueName := fmt.Sprintf("%s_%d%s", base, time.Now().UTC().Unix(), ext)
+				absPath := filepath.Join(filesystem.ScriptsDir, uniqueName)
+				if err := filesystem.WriteFile(absPath, params.Content, 0755); err != nil {
+					return "", fmt.Errorf("filesystem.WriteFile: %w", err)
+				}
+				return fmt.Sprintf(`script saved. pass "%s" as the script parameter to add_task or add_cron`, uniqueName), nil
 			}
 
 			baseDir := e.WorkDir
@@ -69,7 +94,10 @@ func registWriteFile() {
 				}
 			}
 
-			return fmt.Sprintf("%s wrote", absPath), nil
+			if isNew {
+				return fmt.Sprintf("File created successfully at: %s", absPath), nil
+			}
+			return fmt.Sprintf("The file %s has been updated successfully.", absPath), nil
 		},
 	})
 }
