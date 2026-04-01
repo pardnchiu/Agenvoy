@@ -10,6 +10,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/file"
+	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
@@ -43,7 +44,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			ToolID:   toolID,
 		}
 
-		if !allowAll {
+		if !allowAll && !toolRegister.IsReadOnly(toolName) && !strings.HasPrefix(toolName, "api_") {
 			replyCh := make(chan bool, 1)
 			events <- agentTypes.Event{
 				Type:     agentTypes.EventToolConfirm,

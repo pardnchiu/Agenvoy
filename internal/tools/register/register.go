@@ -17,10 +17,12 @@ type Def struct {
 	Description string
 	Parameters  map[string]any
 	Handler     Handler
+	ReadOnly    bool
 }
 
 var handlerMap = map[string]Handler{}
 var defList []toolTypes.Tool
+var readOnlySet = map[string]bool{}
 
 func Regist(d Def) {
 	params, _ := json.Marshal(d.Parameters)
@@ -34,6 +36,13 @@ func Regist(d Def) {
 	}
 	handlerMap[d.Name] = d.Handler
 	defList = append(defList, tool)
+	if d.ReadOnly {
+		readOnlySet[d.Name] = true
+	}
+}
+
+func IsReadOnly(name string) bool {
+	return readOnlySet[name]
 }
 
 func JSON() []byte {

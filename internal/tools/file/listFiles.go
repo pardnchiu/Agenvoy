@@ -14,6 +14,7 @@ import (
 func registListFiles() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "list_files",
+		ReadOnly:    true,
 		Description: "List files and directories at the specified path. Use for exploring project structure.",
 		Parameters: map[string]any{
 			"type": "object",

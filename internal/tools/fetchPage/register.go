@@ -13,6 +13,7 @@ import (
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "fetch_page",
+		ReadOnly:    true,
 		Description: "使用 Chrome 瀏覽器開啟網頁，擷取內容以純文字 Markdown 格式回傳給 agent。此工具不寫入任何檔案，內容僅存在於 agent context。【適用】查詢、摘要、分析、爬取、回答問題等所有「讀取」意圖。【禁止】使用者明確要求將網頁內容寫入本地端檔案（「把這個網頁存成 md」、「下載到本地」、「存到 downloads/」）時，必須改用 download_page；禁止用此工具讀取再自行呼叫 write_file 寫檔。",
 		Parameters: map[string]any{
 			"type": "object",

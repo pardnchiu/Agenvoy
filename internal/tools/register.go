@@ -47,6 +47,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "list_tools",
+		ReadOnly:    true,
 		Description: "列出目前所有可用的工具，包含內建工具與動態載入的 API 工具（api_* 前綴）。回傳每個工具的名稱與描述。",
 		Parameters: map[string]any{
 			"type":       "object",

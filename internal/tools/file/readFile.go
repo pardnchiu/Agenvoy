@@ -22,6 +22,7 @@ const (
 func registReadFile() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "read_file",
+		ReadOnly:    true,
 		Description: "Read the contents of a file. Use to inspect source code, config files, or any text file in the project. Supports .pdf (text extraction).",
 		Parameters: map[string]any{
 			"type": "object",

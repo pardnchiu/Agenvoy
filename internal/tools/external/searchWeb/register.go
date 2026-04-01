@@ -13,6 +13,7 @@ import (
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "search_web",
+		ReadOnly:    true,
 		Description: "Search the web via DuckDuckGo and return a ranked list of titles, URLs, and snippets. You MUST cite sources in your response as markdown hyperlinks: [Title](URL). Suitable for general queries, technical documentation, and product research.",
 		Parameters: map[string]any{
 			"type": "object",

@@ -12,6 +12,7 @@ import (
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "calculate",
+		ReadOnly:    true,
 		Description: "執行數學運算，返回精確結果。支援四則運算（+、-、*、/）、取模（%）、括號、冪次（用 ^ 符號）及數學函式（sqrt、abs、ceil、floor、round、log、log2、log10、sin、cos、tan、pow）。pow 需傳入兩個引數：pow(base, exp)。",
 		Parameters: map[string]any{
 			"type": "object",

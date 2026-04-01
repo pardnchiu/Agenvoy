@@ -34,6 +34,7 @@ var historyTimeRanges = map[string]time.Duration{
 func registSearchHistory() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "search_history",
+		ReadOnly:    true,
 		Description: "Search the current session's conversation history by keyword. Returns full message entries (role and content) that contain the keyword. Supports time range filtering.",
 		Parameters: map[string]any{
 			"type": "object",

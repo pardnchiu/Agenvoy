@@ -12,6 +12,7 @@ import (
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "fetch_google_rss",
+		ReadOnly:    true,
 		Description: "透過 Google News RSS 搜尋新聞，返回標題、摘要與真實文章連結。【重要】RSS 僅提供標題與片段摘要，不含完整內容。若任務具有研究性質（整理、分析、週報、深度調查等），必須對每一筆返回的連結繼續呼叫 fetch_page 以取得完整文章內容，不得僅依賴 RSS 摘要作為資料來源。",
 		Parameters: map[string]any{
 			"type": "object",

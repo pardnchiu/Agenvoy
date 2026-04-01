@@ -20,6 +20,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "get_tool_error",
+		ReadOnly:    true,
 		Description: "Look up detailed information for a tool execution error by hash. Use when a tool returns 'no data: {hash}' to retrieve the full error context (tool_name, args, error message).",
 		Parameters: map[string]any{
 			"type": "object",
@@ -107,6 +108,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "search_errors",
+		ReadOnly:    true,
 		Description: "Query past tool error records. Call first when a tool behaves unexpectedly — retrieves root cause and resolution from prior sessions. Searches across keywords, symptom, cause, and tool_name.",
 		Parameters: map[string]any{
 			"type": "object",

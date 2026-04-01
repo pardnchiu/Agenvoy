@@ -13,6 +13,7 @@ import (
 func registVerifyWithExternalAgent() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "verify_with_external_agent",
+		ReadOnly:    true,
 		Description: `將當前結果送交所有可用外部 agent（codex / copilot / claude）並行審查，回傳各 agent 的獨立回饋供主 agent 參考修正。外部 agent 在獨立環境執行，無法使用本專案 tool。用戶明確要求驗證、審查、交叉確認、second opinion 時才呼叫。無可用外部 agent 時回傳降級訊息，不阻斷主流程。`,
 		Parameters: map[string]any{
 			"type": "object",

@@ -37,6 +37,7 @@ func selectReviewModelKey() string {
 func registReviewResult() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "review_result",
+		ReadOnly:    true,
 		Description: `針對任務輸入與當前結果進行完整性審查，由系統依優先序自動選擇內部可用模型（claude-opus > gpt-5.4 > gemini-3.1-pro > claude-sonnet）執行一次性深度檢查，回傳具體問題與改進建議。無可用內部模型時回傳降級訊息，不阻斷主流程。`,
 		Parameters: map[string]any{
 			"type": "object",

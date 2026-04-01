@@ -30,6 +30,7 @@ var binaryExts = map[string]bool{
 func registSearchContent() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "search_content",
+		ReadOnly:    true,
 		Description: "Search file contents for a pattern. Returns matching lines with file path and line number.",
 		Parameters: map[string]any{
 			"type": "object",

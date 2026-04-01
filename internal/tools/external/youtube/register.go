@@ -12,6 +12,7 @@ import (
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "analyze_youtube",
+		ReadOnly:    true,
 		Description: "分析 YouTube 影片內容，透過 Gemini 進行語音轉文字（STT），返回含時間戳記的完整逐字稿。",
 		Parameters: map[string]any{
 			"type": "object",

@@ -13,6 +13,7 @@ import (
 func skillLog() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "skill_git_log",
+		ReadOnly:    true,
 		Description: "列出 ~/.config/agenvoy/skills 的 git commit 歷史記錄（oneline 格式），用於追蹤 skill 的新增與修改歷程，或在回朔前確認目標 commit hash。",
 		Parameters: map[string]any{
 			"type": "object",

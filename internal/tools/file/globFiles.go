@@ -16,6 +16,7 @@ import (
 func registGlobFiles() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "glob_files",
+		ReadOnly:    true,
 		Description: "Find files matching a glob pattern. Use to locate specific file types (e.g. '**/*.go' for all Go files).",
 		Parameters: map[string]any{
 			"type": "object",

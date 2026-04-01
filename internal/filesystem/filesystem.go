@@ -12,6 +12,7 @@ var (
 	AgenvoyDir     string
 	ConfigPath     string
 	UsagePath      string
+	StoreDir       string
 	SessionsDir    string
 	APIToolsDir    string
 	ScriptToolsDir string
@@ -54,6 +55,7 @@ func Init() error {
 		ConfigPath = filepath.Join(AgenvoyDir, "config.json")
 		UsagePath = filepath.Join(AgenvoyDir, "usage.json")
 
+		StoreDir = filepath.Join(AgenvoyDir, ".store")
 		SessionsDir = filepath.Join(AgenvoyDir, "sessions")
 		APIToolsDir = filepath.Join(AgenvoyDir, "api_tools")
 		ScriptToolsDir = filepath.Join(AgenvoyDir, "script_tools")
@@ -99,6 +101,12 @@ func IsMatch(patterns, parts []string) bool {
 	pattern := patterns[0]
 	if pattern == "**" {
 		rest := patterns[1:]
+		for len(rest) > 0 && rest[0] == "**" {
+			rest = rest[1:]
+		}
+		if len(rest) == 0 {
+			return true
+		}
 		for i := 0; i <= len(parts); i++ {
 			if IsMatch(rest, parts[i:]) {
 				return true

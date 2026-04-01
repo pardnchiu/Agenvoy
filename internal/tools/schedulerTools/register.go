@@ -63,6 +63,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "list_crons",
+		ReadOnly:    true,
 		Description: "列出所有目前啟用中的重複性 cron 任務，每行一筆，格式為 `{index}. {cron_expr} {script} [{channel_id}]`。index 為移除時所需的編號。",
 		Parameters: map[string]any{
 			"type":       "object",
@@ -159,6 +160,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "list_tasks",
+		ReadOnly:    true,
 		Description: "列出所有待執行的一次性定時任務，每行一筆，格式為 `{id} {time} {script}`。id 為移除時所需的識別碼。",
 		Parameters: map[string]any{
 			"type":       "object",
@@ -282,6 +284,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "read_script",
+		ReadOnly:    true,
 		Description: "讀取排程腳本的內容。用於查看或修改腳本前先確認內容。",
 		Parameters: map[string]any{
 			"type": "object",
