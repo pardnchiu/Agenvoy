@@ -76,6 +76,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
+	var failedAttempts []toolAttempt
 	emptyCount := 0
 	trimmedToolCalls := false
 	for i := 0; i < limit; i++ {
@@ -110,7 +111,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 		choice := resp.Choices[0]
 		if len(choice.Message.ToolCalls) > 0 {
-			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall)
+			session, alreadyCall, failedAttempts, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, failedAttempts)
 			if err != nil {
 				return err
 			}

@@ -14,7 +14,13 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string) (*agentTypes.AgentSession, map[string]string, error) {
+type toolAttempt struct {
+	name   string
+	args   string
+	errMsg string
+}
+
+func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, failedAttempts []toolAttempt) (*agentTypes.AgentSession, map[string]string, []toolAttempt, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 
 	hasExternalAgent := false
@@ -84,13 +90,18 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			select {
 			case <-time.After(300 * time.Millisecond):
 			case <-ctx.Done():
-				return sessionData, alreadyCall, ctx.Err()
+				return sessionData, alreadyCall, failedAttempts, ctx.Err()
 			}
 		}
 
 		result, err := tools.Execute(ctx, exec, toolName, json.RawMessage(tool.Function.Arguments))
 		if err != nil {
-			hash := file.SaveToolError(sessionData.ID, toolName, tool.Function.Arguments, err.Error())
+			failedAttempts = append(failedAttempts, toolAttempt{
+				name:   toolName,
+				args:   toolArg,
+				errMsg: err.Error(),
+			})
+			errHash := file.SaveToolError(sessionData.ID, toolName, tool.Function.Arguments, err.Error())
 			if hint := file.SearchErrorMemory(toolName, err.Error(), 3); hint != "" {
 				result = hint
 			} else {
@@ -106,15 +117,42 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 					Type:     agentTypes.EventExecError,
 					ToolName: toolName,
 					ToolID:   toolID,
-					Text:     hash,
+					Text:     errHash,
 				}
-				result = fmt.Sprintf("no data: %s", hash)
+				result = fmt.Sprintf("no data: %s", errHash)
 			}
 		} else if result == "" || result == "no data" {
 			if hint := file.SearchErrorMemory(toolName, "no data", 3); hint != "" {
 				result = hint
 			} else {
 				result = "no data"
+			}
+		} else {
+			var priorFails []toolAttempt
+			var remaining []toolAttempt
+			for _, a := range failedAttempts {
+				if a.name == toolName {
+					priorFails = append(priorFails, a)
+				} else {
+					remaining = append(remaining, a)
+				}
+			}
+			if len(priorFails) > 0 {
+				failedArgs := make([]string, 0, len(priorFails))
+				for _, a := range priorFails {
+					failedArgs = append(failedArgs, a.args)
+				}
+				hint := fmt.Sprintf(
+					"[system hint] Tool %q previously failed with args: %s — succeeded with: %s. Call remember_error to record this pattern.",
+					toolName,
+					strings.Join(failedArgs, " → "),
+					toolArg,
+				)
+				sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
+					Role:    "user",
+					Content: hint,
+				})
+				failedAttempts = remaining
 			}
 		}
 
@@ -169,7 +207,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			sessionData.ToolHistories = trimReviewContext(sessionData.ToolHistories)
 		}
 	}
-	return sessionData, alreadyCall, nil
+	return sessionData, alreadyCall, failedAttempts, nil
 }
 
 func trimMessageContext(toolCall []agentTypes.Message) []agentTypes.Message {
