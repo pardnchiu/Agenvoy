@@ -211,7 +211,7 @@ flowchart TD
 
     subgraph APITools ["API Extensions · apiAdapter"]
         AT["14+ embedded JSON definitions\n(CoinGecko · Wikipedia · Open-Meteo\nYahoo Finance · YouTube · etc.)"]
-        UserAPI["User extensions\n~/.config/agenvoy/apis/*.json\nloaded at startup · no recompile"]
+        UserAPI["User extensions\n~/.config/agenvoy/api_tools/*.json\nloaded at startup · no recompile"]
     end
 
     subgraph ScriptTools ["Script Extensions · scriptAdapter"]

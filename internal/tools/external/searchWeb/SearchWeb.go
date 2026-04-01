@@ -22,6 +22,12 @@ type ResultData struct {
 	Description string `json:"description,omitempty"`
 }
 
+type SearchOutput struct {
+	Results    []ResultData `json:"results"`
+	DurationMs int64        `json:"duration_ms"`
+	Cached     bool         `json:"cached,omitempty"`
+}
+
 type TimeRange string
 
 const (
@@ -46,12 +52,12 @@ func (t TimeRange) valid() bool {
 
 const cacheExpiry = 5 * time.Minute
 
-func Search(ctx context.Context, query string, timeRange TimeRange) (string, error) {
+func Search(ctx context.Context, query string, timeRange TimeRange) (*SearchOutput, error) {
 	if strings.TrimSpace(query) == "" {
-		return "", fmt.Errorf("query is empty")
+		return nil, fmt.Errorf("query is empty")
 	}
 	if timeRange != "" && !timeRange.valid() {
-		return "", fmt.Errorf("invalid time range %q: must be one of 1h, 3h, 6h, 12h, 1d, 7d, 1m, 1y", timeRange)
+		return nil, fmt.Errorf("invalid time range %q: must be one of 1h, 3h, 6h, 12h, 1d, 7d, 1m, 1y", timeRange)
 	}
 
 	hash := sha256.Sum256([]byte(query + "|" + string(timeRange)))
@@ -62,30 +68,39 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (string, err
 	cachePath := filepath.Join(cachedDir, cacheKey+".json")
 	if info, err := os.Stat(cachePath); err == nil {
 		if time.Since(info.ModTime()) < cacheExpiry {
-			if cached, err := os.ReadFile(cachePath); err == nil {
-				return string(cached), nil
+			if data, err := os.ReadFile(cachePath); err == nil {
+				var results []ResultData
+				if err := json.Unmarshal(data, &results); err == nil {
+					return &SearchOutput{Results: results, Cached: true}, nil
+				}
 			}
 		}
 	}
+
+	start := time.Now()
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	results, err := fetchDDG(ctx, query, timeRange)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	out, err := json.Marshal(results)
 	if err != nil {
-		return "", fmt.Errorf("json.Marshal: %w", err)
+		return nil, fmt.Errorf("json.Marshal: %w", err)
 	}
 
 	if err = filesystem.WriteFile(cachePath, string(out), 0644); err != nil {
 		slog.Warn("failed to write cache file",
 			slog.String("path", err.Error()))
 	}
-	return string(out), nil
+
+	return &SearchOutput{
+		Results:    results,
+		DurationMs: time.Since(start).Milliseconds(),
+	}, nil
 }
 
 func cleanCache(dir string, ttl time.Duration) {

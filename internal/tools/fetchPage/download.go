@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -19,6 +18,18 @@ import (
 func Download(href, saveTo string) (string, error) {
 	if href == "" {
 		return "", fmt.Errorf("href is required")
+	}
+
+	parsed, err := url.Parse(href)
+	if err != nil {
+		return "", fmt.Errorf("url.Parse: %w", err)
+	}
+	if err := validateURL(href); err != nil {
+		return "", err
+	}
+	if parsed.Scheme == "http" {
+		parsed.Scheme = "https"
+		href = parsed.String()
 	}
 
 	if saveTo == "" {
@@ -40,22 +51,16 @@ func Download(href, saveTo string) (string, error) {
 	cachePath := filepath.Join(cached, cacheKey+".md")
 	var content string
 	if _, err := os.Stat(cachePath); err == nil {
-		if cached, err := os.ReadFile(cachePath); err == nil {
-			content = string(cached)
+		if b, err := os.ReadFile(cachePath); err == nil {
+			content = string(b)
 		}
 	}
 
 	if content == "" {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
 		defer cancel()
 
-		browser, err := newBrowser()
-		if err != nil {
-			return "", err
-		}
-		defer func() { _ = browser.Close() }()
-
-		page, err := fetch(ctx, browser, href)
+		data, err := fetchAndParse(ctx, href, false)
 		if err != nil {
 			status := 503
 			var fetchErr *FetchError
@@ -65,15 +70,8 @@ func Download(href, saveTo string) (string, error) {
 			addToSkippedMap(href, status)
 			return skippedMessage(href), nil
 		}
-		defer func() { _ = page.Close() }()
 
-		html, err := page.HTML()
-		if err != nil {
-			return "", fmt.Errorf("page.HTML: %w", err)
-		}
-
-		data, err := extract(href, html, false)
-		if err != nil || strings.TrimSpace(data.Markdown) == "" {
+		if strings.TrimSpace(data.Markdown) == "" {
 			addToSkippedMap(href, 0)
 			return skippedMessage(href), nil
 		}

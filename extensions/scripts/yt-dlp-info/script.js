@@ -21,7 +21,7 @@ process.stdin.on("end", () => {
   const python = process.execPath.replace(/node$/, "python3").includes("python3") ? process.execPath : "python3";
 
   // --dump-json: emit full metadata JSON without downloading
-  const args = ["-m", "yt_dlp", "--dump-json", "--no-playlist", url];
+  const args = ["-m", "yt-dlp", "--dump-json", "--no-playlist", url];
 
   execFile(python, args, { timeout: 30000 }, (err, stdout, stderr) => {
     if (err) {

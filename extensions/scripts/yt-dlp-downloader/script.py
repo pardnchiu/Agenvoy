@@ -28,7 +28,9 @@ def main():
 
     url = params.get("url")
     output_template = params.get("output_template", "%(title)s.%(ext)s")
-    format_str = params.get("format", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best")
+    format_str = params.get(
+        "format", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+    )
     download_path = params.get("path", os.path.expanduser("~/Downloads"))
     no_playlist = params.get("no_playlist", True)
 
@@ -41,7 +43,7 @@ def main():
     cmd = [
         sys.executable,
         "-m",
-        "yt_dlp",
+        "yt-dlp",
         "-f",
         format_str,
         "--merge-output-format",

@@ -211,7 +211,7 @@ flowchart TD
 
     subgraph APITools ["API Extension · apiAdapter"]
         AT["14+ 內嵌 JSON 定義\n（CoinGecko · Wikipedia · Open-Meteo\nYahoo Finance · YouTube · 等）"]
-        UserAPI["使用者自訂 Extension\n~/.config/agenvoy/apis/*.json\n啟動時自動載入 · 無需重新編譯"]
+        UserAPI["使用者自訂 Extension\n~/.config/agenvoy/api_tools/*.json\n啟動時自動載入 · 無需重新編譯"]
     end
 
     subgraph ScriptTools ["Script Extension · scriptAdapter"]

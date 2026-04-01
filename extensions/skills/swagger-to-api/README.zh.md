@@ -81,7 +81,7 @@ swagger-to-api/
 
 | 檔案 | 說明 |
 |------|------|
-| `~/.config/agenvoy/apis/{name}.json` | 每個 endpoint 各一個 JSON 檔，格式為 agenvoy APIDocumentData |
+| `~/.config/agenvoy/api_tools/{name}.json` | 每個 endpoint 各一個 JSON 檔，格式為 agenvoy APIDocumentData |
 
 ### Auth 型別對應
 

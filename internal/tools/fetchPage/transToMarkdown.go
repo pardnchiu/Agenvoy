@@ -251,10 +251,9 @@ func attrMap(node *html.Node) map[string]string {
 }
 
 func collapse(s string) string {
-	lines := strings.Split(s, "\n")
 	var out []string
 	blanks := 0
-	for _, line := range lines {
+	for line := range strings.SplitSeq(s, "\n") {
 		trimLine := strings.TrimSpace(line)
 		if trimLine == "" {
 			blanks++

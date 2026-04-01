@@ -114,7 +114,7 @@ cp .env.example .env
 
 ### API Extensions
 
-Place JSON files in `~/.config/agenvoy/apis/` to add custom API tools. Each file defines one callable tool and is loaded at startup:
+Place JSON files in `~/.config/agenvoy/api_tools/` to add custom API tools. Each file defines one callable tool and is loaded at startup:
 
 ```json
 {

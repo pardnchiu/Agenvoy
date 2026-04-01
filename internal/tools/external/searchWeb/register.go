@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -12,17 +13,17 @@ import (
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "search_web",
-		Description: "使用 DuckDuckGo 搜尋網路內容，返回標題、網址與摘要列表（JSON 格式）。適合查詢一般資訊、技術文件、產品資料等。",
+		Description: "Search the web via DuckDuckGo and return a ranked list of titles, URLs, and snippets. You MUST cite sources in your response as markdown hyperlinks: [Title](URL). Suitable for general queries, technical documentation, and product research.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"query": map[string]any{
 					"type":        "string",
-					"description": "搜尋關鍵字或問題",
+					"description": "Search keywords or question",
 				},
 				"range": map[string]any{
 					"type":        "string",
-					"description": "時間範圍過濾：1h（1小時）、3h（3小時）、6h（6小時）、12h（12小時）、1d（1天）、7d（7天）、1m（1個月）、1y（1年）。不傳則無限制。",
+					"description": "Time range filter: 1h, 3h, 6h, 12h (hours), 1d (day), 7d (week), 1m (month), 1y (year). Omit for no restriction.",
 					"enum":        []string{"1h", "3h", "6h", "12h", "1d", "7d", "1m", "1y"},
 				},
 			},
@@ -36,7 +37,30 @@ func init() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			return Search(ctx, params.Query, TimeRange(params.Range))
+			output, err := Search(ctx, params.Query, TimeRange(params.Range))
+			if err != nil {
+				return "", err
+			}
+
+			return formatOutput(params.Query, output), nil
 		},
 	})
+}
+
+func formatOutput(query string, output *SearchOutput) string {
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "Web search results for query: %q\n\n", query)
+
+	for _, result := range output.Results {
+		fmt.Fprintf(&sb, "%d. [%s](%s)\n", result.Position, result.Title, result.URL)
+		if result.Description != "" {
+			fmt.Fprintf(&sb, "   %s\n", result.Description)
+		}
+		sb.WriteByte('\n')
+	}
+
+	sb.WriteString("REMINDER: You MUST include the sources above in your response using markdown hyperlinks: [Title](URL)")
+
+	return sb.String()
 }

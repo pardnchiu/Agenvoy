@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,6 +45,8 @@ const (
 	networkIdleTimeout = 5 * time.Second
 	cacheExpired       = 1 * time.Hour
 	skippedExpired     = 12 * time.Hour
+	fetchTimeout       = 30 * time.Second
+	maxMarkdownLength  = 100 << 10
 )
 
 func skippedMessage(href string) string {
@@ -58,9 +61,38 @@ func skippedMessage(href string) string {
 	return sb.String()
 }
 
+func validateURL(href string) error {
+	if len(href) > 2048 {
+		return fmt.Errorf("url too long: max 2048 chars")
+	}
+	parsed, err := url.Parse(href)
+	if err != nil {
+		return fmt.Errorf("url.Parse: %w", err)
+	}
+	if parsed.User != nil {
+		return fmt.Errorf("url must not contain credentials")
+	}
+	if !strings.Contains(parsed.Hostname(), ".") {
+		return fmt.Errorf("url must have a valid hostname")
+	}
+	return nil
+}
+
 func Load(href string, keepLinks bool) (string, error) {
 	if href == "" {
 		return "", fmt.Errorf("href is required")
+	}
+
+	parsed, err := url.Parse(href)
+	if err != nil {
+		return "", fmt.Errorf("url.Parse: %w", err)
+	}
+	if err := validateURL(href); err != nil {
+		return "", err
+	}
+	if parsed.Scheme == "http" {
+		parsed.Scheme = "https"
+		href = parsed.String()
 	}
 
 	cached5xx := filepath.Join(filesystem.ToolFetchPage, "5xx")
@@ -81,24 +113,27 @@ func Load(href string, keepLinks bool) (string, error) {
 	clean(cached, cacheExpired)
 	cachePath := filepath.Join(cached, cacheKey+".md")
 	if _, err := os.Stat(cachePath); err == nil {
-		if cached, err := os.ReadFile(cachePath); err == nil {
-			return string(cached), nil
+		if b, err := os.ReadFile(cachePath); err == nil {
+			return formatForAgent(truncate(string(b))), nil
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
 	defer cancel()
 
-	data, err := load(ctx, href, keepLinks)
+	data, err := fetchAndParse(ctx, href, keepLinks)
 	if err != nil {
-		// * use 503 as default, if over 10 sec no data, tag as timeout
 		status := 503
 		var fetchErr *FetchError
 		if errors.As(err, &fetchErr) {
 			status = fetchErr.Status
 		}
 		addToSkippedMap(href, status)
-		// * 4xx and 5xx, just tag skipped, not error
+		return skippedMessage(href), nil
+	}
+
+	if detect4xx(data.Title) {
+		addToSkippedMap(href, 404)
 		return skippedMessage(href), nil
 	}
 
@@ -108,7 +143,6 @@ func Load(href string, keepLinks bool) (string, error) {
 	}
 	if body == "" {
 		addToSkippedMap(href, 0)
-		// * empty data, same as 4xx, just tag skipped
 		return skippedMessage(href), nil
 	}
 
@@ -116,10 +150,10 @@ func Load(href string, keepLinks bool) (string, error) {
 		slog.Warn("utils.WriteFile",
 			slog.String("error", err.Error()))
 	}
-	return data.Markdown, nil
+	return formatForAgent(truncate(data.Markdown)), nil
 }
 
-func load(ctx context.Context, href string, keepLinks bool) (*HTMLParser, error) {
+func fetchAndParse(ctx context.Context, href string, keepLinks bool) (*HTMLParser, error) {
 	browser, err := newBrowser()
 	if err != nil {
 		return nil, err
@@ -143,6 +177,46 @@ func load(ctx context.Context, href string, keepLinks bool) (*HTMLParser, error)
 	}
 
 	return result, nil
+}
+
+func urlContains404(finalURL string) bool {
+	u, err := url.Parse(finalURL)
+	if err != nil {
+		return false
+	}
+	for param := range strings.SplitSeq(u.Path, "/") {
+		if param == "404" || param == "403" {
+			return true
+		}
+	}
+	for key := range u.Query() {
+		val := u.Query().Get(key)
+		if val == "404" || val == "403" {
+			return true
+		}
+	}
+	return false
+}
+
+func detect4xx(title string) bool {
+	switch strings.ToLower(strings.TrimSpace(title)) {
+	case "404", "403", "not found", "page not found",
+		"404 not found", "403 forbidden", "access denied",
+		"找不到頁面", "頁面不存在", "此頁面不存在":
+		return true
+	}
+	return false
+}
+
+func formatForAgent(content string) string {
+	return "Web page content:\n---\n" + content + "\n---"
+}
+
+func truncate(s string) string {
+	if len(s) <= maxMarkdownLength {
+		return s
+	}
+	return s[:maxMarkdownLength] + "\n\n[Content truncated due to length...]"
 }
 
 func fetch(ctx context.Context, browser *rod.Browser, href string) (*rod.Page, error) {
@@ -173,6 +247,11 @@ func fetch(ctx context.Context, browser *rod.Browser, href string) (*rod.Page, e
 	if err := page.Context(ctx).WaitLoad(); err != nil {
 		_ = page.Close()
 		return nil, fmt.Errorf("page.WaitLoad: %w", err)
+	}
+
+	if info, err := page.Info(); err == nil && urlContains404(info.URL) {
+		_ = page.Close()
+		return nil, &FetchError{Status: 404, Href: href}
 	}
 
 	if status, err := page.Eval(`() => { const e = performance.getEntriesByType("navigation")[0]; return e ? e.responseStatus : 0 }`); err == nil {

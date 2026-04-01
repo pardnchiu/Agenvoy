@@ -114,7 +114,7 @@ cp .env.example .env
 
 ### API Extension
 
-在 `~/.config/agenvoy/apis/` 放置 JSON 檔即可新增自訂 API 工具，每個檔案定義一個可呼叫的工具，啟動時自動載入：
+在 `~/.config/agenvoy/api_tools/` 放置 JSON 檔即可新增自訂 API 工具，每個檔案定義一個可呼叫的工具，啟動時自動載入：
 
 ```json
 {
