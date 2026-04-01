@@ -11,6 +11,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -77,7 +78,7 @@ func main() {
 
 	if os.Args[1] == "list" {
 		if len(os.Args) > 2 && os.Args[2] == "skill" {
-			skill.SyncSkills(context.Background())
+			skill.SyncSkills(context.Background(), extensions.Skills)
 			scanner := skill.NewScanner()
 
 			if len(scanner.Skills.ByName) == 0 {
@@ -149,7 +150,7 @@ func main() {
 
 		agentRegistry := getAgentRegistry()
 		ctx, cancel := context.WithCancel(context.Background())
-		skill.SyncSkills(ctx)
+		skill.SyncSkills(ctx, extensions.Skills)
 		scanner := skill.NewScanner()
 		defer cancel()
 

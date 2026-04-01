@@ -2,157 +2,73 @@ package skill
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
+	"io/fs"
 	"log/slog"
-	"net/http"
 	"os"
 	"path/filepath"
-	"time"
+	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
-const (
-	apiGithubSkills = "https://skill-agenvoy.pardn.workers.dev"
-)
-
-type ghEntry struct {
-	Name        string `json:"name"`
-	Type        string `json:"type"`
-	DownloadURL string `json:"download_url"`
-}
-
-func SyncSkills(ctx context.Context) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	entries, err := listGitHub(ctx, apiGithubSkills)
-	if err != nil {
-		slog.Error("listGitHub",
+func SyncSkills(_ context.Context, fsys fs.FS) {
+	if err := os.RemoveAll(filesystem.SystemSkillsDir); err != nil {
+		slog.Error("os.RemoveAll",
+			slog.String("path", filesystem.SystemSkillsDir),
 			slog.String("error", err.Error()))
 		return
 	}
 
-	var added []string
-
-	for _, entry := range entries {
-		if entry.Type != "dir" {
-			continue
-		}
-
-		path := filepath.Join(filesystem.SkillsDir, entry.Name)
-		if _, err := os.Stat(path); err == nil {
-			continue
-		}
-		if err := os.MkdirAll(path, 0755); err != nil {
-			slog.Warn("os.MkdirAll",
-				slog.String("error", err.Error()))
-			continue
-		}
-
-		if err := downloadDir(ctx, fmt.Sprintf("%s/%s", apiGithubSkills, entry.Name), path); err != nil {
-			slog.Warn("downloadDir",
-				slog.String("error", err.Error()))
-			os.Remove(path)
-			continue
-		}
-
-		added = append(added, entry.Name)
-	}
-
-	if err := filesystem.CheckSkillsGit(ctx); err != nil {
-		slog.Warn("filesystem.CheckSkillsGit",
+	if err := os.MkdirAll(filesystem.SystemSkillsDir, 0755); err != nil {
+		slog.Error("os.MkdirAll",
+			slog.String("path", filesystem.SystemSkillsDir),
 			slog.String("error", err.Error()))
 		return
 	}
 
-	for _, name := range added {
-		if err := filesystem.CommitSkills(ctx, "add", name); err != nil {
-			slog.Warn("filesystem.CommitSkills",
+	entries, err := fs.ReadDir(fsys, "skills")
+	if err != nil {
+		slog.Error("fs.ReadDir",
+			slog.String("error", err.Error()))
+		return
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		srcDir := "skills/" + entry.Name()
+		destDir := filepath.Join(filesystem.SystemSkillsDir, entry.Name())
+
+		if err := copyFromFS(fsys, srcDir, destDir); err != nil {
+			slog.Warn("copyFromFS",
+				slog.String("skill", entry.Name()),
 				slog.String("error", err.Error()))
 		}
 	}
 }
 
-func listGitHub(ctx context.Context, apiURL string) ([]ghEntry, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("http.NewRequestWithContext: %w", err)
-	}
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("http.DefaultClient.Do: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, apiURL)
-	}
-
-	var entries []ghEntry
-	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
-		return nil, fmt.Errorf("json.Decode: %w", err)
-	}
-	return entries, nil
-}
-
-func downloadDir(ctx context.Context, apiURL, localPath string) error {
-	entries, err := listGitHub(ctx, apiURL)
-	if err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll(localPath, 0755); err != nil {
-		return fmt.Errorf("os.MkdirAll: %w", err)
-	}
-
-	for _, entry := range entries {
-		dest := filepath.Join(localPath, entry.Name)
-		switch entry.Type {
-		case "dir":
-			if err := downloadDir(ctx, fmt.Sprintf("%s/%s", apiURL, entry.Name), dest); err != nil {
-				return err
-			}
-		case "file":
-			if entry.DownloadURL == "" {
-				continue
-			}
-			if err := downloadFile(ctx, entry.DownloadURL, dest); err != nil {
-				return err
-			}
+func copyFromFS(fsys fs.FS, srcDir, destDir string) error {
+	return fs.WalkDir(fsys, srcDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
-	}
-	return nil
-}
 
-func downloadFile(ctx context.Context, url, destPath string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return fmt.Errorf("http.NewRequest: %w", err)
-	}
+		rel := strings.TrimPrefix(path, srcDir)
+		rel = strings.TrimPrefix(rel, "/")
+		destPath := filepath.Join(destDir, filepath.FromSlash(rel))
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("http.Do: %w", err)
-	}
-	defer resp.Body.Close()
+		if d.IsDir() {
+			return os.MkdirAll(destPath, 0755)
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, url)
-	}
+		data, err := fs.ReadFile(fsys, path)
+		if err != nil {
+			return fmt.Errorf("fs.ReadFile %s: %w", path, err)
+		}
 
-	f, err := os.Create(destPath)
-	if err != nil {
-		return fmt.Errorf("os.Create: %w", err)
-	}
-	defer f.Close()
-
-	if _, err := io.Copy(f, resp.Body); err != nil {
-		return fmt.Errorf("io.Copy: %w", err)
-	}
-	return nil
+		return os.WriteFile(destPath, data, 0644)
+	})
 }

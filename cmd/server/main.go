@@ -10,6 +10,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/claude"
@@ -70,7 +71,7 @@ func main() {
 	}
 
 	registry := buildAgentRegistry()
-	go skill.SyncSkills(context.Background())
+	go skill.SyncSkills(context.Background(), extensions.Skills)
 	scanner := skill.NewScanner()
 
 	var selectorBot agentTypes.Agent

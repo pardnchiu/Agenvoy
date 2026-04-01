@@ -8,24 +8,25 @@ import (
 )
 
 var (
-	filesystemOnce sync.Once
-	AgenvoyDir     string
-	ConfigPath     string
-	UsagePath      string
-	StoreDir       string
-	SessionsDir    string
-	APIToolsDir    string
-	ScriptToolsDir string
-	ErrorsDir      string
+	filesystemOnce      sync.Once
+	AgenvoyDir          string
+	ConfigPath          string
+	UsagePath           string
+	StoreDir            string
+	SessionsDir         string
+	APIToolsDir         string
+	ScriptToolsDir      string
+	ErrorsDir           string
 	SchedulerDir        string
 	SchedulerStateDir   string
 	SchedulerRecordsDir string
 	TasksPath           string
 	CronsPath           string
 	ScriptsDir          string
-	SkillsDir      string
-	ToolsDir       string
-	DownloadDir    string
+	SkillsDir           string
+	SystemSkillsDir     string
+	ToolsDir            string
+	DownloadDir         string
 
 	WorkAgenvoyDir     string
 	WorkAPIToolsDir    string
@@ -70,6 +71,7 @@ func Init() error {
 		ScriptsDir = filepath.Join(SchedulerDir, "scripts")
 
 		SkillsDir = filepath.Join(AgenvoyDir, "skills")
+		SystemSkillsDir = filepath.Join(SkillsDir, ".system")
 		ToolsDir = filepath.Join(AgenvoyDir, "tools")
 		ToolFetchPage = filepath.Join(ToolsDir, "fetch_page")
 		ToolSearchWeb = filepath.Join(ToolsDir, "search_web")

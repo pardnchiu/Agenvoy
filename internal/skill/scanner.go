@@ -51,6 +51,7 @@ func NewScanner() *SkillScanner {
 		filepath.Join(home, ".openai", "skills"),
 		filepath.Join(home, ".codex", "skills"),
 		filesystem.SkillsDir,
+		filesystem.SystemSkillsDir,
 		"/mnt/skills/public",
 		"/mnt/skills/user",
 		"/mnt/skills/examples",

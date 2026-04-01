@@ -16,6 +16,13 @@ func CheckSkillsGit(ctx context.Context) error {
 		return fmt.Errorf("os.MkdirAll: %w", err)
 	}
 
+	gitignorePath := filepath.Join(SkillsDir, ".gitignore")
+	if _, err := os.Stat(gitignorePath); os.IsNotExist(err) {
+		if err := os.WriteFile(gitignorePath, []byte(".system/\n"), 0644); err != nil {
+			return fmt.Errorf("os.WriteFile: %w", err)
+		}
+	}
+
 	dir := filepath.Join(SkillsDir, ".git")
 	if _, err := os.Stat(dir); err == nil {
 		return nil
@@ -26,6 +33,7 @@ func CheckSkillsGit(ctx context.Context) error {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("cmd.CombinedOutput: %w: %s", err, strings.TrimSpace(string(out)))
 	}
+
 	return nil
 }
 
