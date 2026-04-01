@@ -50,12 +50,13 @@ var MaxEmptyResponses = func() int {
 }()
 
 type ExecData struct {
-	Agent       agentTypes.Agent
-	WorkDir     string
-	Skill       *skill.Skill
-	Content     string
-	ImageInputs []string
-	FileInputs  []string
+	Agent        agentTypes.Agent
+	WorkDir      string
+	Skill        *skill.Skill
+	Content      string
+	ImageInputs  []string
+	FileInputs   []string
+	ExcludeTools []string
 }
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
@@ -67,6 +68,20 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	exec, err := tools.NewExecutor(data.WorkDir, session.ID)
 	if err != nil {
 		return fmt.Errorf("tools.NewExecutor: %w", err)
+	}
+
+	if len(data.ExcludeTools) > 0 {
+		excluded := make(map[string]bool, len(data.ExcludeTools))
+		for _, name := range data.ExcludeTools {
+			excluded[name] = true
+		}
+		filtered := exec.Tools[:0]
+		for _, t := range exec.Tools {
+			if !excluded[t.Function.Name] {
+				filtered = append(filtered, t)
+			}
+		}
+		exec.Tools = filtered
 	}
 
 	limit := MaxToolIterations

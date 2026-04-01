@@ -17,10 +17,11 @@ import (
 )
 
 type Request struct {
-	Content   string `json:"content"`
-	SSE       bool   `json:"sse"`
-	SessionID string `json:"session_id"`
-	Model     string `json:"model,omitempty"`
+	Content      string   `json:"content"`
+	SSE          bool     `json:"sse"`
+	SessionID    string   `json:"session_id"`
+	Model        string   `json:"model,omitempty"`
+	ExcludeTools []string `json:"exclude_tools,omitempty"`
 }
 
 func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner) gin.HandlerFunc {
@@ -70,10 +71,11 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 
 			workDir, _ := os.UserHomeDir()
 			data := exec.ExecData{
-				Agent:   agent,
-				WorkDir: workDir,
-				Skill:   skill,
-				Content: trimContent,
+				Agent:        agent,
+				WorkDir:      workDir,
+				Skill:        skill,
+				Content:      trimContent,
+				ExcludeTools: req.ExcludeTools,
 			}
 
 			session, err := newSession(data, sessionID)
