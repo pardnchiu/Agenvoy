@@ -327,6 +327,12 @@ description: 顯示給 Agent 選擇時的一行摘要
 { "content": "幫我整理今天的新聞", "sse": false, "model": "claude@claude-opus-4-6" }
 ```
 
+使用 `exclude_tools` 可僅針對本次請求停用指定工具（不影響其他 Session）：
+
+```json
+{ "content": "幫我整理今天的新聞", "sse": false, "exclude_tools": ["run_command", "write_file"] }
+```
+
 **回應（非 SSE）：**
 ```json
 { "text": "..." }
@@ -496,7 +502,8 @@ agenvoy remove
 
 | 工具 | 參數 | 說明 |
 |------|------|------|
-| `read_file` | `path` | 讀取指定路徑的檔案內容 |
+| `search_tools` | `query`, `max_results` | 按需搜尋並注入工具；支援 `select:<name>` 直接啟用、關鍵字模糊搜尋與 `+term` 必要詞語語法 |
+| `read_file` | `path`, `pages` | 讀取指定路徑的檔案內容；自動偵測二進位檔案；PDF 檔案支援 `pages` 範圍（例如 `"1-5"`） |
 | `write_file` | `path`, `content` | 寫入或建立檔案（原子性寫入） |
 | `list_files` | `path`, `recursive` | 列出目錄內容 |
 | `glob_files` | `pattern` | Glob 模式比對（如 `**/*.go`） |
@@ -513,7 +520,6 @@ agenvoy remove
 | `fetch_page` | `url` | 無頭 Chrome 渲染頁面轉 Markdown（唯讀） |
 | `download_page` | `href`, `save_to` | JS 渲染頁面儲存至本地檔案 |
 | `run_command` | `command` | 於沙箱中執行白名單內的 Shell 指令（300 秒逾時） |
-| `write_script` | `name`, `content` | 在排程器目錄建立 `.py` 腳本 |
 | `add_task` | `at`, `script`, `channel_id` | 設定一次性定時任務；執行結果傳送至指定 Discord 頻道 |
 | `list_tasks` | — | 列出所有待執行的一次性任務 |
 | `remove_task` | `index` | 依序號取消一次性任務（多個時須先列出） |

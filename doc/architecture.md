@@ -237,6 +237,10 @@ flowchart TD
         EAT["call_external_agent · delegate task to named external agent\nverify_with_external_agent · parallel cross-validation across all declared agents\nreview_result · internal priority-model review\n(claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet)"]
     end
 
+    subgraph SearchTools ["Deferred Tool Registry · searchTools"]
+        SRT["search_tools · AlwaysLoad=true · ReadOnly=true\nkeyword fuzzy search + 'select:<name>' direct activation\n'+term' required-match syntax · max_results configurable\ninjects matching tool schemas into current request context"]
+    end
+
     Registry --> FileTools
     Registry --> WebTools
     Registry --> APITools
@@ -245,6 +249,7 @@ flowchart TD
     Registry --> SchedulerTools
     Registry --> ErrorMemTools
     Registry --> ExternalAgentTools
+    Registry --> SearchTools
 
     AT --> UserAPI
     ST --> Manifest
@@ -313,8 +318,8 @@ flowchart TD
     subgraph Handlers ["Handlers · internal/routes/handler"]
         H1["ListTools()\nenumerate registered tools\nname · description · parameters"]
         H2["CallTool()\nvalidate tool exists\ndispatch via tools.Execute()"]
-        H3SSE["SendSSE()\nstream token chunks\nContent-Type: text/event-stream"]
-        H3JSON["Send()\ncollect full response\nreturn JSON {text}\n(model field → bypass SelectAgent if set)"]
+        H3SSE["SendSSE()\nstream token chunks\nContent-Type: text/event-stream\n(exclude_tools → filter tool list per request)"]
+        H3JSON["Send()\ncollect full response\nreturn JSON {text}\n(model field → bypass SelectAgent if set)\n(exclude_tools → filter tool list per request)"]
         H4["GetKey()\nread from OS Keychain"]
         H5["SaveKey()\nwrite to OS Keychain"]
     end

@@ -237,6 +237,10 @@ flowchart TD
         EAT["call_external_agent · 委派任務至指定外部 Agent\nverify_with_external_agent · 並行交叉驗證（所有已宣告 Agent）\nreview_result · 內部優先序模型審查\n（claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet）"]
     end
 
+    subgraph SearchTools ["延遲工具 Registry · searchTools"]
+        SRT["search_tools · AlwaysLoad=true · ReadOnly=true\n關鍵字模糊搜尋 + 'select:<name>' 直接啟用\n'+term' 必要詞語語法 · max_results 可設定\n將匹配工具的完整 schema 注入當前請求 Context"]
+    end
+
     Registry --> FileTools
     Registry --> WebTools
     Registry --> APITools
@@ -245,6 +249,7 @@ flowchart TD
     Registry --> SchedulerTools
     Registry --> ErrorMemTools
     Registry --> ExternalAgentTools
+    Registry --> SearchTools
 
     AT --> UserAPI
     ST --> Manifest
@@ -313,8 +318,8 @@ flowchart TD
     subgraph Handlers ["Handlers · internal/routes/handler"]
         H1["ListTools()\n列舉已註冊工具\nname · description · parameters"]
         H2["CallTool()\n驗證工具存在\n透過 tools.Execute() 執行"]
-        H3SSE["SendSSE()\nstreaming token 輸出\nContent-Type: text/event-stream"]
-        H3JSON["Send()\n收集完整回應\n回傳 JSON {text}\n（model 欄位設定時略過 SelectAgent）"]
+        H3SSE["SendSSE()\nstreaming token 輸出\nContent-Type: text/event-stream\n（exclude_tools → 每次請求獨立過濾工具清單）"]
+        H3JSON["Send()\n收集完整回應\n回傳 JSON {text}\n（model 欄位設定時略過 SelectAgent）\n（exclude_tools → 每次請求獨立過濾工具清單）"]
         H4["GetKey()\n從 OS Keychain 讀取"]
         H5["SaveKey()\n寫入 OS Keychain"]
     end

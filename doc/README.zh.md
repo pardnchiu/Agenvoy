@@ -150,6 +150,14 @@ GitHub Copilot、Claude、OpenAI、Gemini、Nvidia NIM，以及任意 OpenAI 相
 
 </details>
 
+### 透過 search_tools 延遲載入工具
+
+`search_tools` 永遠可用，讓 Agent 按需探索並注入工具 — 支援關鍵字模糊搜尋、`select:<name>` 直接啟用，以及 `+term` 必要詞語語法 — 無需預先載入所有工具 Schema。
+
+### 跨所有 Provider 的 Prompt 快取
+
+重複的 System Prompt 與 Context 段落在 Provider 層快取 — Claude、Gemini 與 Copilot — 降低後續呼叫的延遲與 Token 成本。
+
 ### 外部 Agent 驗證與內部審查
 
 三個工具讓 Agent 在回傳結果前交叉核查自身輸出 — 可使用優先序內部模型審查，或並行派發至所有已宣告的外部 Agent。
@@ -205,20 +213,25 @@ agenvoy/
 │   ├── store/              # Session 持久化、搜尋、原子性寫入
 │   ├── tui/                # Terminal UI（rivo/tview）— 檔案瀏覽、Log、內容檢視
 │   ├── sandbox/            # 沙箱隔離 + 敏感路徑封鎖
-│   ├── scheduler/          # 持久化一次性與週期性任務排程器
+│   ├── scheduler/
+│   │   ├── crons/          # 週期性 Cron 任務 CRUD，檔案狀態持久化
+│   │   ├── tasks/          # 一次性任務 CRUD，檔案狀態持久化
+│   │   └── script/         # 腳本執行輔助層
 │   ├── session/            # Session 狀態、設定與滾動摘要
 │   ├── skill/              # Markdown Skill 掃描器與解析器
 │   ├── toolAdapter/
 │   │   ├── api/            # HTTP API 工具翻譯與 dispatch
 │   │   └── script/         # Script Tool 執行器與 stdin/stdout JSON 橋接
-│   ├── tools/              # 29+ 自註冊工具 + git / 排程工具
-│   │   └── externalAgent/  # 外部 Agent 委派 + 內部審查工具
+│   ├── tools/              # 30+ 自註冊工具 + git / 排程工具
+│   │   ├── externalAgent/  # 外部 Agent 委派 + 內部審查工具
+│   │   └── searchTools/    # 延遲工具探索與按需注入
 ├── go.mod
 └── LICENSE
 ```
 
 ## 版本歷史
 
+- **v0.17.3** — 新增 `search_tools` 延遲工具載入 — Agent 可透過關鍵字模糊搜尋或 `select:<name>` 直接啟用的方式按需探索工具，降低大型工具集的 Context 開銷。`/v1/send` 新增 `exclude_tools` 參數支援每次請求獨立過濾工具。新增跨 Claude、Gemini 與 Copilot Provider 的 Prompt 快取，降低延遲與 Token 消耗。工具重試成功後自動提示 LLM 記錄錯誤模式。排程器重構為 `crons/` / `tasks/` / `script/` 子套件，以檔案狀態持久化取代記憶體狀態；以嵌入式 FS 複製取代網路技能同步；全面翻新檔案工具，新增二進位偵測與 PDF 分頁讀取。
 - **v0.17.2** — 新增 `call_external_agent`、`verify_with_external_agent`、`review_result` 三個工具，支援外部委派與內部優先序模型審查。重構 Session 訊息組裝為四個固定段（SystemPrompts / OldHistories / UserInput / ToolHistories），在 context 超限時觸發 reactive trimming。`/v1/send` 新增 `model` 欄位，允許略過自動 Agent 選擇。
 - **v0.17.1** — 修正因提前匯入尚未存在的 `externalAgent` 套件導致的編譯失敗。
 - **v0.17.0** — 完整 REST API 層，包含 `/v1/send`（SSE 與非 SSE）、`/v1/key`、`/v1/tools`、`/v1/tool/:name` 端點。TUI 管理介面正式完成，含檔案瀏覽器、Session 檢視器與即時 Log 串流。Discord Bot 與 REST API 統一整合至 `cmd/app`。Copilot token 遷移至系統金鑰鏈。`browser` 套件重新命名為 `fetchPage`。更新 `schedule-task` 與 `script-tool-creator` 技能，改用 Agenvoy API 呼叫工具取代直接外部呼叫。

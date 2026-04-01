@@ -327,6 +327,12 @@ Use the optional `model` field to bypass automatic agent selection and route dir
 { "content": "summarize today's news", "sse": false, "model": "claude@claude-opus-4-6" }
 ```
 
+Use `exclude_tools` to suppress specific tools for this request only (does not affect other sessions):
+
+```json
+{ "content": "summarize today's news", "sse": false, "exclude_tools": ["run_command", "write_file"] }
+```
+
 **Response (non-SSE):**
 ```json
 { "text": "..." }
@@ -496,7 +502,8 @@ agenvoy remove
 
 | Tool | Parameters | Description |
 |------|------------|-------------|
-| `read_file` | `path` | Read file content at the specified path |
+| `search_tools` | `query`, `max_results` | Search and inject tools on demand; supports `select:<name>` direct activation, keyword fuzzy search, and `+term` required-match syntax |
+| `read_file` | `path`, `pages` | Read file content; binary files are detected and rejected; PDF files support `pages` range (e.g. `"1-5"`) |
 | `write_file` | `path`, `content` | Write or create a file (atomic write) |
 | `list_files` | `path`, `recursive` | List directory contents |
 | `glob_files` | `pattern` | Glob pattern matching (e.g., `**/*.go`) |
@@ -513,7 +520,6 @@ agenvoy remove
 | `fetch_page` | `url` | JS-rendered page content as Markdown (headless Chrome) |
 | `download_page` | `href`, `save_to` | JS-rendered page saved to a local file |
 | `run_command` | `command` | Execute whitelisted shell commands in sandbox (300s timeout) |
-| `write_script` | `name`, `content` | Create a `.py` script under the scheduler directory |
 | `add_task` | `at`, `script`, `channel_id` | Schedule a one-time task; result is posted to the Discord channel on completion |
 | `list_tasks` | — | List all pending one-time tasks |
 | `remove_task` | `index` | Cancel and remove a one-time task (list first if multiple) |

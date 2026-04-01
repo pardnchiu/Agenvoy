@@ -149,6 +149,14 @@ When any tool call fails, the error is persisted to `tool_errors/{hash}.json`. T
 
 </details>
 
+### Deferred Tool Loading via search_tools
+
+`search_tools` is always available and lets the agent discover and inject tools on demand — keyword fuzzy search, `select:<name>` direct activation, or `+term` required-match syntax — without loading every tool schema upfront.
+
+### Prompt Caching Across All Providers
+
+Repeated system prompts and context segments are cached at the provider level — Claude, Gemini, and Copilot — reducing latency and token cost on subsequent calls within the same context.
+
 ### External Agent Verification & Internal Review
 
 Three tools let the agent cross-check its own output before returning it — either using a priority-ordered internal model or dispatching in parallel to all declared external agents.
@@ -204,20 +212,25 @@ agenvoy/
 │   ├── store/              # Session persistence, search, atomic writes
 │   ├── tui/                # Terminal UI (rivo/tview) — file browser, logs, content viewer
 │   ├── sandbox/            # Sandbox isolation + sensitive path denial
-│   ├── scheduler/          # Persistent one-time and recurring task scheduler
+│   ├── scheduler/
+│   │   ├── crons/          # Recurring cron task CRUD with file-based persistence
+│   │   ├── tasks/          # One-time task CRUD with file-based persistence
+│   │   └── script/         # Script execution helper
 │   ├── session/            # Session state, config, and rolling summary
 │   ├── skill/              # Markdown skill scanner and parser
 │   ├── toolAdapter/
 │   │   ├── api/            # HTTP API tool translation and dispatch
 │   │   └── script/         # Script tool executor and stdin/stdout JSON bridge
-│   ├── tools/              # 29+ self-registering tools + git / scheduler tools
-│   │   └── externalAgent/  # External agent delegation + internal review tools
+│   ├── tools/              # 30+ self-registering tools + git / scheduler tools
+│   │   ├── externalAgent/  # External agent delegation + internal review tools
+│   │   └── searchTools/    # Deferred tool discovery and on-demand injection
 ├── go.mod
 └── LICENSE
 ```
 
 ## Version History
 
+- **v0.17.3** — Add `search_tools` deferred tool loading — agents discover and activate tools on demand using keyword fuzzy search or `select:<name>` direct selection, reducing context overhead on large tool sets. Add `exclude_tools` parameter to `/v1/send` for per-request tool filtering. Add prompt caching across Claude, Gemini, and Copilot providers to reduce latency and token cost. Auto-prompt LLM to record error patterns after successful tool retry. Refactor scheduler into `crons/` / `tasks/` / `script/` sub-packages with file-based state persistence; replace network skill sync with embedded FS copy; overhaul file tools with binary detection and PDF page-range reading.
 - **v0.17.2** — Add `call_external_agent`, `verify_with_external_agent`, and `review_result` tools for external delegation and internal priority-model review. Refactor session message assembly into 4 fixed segments (SystemPrompts / OldHistories / UserInput / ToolHistories) with reactive context trimming on context-length errors. Add `model` field to `/v1/send` request to bypass automatic agent selection.
 - **v0.17.1** — Fix build break caused by importing the missing `externalAgent` package before it existed in the repository.
 - **v0.17.0** — Full REST API layer with `/v1/send` (SSE + non-SSE), `/v1/key`, `/v1/tools`, `/v1/tool/:name` endpoints. TUI dashboard complete with file browser, session viewer, and live log stream. Discord bot and REST API unified under `cmd/app`. Copilot token migrated to system keychain. Renamed `browser` package to `fetchPage`. Updated `schedule-task` and `script-tool-creator` skills to invoke tools via Agenvoy API instead of direct external calls.
