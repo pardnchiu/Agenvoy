@@ -110,6 +110,9 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	if model == "" {
 		model = agent.Name()
 	}
+	if _, after, ok := strings.Cut(model, "@"); ok {
+		model = after
+	}
 	footer := model
 	if doneEvent.Usage != nil {
 		footer = fmt.Sprintf("%s | in:%d out:%d", footer, doneEvent.Usage.Input, doneEvent.Usage.Output)

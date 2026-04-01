@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-func ListDir(dirs ...string) ([]string, error) {
+func ListDir(dirs ...string) ([]os.DirEntry, error) {
 	if len(dirs) == 0 || len(dirs) > 2 {
 		return nil, fmt.Errorf("invalid dir: %d", len(dirs))
 	}
@@ -26,18 +26,13 @@ func ListDir(dirs ...string) ([]string, error) {
 		return nil, fmt.Errorf("os.ReadDir: %w", err)
 	}
 
-	var files []string
+	var files []os.DirEntry
 	for _, entry := range entries {
 		newPath := filepath.Join(absPath, entry.Name())
 		if isExclude(workDir, newPath) {
 			continue
 		}
-
-		if entry.IsDir() {
-			files = append(files, entry.Name()+"/")
-		} else {
-			files = append(files, entry.Name())
-		}
+		files = append(files, entry)
 	}
 	return files, nil
 }

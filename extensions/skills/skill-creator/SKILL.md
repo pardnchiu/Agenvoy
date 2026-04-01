@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-description: Create, edit, improve, or audit AgentSkills. Use when creating a new skill from scratch or when asked to improve, review, audit, tidy up, or clean up an existing skill or SKILL.md file. Also use when editing or restructuring a skill directory (moving files to references/ or scripts/, removing stale content, validating against the AgentSkills spec). Triggers on phrases like "create a skill", "author a skill", "tidy up a skill", "improve this skill", "review the skill", "clean up the skill", "audit the skill".
+description: Create, edit, improve, or audit AgentSkills. Use when creating a new skill from scratch or when asked to improve, review, audit, tidy up, or clean up an existing skill or SKILL.md file. Also use when editing or restructuring a skill directory.
 ---
 
 # Skill 建立器
@@ -308,7 +308,8 @@ scripts/init_skill.py my-skill --path skills/public --resources scripts --exampl
 - `description`：這是 Skill 的主要觸發機制
   - 同時包含 Skill 的功能描述與使用時機/Context
   - 所有「何時使用」的資訊放在這裡，不放在 body 中。body 在觸發後才載入，因此 body 中的「何時使用此 Skill」區段對 Agent 沒有幫助
-  - 範例 docx Skill 的 description：「提供全面的文件建立、編輯與分析，支援追蹤修訂、註解、格式保留與文字提取。當需要處理 .docx 檔案時使用：(1) 建立新文件、(2) 修改或編輯內容、(3) 處理追蹤修訂、(4) 新增註解，或任何文件相關任務」
+  - **長度限制：不超過 256 個字元（Unicode rune）**
+  - 範例 docx Skill 的 description：「提供全面的文件建立、編輯與分析，支援追蹤修訂、註解、格式保留與文字提取。當需要處理 .docx 檔案時使用：建立新文件、修改或編輯內容、處理追蹤修訂或新增註解」
 
 不要在 YAML Frontmatter 中包含其他欄位。
 

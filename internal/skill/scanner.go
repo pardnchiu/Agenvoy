@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -204,9 +205,12 @@ func (s *SkillScanner) LoadFS(fsys fs.FS, dir string) {
 }
 
 func (s *SkillScanner) List() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	names := make([]string, 0, len(s.Skills.ByName))
 	for name := range s.Skills.ByName {
 		names = append(names, strings.TrimSpace(name))
 	}
+	sort.Strings(names)
 	return names
 }

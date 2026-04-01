@@ -1,6 +1,6 @@
 ---
 name: script-tool-creator
-description: Create a new Agenvoy script tool (JavaScript or Python) stored at ~/.config/agenvoy/script_tools/. Use when asked to create, add, or generate a script tool. A script tool is a local executable invoked by the agent via stdin/stdout JSON; it extends agent capabilities without modifying the core codebase. Triggers on phrases like "create a script tool", "add a script tool", "make a tool that runs locally", "generate a script tool".
+description: Create a new Agenvoy script tool (JavaScript or Python) stored at ~/.config/agenvoy/script_tools/. Use when asked to create, add, or generate a script tool. A script tool is a local executable invoked by the agent via stdin/stdout JSON.
 ---
 
 # Script Tool 建立器
@@ -222,7 +222,7 @@ python3 scripts/init_script_tool.py parse_csv --lang python
 
 ### 步驟三：編輯 tool.json
 
-填入正確的 `description` 與 `parameters` schema。description 決定 agent 何時呼叫此工具，需清楚且完整。
+填入正確的 `description` 與 `parameters` schema。description 決定 agent 何時呼叫此工具，需清楚且完整，**長度不超過 256 個字元（Unicode rune）**。
 
 ### 步驟四：實作腳本
 

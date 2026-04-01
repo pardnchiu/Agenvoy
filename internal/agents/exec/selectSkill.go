@@ -77,10 +77,16 @@ func SelectSkill(ctx context.Context, bot agentTypes.Agent, scanner *skill.Skill
 		return nil
 	}
 
+	const maxDescLen = 256
+
 	skillMap := make(map[string]string, len(skills))
 	for _, name := range skills {
 		// * already checked List() will output trimmed skill name
-		skillMap[name] = strings.TrimSpace(scanner.Skills.ByName[name].Description)
+		desc := strings.TrimSpace(scanner.Skills.ByName[name].Description)
+		if len([]rune(desc)) > maxDescLen {
+			desc = string([]rune(desc)[:maxDescLen-1]) + "…"
+		}
+		skillMap[name] = desc
 	}
 	skillJson, err := json.Marshal(skillMap)
 	if err != nil {
