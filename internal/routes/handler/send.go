@@ -22,6 +22,7 @@ type Request struct {
 	SessionID    string   `json:"session_id"`
 	Model        string   `json:"model,omitempty"`
 	ExcludeTools []string `json:"exclude_tools,omitempty"`
+	Persist      bool     `json:"persist,omitempty"`
 }
 
 func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner) gin.HandlerFunc {
@@ -36,9 +37,15 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 			return
 		}
 
+		go sessionManager.CleanupSessions()
+
 		sessionID := req.SessionID
 		if sessionID == "" {
-			sessionID = "http-" + utils.UUID()
+			prefix := "temp-"
+			if req.Persist {
+				prefix = "http-"
+			}
+			sessionID = prefix + utils.UUID()
 		}
 
 		events := make(chan agentTypes.Event, 64)

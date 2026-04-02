@@ -6,10 +6,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -156,6 +158,45 @@ func GetHistory(sessionID string) (old, max []agentTypes.Message) {
 		maxHistory = oldHistory[len(oldHistory)-MaxHistoryMessages:]
 	}
 	return oldHistory, maxHistory
+}
+
+func CleanupSessions() {
+	entries, err := os.ReadDir(filesystem.SessionsDir)
+	if err != nil {
+		return
+	}
+	now := time.Now()
+	for _, entry := range entries {
+		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "temp-") {
+			continue
+		}
+		sessionDir := filepath.Join(filesystem.SessionsDir, entry.Name())
+		if now.Sub(latestModTime(sessionDir)) > time.Hour {
+			if err := os.RemoveAll(sessionDir); err != nil {
+				slog.Warn("CleanupTempSessions",
+					slog.String("dir", entry.Name()),
+					slog.String("error", err.Error()))
+			}
+		}
+	}
+}
+
+func latestModTime(dir string) time.Time {
+	var latest time.Time
+	_ = filepath.WalkDir(dir, func(_ string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return nil
+		}
+		if t := info.ModTime(); t.After(latest) {
+			latest = t
+		}
+		return nil
+	})
+	return latest
 }
 
 func SaveHistory(sessionID, content string) error {
