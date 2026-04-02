@@ -50,13 +50,14 @@ var MaxEmptyResponses = func() int {
 }()
 
 type ExecData struct {
-	Agent        agentTypes.Agent
-	WorkDir      string
-	Skill        *skill.Skill
-	Content      string
-	ImageInputs  []string
-	FileInputs   []string
-	ExcludeTools []string
+	Agent             agentTypes.Agent
+	WorkDir           string
+	Skill             *skill.Skill
+	Content           string
+	ImageInputs       []string
+	FileInputs        []string
+	ExcludeTools      []string
+	ExtraSystemPrompt string
 }
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
@@ -253,6 +254,10 @@ func GetSystemPrompt(data ExecData) string {
 			}
 		}
 	}
+	var extraSection string
+	if extra := strings.TrimSpace(data.ExtraSystemPrompt); extra != "" {
+		extraSection = "---\n\n## Additional Instructions\n\n" + extra + "\n\n---\n\n"
+	}
 	return strings.NewReplacer(
 		"{{.SystemOS}}", systemOS,
 		"{{.WorkPath}}", data.WorkDir,
@@ -260,6 +265,7 @@ func GetSystemPrompt(data ExecData) string {
 		"{{.SkillExt}}", skillExt,
 		"{{.Content}}", content,
 		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
+		"{{.ExtraSystemPrompt}}", extraSection,
 	).Replace(configs.SystemPrompt)
 }
 

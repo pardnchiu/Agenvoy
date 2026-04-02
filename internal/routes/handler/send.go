@@ -23,6 +23,7 @@ type Request struct {
 	Model        string   `json:"model,omitempty"`
 	ExcludeTools []string `json:"exclude_tools,omitempty"`
 	Persist      bool     `json:"persist,omitempty"`
+	SystemPrompt string   `json:"system_prompt,omitempty"`
 }
 
 func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner) gin.HandlerFunc {
@@ -78,11 +79,12 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 
 			workDir, _ := os.UserHomeDir()
 			data := exec.ExecData{
-				Agent:        agent,
-				WorkDir:      workDir,
-				Skill:        skill,
-				Content:      trimContent,
-				ExcludeTools: req.ExcludeTools,
+				Agent:             agent,
+				WorkDir:           workDir,
+				Skill:             skill,
+				Content:           trimContent,
+				ExcludeTools:      req.ExcludeTools,
+				ExtraSystemPrompt: req.SystemPrompt,
 			}
 
 			session, err := newSession(data, sessionID)
