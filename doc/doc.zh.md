@@ -6,7 +6,7 @@
 
 ### 系統需求
 
-- Go 1.20 或更高版本
+- Go 1.25 或更高版本
 - 至少一組 AI Provider 憑證（GitHub Copilot 訂閱、或任一 API Key）
 - Discord Bot Token（僅限 Server 模式）
 
@@ -84,6 +84,7 @@ agenvoy add
 |----------|----------|----------|
 | GitHub Copilot | OAuth Device Code Flow（自動刷新） | `gpt-4.1` |
 | OpenAI | API Key（keychain） | `gpt-5-mini` |
+| OpenAI Codex | OAuth Device Code Flow（自動刷新） | `gpt-5.3-codex` |
 | Claude | API Key（keychain） | `claude-sonnet-4-5` |
 | Gemini | API Key（keychain） | `gemini-2.5-pro` |
 | NVIDIA | API Key（keychain） | `openai/gpt-oss-120b` |
@@ -175,7 +176,6 @@ cp .env.example .env
 |-----------|------|------|
 | `nominatim` | 地理編碼 | OpenStreetMap 地理編碼與反向地理編碼 |
 | `coingecko` | 金融 | 加密貨幣價格與市場數據 |
-| `yahoo-finance-1/2` | 金融 | 股票報價與歷史數據 |
 | `wikipedia` | 資料 | Wikipedia 文章搜尋與內容 |
 | `world-bank` | 資料 | 世界銀行發展指標 |
 | `usgs-earthquake` | 資料 | USGS 地震數據 |
@@ -504,6 +504,7 @@ agenvoy remove
 |------|------|------|
 | `search_tools` | `query`, `max_results` | 按需搜尋並注入工具；支援 `select:<name>` 直接啟用、關鍵字模糊搜尋與 `+term` 必要詞語語法 |
 | `read_file` | `path`, `pages` | 讀取指定路徑的檔案內容；自動偵測二進位檔案；PDF 檔案支援 `pages` 範圍（例如 `"1-5"`） |
+| `read_image` | `path` | 讀取本地圖片檔（JPEG/PNG/GIF/WebP，最大 10 MB），回傳 base64 JPEG data URL 供模型視覺檢視 |
 | `write_file` | `path`, `content` | 寫入或建立檔案（原子性寫入） |
 | `list_files` | `path`, `recursive` | 列出目錄內容 |
 | `glob_files` | `pattern` | Glob 模式比對（如 `**/*.go`） |
@@ -513,6 +514,7 @@ agenvoy remove
 | `get_tool_error` | `hash` | 透過 hash 取得失敗工具呼叫的完整錯誤詳情 |
 | `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | 儲存工具錯誤決策至知識庫 |
 | `search_errors` | `keyword` | 檢索錯誤知識庫 |
+| `fetch_yahoo_finance` | `symbol`, `interval`, `range` | 查詢 Yahoo Finance 股票行情與 OHLCV K 線資料；並行雙端點抓取（query1/query2），回傳最快回應 |
 | `analyze_youtube` | `url` | YouTube 影片 metadata（標題、描述、頻道、時長、觀看數） |
 | `fetch_google_rss` | `keyword`, `time`, `lang` | Google 新聞 RSS（含去重） |
 | `send_http_request` | `method`, `url`, `headers`, `body` | 通用 HTTP 請求 |

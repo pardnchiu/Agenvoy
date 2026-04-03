@@ -6,7 +6,7 @@
 
 ### System Requirements
 
-- Go 1.20 or higher
+- Go 1.25 or higher
 - At least one AI provider credential (GitHub Copilot subscription, or any API key)
 - Discord Bot Token (server mode only)
 
@@ -84,6 +84,7 @@ Supported providers:
 |----------|---------------|---------------|
 | GitHub Copilot | OAuth Device Code Flow (auto-refresh) | `gpt-4.1` |
 | OpenAI | API Key (keychain) | `gpt-5-mini` |
+| OpenAI Codex | OAuth Device Code Flow (auto-refresh) | `gpt-5.3-codex` |
 | Claude | API Key (keychain) | `claude-sonnet-4-5` |
 | Gemini | API Key (keychain) | `gemini-2.5-pro` |
 | NVIDIA | API Key (keychain) | `openai/gpt-oss-120b` |
@@ -175,7 +176,6 @@ The following API extensions are bundled and loaded automatically at startup:
 |-----------|----------|-------------|
 | `nominatim` | Geocoding | OpenStreetMap geocoding and reverse geocoding |
 | `coingecko` | Finance | Cryptocurrency prices and market data |
-| `yahoo-finance-1/2` | Finance | Stock quotes and historical data |
 | `wikipedia` | Data | Wikipedia article search and content |
 | `world-bank` | Data | World Bank development indicators |
 | `usgs-earthquake` | Data | USGS earthquake feed |
@@ -504,6 +504,7 @@ agenvoy remove
 |------|------------|-------------|
 | `search_tools` | `query`, `max_results` | Search and inject tools on demand; supports `select:<name>` direct activation, keyword fuzzy search, and `+term` required-match syntax |
 | `read_file` | `path`, `pages` | Read file content; binary files are detected and rejected; PDF files support `pages` range (e.g. `"1-5"`) |
+| `read_image` | `path` | Read a local image file (JPEG/PNG/GIF/WebP, max 10 MB) and return it as a base64 JPEG data URL for visual inspection |
 | `write_file` | `path`, `content` | Write or create a file (atomic write) |
 | `list_files` | `path`, `recursive` | List directory contents |
 | `glob_files` | `pattern` | Glob pattern matching (e.g., `**/*.go`) |
@@ -513,6 +514,7 @@ agenvoy remove
 | `get_tool_error` | `hash` | Retrieve full error details for a failed tool call by hash |
 | `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | Persist tool error decisions to error knowledge base |
 | `search_errors` | `keyword` | Retrieve error knowledge base entries |
+| `fetch_yahoo_finance` | `symbol`, `interval`, `range` | Fetch Yahoo Finance stock quotes and OHLCV candlestick data; concurrent dual-endpoint fetch (query1/query2), returns fastest response |
 | `analyze_youtube` | `url` | YouTube video metadata (title, description, channel, duration, view count) |
 | `fetch_google_rss` | `keyword`, `time`, `lang` | Google News RSS feed with deduplication |
 | `send_http_request` | `method`, `url`, `headers`, `body` | Generic HTTP request |

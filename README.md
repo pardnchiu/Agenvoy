@@ -65,7 +65,7 @@ graph TB
     end
 
     subgraph Providers ["LLM Providers"]
-        P["Copilot · OpenAI · Claude\nGemini · Nvidia · Compat"]
+        P["Copilot · OpenAI · Codex · Claude\nGemini · Nvidia · Compat"]
     end
 
     subgraph Security ["Security Layer"]
@@ -105,12 +105,12 @@ A terminal UI that consolidates CLI execution, Discord bot management, and the R
 
 ### Multi-Provider LLM with Intelligent Routing
 
-Six backends behind one interface — a dedicated planner LLM picks the right provider per request and trims the context window automatically.
+Seven backends behind one interface — a dedicated planner LLM picks the right provider per request and trims the context window automatically.
 
 <details>
 <summary>Details</summary>
 
-GitHub Copilot, Claude, OpenAI, Gemini, Nvidia NIM, and any OpenAI-compatible endpoint (Compat/Ollama) — all behind a unified `Agent` interface. A planner LLM automatically selects the best provider per request. Token-budget trimming prevents context window overflow, and per-provider configurable reasoning levels are supported.
+GitHub Copilot, Claude, OpenAI, OpenAI Codex (OAuth), Gemini, Nvidia NIM, and any OpenAI-compatible endpoint (Compat/Ollama) — all behind a unified `Agent` interface. A planner LLM automatically selects the best provider per request. Token-budget trimming prevents context window overflow, and per-provider configurable reasoning levels are supported.
 
 </details>
 
@@ -230,6 +230,7 @@ agenvoy/
 
 ## Version History
 
+- **v0.17.4** — Add OpenAI Codex as a standalone OAuth provider (Device Code Flow with auto-refresh, default model `gpt-5.3-codex`). Add `read_image` tool to read local image files as base64 data URLs — supports JPEG, PNG, GIF, WebP up to 10 MB, decoded and re-encoded as JPEG. Restore Yahoo Finance as a native Go tool (`fetch_yahoo_finance`) with concurrent dual-endpoint fetch (query1/query2) replacing the removed JSON API extensions. Fix summary generation reliability by completing the summary workflow before final completion signaling. Fix tool fallback handling for `search_history` and `fetch_google_rss` when models send `query` instead of `keyword`. Fix event logging crashes on tool errors without `Err`. Fix stale `discussion_log` retention by filtering entries older than the oldest active context. Fix nil-safe operations and fill missing CRUD coverage in scheduler task and cron flows. Update news-retrieval system prompt with mandatory fallback windows `1h → 24h → 7d → search_web`. Refactor summary extraction into a dedicated workflow; simplify provider startup paths.
 - **v0.17.3** — Add `search_tools` deferred tool loading — agents discover and activate tools on demand using keyword fuzzy search or `select:<name>` direct selection, reducing context overhead on large tool sets. Add `exclude_tools` parameter to `/v1/send` for per-request tool filtering. Add prompt caching across Claude, Gemini, and Copilot providers to reduce latency and token cost. Auto-prompt LLM to record error patterns after successful tool retry. Refactor scheduler into `crons/` / `tasks/` / `script/` sub-packages with file-based state persistence; replace network skill sync with embedded FS copy; overhaul file tools with binary detection and PDF page-range reading.
 - **v0.17.2** — Add `call_external_agent`, `verify_with_external_agent`, and `review_result` tools for external delegation and internal priority-model review. Refactor session message assembly into 4 fixed segments (SystemPrompts / OldHistories / UserInput / ToolHistories) with reactive context trimming on context-length errors. Add `model` field to `/v1/send` request to bypass automatic agent selection.
 - **v0.17.1** — Fix build break caused by importing the missing `externalAgent` package before it existed in the repository.
