@@ -114,13 +114,14 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 	}
 
 	session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: exec.GetSystemPrompt(data)}}
-	if summary := sessionManager.GetSummaryPrompt(sessionID); summary != "" {
-		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
-	}
 
 	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 	session.Histories = oldHistory
 	session.OldHistories = maxHistory
+
+	if summary := sessionManager.GetSummaryPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
+		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
+	}
 	session.ToolHistories = []agentTypes.Message{}
 
 	userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s",

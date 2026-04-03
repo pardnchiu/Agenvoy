@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -30,12 +31,44 @@ func GetSummary(sessionID string) ([]byte, map[string]any) {
 	return bytes, summary
 }
 
-func GetSummaryPrompt(sessionID string) string {
-	bytes, _ := GetSummary(sessionID)
-	summary := strings.NewReplacer(
-		"{{.Summary}}", string(bytes),
+func GetSummaryPrompt(sessionID string, cutoff time.Time) string {
+	raw, summaryMap := GetSummary(sessionID)
+	if raw == nil {
+		return ""
+	}
+
+	if !cutoff.IsZero() && summaryMap != nil {
+		if logs, ok := summaryMap["discussion_log"].([]any); ok {
+			filtered := make([]any, 0, len(logs))
+			for _, item := range logs {
+				m, ok := item.(map[string]any)
+				if !ok {
+					continue
+				}
+				t, ok := m["time"].(string)
+				if !ok {
+					filtered = append(filtered, item)
+					continue
+				}
+				// discussion_log time format: "2006-01-02 15:04"
+				if parsed, err := time.ParseInLocation("2006-01-02 15:04", t, time.Local); err == nil {
+					if !parsed.Before(cutoff) {
+						filtered = append(filtered, item)
+					}
+				} else {
+					filtered = append(filtered, item)
+				}
+			}
+			summaryMap["discussion_log"] = filtered
+		}
+		if b, err := json.Marshal(summaryMap); err == nil {
+			raw = b
+		}
+	}
+
+	return strings.NewReplacer(
+		"{{.Summary}}", string(raw),
 	).Replace(strings.TrimSpace(configs.SummaryPrompt))
-	return summary
 }
 
 func SaveSummary(sessionID string, data any) {

@@ -65,7 +65,7 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 		{Role: "system", Content: configs.DiscordSystemPrompt},
 		{Role: "system", Content: exec.GetSystemPrompt(data)},
 	}
-	if summary := sessionManager.GetSummaryPrompt(sessionID); summary != "" {
+	if summary := sessionManager.GetSummaryPrompt(sessionID, time.Time{}); summary != "" {
 		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
 

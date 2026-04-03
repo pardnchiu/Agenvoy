@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"regexp"
 	_ "image/gif"
 	"image/jpeg"
 	_ "image/png"
@@ -114,7 +115,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		session.Histories = oldHistory
 
 		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: prompt}}
-		if summary := sessionManager.GetSummaryPrompt(sessionID); summary != "" {
+		if summary := sessionManager.GetSummaryPrompt(sessionID, OldestMessageTime(maxHistory)); summary != "" {
 			session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 		}
 
@@ -179,6 +180,23 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	session.ID = sessionID
 
 	return &session, nil
+}
+
+var msgTimeRegex = regexp.MustCompile(`當前時間:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})`)
+
+func OldestMessageTime(histories []agentTypes.Message) time.Time {
+	for _, m := range histories {
+		s, ok := m.Content.(string)
+		if !ok {
+			continue
+		}
+		if matches := msgTimeRegex.FindStringSubmatch(s); len(matches) > 1 {
+			if t, err := time.ParseInLocation("2006-01-02 15:04:05", matches[1], time.Local); err == nil {
+				return t
+			}
+		}
+	}
+	return time.Time{}
 }
 
 func convertToBase64(path string) (string, error) {
