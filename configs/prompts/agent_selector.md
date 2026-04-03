@@ -14,6 +14,10 @@ Agents whose name contains any of the following keywords must NOT be selected (u
 `flash-lite`, `nano`, `haiku`
 → These lightweight models have insufficient instruction-following capability and cannot reliably produce structured summaries, leading to unstable conversation memory.
 
+### Codex Restriction
+Agents whose name contains `codex` must only be selected for code generation tasks (P1 row: Code generation, refactor, debug, code review, code completion).
+For all other task types, `codex` agents must be treated as lowest priority — only selected if no other agent is available.
+
 ### P1: Task-type preference
 Find the preferred provider from the table below, then pick the first `name` in the available list whose prefix matches the preferred provider (excluding blacklist above):
 
@@ -22,7 +26,7 @@ Find the preferred provider from the table below, then pick the first `name` in 
 | Skill execution (Skill already matched) | claude > openai > gemini > copilot > nvidia |
 | Image analysis, visual understanding, chart interpretation | claude > gemini > openai > copilot > nvidia |
 | Complex reasoning, deep analysis, long-form generation | claude > gemini > openai > copilot > nvidia |
-| Code completion, syntax fix, single-file refactor | copilot > claude > gemini > openai > nvidia |
+| Code generation, refactor, debug, code review, code completion | claude(opus) > codex > claude(sonnet) > gemini > openai > copilot > nvidia |
 | Multi-source search integration, cross-referencing | claude > gemini > openai > copilot > nvidia |
 | Pure data retrieval: weather, exchange rate, news headline, short translation | nvidia > copilot > claude > gemini > openai |
 | General Q&A, no distinctive task feature | nvidia > copilot > claude > gemini > openai |

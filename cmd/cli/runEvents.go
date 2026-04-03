@@ -105,7 +105,11 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 		case agentTypes.EventDone:
 			fmt.Printf(" (%s)", time.Since(start).Round(time.Millisecond))
 			if ev.Model != "" {
-				fmt.Printf(" [%s", ev.Model)
+				modelDisplay := ev.Model
+				if _, after, ok := strings.Cut(ev.Model, "@"); ok {
+					modelDisplay = after
+				}
+				fmt.Printf(" [%s", modelDisplay)
 				if ev.Usage != nil {
 					fmt.Printf(" | in:%d out:%d", ev.Usage.Input, ev.Usage.Output)
 				}

@@ -25,6 +25,7 @@ type Provider struct {
 	Description string `json:"description"`
 	IsCopilot   bool   `json:"is_copilot"`
 	IsCompat    bool   `json:"is_compat"`
+	IsCodex     bool   `json:"is_codex"`
 }
 
 //go:embed embed/providers.json
@@ -72,6 +73,9 @@ func runAdd() {
 
 	case provider.IsCompat:
 		model, description = addCompat()
+
+	case provider.IsCodex:
+		model, description = addOpenAICodex(provider.Prefix, provider.Model)
 
 	default:
 		addAPIKey(provider.Label, provider.EnvKey)

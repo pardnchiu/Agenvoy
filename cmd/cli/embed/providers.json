@@ -14,6 +14,13 @@
     "description": "通用語言任務、快速回應、批量處理、不需要深度推理"
   },
   {
+    "label": "OpenAI (OAuth) need ChatGPT Pro/Max",
+    "prefix": "codex@",
+    "model": "gpt-5.3-codex",
+    "description": "Agentic coding · 使用個人 ChatGPT 帳號授權 · 僅供個人測試，不得用於商業服務",
+    "is_codex": true
+  },
+  {
     "label": "Claude",
     "prefix": "claude@",
     "envKey": "ANTHROPIC_API_KEY",

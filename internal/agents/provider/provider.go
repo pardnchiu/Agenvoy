@@ -66,11 +66,12 @@ func parse(data []byte) ProviderItem {
 
 func providers() map[string]ProviderItem {
 	return map[string]ProviderItem{
-		"claude":  parse(configs.ClaudeModels),
-		"copilot": parse(configs.CopilotModels),
-		"gemini":  parse(configs.GeminiModels),
-		"nvidia":  parse(configs.NvidiaModels),
-		"openai":  parse(configs.OpenaiModels),
+		"claude":       parse(configs.ClaudeModels),
+		"codex":        parse(configs.CodexModels),
+		"copilot":      parse(configs.CopilotModels),
+		"gemini":       parse(configs.GeminiModels),
+		"nvidia":       parse(configs.NvidiaModels),
+		"openai":       parse(configs.OpenaiModels),
 	}
 }
 

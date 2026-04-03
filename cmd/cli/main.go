@@ -10,10 +10,12 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/manifoldco/promptui"
 
 	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
+	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/sandbox"
@@ -171,4 +173,42 @@ func main() {
 		}
 		return
 	}
+}
+
+func addOpenAICodex(prefix, defaultModel string) (string, string) {
+	if openaicodex.HasToken() {
+		confirm := promptui.Select{
+			Label:        "OpenAI Codex token exists, re-login?",
+			Items:        []string{"No", "Yes"},
+			HideSelected: true,
+		}
+		idx, _, err := confirm.Run()
+		if err != nil {
+			os.Exit(1)
+		}
+		if idx == 0 {
+			return getModelName(prefix, defaultModel)
+		}
+		if err := openaicodex.ClearToken(); err != nil {
+			slog.Error("openaicodex.ClearToken", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}
+
+	fmt.Println("[!] OpenAI Codex OAuth Notice")
+	fmt.Println("[*] Authenticates via your personal ChatGPT account (OAuth), not an API key")
+	fmt.Println("[*] Requires an active ChatGPT Pro or Max subscription")
+	fmt.Println("[*] For personal testing only — not for commercial or multi-user use")
+	fmt.Println()
+	fmt.Print("[?] Press Enter to confirm you understand and accept the above. (Ctrl+C to cancel)")
+	fmt.Scanln()
+
+	_, err := openaicodex.New()
+	if err != nil {
+		slog.Error("failed to initialize OpenAI Codex",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	return getModelName(prefix, defaultModel)
 }

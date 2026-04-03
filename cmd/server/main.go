@@ -19,6 +19,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/gemini"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/nvidia"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/openai"
+	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -111,6 +112,7 @@ func buildAgentRegistry() agentTypes.AgentRegistry {
 	newFn := map[string]func(string) (agentTypes.Agent, error){
 		"copilot": func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
 		"openai":  func(m string) (agentTypes.Agent, error) { return openai.New(m) },
+		"codex":   func(m string) (agentTypes.Agent, error) { return openaicodex.New(m) },
 		"compat":  func(m string) (agentTypes.Agent, error) { return compat.New(m) },
 		"claude":  func(m string) (agentTypes.Agent, error) { return claude.New(m) },
 		"gemini":  func(m string) (agentTypes.Agent, error) { return gemini.New(m) },

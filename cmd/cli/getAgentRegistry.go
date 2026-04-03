@@ -13,17 +13,19 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/gemini"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/nvidia"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/openai"
+	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
 func newAgentFromModel(modelName string) agentTypes.Agent {
 	agentMap := map[string]func(string) (agentTypes.Agent, error){
-		"copilot": func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
-		"openai":  func(m string) (agentTypes.Agent, error) { return openai.New(m) },
-		"compat":  func(m string) (agentTypes.Agent, error) { return compat.New(m) },
-		"claude":  func(m string) (agentTypes.Agent, error) { return claude.New(m) },
-		"gemini":  func(m string) (agentTypes.Agent, error) { return gemini.New(m) },
-		"nvidia":  func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
+		"copilot":      func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
+		"openai":       func(m string) (agentTypes.Agent, error) { return openai.New(m) },
+		"codex": func(m string) (agentTypes.Agent, error) { return openaicodex.New(m) },
+		"compat":       func(m string) (agentTypes.Agent, error) { return compat.New(m) },
+		"claude":       func(m string) (agentTypes.Agent, error) { return claude.New(m) },
+		"gemini":       func(m string) (agentTypes.Agent, error) { return gemini.New(m) },
+		"nvidia":       func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
 	}
 	providerName := strings.SplitN(modelName, "@", 2)[0]
 	provider, _, _ := strings.Cut(providerName, "[")
@@ -42,12 +44,13 @@ func newAgentFromModel(modelName string) agentTypes.Agent {
 
 func getAgentRegistry() agentTypes.AgentRegistry {
 	agentMap := map[string]func(string) (agentTypes.Agent, error){
-		"copilot": func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
-		"openai":  func(m string) (agentTypes.Agent, error) { return openai.New(m) },
-		"compat":  func(m string) (agentTypes.Agent, error) { return compat.New(m) },
-		"claude":  func(m string) (agentTypes.Agent, error) { return claude.New(m) },
-		"gemini":  func(m string) (agentTypes.Agent, error) { return gemini.New(m) },
-		"nvidia":  func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
+		"copilot":      func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
+		"openai":       func(m string) (agentTypes.Agent, error) { return openai.New(m) },
+		"codex": func(m string) (agentTypes.Agent, error) { return openaicodex.New(m) },
+		"compat":       func(m string) (agentTypes.Agent, error) { return compat.New(m) },
+		"claude":       func(m string) (agentTypes.Agent, error) { return claude.New(m) },
+		"gemini":       func(m string) (agentTypes.Agent, error) { return gemini.New(m) },
+		"nvidia":       func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
 	}
 
 	agentEntries := exec.GetAgent()

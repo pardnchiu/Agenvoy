@@ -49,5 +49,8 @@ var GeminiModels []byte
 //go:embed jsons/providors/nvidia.json
 var NvidiaModels []byte
 
+//go:embed jsons/providors/codex.json
+var CodexModels []byte
+
 //go:embed jsons/providors/openai.json
 var OpenaiModels []byte
