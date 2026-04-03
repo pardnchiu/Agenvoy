@@ -5,9 +5,9 @@ import (
 )
 
 var (
-	fencedBlockRegex    = regexp.MustCompile("(?s)" + "```" + `(?:json|summary)\s*\n(\{.*?\})\s*\n` + "```" + `\s*$`)
-	summaryTagRegex     = regexp.MustCompile(`(?s)<summary>\s*(\{.*?\})\s*</summary>`)
-	summaryBracketRegex = regexp.MustCompile(`(?s)\[summary\]\s*(\{.*?\})\s*\[/summary\]`)
+	fencedBlockRegex    = regexp.MustCompile("(?s)" + "```" + `(?:json|summary)\s*\n([\s\S]*?)\s*\n` + "```")
+	summaryTagRegex     = regexp.MustCompile(`(?s)<summary>\s*([\s\S]*?)\s*</summary>`)
+	summaryBracketRegex = regexp.MustCompile(`(?s)\[summary\]\s*([\s\S]*?)\s*\[/summary\]`)
 )
 
 func isSummaryJSON(m map[string]any) bool {

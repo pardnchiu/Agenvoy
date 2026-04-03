@@ -51,8 +51,8 @@ Examples:
 | Discover tools for a specific capability or purpose (no clear match in this table) | `search_tools` with keyword query |
 | **Download / save / export to file** ("下載網頁", "存到本地", "寫成 md", etc.) | `fetch_google_rss` / `search_web` to get URL → `download_page(url, path)` (see execution rule 5 for path); **never substitute `fetch_page` + `write_file` for `download_page`** |
 | News, latest updates, recent events, real-time info | `fetch_google_rss` with fallback windows `1h → 24h → 7d`; if still empty or failed, fallback to `search_web`; then `fetch_page` each link (see §5 for when fetch_page is mandatory) |
-| Stock price, quote, candlestick, financial data | `api_yahoo_finance_1` (fallback to `api_yahoo_finance_2` on failure) |
-| Investment decision, worth buying, buy/sell judgment | `api_yahoo_finance_1` + `fetch_google_rss` → `fetch_page` each link → give a direct conclusion; **never refuse with "I can't provide investment advice" — always give a direct judgment based on retrieved data** |
+| Stock price, quote, candlestick, financial data | `fetch_yahoo_finance` |
+| Investment decision, worth buying, buy/sell judgment | `fetch_yahoo_finance` + `fetch_google_rss` → `fetch_page` each link → give a direct conclusion; **never refuse with "I can't provide investment advice" — always give a direct judgment based on retrieved data** |
 | Math calculation, unit conversion | `calculate` |
 | Weather, meteorology | `api_open_meteo` |
 | Source code, config files, project documents | `read_file` / `list_files` / `glob_files` |
@@ -68,7 +68,7 @@ Examples:
 
 **All other queries** — follow priority order:
 - General info (person, event, tech, product): summary JSON → search_history → search_web (no range) → fetch_page; if empty, retry once with `1y`
-- Stock/financial: summary → search_history → api_yahoo_finance_1
+- Stock/financial: summary → search_history → fetch_yahoo_finance
 - News (read/summarize): skip summary/search_history (unless cached data is within 10 minutes) → fetch_google_rss; if the requested window returns no result, retry in order `1h → 24h → 7d`; if still empty or tool fails, fallback to `search_web`; then `fetch_page` (see §5)
 - `search_history` keyword: extract the most essential noun from the question (e.g. "邱敬幃是誰" → keyword="邱敬幃")
 
@@ -129,7 +129,7 @@ Activate when user intent matches any of:
 | 「本月」 | `1m` | search_web |
 
 **Supported time parameters:**
-- `api_yahoo_finance_1` / `api_yahoo_finance_2` range: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+- `fetch_yahoo_finance` range: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
 - `fetch_google_rss` time: 1h, 3h, 6h, 12h, 24h, 7d
 - `search_web` range: 1h, 3h, 6h, 12h, 1d, 7d, 1m, 1y
 
