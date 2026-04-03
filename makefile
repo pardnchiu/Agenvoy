@@ -48,7 +48,7 @@ models:
 	go run ./cmd/cli/ list
 
 skills:
-	go run ./cmd/cli/ list skills
+	go run ./cmd/cli/ list skill
 
 test:
 	go test ./test/... -v -timeout 60s

@@ -23,6 +23,25 @@ import (
 )
 
 func init() {
+	toolRegister.RegistGroup("api_", func(_ context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
+		if e.APIToolbox == nil || !e.APIToolbox.IsExist(name) {
+			return "", fmt.Errorf("not exist: %s", name)
+		}
+
+		var params map[string]any
+		if err := json.Unmarshal(args, &params); err != nil {
+			return "", fmt.Errorf("json.Unmarshal: %w", err)
+		}
+		return e.APIToolbox.Execute(name, params)
+	})
+
+	toolRegister.RegistGroup("script_", func(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
+		if e.ScriptToolbox == nil || !e.ScriptToolbox.IsExist(name) {
+			return "", fmt.Errorf("not exist: %s", name)
+		}
+		return e.ScriptToolbox.Execute(ctx, name, args, e.WorkDir)
+	})
+
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "run_command",
 		Description: "執行 shell 指令並返回其輸出。用於執行建置工具、git 指令等。",

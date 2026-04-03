@@ -47,7 +47,7 @@ func main() {
 		fmt.Println("  go run cmd/cli/main.go add")
 		fmt.Println("  go run cmd/cli/main.go remove")
 		fmt.Println("  go run cmd/cli/main.go list")
-		fmt.Println("  go run cmd/cli/main.go list skills")
+		fmt.Println("  go run cmd/cli/main.go list skill")
 		fmt.Println("  go run cmd/cli/main.go run <input...>")
 		fmt.Println("  go run cmd/cli/main.go run-allow <input...>")
 		os.Exit(1)

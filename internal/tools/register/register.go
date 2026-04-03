@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -22,6 +23,7 @@ type Def struct {
 }
 
 var handlerMap = map[string]Handler{}
+var groupHandlerMap = map[string]GroupHandler{}
 var defList []toolTypes.Tool
 var readOnlySet = map[string]bool{}
 var alwaysLoadSet = map[string]bool{}
@@ -64,8 +66,19 @@ func JSON() []byte {
 
 func Dispatch(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
 	handler, ok := handlerMap[name]
-	if !ok {
-		return "", fmt.Errorf("not exist: %s", name)
+	if ok {
+		return handler(ctx, e, args)
 	}
-	return handler(ctx, e, args)
+
+	for prefix, handler := range groupHandlerMap {
+		if strings.HasPrefix(name, prefix) {
+			return handler(ctx, e, name, args)
+		}
+	}
+
+	return "", fmt.Errorf("not exist: %s", name)
+}
+
+func RegistGroup(prefix string, handler GroupHandler) {
+	groupHandlerMap[prefix] = handler
 }

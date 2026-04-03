@@ -18,6 +18,8 @@ func (t *Translator) Execute(name string, params map[string]any) (string, error)
 		return "", fmt.Errorf("api tool not found: %s", name)
 	}
 
+	normalizeAliasParams(doc, params)
+
 	if err := t.checkRequireds(doc, params); err != nil {
 		return "", fmt.Errorf("t.checkRequireds: %w", err)
 	}
@@ -28,6 +30,27 @@ func (t *Translator) Execute(name string, params map[string]any) (string, error)
 	}
 
 	return result, nil
+}
+
+func normalizeAliasParams(doc *APIDocumentData, params map[string]any) {
+	aliasMap := map[string][]string{
+		"currency": {"base", "from"},
+	}
+
+	for canonical, aliases := range aliasMap {
+		if _, ok := doc.Parameters[canonical]; !ok {
+			continue
+		}
+		if value, ok := params[canonical]; ok && value != nil {
+			continue
+		}
+		for _, alias := range aliases {
+			if value, ok := params[alias]; ok && value != nil {
+				params[canonical] = value
+				break
+			}
+		}
+	}
 }
 
 func (t *Translator) checkRequireds(doc *APIDocumentData, params map[string]any) error {
