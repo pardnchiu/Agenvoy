@@ -37,11 +37,18 @@ func init() {
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Keyword string `json:"keyword"`
+				Q       string `json:"q"`
 				Time    string `json:"time"`
 				Lang    string `json:"lang"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
+			}
+			if params.Keyword == "" {
+				params.Keyword = params.Q
+			}
+			if params.Keyword == "" {
+				return "", fmt.Errorf("keyword is required")
 			}
 			return Fetch(params.Keyword, params.Time, params.Lang)
 		},

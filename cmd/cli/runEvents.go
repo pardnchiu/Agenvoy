@@ -25,7 +25,7 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 	for ev := range ch {
 		switch ev.Type {
 		case agentTypes.EventSkillSelect:
-			fmt.Printf("[~] Selecting skill...")
+			fmt.Printf("[~] Selecting skill…")
 
 		case agentTypes.EventSkillResult:
 			if ev.Text == "none" {
@@ -37,13 +37,16 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 
 		case agentTypes.EventAgentSelect:
 			if skillNone {
-				fmt.Printf("\033[2K\r[~] Selecting agent...")
+				fmt.Printf("\033[2K\r[~] Selecting agent…")
 			} else {
-				fmt.Printf("[~] Selecting agent...")
+				fmt.Printf("[~] Selecting agent…")
 			}
 
 		case agentTypes.EventAgentResult:
 			fmt.Printf("\033[2K\r[*] Agent: %s\n", ev.Text)
+
+		case agentTypes.EventToolCall:
+			fmt.Printf("\033[2K\r[*] Tool: %s\n", ev.ToolName)
 
 		case agentTypes.EventText:
 			if strings.HasPrefix(ev.Text, "Agent:") || strings.HasPrefix(ev.Text, "Tool:") || strings.HasPrefix(ev.Text, "Result:") {
@@ -51,15 +54,6 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 			} else {
 				fmt.Printf("%s\n", ev.Text)
 			}
-
-		case agentTypes.EventToolCall:
-			printTool(ev)
-
-		case agentTypes.EventToolCallStart, agentTypes.EventToolCallEnd:
-			printHint("──────────────────────────────────────────────────")
-
-		case agentTypes.EventToolCallText:
-			printHint(strings.TrimSpace(ev.Text))
 
 		case agentTypes.EventToolConfirm:
 			prompt := promptui.Select{
@@ -78,20 +72,6 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 				ev.ReplyCh <- false
 			} else {
 				ev.ReplyCh <- true
-			}
-
-		case agentTypes.EventToolSkipped:
-			fmt.Printf("[x] Skipped: %s\n", ev.ToolName)
-
-		case agentTypes.EventToolResult:
-			var skipped = []string{
-				"fetch_google_rss",
-				"fetch_page",
-				"search_web",
-				"fetch_weather",
-			}
-			if !strings.Contains(strings.Join(skipped, ","), ev.ToolName) {
-				fmt.Printf("[*] Result: %s\n", strings.TrimSpace(ev.Result))
 			}
 
 		case agentTypes.EventExecError:
