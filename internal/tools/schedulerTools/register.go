@@ -55,7 +55,11 @@ func init() {
 			}
 			mgr := scheduler.Get()
 			if mgr == nil {
-				return crons.AddToFile(params.CronExpr, params.Script, params.ChannelID)
+				msg, err := crons.AddToFile(params.CronExpr, params.Script, params.ChannelID)
+				if err != nil {
+					return "", err
+				}
+				return msg + "\n排程已寫入檔案，但需啟動 app 才能實際執行。", nil
 			}
 			return crons.Add(mgr, params.CronExpr, params.Script, params.ChannelID)
 		},
@@ -69,12 +73,11 @@ func init() {
 			"type":       "object",
 			"properties": map[string]any{},
 		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			mgr := scheduler.Get()
-			if mgr == nil {
-				return "", fmt.Errorf("scheduler not initialized")
+		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
+			results, err := crons.List(scheduler.Get())
+			if err != nil {
+				return "", err
 			}
-			results := crons.List(mgr)
 			if len(results) == 0 {
 				return "no cron tasks", nil
 			}
@@ -103,11 +106,7 @@ func init() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			mgr := scheduler.Get()
-			if mgr == nil {
-				return "", fmt.Errorf("scheduler not initialized")
-			}
-			c, r, ok := crons.GetCron(mgr, params.ID)
+			c, r, ok := crons.GetCron(scheduler.Get(), params.ID)
 			if !ok {
 				return "", fmt.Errorf("not found: %s", params.ID)
 			}
@@ -152,11 +151,7 @@ func init() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			mgr := scheduler.Get()
-			if mgr == nil {
-				return "", fmt.Errorf("scheduler not initialized")
-			}
-			if err := crons.Delete(mgr, params.ID); err != nil {
+			if err := crons.Delete(scheduler.Get(), params.ID); err != nil {
 				return "", err
 			}
 			return fmt.Sprintf("cron task %s removed", params.ID), nil
@@ -200,7 +195,11 @@ func init() {
 			}
 			mgr := scheduler.Get()
 			if mgr == nil {
-				return tasks.AddToFile(params.At, params.Script, params.ChannelID)
+				msg, err := tasks.AddToFile(params.At, params.Script, params.ChannelID)
+				if err != nil {
+					return "", err
+				}
+				return msg + "\n排程已寫入檔案，但需啟動 app 才能實際執行。", nil
 			}
 			return tasks.Add(mgr, params.At, params.Script, params.ChannelID)
 		},
@@ -215,11 +214,10 @@ func init() {
 			"properties": map[string]any{},
 		},
 		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			mgr := scheduler.Get()
-			if mgr == nil {
-				return "", fmt.Errorf("scheduler not initialized")
+			results, err := tasks.ListTasks(scheduler.Get())
+			if err != nil {
+				return "", err
 			}
-			results := tasks.ListTasks(mgr)
 			if len(results) == 0 {
 				return "no onetime tasks", nil
 			}
@@ -248,11 +246,7 @@ func init() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			mgr := scheduler.Get()
-			if mgr == nil {
-				return "", fmt.Errorf("scheduler not initialized")
-			}
-			t, ok := tasks.GetTask(mgr, params.ID)
+			t, ok := tasks.GetTask(scheduler.Get(), params.ID)
 			if !ok {
 				return "", fmt.Errorf("not found: %s", params.ID)
 			}
@@ -298,11 +292,7 @@ func init() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			mgr := scheduler.Get()
-			if mgr == nil {
-				return "", fmt.Errorf("scheduler not initialized")
-			}
-			if err := tasks.Delete(mgr, params.ID); err != nil {
+			if err := tasks.Delete(scheduler.Get(), params.ID); err != nil {
 				return "", err
 			}
 			return fmt.Sprintf("onetime task %s removed", params.ID), nil
@@ -334,11 +324,7 @@ func init() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			mgr := scheduler.Get()
-			if mgr == nil {
-				return "", fmt.Errorf("scheduler not initialized")
-			}
-			if err := crons.Update(mgr, params.ID, params.CronExpr); err != nil {
+			if err := crons.Update(scheduler.Get(), params.ID, params.CronExpr); err != nil {
 				return "", err
 			}
 			return fmt.Sprintf("cron %s updated: %s", params.ID, params.CronExpr), nil
@@ -370,11 +356,7 @@ func init() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			mgr := scheduler.Get()
-			if mgr == nil {
-				return "", fmt.Errorf("scheduler not initialized")
-			}
-			if err := tasks.Update(mgr, params.ID, params.At); err != nil {
+			if err := tasks.Update(scheduler.Get(), params.ID, params.At); err != nil {
 				return "", err
 			}
 			return fmt.Sprintf("task %s updated: scheduled at %s", params.ID, params.At), nil

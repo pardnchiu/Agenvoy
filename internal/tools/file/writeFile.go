@@ -25,6 +25,10 @@ func registWriteFile() {
 					"type":        "string",
 					"description": "Path to the file (relative to project root or absolute). When executable is true, provide only the filename (e.g. 'notify.sh') — path components are ignored.",
 				},
+				"name": map[string]any{
+					"type":        "string",
+					"description": "Alias for path when executable is true. Provide the script filename (e.g. 'notify.sh').",
+				},
 				"content": map[string]any{
 					"type":        "string",
 					"description": "Content to write to the file",
@@ -34,11 +38,12 @@ func registWriteFile() {
 					"description": "If true, saves as an executable script (.sh or .py) to the scheduler scripts directory with a UTC timestamp suffix (e.g. notify_1741569300.sh). The returned filename must be passed to add_task or add_cron.",
 				},
 			},
-			"required": []string{"path", "content"},
+			"required": []string{"content"},
 		},
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Path       string `json:"path"`
+				Name       string `json:"name"`
 				Content    string `json:"content"`
 				Executable bool   `json:"executable"`
 			}
@@ -47,13 +52,16 @@ func registWriteFile() {
 			}
 
 			if params.Path == "" {
-				return "", fmt.Errorf("path is required")
+				params.Path = params.Name
 			}
 			if params.Content == "" {
 				return "", fmt.Errorf("content is required")
 			}
 
 			if params.Executable {
+				if params.Path == "" {
+					return "", fmt.Errorf("path or name is required for executable script")
+				}
 				ext := strings.ToLower(filepath.Ext(params.Path))
 				if ext != ".sh" && ext != ".py" {
 					return "", fmt.Errorf("executable scripts only support .sh or .py")

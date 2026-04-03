@@ -61,18 +61,21 @@ func Setup(s *scheduler.Scheduler) error {
 	return nil
 }
 
-func ListTasks(s *scheduler.Scheduler) []string {
-	s.Mu.Lock()
-	defer s.Mu.Unlock()
-
-	result := make([]string, len(s.Tasks))
-	for i, task := range s.Tasks {
-		result[i] = fmt.Sprintf("%s %s %s", task.ID, task.At.Local().Format("2006-01-02 15:04:05"), task.Script)
-	}
-	return result
-}
-
 func GetTask(s *scheduler.Scheduler, id string) (*filesystem.TaskResult, bool) {
+	if s == nil {
+		results, err := filesystem.GetAllTaskResults()
+		if err != nil {
+			return nil, false
+		}
+		for _, r := range results {
+			if r.ID == id {
+				cp := r
+				return &cp, true
+			}
+		}
+		return nil, false
+	}
+
 	s.Mu.Lock()
 	defer s.Mu.Unlock()
 

@@ -13,6 +13,25 @@ func Update(s *scheduler.Scheduler, id, expression string) error {
 		return fmt.Errorf("expression must be 5 fields `{min} {hour} {dom} {mon} {dow}`")
 	}
 
+	if s == nil {
+		items, err := filesystem.GetCrons()
+		if err != nil {
+			return fmt.Errorf("filesystem.GetCrons: %w", err)
+		}
+		idx := -1
+		for i, c := range items {
+			if c.ID == id {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			return fmt.Errorf("not found: %s", id)
+		}
+		items[idx].Expression = expression
+		return filesystem.WriteCrons(items)
+	}
+
 	s.Mu.Lock()
 	defer s.Mu.Unlock()
 
@@ -22,10 +41,10 @@ func Update(s *scheduler.Scheduler, id, expression string) error {
 	}
 
 	newTarget := filesystem.CronItem{
-		ID:         target.ID,
+		ID:        target.ID,
 		Expression: expression,
-		Script:     target.Script,
-		ChannelID:  target.ChannelID,
+		Script:    target.Script,
+		ChannelID: target.ChannelID,
 	}
 
 	newID, err := s.Cron.Add(newTarget.Expression, set(s, newTarget))

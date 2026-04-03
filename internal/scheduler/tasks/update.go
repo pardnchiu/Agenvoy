@@ -30,9 +30,6 @@ func fit(s *scheduler.Scheduler, id string) (int, filesystem.TaskItem) {
 }
 
 func Update(s *scheduler.Scheduler, id, timeText string) error {
-	s.Mu.Lock()
-	defer s.Mu.Unlock()
-
 	at, err := parseTime(timeText)
 	if err != nil {
 		return err
@@ -40,6 +37,28 @@ func Update(s *scheduler.Scheduler, id, timeText string) error {
 	if !at.After(time.Now()) {
 		return fmt.Errorf("already gone")
 	}
+
+	if s == nil {
+		items, err := filesystem.GetTasks()
+		if err != nil {
+			return fmt.Errorf("filesystem.GetTasks: %w", err)
+		}
+		idx := -1
+		for i, t := range items {
+			if t.ID == id {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			return fmt.Errorf("not found: %s", id)
+		}
+		items[idx].At = at.UTC()
+		return filesystem.WriteTasks(items)
+	}
+
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
 
 	idx, target := fit(s, id)
 	if idx == -1 {

@@ -6,6 +6,35 @@ import (
 )
 
 func GetCron(s *scheduler.Scheduler, id string) (*filesystem.CronItem, *filesystem.CronResult, bool) {
+	if s == nil {
+		items, err := filesystem.GetCrons()
+		if err != nil {
+			return nil, nil, false
+		}
+		var item *filesystem.CronItem
+		for _, c := range items {
+			if c.ID == id {
+				cp := c
+				item = &cp
+				break
+			}
+		}
+		if item == nil {
+			return nil, nil, false
+		}
+		results, err := filesystem.GetAllCronResults()
+		if err != nil {
+			return item, nil, true
+		}
+		for _, r := range results {
+			if r.ID == id {
+				cp := r
+				return item, &cp, true
+			}
+		}
+		return item, nil, true
+	}
+
 	s.Mu.Lock()
 	defer s.Mu.Unlock()
 
