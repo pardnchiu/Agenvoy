@@ -49,6 +49,9 @@ func (a *Agent) Name() string {
 	return a.model
 }
 
-func (a *Agent) MaxInputTokens() int {
-	return provider.Get("claude", a.model).Input
+func (a *Agent) maxOutputTokens() int {
+	if a.model == "claude-opus-4-6" {
+		return 128000
+	}
+	return 64000
 }

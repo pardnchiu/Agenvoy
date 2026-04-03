@@ -62,7 +62,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 
 	requestBody := map[string]any{
 		"model":      a.model,
-		"max_tokens": provider.OutputTokens("claude", a.model),
+		"max_tokens": a.maxOutputTokens(),
 		"system":     systemPrompts,
 		"messages":   newMessages,
 		"tools":      newTools,
@@ -100,7 +100,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	}
 
 	if result.StopReason == "max_tokens" {
-		return nil, fmt.Errorf("exceeded max_tokens (%d)", provider.OutputTokens("claude", a.model))
+		return nil, fmt.Errorf("exceeded max_tokens (%d)", a.maxOutputTokens())
 	}
 
 	return a.convertToOutput(&result), nil

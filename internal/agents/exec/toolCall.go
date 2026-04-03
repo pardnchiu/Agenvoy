@@ -14,18 +14,11 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-type toolAttempt struct {
-	name   string
-	args   string
-	errMsg string
-}
-
-func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, failedAttempts []toolAttempt) (*agentTypes.AgentSession, map[string]string, []toolAttempt, error) {
+func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string) (*agentTypes.AgentSession, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 
 	hasExternalAgent := false
 	hasReviewResult := false
-	var pendingHints []string
 	for i, tool := range choice.Message.ToolCalls {
 		toolID := strings.TrimSpace(tool.ID)
 		toolArg := strings.TrimSpace(tool.Function.Arguments)
@@ -91,29 +84,16 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			select {
 			case <-time.After(300 * time.Millisecond):
 			case <-ctx.Done():
-				return sessionData, alreadyCall, failedAttempts, ctx.Err()
+				return sessionData, alreadyCall, ctx.Err()
 			}
 		}
 
 		result, err := tools.Execute(ctx, exec, toolName, json.RawMessage(tool.Function.Arguments))
 		if err != nil {
-			failedAttempts = append(failedAttempts, toolAttempt{
-				name:   toolName,
-				args:   toolArg,
-				errMsg: err.Error(),
-			})
 			errHash := file.SaveToolError(sessionData.ID, toolName, tool.Function.Arguments, err.Error())
 			if hint := file.SearchErrorMemory(toolName, err.Error(), 3); hint != "" {
 				result = fmt.Sprintf("error: %s\nrelated_errors: %s", err.Error(), hint)
 			} else {
-				if strings.HasPrefix(toolName, "api_") {
-					_, _ = file.SaveErrorMemory(sessionData.ID, file.ErrorMemory{
-						ToolName: toolName,
-						Keywords: []string{toolName},
-						Symptom:  err.Error(),
-						Action:   "工具呼叫失敗，若有備援工具（例如 api_*_1 ↔ api_*_2）請改用；否則回報無法取得資料",
-					})
-				}
 				events <- agentTypes.Event{
 					Type:     agentTypes.EventExecError,
 					ToolName: toolName,
@@ -127,29 +107,6 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 				result = hint
 			} else {
 				result = "no data"
-			}
-		} else {
-			var priorFails []toolAttempt
-			var remaining []toolAttempt
-			for _, a := range failedAttempts {
-				if a.name == toolName {
-					priorFails = append(priorFails, a)
-				} else {
-					remaining = append(remaining, a)
-				}
-			}
-			if len(priorFails) > 0 {
-				failedArgs := make([]string, 0, len(priorFails))
-				for _, a := range priorFails {
-					failedArgs = append(failedArgs, a.args)
-				}
-				pendingHints = append(pendingHints, fmt.Sprintf(
-					"[system hint] Tool %q previously failed with args: %s — succeeded with: %s. Call remember_error to record this pattern.",
-					toolName,
-					strings.Join(failedArgs, " → "),
-					toolArg,
-				))
-				failedAttempts = remaining
 			}
 		}
 
@@ -196,13 +153,6 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		}
 	}
 
-	for _, hint := range pendingHints {
-		sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
-			Role:    "user",
-			Content: hint,
-		})
-	}
-
 	if hasExternalAgent || hasReviewResult {
 		sessionData.OldHistories = nil
 		if hasExternalAgent {
@@ -211,7 +161,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			sessionData.ToolHistories = trimReviewContext(sessionData.ToolHistories)
 		}
 	}
-	return sessionData, alreadyCall, failedAttempts, nil
+	return sessionData, alreadyCall, nil
 }
 
 func trimMessageContext(toolCall []agentTypes.Message) []agentTypes.Message {

@@ -2,81 +2,55 @@
   "default": "gpt-5-mini",
   "models": {
     "gpt-5.4": {
-      "input": 1050000,
-      "output": 131072,
       "description": "OpenAI 最新旗艦模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
     },
     "gpt-5.4-mini": {
-      "input": 1050000,
-      "output": 131072,
       "description": "GPT-5.4 高效版，保留超長上下文與電腦控制能力，速度更快且成本更低"
     },
     "gpt-5.4-nano": {
-      "input": 1050000,
-      "output": 131072,
       "description": "GPT-5.4 最輕量版，超長上下文支援，專為低延遲與高吞吐場景設計"
     },
     "gpt-5": {
-      "input": 400000,
-      "output": 131072,
       "description": "智慧推理模型，支援可配置推理深度，適合程式與 Agentic 任務",
       "no_temperature": true,
       "reasoning_effort": true
     },
     "gpt-5-mini": {
-      "input": 400000,
-      "output": 131072,
       "description": "GPT-5 高效版，速度更快且成本更低，適合明確定義的任務",
       "no_temperature": true,
       "reasoning_effort": true
     },
     "gpt-5-nano": {
-      "input": 400000,
-      "output": 131072,
       "description": "GPT-5 最輕量版，專為摘要與分類設計，延遲與成本最低",
       "no_temperature": true,
       "reasoning_effort": true
     },
     "gpt-4.1": {
-      "input": 1047576,
-      "output": 32768,
       "description": "非推理旗艦模型，指令遵循與工具呼叫最佳化，低延遲快速推理",
       "no_temperature": true
     },
-    "gpt-4o": { "input": 128000, "output": 16384, "description": "多模態旗艦模型，支援文字、圖像與音訊輸入" },
+    "gpt-4o": { "description": "多模態旗艦模型，支援文字、圖像與音訊輸入" },
     "gpt-5.3-codex": {
-      "input": 200000,
-      "output": 65536,
       "description": "GPT-5.3 Codex，強化程式生成與 Agentic coding 能力",
       "no_temperature": true
     },
     "gpt-5.2-codex": {
-      "input": 200000,
-      "output": 65536,
       "description": "GPT-5.2 Codex，穩定的程式生成模型",
       "no_temperature": true
     },
     "gpt-5.1-codex-max": {
-      "input": 200000,
-      "output": 65536,
       "description": "GPT-5.1 Codex Max，最大上下文程式生成版本",
       "no_temperature": true
     },
     "gpt-5.1-codex": {
-      "input": 200000,
-      "output": 65536,
       "description": "GPT-5.1 Codex，適合程式補全與 Agentic 任務",
       "no_temperature": true
     },
     "gpt-5.1-codex-mini": {
-      "input": 200000,
-      "output": 32768,
       "description": "GPT-5.1 Codex Mini，輕量程式生成，低延遲",
       "no_temperature": true
     },
     "gpt-5-codex": {
-      "input": 200000,
-      "output": 65536,
       "description": "GPT-5 Codex，基礎程式生成模型",
       "no_temperature": true
     }

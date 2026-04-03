@@ -13,8 +13,6 @@ type ProviderItem struct {
 }
 
 type ModelItem struct {
-	Input           int    `json:"input"`
-	Output          int    `json:"output"`
 	Description     string `json:"description"`
 	NoTemperature   bool   `json:"no_temperature,omitempty"`
 	ReasoningEffort bool   `json:"reasoning_effort,omitempty"` // OpenAI: supports reasoning_effort param
@@ -83,7 +81,7 @@ func Default(provider string) string {
 func Get(provider, model string) ModelItem {
 	cfg, exist := providers()[provider]
 	if !exist {
-		return ModelItem{Input: 128000, Output: 16384}
+		return ModelItem{}
 	}
 
 	if info, exist := cfg.Models[model]; exist {
@@ -93,7 +91,7 @@ func Get(provider, model string) ModelItem {
 	if info, exist := cfg.Models[cfg.Default]; exist {
 		return info
 	}
-	return ModelItem{Input: 128000, Output: 16384}
+	return ModelItem{}
 }
 
 func Models(provider string) map[string]ModelItem {
@@ -106,12 +104,4 @@ func Models(provider string) map[string]ModelItem {
 
 func SupportTemperature(providerName, model string) bool {
 	return !Get(providerName, model).NoTemperature
-}
-
-func InputBytes(provider, model string) int {
-	return Get(provider, model).Input * 4
-}
-
-func OutputTokens(provider, model string) int {
-	return Get(provider, model).Output
 }

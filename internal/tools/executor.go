@@ -137,7 +137,7 @@ func Execute(ctx context.Context, e *toolTypes.Executor, name string, args json.
 		activateArgs, _ := json.Marshal(map[string]any{"query": "select:" + name})
 		_, _ = toolRegister.Dispatch(ctx, e, "search_tools", activateArgs)
 		delete(e.StubTools, name)
-		return `{"status":"schema_activated","message":"Tool schema has been loaded. Please call this tool again with the correct parameters based on the updated schema."}`, nil
+		return toolRegister.Dispatch(ctx, e, name, args)
 	}
 
 	if strings.HasPrefix(name, "api_") && e.APIToolbox != nil && e.APIToolbox.IsExist(name) {

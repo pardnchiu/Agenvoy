@@ -2,23 +2,15 @@
   "default": "openai/gpt-oss-120b",
   "models": {
     "openai/gpt-oss-120b": {
-      "input": 128000,
-      "output": 16384,
       "description": "OpenAI 開源 120B 模型，平衡效能與推理能力"
     },
     "meta/llama-3.3-70b-instruct": {
-      "input": 128000,
-      "output": 16384,
       "description": "OpenAI 開源 120B 模型，平衡效能與推理能力"
     },
     "qwen/qwen3.5-122b-a10b": {
-      "input": 262144,
-      "output": 16384,
       "description": "Qwen3.5 122B MoE 多模態視覺語言模型，支援文字、圖片與影片輸入，適用於 Agent 應用"
     },
     "nvidia/nemotron-3-super-120b-a12b": {
-      "input": 1000000,
-      "output": 32768,
       "description": "NVIDIA Nemotron-3 Super 120B（12B active）Hybrid LatentMoE 模型，支援 Tool Use、多語言與 Agentic 推理工作流"
     }
   }

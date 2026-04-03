@@ -71,7 +71,3 @@ func New(model ...string) (*Agent, error) {
 func (a *Agent) Name() string {
 	return a.model
 }
-
-func (a *Agent) MaxInputTokens() int {
-	return 128000
-}
