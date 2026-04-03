@@ -108,13 +108,40 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 
 func (a *Agent) convertToMessage(message agentTypes.Message) map[string]any {
 	if message.ToolCallID != "" {
+		var toolResultContent any = message.Content
+		if parts, ok := message.Content.([]agentTypes.ContentPart); ok {
+			var blocks []map[string]any
+			for _, p := range parts {
+				switch p.Type {
+				case "text":
+					blocks = append(blocks, map[string]any{"type": "text", "text": p.Text})
+				case "image_url":
+					if p.ImageURL == nil {
+						continue
+					}
+					mediaType, data, ok := parseDataURL(p.ImageURL.URL)
+					if !ok {
+						continue
+					}
+					blocks = append(blocks, map[string]any{
+						"type": "image",
+						"source": map[string]any{
+							"type":       "base64",
+							"media_type": mediaType,
+							"data":       data,
+						},
+					})
+				}
+			}
+			toolResultContent = blocks
+		}
 		return map[string]any{
 			"role": "user",
 			"content": []map[string]any{
 				{
 					"type":        "tool_result",
 					"tool_use_id": message.ToolCallID,
-					"content":     message.Content,
+					"content":     toolResultContent,
 				},
 			},
 		}

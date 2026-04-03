@@ -78,6 +78,22 @@ func (a *Agent) convertToContent(message agentTypes.Message) Content {
 				},
 			},
 		}
+		if parts, ok := message.Content.([]agentTypes.ContentPart); ok {
+			for _, p := range parts {
+				if p.Type == "image_url" && p.ImageURL != nil {
+					url := p.ImageURL.URL
+					if strings.HasPrefix(url, "data:") {
+						if semi := strings.Index(url, ";base64,"); semi != -1 {
+							mimeType := url[5:semi]
+							b64 := url[semi+8:]
+							content.Parts = append(content.Parts, Part{
+								InlineData: &InlineData{MimeType: mimeType, Data: b64},
+							})
+						}
+					}
+				}
+			}
+		}
 		return content
 	}
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -137,18 +136,7 @@ func main() {
 
 		allowAll := os.Args[1] == "run-allow"
 
-		raw := strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n")
-		imagePattern := regexp.MustCompile(`--image\s+(\S+)`)
-		filePattern := regexp.MustCompile(`--file\s+(\S+)`)
-		var imageInputs []string
-		for _, path := range imagePattern.FindAllStringSubmatch(raw, -1) {
-			imageInputs = append(imageInputs, path[1])
-		}
-		var fileInputs []string
-		for _, path := range filePattern.FindAllStringSubmatch(raw, -1) {
-			fileInputs = append(fileInputs, path[1])
-		}
-		userInput := strings.TrimSpace(filePattern.ReplaceAllString(imagePattern.ReplaceAllString(raw, ""), ""))
+		userInput := strings.TrimSpace(strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n"))
 
 		agentRegistry := getAgentRegistry()
 		ctx, cancel := context.WithCancel(context.Background())
@@ -165,7 +153,7 @@ func main() {
 		}
 
 		if err := runEvents(ctx, cancel, func(ch chan<- agentTypes.Event) error {
-			return exec.Run(ctx, selectorBot, agentRegistry, scanner, userInput, imageInputs, fileInputs, ch, allowAll)
+			return exec.Run(ctx, selectorBot, agentRegistry, scanner, userInput, nil, nil, ch, allowAll)
 		}); err != nil && ctx.Err() == nil {
 			slog.Error("failed to execute",
 				slog.String("error", err.Error()))

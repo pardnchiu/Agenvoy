@@ -57,8 +57,12 @@ func registReadFile() {
 				return "", fmt.Errorf("filesystem.AbsPath: %w", err)
 			}
 
-			if strings.ToLower(filepath.Ext(absPath)) == ".pdf" {
+			ext := strings.ToLower(filepath.Ext(absPath))
+			if ext == ".pdf" {
 				return readPDF(absPath, params.Offset, params.Limit)
+			}
+			if isImageExt(ext) {
+				return "", fmt.Errorf("image file detected, use read_image instead")
 			}
 
 			content, _, err := readFile(e, params.Path)

@@ -11,6 +11,7 @@ import (
 
 func init() {
 	registReadFile()
+	registReadImage()
 	registListFiles()
 	registGlobFiles()
 	registSearchContent()

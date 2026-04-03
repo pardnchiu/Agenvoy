@@ -29,9 +29,14 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 
 		hash := fmt.Sprintf("%v|%v", toolName, toolArg)
 		if cached, ok := alreadyCall[hash]; ok && cached != "" {
+			cachedContent := strings.TrimSpace(cached)
+			if strings.HasPrefix(cached, "data:image/") {
+				cachedContent = fmt.Sprintf("[%s] image loaded", toolName)
+				injectImageToUserInput(sessionData, cached)
+			}
 			sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
 				Role:       "tool",
-				Content:    strings.TrimSpace(cached),
+				Content:    cachedContent,
 				ToolCallID: toolID,
 			})
 			continue
@@ -125,8 +130,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			ToolID:   toolID,
 		}
 
-		content := strings.TrimSpace(fmt.Sprintf("[%s] %s", toolName, result))
-		alreadyCall[hash] = content
+		alreadyCall[hash] = result
 
 		events <- agentTypes.Event{
 			Type:     agentTypes.EventToolResult,
@@ -134,16 +138,19 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			ToolID:   toolID,
 			Result:   result,
 		}
-		sessionData.Tools = append(sessionData.Tools, agentTypes.Message{
+
+		toolMsgContent := strings.TrimSpace(fmt.Sprintf("[%s] %s", toolName, result))
+		if strings.HasPrefix(result, "data:image/") {
+			toolMsgContent = fmt.Sprintf("[%s] image loaded", toolName)
+			injectImageToUserInput(sessionData, result)
+		}
+		toolMsg := agentTypes.Message{
 			Role:       "tool",
-			Content:    content,
+			Content:    toolMsgContent,
 			ToolCallID: toolID,
-		})
-		sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
-			Role:       "tool",
-			Content:    content,
-			ToolCallID: toolID,
-		})
+		}
+		sessionData.Tools = append(sessionData.Tools, toolMsg)
+		sessionData.ToolHistories = append(sessionData.ToolHistories, toolMsg)
 
 		switch toolName {
 		case "verify_with_external_agent":
@@ -162,6 +169,24 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		}
 	}
 	return sessionData, alreadyCall, nil
+}
+
+// injectImageToUserInput adds a data URL image to the current UserInput so the model
+// can see it visually in the next Send() call. All providers support images in user messages.
+func injectImageToUserInput(session *agentTypes.AgentSession, dataURL string) {
+	part := agentTypes.ContentPart{
+		Type:     "image_url",
+		ImageURL: &agentTypes.ImageURL{URL: dataURL, Detail: "auto"},
+	}
+	switch v := session.UserInput.Content.(type) {
+	case []agentTypes.ContentPart:
+		session.UserInput.Content = append(v, part)
+	case string:
+		session.UserInput.Content = []agentTypes.ContentPart{
+			{Type: "text", Text: v},
+			part,
+		}
+	}
 }
 
 func trimMessageContext(toolCall []agentTypes.Message) []agentTypes.Message {
