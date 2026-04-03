@@ -1,19 +1,13 @@
 package exec
 
 import (
-	"encoding/json"
 	"regexp"
-	"strings"
-	"time"
-
-	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
 var (
-	fencedBlockRegex     = regexp.MustCompile("(?s)" + "```" + `(?:json|summary)\s*\n(\{.*?\})\s*\n` + "```" + `\s*$`)
-	summaryTagRegex      = regexp.MustCompile(`(?s)<summary>\s*(\{.*?\})\s*</summary>`)
-	summaryBracketRegex  = regexp.MustCompile(`(?s)\[summary\]\s*(\{.*?\})\s*\[/summary\]`)
-	timestampHeaderRegex = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
+	fencedBlockRegex    = regexp.MustCompile("(?s)" + "```" + `(?:json|summary)\s*\n(\{.*?\})\s*\n` + "```" + `\s*$`)
+	summaryTagRegex     = regexp.MustCompile(`(?s)<summary>\s*(\{.*?\})\s*</summary>`)
+	summaryBracketRegex = regexp.MustCompile(`(?s)\[summary\]\s*(\{.*?\})\s*\[/summary\]`)
 )
 
 func isSummaryJSON(m map[string]any) bool {
@@ -27,62 +21,6 @@ func isSummaryJSON(m map[string]any) bool {
 		}
 	}
 	return matched >= 2
-}
-
-func extractSummary(sessionID, value string) string {
-	value = timestampHeaderRegex.ReplaceAllString(value, "")
-
-	var jsonData any
-	var cleaned string
-
-	patterns := []*regexp.Regexp{
-		fencedBlockRegex,
-		summaryTagRegex,
-		summaryBracketRegex,
-	}
-	for _, re := range patterns {
-		if loc := re.FindStringSubmatchIndex(value); loc != nil {
-			jsonPart := value[loc[2]:loc[3]]
-			var m map[string]any
-			if json.Unmarshal([]byte(jsonPart), &m) == nil && isSummaryJSON(m) {
-				jsonData = m
-				cleaned = strings.TrimRight(value[:loc[0]], " \t\n\r")
-				break
-			}
-		}
-	}
-	if cleaned == "" {
-		cleaned = value
-	}
-
-	if jsonData == nil {
-		jsonData = map[string]any{
-			"confirmed_needs":    []any{},
-			"constraints":        []any{},
-			"core_discussion":    "",
-			"current_conclusion": []any{},
-			"discussion_log": []any{
-				map[string]any{
-					"conclusion": "resolved",
-					"time":       time.Now().Format("2006-01-02 15:04"),
-					"topic":      strings.TrimSpace(cleaned),
-				},
-			},
-			"excluded_options":  []any{},
-			"key_data":          []any{},
-			"pending_questions": []any{},
-		}
-	}
-
-	if newMap, ok := jsonData.(map[string]any); ok {
-		_, oldMap := session.GetSummary(sessionID)
-		if oldMap != nil {
-			newMap = mergeSummary(oldMap, newMap)
-		}
-		jsonData = newMap
-	}
-	session.SaveSummary(sessionID, jsonData)
-	return cleaned
 }
 
 func mergeSummary(old, new map[string]any) map[string]any {
@@ -104,7 +42,6 @@ func mergeSummary(old, new map[string]any) map[string]any {
 		new[field] = newVals
 	}
 
-	// { "conclusion": "resolved", "time": "2026-02-27 23:57", "topic": "DGX Spark vs Ryzen Halo 比較" },
 	oldVals := getMapSlice(old["discussion_log"])
 	newVals := getMapSlice(new["discussion_log"])
 	vals := make(map[string]struct{}, len(newVals))

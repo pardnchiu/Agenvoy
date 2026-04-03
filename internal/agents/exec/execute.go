@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -21,6 +22,24 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
 )
+
+var timestampHeaderRegex = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
+
+func StripModelResponse(text string) string {
+	text = timestampHeaderRegex.ReplaceAllString(text, "")
+	lines := strings.Split(text, "\n")
+	inFence := false
+	for i, line := range lines {
+		trimmed := strings.TrimLeft(line, " \t")
+		if strings.HasPrefix(trimmed, "```") {
+			inFence = !inFence
+		}
+		if !inFence {
+			lines[i] = trimmed
+		}
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
 
 var MaxToolIterations = func() int {
 	if v := os.Getenv("MAX_TOOL_ITERATIONS"); v != "" {
@@ -155,8 +174,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				continue
 			}
 
-			cleaned := extractSummary(session.ID, text)
-			if cleaned == "" {
+			stripped := StripModelResponse(text)
+			if stripped == "" {
 				if actionError(&emptyCount, events) {
 					return nil
 				}
@@ -164,7 +183,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 			emptyCount = 0
 
-			responseText := cleaned
+			responseText := stripped
 			if trimmedToolCalls {
 				responseText += "\n\n> 因超過模型 max input，部分工具查詢資料已被裁減，建議使用更大 context window 的模型再試一次。"
 			}
@@ -173,7 +192,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				Text: responseText,
 			}
 
-			choice.Message.Content = fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), cleaned)
+			choice.Message.Content = fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), stripped)
 			session.ToolHistories = append(session.ToolHistories, choice.Message)
 
 			if err := saveNewHistory(choice, session); err != nil {
@@ -217,8 +236,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		usage.CacheCreate += resp.Usage.CacheCreate
 		usage.CacheRead += resp.Usage.CacheRead
 		if text, ok := resp.Choices[0].Message.Content.(string); ok && text != "" {
-			cleaned := extractSummary(session.ID, text)
-			events <- agentTypes.Event{Type: agentTypes.EventText, Text: cleaned}
+			events <- agentTypes.Event{Type: agentTypes.EventText, Text: StripModelResponse(text)}
 			if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 				slog.Warn("usageManager.Update",
 					slog.String("error", err.Error()))

@@ -43,6 +43,10 @@ func registSearchHistory() {
 					"type":        "string",
 					"description": "Keyword to search for (case-insensitive, literal string match)",
 				},
+				"query": map[string]any{
+					"type":        "string",
+					"description": "Fallback alias for keyword. Use keyword when possible.",
+				},
 				"time_range": map[string]any{
 					"type":        "string",
 					"enum":        []string{"1d", "7d", "1m", "1y"},
@@ -54,10 +58,14 @@ func registSearchHistory() {
 		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Keyword   string `json:"keyword"`
+				Query     string `json:"query"`
 				TimeRange string `json:"time_range"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
+			}
+			if params.Keyword == "" {
+				params.Keyword = params.Query
 			}
 			return searchHistory(e.SessionID, params.Keyword, params.TimeRange)
 		},

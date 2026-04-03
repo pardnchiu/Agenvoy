@@ -26,7 +26,7 @@ import (
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, channelID, userID, currentMessageID, input string, imageInputs []string, fileInputs []discordTypes.FileInput, data exec.ExecData) (*agentTypes.AgentSession, error) {
+func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, channelID, userID, currentMessageID, authorName, input string, imageInputs []string, fileInputs []discordTypes.FileInput, data exec.ExecData) (*agentTypes.AgentSession, error) {
 	sessionID, err := sessionManager.GetDiscordSession(guildID, channelID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("sessionManager.GetDiscordSessionID: %w", err)
@@ -38,41 +38,26 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 		Histories: []agentTypes.Message{},
 	}
 
-	var channelHistory []agentTypes.Message
-	if msgs, err := dcSession.ChannelMessages(channelID, 16, currentMessageID, "", ""); err == nil {
-		botID := dcSession.State.User.ID
-		for i := len(msgs) - 1; i >= 0; i-- {
-			msg := msgs[i]
-			if msg.Author == nil || msg.Content == "" {
-				continue
-			}
-			role := "user"
-			content := msg.Content
-			if msg.Author.ID == botID {
-				role = "assistant"
-				if idx := strings.LastIndex(content, "\n-# "); idx != -1 {
-					content = content[:idx]
-				}
-			}
-			channelHistory = append(channelHistory, agentTypes.Message{
-				Role:    role,
-				Content: content,
-			})
-		}
-	}
+	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
+	session.Histories = oldHistory
 
 	session.SystemPrompts = []agentTypes.Message{
 		{Role: "system", Content: configs.DiscordSystemPrompt},
 		{Role: "system", Content: exec.GetSystemPrompt(data)},
 	}
-	if summary := sessionManager.GetSummaryPrompt(sessionID, time.Time{}); summary != "" {
+	if summary := sessionManager.GetSummaryPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
 		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
 
-	session.OldHistories = channelHistory
+	session.OldHistories = maxHistory
 	session.ToolHistories = []agentTypes.Message{}
 
-	userText := fmt.Sprintf("當前時間: %s\n當前頻道 ID: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), channelID, strings.TrimSpace(input))
+	userText := fmt.Sprintf("---\n當前時間: %s\n傳送者: %s\n當前頻道 ID: %s\n---\n%s",
+		time.Now().Format("2006-01-02 15:04:05"),
+		authorName,
+		channelID,
+		strings.TrimSpace(input),
+	)
 
 	var userContent any
 	if len(imageInputs) > 0 || len(fileInputs) > 0 {
@@ -110,6 +95,10 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 		userContent = userText
 	}
 
+	session.Histories = append(session.Histories, agentTypes.Message{
+		Role:    "user",
+		Content: userText,
+	})
 	session.UserInput = agentTypes.Message{
 		Role:    "user",
 		Content: userContent,

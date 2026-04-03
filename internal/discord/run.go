@@ -40,7 +40,7 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 		Content: receiveMessage.Content,
 	}
 
-	session, err := getSession(ctx, dcSession, receiveMessage.GuildID, receiveMessage.ChannelID, receiveMessage.AuthorID, dcMessageCreate.ID, receiveMessage.Content, receiveMessage.ImageInputs, receiveMessage.FileInputs, execData)
+	session, err := getSession(ctx, dcSession, receiveMessage.GuildID, receiveMessage.ChannelID, receiveMessage.AuthorID, dcMessageCreate.ID, receiveMessage.AuthorName, receiveMessage.Content, receiveMessage.ImageInputs, receiveMessage.FileInputs, execData)
 	if err != nil {
 		return fmt.Errorf("loadDiscordSession: %w", err)
 	}
@@ -59,6 +59,12 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 				slog.String("error", err.Error()))
 		}
 		close(events)
+		summaryHistories := exec.GetSummaryHistories(session.Histories)
+		go func() {
+			bgCtx := context.Background()
+			summaryAgent := exec.SelectAgent(bgCtx, dcBot.PlannerAgent, dcBot.AgentRegistry, "[summary] 整理對話摘要，選擇最輕量可完成任務的模型", false)
+			exec.GenerateSummary(bgCtx, summaryAgent, session.ID, summaryHistories)
+		}()
 	}()
 
 	var replyText string

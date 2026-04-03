@@ -2,12 +2,17 @@ package discord
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"regexp"
 	"slices"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
+	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
+	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 
 func messageCreate(bot *discordTypes.DiscordBot, dcSession *discordgo.Session, dcMessageCreate *discordgo.MessageCreate) {
@@ -73,8 +78,9 @@ func messageCreate(bot *discordTypes.DiscordBot, dcSession *discordgo.Session, d
 		}
 	}
 
-	// * if in channel, must be used mention to trigger
+	// * if in channel without mention, log silently and return
 	if message.IsChannel && !message.IsMention {
+		logDiscordMessage(message)
 		return
 	}
 
@@ -89,5 +95,25 @@ func messageCreate(bot *discordTypes.DiscordBot, dcSession *discordgo.Session, d
 			}
 			dcSession.MessageReactionRemove(dcMessageCreate.ChannelID, dcMessageCreate.ID, "🦍", "@me")
 		}()
+	}
+}
+
+func logDiscordMessage(msg *discordTypes.ReceiveMessage) {
+	sessionID, err := sessionManager.GetDiscordSession(msg.GuildID, msg.ChannelID, msg.AuthorID)
+	if err != nil {
+		return
+	}
+
+	userText := fmt.Sprintf("---\n當前時間: %s\n傳送者: %s\n---\n%s",
+		time.Unix(msg.RecievedAt, 0).Format("2006-01-02 15:04:05"),
+		msg.AuthorName,
+		msg.Content,
+	)
+
+	old, _ := sessionManager.GetHistory(sessionID)
+	old = append(old, agentTypes.Message{Role: "user", Content: userText})
+
+	if b, err := json.Marshal(old); err == nil {
+		sessionManager.SaveHistory(sessionID, string(b))
 	}
 }

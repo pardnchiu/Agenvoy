@@ -23,6 +23,7 @@ const (
 	EventToolConfirm
 	EventExecError
 	EventError
+	EventSummaryGenerate
 	EventDone
 )
 
@@ -56,6 +57,8 @@ func (e EventType) String() string {
 		return "EventExecError"
 	case EventError:
 		return "EventError"
+	case EventSummaryGenerate:
+		return "EventSummaryGenerate"
 	case EventDone:
 		return "EventDone"
 	default:

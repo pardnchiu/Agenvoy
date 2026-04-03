@@ -62,5 +62,42 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	if err != nil {
 		return fmt.Errorf("GetSession: %w", err)
 	}
-	return Execute(ctx, execData, session, events, allowAll)
+	doneEvents := make(chan agentTypes.Event, 4)
+	forwardEvents := make(chan agentTypes.Event, 16)
+	execErrCh := make(chan error, 1)
+
+	go func() {
+		defer close(forwardEvents)
+		for event := range doneEvents {
+			if event.Type == agentTypes.EventDone {
+				forwardEvents <- event
+				continue
+			}
+			events <- event
+		}
+	}()
+
+	go func() {
+		execErrCh <- Execute(ctx, execData, session, doneEvents, allowAll)
+		close(doneEvents)
+	}()
+
+	var finalDone *agentTypes.Event
+	for event := range forwardEvents {
+		if event.Type == agentTypes.EventDone {
+			ev := event
+			finalDone = &ev
+			continue
+		}
+	}
+
+	if err := <-execErrCh; err != nil {
+		return err
+	}
+	events <- agentTypes.Event{Type: agentTypes.EventSummaryGenerate}
+	GenerateSummary(context.Background(), SelectAgent(ctx, bot, registry, "[summary] 整理對話摘要，選擇最輕量可完成任務的模型", false), session.ID, session.Histories)
+	if finalDone != nil {
+		events <- *finalDone
+	}
+	return nil
 }

@@ -84,10 +84,18 @@ func EventLog(tag string, event agentTypes.Event, sessionID string, input string
 			slog.String("output", text))
 
 	case agentTypes.EventError, agentTypes.EventExecError:
+		errText := event.Text
+		if event.Err != nil {
+			errText = event.Err.Error()
+		}
+		if errText == "" {
+			errText = "unknown error"
+		}
 		slog.Error(tag,
 			slog.String("session", sessionLog),
 			slog.String("event", event.Type.String()),
-			slog.String("error", event.Err.Error()))
+			slog.String("tool", event.ToolName),
+			slog.String("error", errText))
 
 	default:
 		break

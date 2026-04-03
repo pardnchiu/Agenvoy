@@ -31,6 +31,58 @@ type ErrorMemoryItem struct {
 	LastUpdated int64 `json:"last_updated"`
 }
 
+func classifyErrorText(text string) string {
+	lower := strings.ToLower(strings.TrimSpace(text))
+	switch {
+	case lower == "":
+		return "unknown"
+	case strings.Contains(lower, "not exist:"),
+		strings.Contains(lower, "tool not found"),
+		strings.Contains(lower, "unsupported tool"):
+		return "tool_not_exist"
+	case strings.Contains(lower, "required"):
+		return "required_param"
+	case strings.Contains(lower, "invalid"):
+		return "invalid_param"
+	case strings.Contains(lower, "timeout"),
+		strings.Contains(lower, "deadline exceeded"):
+		return "timeout"
+	case strings.Contains(lower, "unauthorized"),
+		strings.Contains(lower, "forbidden"),
+		strings.Contains(lower, "permission denied"),
+		strings.Contains(lower, "access denied"):
+		return "permission"
+	case strings.Contains(lower, "no result"),
+		strings.Contains(lower, "no data"),
+		strings.Contains(lower, "not found"),
+		strings.Contains(lower, "empty result"):
+		return "no_result"
+	default:
+		return "other"
+	}
+}
+
+func normalizeKeywords(keywords []string) []string {
+	if len(keywords) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(keywords))
+	result := make([]string, 0, len(keywords))
+	for _, keyword := range keywords {
+		text := strings.TrimSpace(strings.ToLower(keyword))
+		if text == "" {
+			continue
+		}
+		if _, ok := seen[text]; ok {
+			continue
+		}
+		seen[text] = struct{}{}
+		result = append(result, text)
+	}
+	return result
+}
+
 func SearchErrors(keyword string, limit int) (string, error) {
 	if keyword == "" {
 		return "", fmt.Errorf("keyword is required")
@@ -99,6 +151,9 @@ func getErrorMemory(path string) []ErrorMemory {
 }
 
 func matchErrorMemory(rec ErrorMemory, lower string) bool {
+	if lower == "" {
+		return true
+	}
 	if strings.Contains(strings.ToLower(rec.ToolName), lower) ||
 		strings.Contains(strings.ToLower(rec.Symptom), lower) ||
 		strings.Contains(strings.ToLower(rec.Cause), lower) {
@@ -131,6 +186,12 @@ func SaveErrorMemory(sessionID string, record ErrorMemory) (string, error) {
 	// if err != nil {
 	// 	return "", fmt.Errorf("utils.GetConfigDir: %w", err)
 	// }
+
+	record.Keywords = normalizeKeywords(record.Keywords)
+	errType := classifyErrorText(record.Symptom + "\n" + record.Cause)
+	if errType != "unknown" {
+		record.Keywords = normalizeKeywords(append(record.Keywords, "error_type:"+errType))
+	}
 
 	now := time.Now()
 	h := sha256.Sum256([]byte(record.ToolName + strconv.FormatInt(now.Unix(), 10)))
@@ -171,6 +232,14 @@ func writeErrorList(home string, index map[string]ErrorMemoryItem) error {
 }
 
 func SearchErrorMemory(tool, keyword string, limit int) string {
+	errType := classifyErrorText(keyword)
+	if errType != "unknown" {
+		result, err := searchFile(tool, "error_type:"+errType, limit)
+		if err == nil && result != "NONE" {
+			return result
+		}
+	}
+
 	result, err := searchFile(tool, keyword, limit)
 	if err != nil {
 		slog.Warn("searchFile",

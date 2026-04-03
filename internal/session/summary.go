@@ -31,6 +31,22 @@ func GetSummary(sessionID string) ([]byte, map[string]any) {
 	return bytes, summary
 }
 
+func EnsureSummary(sessionID string) ([]byte, map[string]any) {
+	raw, summary := GetSummary(sessionID)
+	if raw != nil {
+		return raw, summary
+	}
+
+	empty := map[string]any{}
+	SaveSummary(sessionID, empty)
+	raw, summary = GetSummary(sessionID)
+	if raw != nil {
+		return raw, summary
+	}
+
+	return []byte("{}"), empty
+}
+
 func GetSummaryPrompt(sessionID string, cutoff time.Time) string {
 	raw, summaryMap := GetSummary(sessionID)
 	if raw == nil {
