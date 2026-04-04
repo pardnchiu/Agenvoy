@@ -80,11 +80,6 @@ func getSecretFromMac(key string) string {
 }
 
 func setFallback(key, value string) error {
-	// configData, err := utils.GetConfigDir()
-	// if err != nil {
-	// 	return fmt.Errorf("utils.GetConfigDir: %w", err)
-	// }
-
 	path := filepath.Join(filesystem.AgenvoyDir, ".secrets")
 	lines := readFallbackLines()
 	prefix := key + "="
@@ -117,11 +112,6 @@ func getFallback(key string) string {
 }
 
 func readFallbackLines() []string {
-	// configData, err := utils.GetConfigDir()
-	// if err != nil {
-	// 	return nil
-	// }
-
 	path := filepath.Join(filesystem.AgenvoyDir, ".secrets")
 	data, err := os.ReadFile(path)
 	if err != nil {

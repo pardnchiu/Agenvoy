@@ -1,5 +1,5 @@
 {
-  "dirs": [".ssh", ".aws", ".gcloud", ".gnupg", ".gpg", ".docker", "Library"],
+  "dirs": [".ssh", ".aws", ".gcloud", ".gnupg", ".gpg", ".docker"],
   "files": [
     "id_rsa",
     "id_rsa.pub",
@@ -10,8 +10,6 @@
     "id_ed25519",
     "id_ed25519.pub",
     "authorized_keys",
-    "known_hosts",
-    "ssh_config",
     "ssh_host_rsa_key",
     "ssh_host_rsa_key.pub",
     "ssh_host_ed25519_key",
@@ -20,18 +18,10 @@
     ".zsh_history",
     ".zhistory",
     ".sh_history",
-    ".zshrc",
-    ".bashrc",
-    ".bash_profile",
-    ".zprofile",
-    ".zshenv",
-    ".profile",
-    ".bash_logout",
     ".netrc",
     ".git-credentials",
-    ".gitconfig",
     ".env"
   ],
   "prefixes": [".env."],
-  "extensions": [".pem", ".key", ".p12", ".pfx", ".cer", ".crt", ".der"]
+  "extensions": [".pem", ".key", ".p12", ".pfx", ".cer"]
 }

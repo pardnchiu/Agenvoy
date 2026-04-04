@@ -42,34 +42,12 @@ func init() {
 		return e.ScriptToolbox.Execute(ctx, name, args, e.WorkDir)
 	})
 
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "run_command",
-		Description: "執行 shell 指令並返回其輸出。用於執行建置工具、git 指令等。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"command": map[string]any{
-					"type":        "string",
-					"description": "要執行的 shell 指令",
-				},
-			},
-			"required": []string{"command"},
-		},
-		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				Command string `json:"command"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			return runCommand(ctx, e, params.Command)
-		},
-	})
+	registRunCommand()
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "list_tools",
 		ReadOnly:    true,
-		Description: "列出目前所有可用的工具，包含內建工具與動態載入的 API 工具（api_* 前綴）。回傳每個工具的名稱與描述。",
+		Description: "List all currently available tools, including built-in tools and dynamically loaded API tools (prefixed with api_*). Returns each tool's name and description.",
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},

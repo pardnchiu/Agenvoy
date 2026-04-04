@@ -64,10 +64,22 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 			writeStdoutLine(fmt.Sprintf("[*] Tool: %s", ev.ToolName))
 
 		case agentTypes.EventText:
-			if strings.HasPrefix(ev.Text, "Agent:") || strings.HasPrefix(ev.Text, "Tool:") || strings.HasPrefix(ev.Text, "Result:") {
-				writeStdoutLine("[*] " + ev.Text)
+			text := ev.Text
+			for {
+				start := strings.Index(text, "<summary>")
+				end := strings.Index(text, "</summary>")
+				if start == -1 || end == -1 || end < start {
+					break
+				}
+				text = strings.TrimSpace(text[:start] + text[end+len("</summary>"):])
+			}
+			if text == "" {
+				break
+			}
+			if strings.HasPrefix(text, "Agent:") || strings.HasPrefix(text, "Tool:") || strings.HasPrefix(text, "Result:") {
+				writeStdoutLine("[*] " + text)
 			} else {
-				writeStdoutLine("---\n" + ev.Text + "\n---")
+				writeStdoutLine("---\n" + text + "\n---")
 			}
 
 		case agentTypes.EventToolConfirm:

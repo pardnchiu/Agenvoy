@@ -50,6 +50,10 @@ func seatbeltProfile(home string) string {
 (allow file-write*
     (subpath %q))
 
+;; allow /dev access (required for /dev/null, /dev/random, etc.)
+(allow file-read* (subpath "/dev"))
+(allow file-write* (subpath "/dev"))
+
 ;; allow network
 (allow network*)
 `, deny.String(), keychainDir, keychainDir, home)
