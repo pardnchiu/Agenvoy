@@ -1,8 +1,6 @@
 package main
 
 import (
-	_ "embed"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,39 +10,50 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
+	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"golang.org/x/term"
 )
 
 type Provider struct {
-	Label       string `json:"label"`
-	EnvKey      string `json:"envKey"`
-	Prefix      string `json:"prefix"`
-	Model       string `json:"model"`
-	Description string `json:"description"`
-	IsCopilot   bool   `json:"is_copilot"`
-	IsCompat    bool   `json:"is_compat"`
-	IsCodex     bool   `json:"is_codex"`
+	Prefix string
 }
 
-//go:embed embed/providers.json
-var providersJSON []byte
-
-var providers []Provider
-
-func init() {
-	if err := json.Unmarshal(providersJSON, &providers); err != nil {
-		slog.Error("json.Unmarshal",
-			slog.String("error", err.Error()))
-		os.Exit(1)
+func (p Provider) name() string {
+	name := strings.TrimSuffix(p.Prefix, "@")
+	if idx := strings.Index(name, "["); idx != -1 {
+		name = name[:idx]
 	}
+	return name
+}
+
+func (p Provider) label() string {
+	n := p.name()
+	if n == "" {
+		return p.Prefix
+	}
+	return strings.ToUpper(n[:1]) + n[1:]
+}
+
+func (p Provider) envKey() string {
+	return strings.ToUpper(p.name()) + "_API_KEY"
+}
+
+var providers = []Provider{
+	{Prefix: "copilot@"},
+	{Prefix: "openai@"},
+	{Prefix: "codex@"},
+	{Prefix: "claude@"},
+	{Prefix: "gemini@"},
+	{Prefix: "nvidia@"},
+	{Prefix: "compat"},
 }
 
 func runAdd() {
 	items := make([]string, len(providers)+1)
-	for i, provider := range providers {
-		items[i] = provider.Label
+	for i, p := range providers {
+		items[i] = p.label()
 	}
 	items[len(providers)] = "exit"
 
@@ -64,22 +73,23 @@ func runAdd() {
 		os.Exit(0)
 	}
 
-	provider := providers[index]
+	p := providers[index]
+	defaultModel := provider.Default(p.name())
 
 	var model, description string
-	switch {
-	case provider.IsCopilot:
-		model, description = addCopilot(provider.Prefix, provider.Model)
+	switch p.name() {
+	case "copilot":
+		model, description = addCopilot(p.Prefix, defaultModel)
 
-	case provider.IsCompat:
+	case "compat":
 		model, description = addCompat()
 
-	case provider.IsCodex:
-		model, description = addOpenAICodex(provider.Prefix, provider.Model)
+	case "codex":
+		model, description = addOpenAICodex(p.Prefix, defaultModel)
 
 	default:
-		addAPIKey(provider.Label, provider.EnvKey)
-		model, description = getModelName(provider.Prefix, provider.Model)
+		addAPIKey(p.label(), p.envKey())
+		model, description = getModelName(p.Prefix, defaultModel)
 	}
 
 	if model != "" {
@@ -136,13 +146,12 @@ func addCompat() (string, string) {
 	}
 
 	if err := session.UpsertCompat(providor, url); err != nil {
-		slog.Error(" keychain.UpsertCompat",
+		slog.Error("keychain.UpsertCompat",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 	fmt.Printf("[*] Compat provider %q saved: %s\n", providor, url)
 
-	// * compat is optional, so if empty, skip
 	fmt.Print("API Key (leave empty to skip): ")
 	keyBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Println()
@@ -168,7 +177,6 @@ func addCompat() (string, string) {
 		fmt.Printf("[*] No API key: %q\n", providor)
 	}
 
-	// * if no model specified, skip
 	prefix := fmt.Sprintf("compat[%s]@", providor)
 	model, _ := getModelName(prefix, "")
 	return model, ""
@@ -216,13 +224,13 @@ func addAPIKey(label, envKey string) {
 }
 
 func getModelName(prefix, defaultModel string) (string, string) {
-	provider := strings.TrimSuffix(prefix, "@")
-	if idx := strings.Index(provider, "["); idx != -1 {
-		provider = ""
+	p := strings.TrimSuffix(prefix, "@")
+	if idx := strings.Index(p, "["); idx != -1 {
+		p = ""
 	}
 
-	if provider != "" {
-		if model, desc, ok := selectModelFromList(prefix, provider, defaultModel); ok {
+	if p != "" {
+		if model, desc, ok := selectModelFromList(prefix, p, defaultModel); ok {
 			return model, desc
 		}
 	}
@@ -328,7 +336,7 @@ func runReasoning() {
 func runPlanner() {
 	cfg, err := session.Load()
 	if err != nil {
-		slog.Error("keychain.Load",
+		slog.Error("session.Load",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -359,7 +367,7 @@ func runPlanner() {
 
 	cfg.PlannerModel = cfg.Models[idx].Name
 	if err := session.Save(cfg); err != nil {
-		slog.Error("keychain.Save",
+		slog.Error("session.Save",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -383,7 +391,7 @@ func upsertModel(name, defaultDesc string) {
 
 	cfg, err := session.Load()
 	if err != nil {
-		slog.Error("keychain.Load",
+		slog.Error("session.Load",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -415,7 +423,7 @@ func upsertModel(name, defaultDesc string) {
 	}
 
 	if err := session.Save(cfg); err != nil {
-		slog.Error("keychain.Save",
+		slog.Error("session.Save",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -425,4 +433,42 @@ func upsertModel(name, defaultDesc string) {
 	if cfg.PlannerModel == name {
 		fmt.Printf("[*] set %q as planner model\n", name)
 	}
+}
+
+func addOpenAICodex(prefix, defaultModel string) (string, string) {
+	if openaicodex.HasToken() {
+		confirm := promptui.Select{
+			Label:        "OpenAI Codex token exists, re-login?",
+			Items:        []string{"No", "Yes"},
+			HideSelected: true,
+		}
+		idx, _, err := confirm.Run()
+		if err != nil {
+			os.Exit(1)
+		}
+		if idx == 0 {
+			return getModelName(prefix, defaultModel)
+		}
+		if err := openaicodex.ClearToken(); err != nil {
+			slog.Error("openaicodex.ClearToken", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}
+
+	fmt.Println("[!] OpenAI Codex OAuth Notice")
+	fmt.Println("[*] Authenticates via your personal ChatGPT account (OAuth), not an API key")
+	fmt.Println("[*] Requires an active ChatGPT Pro or Max subscription")
+	fmt.Println("[*] For personal testing only — not for commercial or multi-user use")
+	fmt.Println()
+	fmt.Print("[?] Press Enter to confirm you understand and accept the above. (Ctrl+C to cancel)")
+	fmt.Scanln()
+
+	_, err := openaicodex.New()
+	if err != nil {
+		slog.Error("failed to initialize OpenAI Codex",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	return getModelName(prefix, defaultModel)
 }

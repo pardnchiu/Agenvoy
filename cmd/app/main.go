@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -16,13 +17,6 @@ import (
 	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
-	"github.com/pardnchiu/agenvoy/internal/agents/provider/claude"
-	"github.com/pardnchiu/agenvoy/internal/agents/provider/compat"
-	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
-	"github.com/pardnchiu/agenvoy/internal/agents/provider/gemini"
-	"github.com/pardnchiu/agenvoy/internal/agents/provider/nvidia"
-	"github.com/pardnchiu/agenvoy/internal/agents/provider/openai"
-	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -44,6 +38,138 @@ func init() {
 }
 
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "add":
+			initCLI()
+			runAdd()
+			return
+		case "remove":
+			initCLI()
+			runRemove()
+			return
+		case "reasoning":
+			initCLI()
+			runReasoning()
+			return
+		case "planner":
+			initCLI()
+			runPlanner()
+			return
+		case "list":
+			initCLI()
+			runList()
+			return
+		case "run", "run-allow":
+			if len(os.Args) < 3 {
+				fmt.Fprintf(os.Stderr, "Usage: agenvoy run <input...>\n")
+				fmt.Fprintf(os.Stderr, "       agenvoy run-allow <input...>\n")
+				os.Exit(1)
+			}
+			initCLI()
+			runAgent(os.Args[1] == "run-allow")
+			return
+		default:
+			printUsage()
+			os.Exit(1)
+		}
+	}
+
+	runApp()
+}
+
+func initCLI() {
+	if err := sandbox.CheckDependence(); err != nil {
+		slog.Error("sandbox.CheckDependence",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if err := filesystem.Init(); err != nil {
+		slog.Error("filesystem.Init",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if cfg, err := session.Load(); err == nil {
+		provider.SetReasoningLevel(cfg.ReasoningLevel)
+	}
+}
+
+func runList() {
+	if len(os.Args) > 2 && os.Args[2] == "skill" {
+		skill.SyncSkills(context.Background(), extensions.Skills)
+		scanner := skill.NewScanner()
+
+		if len(scanner.Skills.ByName) == 0 {
+			fmt.Println("No skills found")
+			fmt.Println("\nScanned paths:")
+			for _, path := range scanner.Skills.Paths {
+				fmt.Printf("  - %s\n", path)
+			}
+			return
+		}
+
+		names := scanner.List()
+		sort.Strings(names)
+
+		fmt.Printf("Found %d skill(s):\n\n", len(names))
+		for _, name := range names {
+			s := scanner.Skills.ByName[name]
+			fmt.Printf("• %s\n", name)
+			if s.Description != "" {
+				fmt.Printf("  %s\n", s.Description)
+			}
+			fmt.Printf("  Path: %s\n\n", s.Path)
+		}
+		return
+	}
+
+	cfg, err := session.Load()
+	if err != nil {
+		slog.Error("session.Load", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	if len(cfg.Models) == 0 {
+		fmt.Println("No models configured.")
+		return
+	}
+
+	fmt.Printf("Found %d model(s):\n\n", len(cfg.Models))
+	for _, m := range cfg.Models {
+		fmt.Printf("• %s\n", m.Name)
+		if m.Description != "" {
+			fmt.Printf("  %s\n", m.Description)
+		}
+	}
+}
+
+func runAgent(allowAll bool) {
+	userInput := strings.TrimSpace(strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n"))
+
+	registry := buildAgentRegistry()
+	ctx, cancel := context.WithCancel(context.Background())
+	skill.SyncSkills(ctx, extensions.Skills)
+	scanner := skill.NewScanner()
+	defer cancel()
+
+	var selectorBot agentTypes.Agent
+	if cfg, err := session.Load(); err == nil && cfg.PlannerModel != "" {
+		selectorBot = selectAgent(cfg.PlannerModel)
+	}
+	if selectorBot == nil {
+		selectorBot = registry.Fallback
+	}
+
+	if err := runEvents(ctx, cancel, func(ch chan<- agentTypes.Event) error {
+		return exec.Run(ctx, selectorBot, registry, scanner, userInput, nil, nil, ch, allowAll)
+	}); err != nil && ctx.Err() == nil {
+		slog.Error("failed to execute",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+}
+
+func runApp() {
 	if err := filesystem.Init(); err != nil {
 		slog.Error("filesystem.Init",
 			slog.String("error", err.Error()))
@@ -152,46 +278,15 @@ func main() {
 	}
 }
 
-func buildAgentRegistry() agentTypes.AgentRegistry {
-	newFn := map[string]func(string) (agentTypes.Agent, error){
-		"copilot": func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
-		"openai":  func(m string) (agentTypes.Agent, error) { return openai.New(m) },
-		"codex":   func(m string) (agentTypes.Agent, error) { return openaicodex.New(m) },
-		"compat":  func(m string) (agentTypes.Agent, error) { return compat.New(m) },
-		"claude":  func(m string) (agentTypes.Agent, error) { return claude.New(m) },
-		"gemini":  func(m string) (agentTypes.Agent, error) { return gemini.New(m) },
-		"nvidia":  func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
-	}
-
-	agentEntries := exec.GetAgent()
-	registry := agentTypes.AgentRegistry{
-		Registry: make(map[string]agentTypes.Agent, len(agentEntries)),
-		Entries:  make([]agentTypes.AgentEntry, 0, len(agentEntries)),
-	}
-	for _, e := range agentEntries {
-		providerFull := strings.SplitN(e.Name, "@", 2)[0]
-		prov, _, _ := strings.Cut(providerFull, "[")
-		fn, ok := newFn[prov]
-		if !ok {
-			continue
-		}
-		a, err := fn(e.Name)
-		if err != nil {
-			slog.Warn("failed to initialize",
-				slog.String("name", e.Name),
-				slog.String("error", err.Error()))
-			continue
-		}
-		registry.Registry[e.Name] = a
-		registry.Entries = append(registry.Entries, e)
-		if registry.Fallback == nil {
-			registry.Fallback = a
-		}
-	}
-
-	if registry.Fallback == nil {
-		slog.Error("no agents initialized, please check API keys")
-	}
-
-	return registry
+func printUsage() {
+	fmt.Println("Usage:")
+	fmt.Println("  agenvoy                 Start TUI + server + Discord bot")
+	fmt.Println("  agenvoy add             Add a provider/model")
+	fmt.Println("  agenvoy remove          Remove a provider/model")
+	fmt.Println("  agenvoy list            List configured models")
+	fmt.Println("  agenvoy list skill      List available skills")
+	fmt.Println("  agenvoy planner         Set planner model")
+	fmt.Println("  agenvoy reasoning       Set reasoning level")
+	fmt.Println("  agenvoy run <input...>  Run agent (requires tool confirmation)")
+	fmt.Println("  agenvoy run-allow <input...>  Run agent (allow all tools)")
 }

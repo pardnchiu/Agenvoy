@@ -1,10 +1,10 @@
 ifneq ($(filter cli run,$(MAKECMDGOALS)),)
 
 cli:
-	@go run ./cmd/cli/ run $(filter-out $@,$(MAKECMDGOALS))
+	@go run ./cmd/app/ run $(filter-out $@,$(MAKECMDGOALS))
 
 run:
-	@go run ./cmd/cli/ run-allow $(filter-out $@,$(MAKECMDGOALS))
+	@go run ./cmd/app/ run-allow $(filter-out $@,$(MAKECMDGOALS))
 
 %:
 	@:
@@ -27,28 +27,28 @@ help:
 	@echo "  make run <input...>     Run agent (allow all tools)"
 
 app:
-	go run ./cmd/app/main.go
+	go run ./cmd/app/
 
 discord:
 	go run ./cmd/server/main.go
 
 add:
-	go run ./cmd/cli/ add
+	go run ./cmd/app/ add
 
 remove:
-	go run ./cmd/cli/ remove
+	go run ./cmd/app/ remove
 
 planner:
-	go run ./cmd/cli/ planner
+	go run ./cmd/app/ planner
 
 reasoning:
-	go run ./cmd/cli/ reasoning
+	go run ./cmd/app/ reasoning
 
 models:
-	go run ./cmd/cli/ list
+	go run ./cmd/app/ list
 
 skills:
-	go run ./cmd/cli/ list skill
+	go run ./cmd/app/ list skill
 
 test:
 	go test ./test/... -v -timeout 60s

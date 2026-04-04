@@ -65,6 +65,7 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 
 		case agentTypes.EventText:
 			text := ev.Text
+			// strip any <summary>...</summary> block the LLM may have leaked
 			for {
 				start := strings.Index(text, "<summary>")
 				end := strings.Index(text, "</summary>")
