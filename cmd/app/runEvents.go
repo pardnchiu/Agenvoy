@@ -11,6 +11,25 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
+func stripSummaryBlocks(text string) string {
+	type pair struct{ open, close string }
+	tags := []pair{
+		{"<summary>", "</summary>"},
+		{"<|summary|>", "</|summary|>"},
+	}
+	for _, t := range tags {
+		for {
+			s := strings.Index(text, t.open)
+			e := strings.Index(text, t.close)
+			if s == -1 || e == -1 || e < s {
+				break
+			}
+			text = strings.TrimSpace(text[:s] + text[e+len(t.close):])
+		}
+	}
+	return text
+}
+
 func writeStdout(text string) {
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 	text = strings.ReplaceAll(text, "\r", "\n")
@@ -64,16 +83,7 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 			writeStdoutLine(fmt.Sprintf("[*] Tool: %s", ev.ToolName))
 
 		case agentTypes.EventText:
-			text := ev.Text
-			// strip any <summary>...</summary> block the LLM may have leaked
-			for {
-				start := strings.Index(text, "<summary>")
-				end := strings.Index(text, "</summary>")
-				if start == -1 || end == -1 || end < start {
-					break
-				}
-				text = strings.TrimSpace(text[:start] + text[end+len("</summary>"):])
-			}
+			text := stripSummaryBlocks(ev.Text)
 			if text == "" {
 				break
 			}

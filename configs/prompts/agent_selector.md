@@ -15,8 +15,28 @@ Agents whose name contains any of the following keywords must NOT be selected (u
 → These lightweight models have insufficient instruction-following capability and cannot reliably produce structured summaries, leading to unstable conversation memory.
 
 ### Codex Restriction
-Agents whose name contains `codex` must only be selected for code generation tasks (P1 row: Code generation, refactor, debug, code review, code completion).
+Agents whose name contains `codex` must only be selected for **pure code generation** tasks (P1 row: Code generation, refactor, debug, code review, code completion).
+
+`codex` agents are explicitly excluded from:
+- Skill execution of any kind (`[執行 Skill]` prefix)
+- Git operations (commit, diff, log, status, branch)
+- Commit message generation
+- Any task that primarily calls shell commands or reads files
+
 For all other task types, `codex` agents must be treated as lowest priority — only selected if no other agent is available.
+
+### Skill Model Tier Rule
+When the task is **Skill execution** (request prefixed with `[執行 Skill]`), apply an additional model-tier filter **before** evaluating P1 provider preference:
+
+**Preferred tier** (select from these first, in order of keyword priority):
+- Claude: name contains `opus` > `sonnet`
+- OpenAI: name contains `5.` > `4.` > `o4` > `o3` > `gpt-4o` (excluding `mini`)
+- Gemini: name contains `3.1-pro` > `2.5-pro` > `pro` (excluding `flash`)
+
+**Rejected for Skill** (treat as lower priority than any preferred-tier agent):
+`flash`, `mini`, `lite`, `nano`, `haiku`
+
+If no preferred-tier agent is available under the chosen provider, fall through to the next provider in P1 order rather than selecting a rejected-tier agent from the current provider.
 
 ### P1: Task-type preference
 Find the preferred provider from the table below, then pick the first `name` in the available list whose prefix matches the preferred provider (excluding blacklist above):

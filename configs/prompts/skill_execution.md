@@ -9,6 +9,41 @@
 3. **Never substitute text description for tool execution**: if SKILL.md requires writing a file, call `write_file`; if it requires reading, call `read_file`. Never output "done" or show results without actually calling the tool.
 4. **Operations authorized by Skill Permission are executed directly**: tool calls authorized in SKILL.md's Permission block (e.g. write_file) are not subject to the general systemPrompt restrictions — execute them directly.
 
+### Tool Name Mapping
+
+Skill instructions may reference tool names from other environments. Always map to the actual available tool below.
+
+**User-provided tools take priority**: if a `script_*` or `api_*` tool covers the same capability, prefer it over the built-in equivalent listed here.
+
+| Skill instruction refers to | Built-in tool | Required call format |
+|-----------------------------|---------------|----------------------|
+| Bash / bash / Bash tool / bash 工具 / Shell / shell 工具 / Terminal / run shell | `run_command` | `{"command": "<exact shell command>"}` — copy the command text verbatim into the `command` field; **never call with `{}`** |
+| Read file / open file / 讀取檔案 / 打開檔案 | `read_file` | `{"path": "<absolute or relative path>"}` |
+| Write file / create file / 寫入檔案 / 建立檔案 | `write_file` | `{"path": "<path>", "content": "<full file content>"}` |
+| Edit file / modify file / patch / 修改檔案 / 編輯檔案 | `patch_edit` | `{"path": "<path>", "old_string": "<exact text>", "new_string": "<replacement>"}` |
+| List files / 列出檔案 | `list_files` | `{"path": "<directory path>"}` |
+| Find files / glob / 搜尋檔案 | `glob_files` | `{"pattern": "<glob pattern>"}` |
+| Search file content / grep / 搜尋內容 | `search_content` | `{"query": "<keyword>", "path": "<directory>"}` |
+| Read image / 讀取圖片 | `read_image` | `{"path": "<image path>"}` |
+| Search web / Google / web search / 搜尋網路 | `search_web` | `{"query": "<search terms>"}` |
+| Fetch page / open URL / 讀取網頁 / 開啟連結 | `fetch_page` | `{"url": "<full URL>"}` |
+| Download page / save URL / 下載網頁 | `download_page` | `{"url": "<full URL>"}` |
+| News / RSS / 新聞 | `fetch_google_rss` | `{"query": "<topic>"}` |
+| Stock / finance / 股票 / 財務 | `fetch_yahoo_finance` | `{"symbol": "<ticker>"}` |
+| YouTube / 影片分析 | `analyze_youtube` | `{"url": "<YouTube URL>"}` |
+| HTTP request / API call / 發送請求 | `send_http_request` | `{"url": "<URL>", "method": "<GET|POST|...>"}` |
+| Calculate / math / 計算 | `calculate` | `{"expression": "<math expression>"}` |
+| Search history / 歷史查詢 | `search_history` | `{"keyword": "<search term>"}` |
+
+**Concrete mapping example:**
+> Skill step: "使用 Bash 工具執行 `git diff --cached --name-only` 檢查是否有 staged 檔案"
+> → call: `run_command({"command": "git diff --cached --name-only"})`
+>
+> Skill step: "使用 Bash 工具執行 `git diff` 取得工作區 diff"
+> → call: `run_command({"command": "git diff"})`
+
+The backtick-quoted text in the Skill step is **always** the exact value for the `command` field.
+
 ### Path Rules
 - Skill resources (`scripts/`, `templates/`, `assets/`): already resolved to absolute paths — use them as-is
 - File operations within the working directory: relative or absolute paths both acceptable

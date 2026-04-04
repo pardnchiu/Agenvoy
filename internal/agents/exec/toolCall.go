@@ -93,11 +93,28 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			}
 		}
 
+		if earlyErr := validateToolArgs(toolName, toolArg); earlyErr != "" {
+			events <- agentTypes.Event{
+				Type:     agentTypes.EventExecError,
+				ToolName: toolName,
+				ToolID:   toolID,
+				Text:     earlyErr,
+			}
+			toolMsg := agentTypes.Message{
+				Role:       "tool",
+				Content:    fmt.Sprintf("[RETRY_REQUIRED] tool=%s: %s", toolName, earlyErr),
+				ToolCallID: toolID,
+			}
+			sessionData.Tools = append(sessionData.Tools, toolMsg)
+			sessionData.ToolHistories = append(sessionData.ToolHistories, toolMsg)
+			continue
+		}
+
 		result, err := tools.Execute(ctx, exec, toolName, json.RawMessage(tool.Function.Arguments))
 		if err != nil {
 			errHash := file.SaveToolError(sessionData.ID, toolName, tool.Function.Arguments, err.Error())
 			if hint := file.SearchErrorMemory(toolName, err.Error(), 3); hint != "" {
-				result = fmt.Sprintf("error: %s\nrelated_errors: %s", err.Error(), hint)
+				result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nrelated_errors: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", toolName, err.Error(), hint, toolName)
 			} else {
 				events <- agentTypes.Event{
 					Type:     agentTypes.EventExecError,
@@ -105,8 +122,9 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 					ToolID:   toolID,
 					Text:     errHash,
 				}
-				result = fmt.Sprintf("no data: %s", errHash)
+				result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", toolName, err.Error(), toolName)
 			}
+			delete(alreadyCall, hash)
 		} else if result == "" || result == "no data" {
 			if hint := file.SearchErrorMemory(toolName, "no data", 3); hint != "" {
 				result = hint
@@ -171,8 +189,34 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 	return sessionData, alreadyCall, nil
 }
 
-// injectImageToUserInput adds a data URL image to the current UserInput so the model
-// can see it visually in the next Send() call. All providers support images in user messages.
+func validateToolArgs(toolName, args string) string {
+	args = strings.TrimSpace(args)
+	isEmpty := args == "" || args == "{}" || args == "null"
+
+	type req struct {
+		field   string
+		example string
+	}
+	rules := map[string]req{
+		"run_command":   {"command", `{"command": "git diff --cached"}`},
+		"read_file":     {"path", `{"path": "/path/to/file"}`},
+		"write_file":    {"path", `{"path": "/path/to/file", "content": "..."}`},
+		"patch_edit":    {"path", `{"path": "/path/to/file", "old_string": "...", "new_string": "..."}`},
+		"fetch_page":    {"url", `{"url": "https://..."}`},
+		"download_page": {"url", `{"url": "https://..."}`},
+		"search_web":    {"query", `{"query": "search terms"}`},
+	}
+
+	r, known := rules[toolName]
+	if !known {
+		return ""
+	}
+	if isEmpty || !strings.Contains(args, `"`+r.field+`"`) {
+		return fmt.Sprintf("missing required field '%s'. Call %s with: %s", r.field, toolName, r.example)
+	}
+	return ""
+}
+
 func injectImageToUserInput(session *agentTypes.AgentSession, dataURL string) {
 	part := agentTypes.ContentPart{
 		Type:     "image_url",

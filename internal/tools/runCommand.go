@@ -17,13 +17,13 @@ import (
 func registRunCommand() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "run_command",
-		Description: "Execute shell commands and return their output. Useful for running build tools, git commands, and more.",
+		Description: "Execute a shell command and return its combined stdout/stderr output. IMPORTANT: only call this tool when you have a complete, non-empty command string ready to execute. Never call this tool speculatively or with a placeholder — if the exact command is not yet determined, resolve it first before calling.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"command": map[string]any{
 					"type":        "string",
-					"description": "Shell command to execute",
+					"description": "The exact shell command to execute. Must be a non-empty, fully-formed command string (e.g. \"git status\", \"ls -la /tmp\"). Empty strings and placeholders are not accepted and will result in an error.",
 				},
 			},
 			"required": []string{"command"},
@@ -43,7 +43,7 @@ func registRunCommand() {
 func runCommand(ctx context.Context, e *toolTypes.Executor, command string) (string, error) {
 	command = strings.TrimSpace(command)
 	if command == "" {
-		return "", fmt.Errorf("failed to run command: command is empty")
+		return "", fmt.Errorf("run_command requires a non-empty 'command' argument. Call this tool again with the exact shell command to execute, e.g. {\"command\": \"git diff --cached\"}")
 	}
 
 	for _, dir := range DeniedConfig.Dirs {
