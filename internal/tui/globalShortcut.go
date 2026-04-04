@@ -23,6 +23,10 @@ func globalShortcut(event *tcell.EventKey) *tcell.EventKey {
 		return nil
 
 	case tcell.KeyEsc:
+		if isCommandMode() {
+			hideCommandInput()
+			return nil
+		}
 		resetView()
 		return nil
 
@@ -45,7 +49,87 @@ func globalShortcut(event *tcell.EventKey) *tcell.EventKey {
 
 	switch event.Rune() {
 	case 'q':
+		if isCommandMode() {
+			return event
+		}
 		app.Stop()
+		return nil
+
+	case 'i':
+		if !isCommandMode() && !isPopup() {
+			showCommandInput()
+			return nil
+		}
+
+	case 'h':
+		if isCommandMode() || isPopup() {
+			return event
+		}
+		focusIndex = (focusIndex + len(panels) - 1) % len(panels)
+		app.SetFocus(panels[focusIndex])
+		return nil
+
+	case 'l':
+		if isCommandMode() || isPopup() {
+			return event
+		}
+		focusIndex = (focusIndex + 1) % len(panels)
+		app.SetFocus(panels[focusIndex])
+		return nil
+
+	case 'j':
+		if isCommandMode() || isPopup() {
+			return event
+		}
+		switch app.GetFocus() {
+		case filesView:
+			count := filesView.GetItemCount()
+			if count > 0 {
+				next := filesView.GetCurrentItem() + 1
+				if next < count {
+					filesView.SetCurrentItem(next)
+				}
+			}
+		case contentView:
+			row, col := contentView.GetScrollOffset()
+			contentView.ScrollTo(row+1, col)
+		case logsView:
+			row, col := logsView.GetScrollOffset()
+			logsView.ScrollTo(row+1, col)
+		}
+		return nil
+
+	case 'k':
+		if isCommandMode() || isPopup() {
+			return event
+		}
+		switch app.GetFocus() {
+		case filesView:
+			prev := filesView.GetCurrentItem() - 1
+			if prev >= 0 {
+				filesView.SetCurrentItem(prev)
+			}
+		case contentView:
+			row, col := contentView.GetScrollOffset()
+			if row > 0 {
+				contentView.ScrollTo(row-1, col)
+			}
+		case logsView:
+			row, col := logsView.GetScrollOffset()
+			if row > 0 {
+				logsView.ScrollTo(row-1, col)
+			}
+		}
+		return nil
+
+	case 'o':
+		if isCommandMode() || isPopup() {
+			return event
+		}
+		if app.GetFocus() == filesView {
+			idx := filesView.GetCurrentItem()
+			selectFile(idx, "", "", 0)
+		}
 		return nil
 
 	case 'e':
@@ -77,6 +161,21 @@ func resetView() {
 			contentView.ScrollToBeginning()
 		})
 	}
+}
+
+func isCommandMode() bool {
+	return app.GetFocus() == cmdInput
+}
+
+func showCommandInput() {
+	layout.ResizeItem(cmdInput, 3, 0)
+	app.SetFocus(cmdInput)
+}
+
+func hideCommandInput() {
+	layout.ResizeItem(cmdInput, 0, 0)
+	cmdInput.SetText("")
+	app.SetFocus(panels[focusIndex])
 }
 
 func isPopup() bool {

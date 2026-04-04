@@ -32,6 +32,8 @@ var (
 	currentDir  string
 	flieLists   []string
 	currentPath string
+
+	cmdInput *tview.InputField
 )
 
 func New() {
@@ -59,7 +61,8 @@ func New() {
 
 		logsView = tview.NewTextView().
 			SetScrollable(true).
-			SetWrap(true)
+			SetWrap(true).
+			SetDynamicColors(true)
 		logsView.SetBorder(true).
 			SetTitle(" Logs ").
 			SetTitleAlign(tview.AlignLeft)
@@ -80,11 +83,30 @@ func New() {
 			AddItem(contentView, 0, 2, false).
 			AddItem(logsView, 0, 2, false)
 
+		cmdInput = tview.NewInputField().
+			SetLabel("> ").
+			SetFieldBackgroundColor(tcell.ColorDefault).
+			SetLabelColor(tcell.ColorYellow)
+		cmdInput.SetBorder(true).
+			SetTitle(" Command ").
+			SetTitleAlign(tview.AlignLeft)
+		cmdInput.SetDoneFunc(func(key tcell.Key) {
+			switch key {
+			case tcell.KeyEnter:
+				text := cmdInput.GetText()
+				cmdInput.SetText("")
+				executeCommand(text)
+			case tcell.KeyEscape:
+				hideCommandInput()
+			}
+		})
+
 		pages = tview.NewPages().
 			AddPage("main", mainFlex, true, true)
 
-		layout = tview.NewFlex().
-			AddItem(pages, 0, 1, true)
+		layout = tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(pages, 0, 1, true).
+			AddItem(cmdInput, 0, 0, false)
 
 		go fetchMeta()
 
