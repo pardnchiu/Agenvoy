@@ -1,20 +1,21 @@
 ifneq ($(filter cli run,$(MAKECMDGOALS)),)
 
 cli:
-	@go run ./cmd/app/ run $(filter-out $@,$(MAKECMDGOALS))
+	@go run ./cmd/app/ cli $(filter-out $@,$(MAKECMDGOALS))
 
 run:
-	@go run ./cmd/app/ run-allow $(filter-out $@,$(MAKECMDGOALS))
+	@go run ./cmd/app/ run $(filter-out $@,$(MAKECMDGOALS))
 
 %:
 	@:
 
 else
 
-.PHONY: help app discord add remove planner reasoning models skills test
+.PHONY: help build app discord add remove planner reasoning models skills test
 
 help:
 	@echo "How to use:"
+	@echo "  make build              Build binary and install to /usr/local/bin/agen"
 	@echo "  make app                Start unified app (TUI + Discord + REST API)"
 	@echo "  make discord            Start Discord bot server (legacy)"
 	@echo "  make add                Add a provider/model"
@@ -24,7 +25,10 @@ help:
 	@echo "  make models             Get model list"
 	@echo "  make skills             Get skill list"
 	@echo "  make cli <input...>     Run agent (requires tool confirmation)"
-	@echo "  make run <input...>     Run agent (allow all tools)"
+	@echo "  make run <input...>     Run agent (allow all tools, no confirmation)"
+
+build:
+	go build -o agen ./cmd/app/ && sudo mv agen /usr/local/bin/agen
 
 app:
 	go run ./cmd/app/

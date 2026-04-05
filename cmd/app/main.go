@@ -60,14 +60,14 @@ func main() {
 			initCLI()
 			runList()
 			return
-		case "run", "run-allow":
+		case "cli", "run":
 			if len(os.Args) < 3 {
-				fmt.Fprintf(os.Stderr, "Usage: agenvoy run <input...>\n")
-				fmt.Fprintf(os.Stderr, "       agenvoy run-allow <input...>\n")
+				fmt.Fprintf(os.Stderr, "Usage: agen cli <input...>\n")
+				fmt.Fprintf(os.Stderr, "       agen run <input...>\n")
 				os.Exit(1)
 			}
 			initCLI()
-			runAgent(os.Args[1] == "run-allow")
+			runAgent(os.Args[1] == "run")
 			return
 		default:
 			printUsage()
@@ -280,13 +280,13 @@ func runApp() {
 
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("  agenvoy                 Start TUI + server + Discord bot")
-	fmt.Println("  agenvoy add             Add a provider/model")
-	fmt.Println("  agenvoy remove          Remove a provider/model")
-	fmt.Println("  agenvoy list            List configured models")
-	fmt.Println("  agenvoy list skill      List available skills")
-	fmt.Println("  agenvoy planner         Set planner model")
-	fmt.Println("  agenvoy reasoning       Set reasoning level")
-	fmt.Println("  agenvoy run <input...>  Run agent (requires tool confirmation)")
-	fmt.Println("  agenvoy run-allow <input...>  Run agent (allow all tools)")
+	fmt.Println("  agen                    Start TUI + server + Discord bot")
+	fmt.Println("  agen add                Add a provider/model")
+	fmt.Println("  agen remove             Remove a provider/model")
+	fmt.Println("  agen list               List configured models")
+	fmt.Println("  agen list skill         List available skills")
+	fmt.Println("  agen planner            Set planner model")
+	fmt.Println("  agen reasoning          Set reasoning level")
+	fmt.Println("  agen cli <input...>     Run agent (requires tool confirmation)")
+	fmt.Println("  agen run <input...>     Run agent (allow all tools)")
 }
