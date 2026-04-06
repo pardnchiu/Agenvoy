@@ -87,6 +87,33 @@ func GetSummaryPrompt(sessionID string, cutoff time.Time) string {
 	).Replace(strings.TrimSpace(configs.SummaryPrompt))
 }
 
+func IsNeedSummary() []string {
+	entries, err := os.ReadDir(filesystem.SessionsDir)
+	if err != nil {
+		return nil
+	}
+
+	var result []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		sid := entry.Name()
+		historyPath := filepath.Join(filesystem.SessionsDir, sid, "history.json")
+		hInfo, err := os.Stat(historyPath)
+		if err != nil {
+			continue
+		}
+
+		summaryPath := SummaryPath(sid)
+		sInfo, err := os.Stat(summaryPath)
+		if err != nil || hInfo.ModTime().After(sInfo.ModTime()) {
+			result = append(result, sid)
+		}
+	}
+	return result
+}
+
 func SaveSummary(sessionID string, data any) {
 	if bytes, err := json.Marshal(data); err == nil {
 		if err := filesystem.WriteFile(SummaryPath(sessionID), string(bytes), 0644); err != nil {

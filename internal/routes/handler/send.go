@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -98,8 +97,6 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 				events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 				return
 			}
-			summaryHistories := exec.GetSummaryHistories(session.Histories)
-			go exec.GenerateSummary(context.Background(), exec.SelectAgent(context.Background(), bot, registry, "[summary] 整理對話摘要，選擇最輕量可完成任務的模型", false), session.ID, summaryHistories)
 		}()
 
 		if req.SSE {

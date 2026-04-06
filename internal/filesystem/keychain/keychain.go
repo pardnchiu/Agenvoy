@@ -33,6 +33,37 @@ func Set(key, value string) error {
 	}
 }
 
+func Delete(key string) error {
+	switch runtime.GOOS {
+	case "darwin":
+		exec.Command("security", "delete-generic-password",
+			"-s", "agenvoy",
+			"-a", key).Run()
+	default:
+		exec.Command("secret-tool", "clear",
+			"service", "agenvoy", "account", key).Run()
+		deleteFallback(key)
+	}
+	return nil
+}
+
+func deleteFallback(key string) {
+	path := filepath.Join(filesystem.AgenvoyDir, ".secrets")
+	lines := readFallbackLines()
+	prefix := key + "="
+	filtered := lines[:0]
+	for _, l := range lines {
+		if !strings.HasPrefix(l, prefix) {
+			filtered = append(filtered, l)
+		}
+	}
+	data := strings.Join(filtered, "\n")
+	if len(filtered) > 0 {
+		data += "\n"
+	}
+	filesystem.WriteFile(path, data, 0600)
+}
+
 func setSecret(key, value string) error {
 	cmd := exec.Command("secret-tool", "store",
 		"--label", "agenvoy/"+key,

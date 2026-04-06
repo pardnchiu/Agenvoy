@@ -94,8 +94,6 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	if err := <-execErrCh; err != nil {
 		return err
 	}
-	events <- agentTypes.Event{Type: agentTypes.EventSummaryGenerate}
-	GenerateSummary(context.Background(), SelectAgent(ctx, bot, registry, "[summary] 整理對話摘要，選擇最輕量可完成任務的模型", false), session.ID, session.Histories)
 	if finalDone != nil {
 		events <- *finalDone
 	}

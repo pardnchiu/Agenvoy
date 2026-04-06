@@ -264,6 +264,10 @@ func runApp() {
 		defer scheduler.Stop()
 	}
 
+	if selectorBot != nil {
+		go setSummaryCron(selectorBot, registry)
+	}
+
 	go tui.FileMonitor()
 
 	quit := make(chan os.Signal, 1)
@@ -275,6 +279,33 @@ func runApp() {
 
 	if err := tui.Set(); err != nil {
 		fmt.Fprintf(os.Stderr, "tui.Set error: %v\n", err)
+	}
+}
+
+func setSummaryCron(bot agentTypes.Agent, registry agentTypes.AgentRegistry) {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		sessions := session.IsNeedSummary()
+		if len(sessions) == 0 {
+			continue
+		}
+		slog.Info("summary cron",
+			slog.Int("sessions", len(sessions)))
+
+		for _, sid := range sessions {
+			histories, _ := session.GetHistory(sid)
+			summaryHistories := exec.GetSummaryHistories(histories)
+			if len(summaryHistories) == 0 {
+				continue
+			}
+			bgCtx := context.Background()
+			summaryAgent := exec.SelectAgent(bgCtx, bot, registry, "[summary] 整理對話摘要，選擇最輕量可完成任務的模型", false)
+			exec.GenerateSummary(bgCtx, summaryAgent, sid, summaryHistories)
+			slog.Info("summary done",
+				slog.String("session", sid))
+		}
 	}
 }
 
