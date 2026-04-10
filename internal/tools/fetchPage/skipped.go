@@ -4,52 +4,37 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"log/slog"
-	"os"
-	"path/filepath"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 )
 
+func skipKey(href string) string {
+	hash := sha256.Sum256([]byte(href))
+	return "skip:" + hex.EncodeToString(hash[:])
+}
+
 func isSkipped(href string) bool {
-	for _, folder := range []string{"4xx", "5xx"} {
-		_, path, err := skippedPath(folder, href)
-		if err != nil {
-			continue
-		}
-		if _, err := os.Stat(path); err == nil {
-			return true
-		}
+	key := skipKey(href)
+	if _, ok := store.DB(store.DBFetchSkip4xx).Get(key); ok {
+		return true
+	}
+	if _, ok := store.DB(store.DBFetchSkip5xx).Get(key); ok {
+		return true
 	}
 	return false
 }
 
-func skippedPath(folder, href string) (string, string, error) {
-	cached := filepath.Join(filesystem.ToolFetchPage, folder)
-	hash := sha256.Sum256([]byte(href))
-	name := hex.EncodeToString(hash[:])
-	return cached, filepath.Join(cached, name), nil
-}
-
 func addToSkippedMap(href string, status int) {
-	folder := "4xx"
+	key := skipKey(href)
 	if status >= 500 {
-		folder = "5xx"
-	}
-
-	dir, path, err := skippedPath(folder, href)
-	if err != nil {
-		slog.Warn("skippedPath",
-			slog.String("error", err.Error()))
+		if err := store.DB(store.DBFetchSkip5xx).Set(key, "1", store.SetDefault, store.TTL(int64(skippedExpired.Seconds()))); err != nil {
+			slog.Warn("store.DB.Set",
+				slog.String("error", err.Error()))
+		}
 		return
 	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		slog.Warn("os.MkdirAll",
-			slog.String("error", err.Error()))
-		return
-	}
-
-	if err = filesystem.WriteFile(path, "1", 0644); err != nil {
-		slog.Warn("utils.WriteFile",
+	if err := store.DB(store.DBFetchSkip4xx).Set(key, "1", store.SetDefault, nil); err != nil {
+		slog.Warn("store.DB.Set",
 			slog.String("error", err.Error()))
 	}
 }

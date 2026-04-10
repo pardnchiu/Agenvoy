@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 )
 
 func Download(href, saveTo string) (string, error) {
@@ -36,24 +37,17 @@ func Download(href, saveTo string) (string, error) {
 		saveTo = defaultDownloadPath(href)
 	}
 
-	cached5xxDir := filepath.Join(filesystem.ToolFetchPage, "5xx")
-	clean(cached5xxDir, skippedExpired)
-
 	if isSkipped(href) {
 		return skippedMessage(href), nil
 	}
 
 	hash := sha256.Sum256([]byte(href + "|download"))
-	cacheKey := hex.EncodeToString(hash[:])
-	cached := filepath.Join(filesystem.ToolFetchPage, "cached")
+	cacheKey := "page:" + hex.EncodeToString(hash[:])
 
-	clean(cached, cacheExpired)
-	cachePath := filepath.Join(cached, cacheKey+".md")
+	db := store.DB(store.DBFetchPage)
 	var content string
-	if _, err := os.Stat(cachePath); err == nil {
-		if b, err := os.ReadFile(cachePath); err == nil {
-			content = string(b)
-		}
+	if entry, ok := db.Get(cacheKey); ok {
+		content = entry.Value
 	}
 
 	if content == "" {
@@ -77,8 +71,8 @@ func Download(href, saveTo string) (string, error) {
 		}
 
 		content = data.Markdown
-		if err := filesystem.WriteFile(cachePath, content, 0644); err != nil {
-			slog.Warn("utils.WriteFile",
+		if err := db.Set(cacheKey, content, store.SetDefault, store.TTL(int64(cacheExpired.Seconds()))); err != nil {
+			slog.Warn("db.Set",
 				slog.String("error", err.Error()))
 		}
 	}

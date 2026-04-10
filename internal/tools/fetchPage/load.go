@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"text/template"
@@ -20,7 +19,7 @@ import (
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 )
 
 //go:embed embed/stealth.js
@@ -95,9 +94,6 @@ func Load(href string, keepLinks bool) (string, error) {
 		href = parsed.String()
 	}
 
-	cached5xx := filepath.Join(filesystem.ToolFetchPage, "5xx")
-	clean(cached5xx, skippedExpired)
-
 	if isSkipped(href) {
 		return skippedMessage(href), nil
 	}
@@ -107,15 +103,11 @@ func Load(href string, keepLinks bool) (string, error) {
 		cacheVariant = "|links"
 	}
 	hash := sha256.Sum256([]byte(href + cacheVariant))
-	cacheKey := hex.EncodeToString(hash[:])
-	cached := filepath.Join(filesystem.ToolFetchPage, "cached")
+	cacheKey := "page:" + hex.EncodeToString(hash[:])
 
-	clean(cached, cacheExpired)
-	cachePath := filepath.Join(cached, cacheKey+".md")
-	if _, err := os.Stat(cachePath); err == nil {
-		if b, err := os.ReadFile(cachePath); err == nil {
-			return formatForAgent(truncate(string(b))), nil
-		}
+	db := store.DB(store.DBFetchPage)
+	if entry, ok := db.Get(cacheKey); ok {
+		return formatForAgent(truncate(entry.Value)), nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
@@ -146,8 +138,8 @@ func Load(href string, keepLinks bool) (string, error) {
 		return skippedMessage(href), nil
 	}
 
-	if err = filesystem.WriteFile(cachePath, data.Markdown, 0644); err != nil {
-		slog.Warn("utils.WriteFile",
+	if err = db.Set(cacheKey, data.Markdown, store.SetDefault, store.TTL(int64(cacheExpired.Seconds()))); err != nil {
+		slog.Warn("db.Set",
 			slog.String("error", err.Error()))
 	}
 	return formatForAgent(truncate(data.Markdown)), nil
@@ -337,25 +329,4 @@ func newBrowser() (*rod.Browser, error) {
 		return nil, fmt.Errorf("browser.Connect: %w", err)
 	}
 	return browser, nil
-}
-
-func clean(dir string, ttl time.Duration) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return
-	}
-
-	now := time.Now()
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		info, err := entry.Info()
-		if err != nil {
-			continue
-		}
-		if now.Sub(info.ModTime()) > ttl {
-			_ = os.Remove(filepath.Join(dir, entry.Name()))
-		}
-	}
 }
