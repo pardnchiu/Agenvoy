@@ -4,19 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
-)
-
-var (
-	timeRegex = regexp.MustCompile(`(---\n)*當前時間: (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})`)
 )
 
 type messageHistory struct {
@@ -72,16 +66,6 @@ func registSearchHistory() {
 	})
 }
 
-func getTimestamp(content string) (int64, string) {
-	matches := timeRegex.FindStringSubmatch(content)
-	if len(matches) >= 2 {
-		if t, err := time.ParseInLocation("2006-01-02 15:04:05", matches[2], time.Local); err == nil {
-			return t.Unix(), matches[2]
-		}
-	}
-	return 0, content
-}
-
 func searchHistory(sessionID, keyword, timeRange string) (string, error) {
 	const limit = 8
 	if sessionID == "" {
@@ -91,45 +75,46 @@ func searchHistory(sessionID, keyword, timeRange string) (string, error) {
 		return "", fmt.Errorf("keyword is required")
 	}
 
-	historyPath := filesystem.HistoryPath(sessionID)
-	data, err := os.ReadFile(historyPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "no history found for current session", nil
-		}
-		return "", fmt.Errorf("failed to read %s: %w", historyPath, err)
+	db := store.DB(store.DBSessionHist)
+	keys := db.Keys(sessionID + ":*")
+	if len(keys) == 0 {
+		return "no history found for current session", nil
 	}
 
-	var histories []messageHistory
-	if err := json.Unmarshal(data, &histories); err != nil {
-		return "", fmt.Errorf("failed to parse %s: %w", historyPath, err)
-	}
-
-	var after int64
+	var afterNano int64
 	if d, ok := historyTimeRanges[timeRange]; ok {
-		after = time.Now().Add(-d).Unix()
+		afterNano = time.Now().Add(-d).UnixNano()
 	}
 
 	lower := strings.ToLower(keyword)
-	var matches []messageHistory
+	matches := make([]messageHistory, 0, limit)
 
-	// * skip static history messages
-	startIdx := len(histories) - session.MaxHistoryMessages - 1
-	if startIdx < 0 {
-		return "not much history to search", nil
-	}
+	for i := len(keys) - 1; i >= 0; i-- {
+		key := keys[i]
 
-	for i := startIdx; i >= 0; i-- {
-		entry := histories[i]
-		ts, body := getTimestamp(entry.Content)
-		if after > 0 && ts > 0 && ts < after {
+		if afterNano > 0 {
+			if idx := strings.LastIndexByte(key, ':'); idx >= 0 {
+				if ts, err := strconv.ParseInt(key[idx+1:], 10, 64); err == nil && ts < afterNano {
+					break
+				}
+			}
+		}
+
+		entry, ok := db.Get(key)
+		if !ok {
 			continue
 		}
-		if strings.Contains(strings.ToLower(body), lower) {
-			matches = append(matches, entry)
-			if len(matches) >= limit {
-				break
-			}
+		if !strings.Contains(strings.ToLower(entry.Value), lower) {
+			continue
+		}
+
+		var msg messageHistory
+		if err := json.Unmarshal([]byte(entry.Value), &msg); err != nil {
+			continue
+		}
+		matches = append(matches, msg)
+		if len(matches) >= limit {
+			break
 		}
 	}
 
