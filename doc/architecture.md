@@ -1,6 +1,8 @@
-# Agenvoy — Architecture Reference
+# Agenvoy — Architecture
 
-Six diagrams covering the full system, from entry points down to individual subsystems.
+> Back to [README](../README.md)
+
+Seven Mermaid diagrams covering the full system, from entry points down to individual subsystems.
 
 ## 1. System Overview
 
@@ -9,12 +11,7 @@ High-level data flow across all major subsystems.
 ```mermaid
 graph TB
     subgraph Entry ["Entry Points"]
-        App["cmd/app · TUI Dashboard"]
-        subgraph Managed ["Managed by cmd/app"]
-            CLI["cmd/cli · will deprecate"]
-            Discord["Discord Bot"]
-            API["REST API · /v1/send · /v1/tools · /v1/tool/:name · /v1/key"]
-        end
+        App["cmd/app · Unified TUI App\n(CLI · TUI · Discord · REST API)"]
     end
 
     subgraph Engine ["Execution Engine"]
@@ -23,7 +20,7 @@ graph TB
     end
 
     subgraph Providers ["LLM Providers"]
-        P["Copilot · OpenAI · Claude\nGemini · Nvidia · Compat"]
+        P["Copilot · OpenAI · Codex · Claude\nGemini · Nvidia · Compat"]
     end
 
     subgraph Security ["Security Layer"]
@@ -31,26 +28,21 @@ graph TB
     end
 
     subgraph Tools ["Tool Subsystem"]
-        T["File · Web · API · Script\nScheduler · Error Memory"]
+        T["File · Web · API · Script\nScheduler · Error Memory\nObsidian Memory"]
     end
 
-    subgraph Persistence ["Persistence"]
-        PS["Session Summary · History"]
+    subgraph Memory ["Memory Layer"]
+        PS["ToriiDB Store\nSession Summary\nObsidian Vault (optional)"]
     end
 
-    App --> CLI
-    App --> Discord
-    App --> API
-    CLI --> Run
-    Discord --> Run
-    API --> Run
+    App --> Run
     Run --> Execute
     Execute -->|"Agent.Send()"| Providers
     Execute -->|"tool calls"| Security
     Security --> Tools
     Tools -->|"results"| Execute
-    Execute --> Persistence
-    Persistence -.->|"inject"| Execute
+    Execute --> Memory
+    Memory -.->|"inject"| Execute
 ```
 
 ---
@@ -111,6 +103,7 @@ flowchart TD
     subgraph Providers ["Provider Backends"]
         Copilot["Copilot\ngithub.com token auth\nauto-relogin on 401"]
         OpenAI["OpenAI\nno_temperature flag\nfor reasoning models"]
+        Codex["OpenAI Codex\nDevice Code Flow\nauto-refresh"]
         Claude["Claude\nmulti-system-prompt merge"]
         Gemini["Gemini\nmultipart message fix"]
         Nvidia["Nvidia NIM\nOpenAI-compatible"]
@@ -130,6 +123,7 @@ flowchart TD
 
     Planner --> Copilot
     Planner --> OpenAI
+    Planner --> Codex
     Planner --> Claude
     Planner --> Gemini
     Planner --> Nvidia
@@ -171,7 +165,7 @@ flowchart TD
         SandboxExecMac["sandbox-exec · macOS\nApple Seatbelt profile"]
     end
 
-    subgraph Keychain ["Credential Storage · filesystem"]
+    subgraph Keychain ["Credential Storage · filesystem/keychain"]
         KC["OS Keychain\nmacOS Keychain / Linux secret-service\nAPI keys never stored in plaintext"]
     end
 
@@ -202,15 +196,15 @@ flowchart TD
     Registry["Self-registering Tool Registry\n(replaces switch routing)"]
 
     subgraph FileTools ["File Operations"]
-        FT["read_file · write_file\npatch_edit · glob_files\nlist_files · search_content\nmove_to_trash · run_command"]
+        FT["read_file · write_file · read_image\npatch_edit · glob_files\nlist_files · search_content\nmove_to_trash · run_command"]
     end
 
-    subgraph WebTools ["Web Access"]
-        WT["fetch_page · headless Chrome + stealth JS · Chrome auto-detect\nsearch_web · Brave + DDG concurrent · SHA-256 cache 5min TTL\ngoogle_rss · RSS feed fetch · 5min cache\ndownload_page · raw page download\nanalyze_youtube · metadata fetch"]
+    subgraph WebTools ["Web Access (ToriiDB cached)"]
+        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Google + DDG concurrent · SHA-256 cache\nfetch_google_rss · RSS feed fetch\ndownload_page · raw page download\nanalyze_youtube · metadata fetch"]
     end
 
     subgraph APITools ["API Extensions · apiAdapter"]
-        AT["14+ embedded JSON definitions\n(CoinGecko · Wikipedia · Open-Meteo\nYahoo Finance · YouTube · etc.)"]
+        AT["12+ embedded JSON definitions\n(CoinGecko · Wikipedia · Open-Meteo\nYahoo Finance · YouTube · etc.)"]
         UserAPI["User extensions\n~/.config/agenvoy/api_tools/*.json\nloaded at startup · no recompile"]
     end
 
@@ -226,11 +220,15 @@ flowchart TD
 
     subgraph SchedulerTools ["Scheduler · scheduler"]
         SchT["cron tasks · recurring\none-time tasks\nJSON persistence · restore on restart\nDiscord callback on complete"]
-        SchCRUD["add_task · update_task · delete_task\nadd_cron · update_cron · delete_cron"]
+        SchCRUD["add_task · remove_task · list_tasks\nadd_cron · remove_cron · list_crons"]
     end
 
-    subgraph ErrorMemTools ["Error Memory"]
-        EMT["Tool call fails →\npersist to tool_errors/{SHA-256}.json\nsearch_errors · recall past failures\nremember_error · persist resolution\ncross-session learning"]
+    subgraph ErrorMemTools ["Error Memory (ToriiDB)"]
+        EMT["Tool call fails →\npersist to ToriiDB store\nsearch_errors · recall past failures\nremember_error · persist resolution\ncross-session learning"]
+    end
+
+    subgraph ObsidianMemTools ["Obsidian Vault Memory (optional)"]
+        OMT["memory_search · full-text keyword\nmemory_search_tag · JsonLogic tag search\nmemory_tags · list all vault tags\nmemory_list · list memories by category\n(requires Local REST API)"]
     end
 
     subgraph ExternalAgentTools ["External Agent Tools"]
@@ -238,7 +236,7 @@ flowchart TD
     end
 
     subgraph SearchTools ["Deferred Tool Registry · searchTools"]
-        SRT["search_tools · AlwaysLoad=true · ReadOnly=true\nkeyword fuzzy search + 'select:<name>' direct activation\n'+term' required-match syntax · max_results configurable\ninjects matching tool schemas into current request context"]
+        SRT["search_tools · AlwaysLoad=true · ReadOnly=true\nkeyword fuzzy + 'select:<name>' direct activation\n'+term' required-match syntax · max_results configurable\ninjects matching tool schemas into current request context"]
     end
 
     Registry --> FileTools
@@ -248,6 +246,7 @@ flowchart TD
     Registry --> SkillTools
     Registry --> SchedulerTools
     Registry --> ErrorMemTools
+    Registry --> ObsidianMemTools
     Registry --> ExternalAgentTools
     Registry --> SearchTools
 
@@ -261,11 +260,13 @@ flowchart TD
 
 ## 6. Persistence & Memory
 
-Session summary deep-merge, conversation history trimming, and error memory.
+Chunked multi-pass summary generation, conversation history trimming, ToriiDB-backed error memory, and Obsidian vault integration.
 
 ```mermaid
 flowchart TD
     subgraph SessionSummary ["Session Summary · sessionManager"]
+        SumCron["Hourly cron trigger\n(not per-request)"]
+        SumChunk["Chunked multi-pass generation\navoids context overflow on long sessions"]
         SumExtract["Summary extraction\n3 independent regex patterns\n· fenced block\n· XML &lt;summary&gt; tag\n· [summary] bracket"]
         SumMerge["mergeSummary()\ndeep-merge across turns\nnew entries append\nexisting entries update in-place"]
         SumInject["Inject into next Execute()\nas system context before history"]
@@ -275,26 +276,40 @@ flowchart TD
         Budget["MaxInputTokens()\nper-provider token budget"]
         Preserve["Always preserve\n· system prompt\n· injected summary\n· latest user message"]
         Trim["Trim oldest turns first\nuntil within budget\nellipsis markers inserted"]
-        SearchHist["search_history tool\nkeyword-triggered recall\n(not full replay)"]
+        SearchHist["search_history tool\n(ToriiDB store)\nkeyword-triggered recall\n(not full replay)"]
+    end
+
+    subgraph ToriiStore ["ToriiDB Store · filesystem/store"]
+        TS["Embedded KV store\nreplaces scattered JSON files\n· session history\n· error memory\n· fetch_page / search_web / google_rss cache\n· fetch_page skip list"]
     end
 
     subgraph ErrorMemory ["Error Memory · errorMemory"]
         ErrHash["SHA-256(tool_name + args)\nper-session key"]
-        ErrStore["tool_errors/{hash}.json\npersisted to filesystem"]
+        ErrStore["ToriiDB store\nreplaces earlier tool_errors/*.json"]
         ErrRecall["search_errors\nfuzzy keyword match\nacross all sessions"]
         ErrResolve["remember_error\npersist resolution decision\ncross-session reuse"]
+    end
+
+    subgraph ObsidianMem ["Obsidian Vault (optional) · filesystem/obsidian"]
+        OBConn["Local REST API\nhttps://127.0.0.1:27124"]
+        OBWrite["AgenvoyMem/ subfolder\nconversations/ and knowledge/\nauto-persisted as markdown"]
+        OBSearch["memory_search_* tools\ncross-session semantic / tag recall"]
     end
 
     subgraph UsageTracking ["Usage Tracking · usageManager"]
         UT["Per-model token usage\naccumulated across all\ntool-call iterations per request"]
     end
 
-    SumExtract --> SumMerge --> SumInject
+    SumCron --> SumChunk --> SumExtract --> SumMerge --> SumInject
     Budget --> Preserve --> Trim
     Trim --> SearchHist
+    SearchHist --> TS
     ErrHash --> ErrStore
+    ErrStore --> TS
     ErrStore --> ErrRecall
     ErrRecall --> ErrResolve
+    OBConn --> OBWrite
+    OBWrite --> OBSearch
 ```
 
 ---
@@ -318,8 +333,8 @@ flowchart TD
     subgraph Handlers ["Handlers · internal/routes/handler"]
         H1["ListTools()\nenumerate registered tools\nname · description · parameters"]
         H2["CallTool()\nvalidate tool exists\ndispatch via tools.Execute()"]
-        H3SSE["SendSSE()\nstream token chunks\nContent-Type: text/event-stream\n(exclude_tools → filter tool list per request)"]
-        H3JSON["Send()\ncollect full response\nreturn JSON {text}\n(model field → bypass SelectAgent if set)\n(exclude_tools → filter tool list per request)"]
+        H3SSE["SendSSE()\nstream token chunks\nContent-Type: text/event-stream\n(exclude_tools → filter per request)"]
+        H3JSON["Send()\ncollect full response\nreturn JSON {text}\n(model field → bypass SelectAgent)\n(exclude_tools → filter per request)"]
         H4["GetKey()\nread from OS Keychain"]
         H5["SaveKey()\nwrite to OS Keychain"]
     end
@@ -349,3 +364,7 @@ flowchart TD
     H4 --> KC
     H5 --> KC
 ```
+
+***
+
+©️ 2026 [邱敬幃 Pardn Chiu](https://linkedin.com/in/pardnchiu)

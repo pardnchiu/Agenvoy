@@ -1,4 +1,4 @@
-# agenvoy - 技術文件
+# Agenvoy - 技術文件
 
 > 返回 [README](./README.zh.md)
 
@@ -6,121 +6,144 @@
 
 ### 系統需求
 
-- Go 1.25 或更高版本
-- 至少一組 AI Provider 憑證（GitHub Copilot 訂閱、或任一 API Key）
-- Discord Bot Token（僅限 Server 模式）
+- Go 1.25 或更新版本
+- 至少一組 AI provider 憑證（GitHub Copilot 訂閱或任一 API key）
+- Discord Bot Token（僅 Discord 模式需要）
+- Obsidian + Local REST API 外掛（選用，啟用 Obsidian vault 記憶時需要）
 
-### 沙箱依賴
+### Sandbox 依賴
 
 | 平台 | 依賴 | 說明 |
 |------|------|------|
-| Linux | `bubblewrap`（`bwrap`） | 啟動時自動偵測，未安裝則透過 `apt-get` / `dnf` / `yum` / `pacman` / `apk` 自動安裝 |
-| macOS | `sandbox-exec` | 已內建於系統，無需額外安裝 |
+| Linux | `bubblewrap` (`bwrap`) | 啟動時自動偵測，未安裝時會透過 `apt-get` / `dnf` / `yum` / `pacman` / `apk` 自動安裝 |
+| macOS | `sandbox-exec` | macOS 內建，無需安裝 |
 
 ### 瀏覽器依賴（選用）
 
-- Chromium 或 Google Chrome — `fetch_page` 與 `download_page` 工具使用 headless 模式渲染頁面
-- `go-rod` 會在首次使用時自動下載 Chromium（若系統未安裝）
+- Chromium 或 Google Chrome — 由 `fetch_page` / `download_page` 以 headless 模式使用
+- 若系統沒有 Chrome，`go-rod` 會在首次使用時自動下載 Chromium
 
-### Go 相依套件
+### Go 相依
 
 | 套件 | 用途 |
 |------|------|
 | `github.com/bwmarrin/discordgo` | Discord Bot API |
-| `github.com/gin-gonic/gin` | REST API 伺服器（HTTP 路由） |
+| `github.com/gin-gonic/gin` | REST API server（HTTP 路由） |
 | `github.com/go-rod/rod` | Headless Chrome 瀏覽器自動化 |
 | `github.com/go-shiori/go-readability` | HTML 內容擷取與清理 |
 | `github.com/joho/godotenv` | `.env` 環境變數載入 |
-| `github.com/manifoldco/promptui` | CLI 互動式選單 |
-| `github.com/pardnchiu/go-scheduler` | Cron 表達式解析與排程 |
+| `github.com/manifoldco/promptui` | 互動式 CLI 選單 |
+| `github.com/pardnchiu/ToriiDB` | 嵌入式 KV 儲存（session 歷史、錯誤記憶、web 快取） |
+| `github.com/pardnchiu/go-scheduler` | Cron 運算式解析與排程 |
 | `github.com/rivo/tview` | Terminal UI 框架 |
-| `github.com/gdamore/tcell/v2` | Terminal cell 與事件函式庫 |
-| `github.com/fsnotify/fsnotify` | 檔案系統事件監聽（TUI 檔案監視器） |
-| `golang.org/x/image` | WebP 圖片解碼（Vision 輸入） |
-| `golang.org/x/net` | HTML tokenizer 與網路工具 |
-| `golang.org/x/term` | Terminal 狀態與原始模式控制 |
+| `github.com/gdamore/tcell/v2` | Terminal cell / event library |
+| `github.com/fsnotify/fsnotify` | TUI 檔案監視 |
+| `golang.org/x/net` | HTML tokenizer / 網路工具 |
 
 ## 安裝
 
 ### 使用 go install
 
 ```bash
-go install github.com/pardnchiu/agenvoy/cmd/cli@latest
+go install github.com/pardnchiu/agenvoy/cmd/app@latest
 ```
 
-### 從原始碼建置（CLI）
+### 從原始碼建置並安裝
 
 ```bash
 git clone https://github.com/pardnchiu/agenvoy.git
 cd agenvoy
-go build -o agenvoy ./cmd/cli
+make build  # 建置為 agen 並複製到 /usr/local/bin/agen
 ```
 
-### 從原始碼建置（統一進入點：TUI + Discord + REST API）
+### 從原始碼直接執行（無需全域安裝）
 
 ```bash
-go build -o agenvoy-app ./cmd/app
-```
-
-### 從原始碼建置（僅 Discord Bot）
-
-```bash
-go build -o agenvoy-server ./cmd/server
+make app                # 啟動 TUI + Discord + REST API
+make run <input...>     # 執行 agent（自動核准所有工具）
+make cli <input...>     # 執行 agent（工具逐一確認）
 ```
 
 ## 設定
 
 ### 新增 Provider
 
-執行互動式設定流程，從內嵌模型登錄檔選擇 Provider 與模型：
+執行互動式設定以從嵌入 registry 選擇 provider 與模型：
 
 ```bash
-agenvoy add
+agen add
 ```
 
-支援的 Provider：
+支援的 provider：
 
 | Provider | 認證方式 | 預設模型 |
-|----------|----------|----------|
+|----------|---------|---------|
 | GitHub Copilot | OAuth Device Code Flow（自動刷新） | `gpt-4.1` |
 | OpenAI | API Key（keychain） | `gpt-5-mini` |
 | OpenAI Codex | OAuth Device Code Flow（自動刷新） | `gpt-5.3-codex` |
 | Claude | API Key（keychain） | `claude-sonnet-4-5` |
 | Gemini | API Key（keychain） | `gemini-2.5-pro` |
 | NVIDIA | API Key（keychain） | `openai/gpt-oss-120b` |
-| Compat | 選填 API Key（keychain） | 使用者指定 |
+| Compat | 選用 API Key（keychain） | 使用者自訂 |
 
 ### 環境變數
 
 | 變數 | 必要 | 說明 |
 |------|------|------|
-| `DISCORD_TOKEN` | 是（Server 模式） | Discord Bot Token |
-| `DISCORD_GUILD_ID` | 否 | 設定後僅限特定 Guild 接收 Slash Command |
-| `PORT` | 否 | REST API 伺服器監聽埠（預設：`17989`） |
-| `MAX_HISTORY_MESSAGES` | 否 | 傳送至 Agent 的最大歷史訊息數（預設：16） |
-| `MAX_TOOL_ITERATIONS` | 否 | 每次請求的最大工具呼叫迭代次數（預設：16） |
-| `MAX_SKILL_ITERATIONS` | 否 | Skill 執行中的最大工具呼叫迭代次數（預設：128） |
-| `MAX_EMPTY_RESPONSES` | 否 | 連續空回應的最大次數，超過則中止（預設：8） |
-| `EXTERNAL_COPILOT` | 否 | GitHub Copilot 外部 Agent 端點（供 `verify_with_external_agent` / `call_external_agent` 使用） |
-| `EXTERNAL_CLAUDE` | 否 | Claude 外部 Agent 端點（供 `verify_with_external_agent` / `call_external_agent` 使用） |
-| `EXTERNAL_CODEX` | 否 | Codex 外部 Agent 端點（供 `verify_with_external_agent` / `call_external_agent` 使用） |
+| `DISCORD_TOKEN` | 是（Discord 模式） | Discord Bot Token |
+| `DISCORD_GUILD_ID` | 否 | 將 slash command 註冊限制於特定 guild |
+| `PORT` | 否 | REST API server 監聽埠（預設：`17989`） |
+| `MAX_HISTORY_MESSAGES` | 否 | 送至 agent 的歷史訊息上限（預設：16） |
+| `MAX_TOOL_ITERATIONS` | 否 | 單次請求的最大工具呼叫迭代次數（預設：16） |
+| `MAX_SKILL_ITERATIONS` | 否 | 單次 skill 執行的最大工具呼叫迭代次數（預設：128） |
+| `MAX_EMPTY_RESPONSES` | 否 | 連續空回應放棄的上限（預設：8） |
+| `EXTERNAL_COPILOT` | 否 | GitHub Copilot 的外部 agent endpoint |
+| `EXTERNAL_CLAUDE` | 否 | Claude 的外部 agent endpoint |
+| `EXTERNAL_CODEX` | 否 | Codex 的外部 agent endpoint |
 
-建立 `.env` 並填入對應值：
+複製 `.env.example` 並填入對應值：
 
 ```bash
 cp .env.example .env
 ```
 
-> 檔名含 `.example` 的檔案（如 `.env.example`）不受環境變數前綴封鎖規則限制，可安全讀取。
+> 名稱含 `.example` 的檔案（例如 `.env.example`）會繞過 env 前綴 deny 規則，可以直接讀取。
 
-### API Extension
+### 啟用 Obsidian Vault 記憶（選用）
 
-在 `~/.config/agenvoy/api_tools/` 放置 JSON 檔即可新增自訂 API 工具，每個檔案定義一個可呼叫的工具，啟動時自動載入：
+連接 Obsidian Local REST API 即可將 session 歷史、工具記錄與錯誤知識寫入 vault，並提供 `memory_search` / `memory_search_tag` / `memory_tags` / `memory_list` 四個工具做跨 session 回溯。
+
+前置需求：
+
+- Obsidian 桌面版已開啟
+- 已安裝 **Local REST API** 外掛並啟用（預設埠 `https://127.0.0.1:27124`）
+- 在 Obsidian → Settings → Local REST API 取得 API key
+
+綁定：
+
+```bash
+agen obsidian add        # 互動式輸入 vault 路徑與 API key
+agen obsidian            # 顯示當前綁定狀態
+agen obsidian disable    # 停用並清除記錄
+```
+
+啟用後，所有記憶會儲存在 vault 下的 `AgenvoyMem/` 子資料夾：
+
+```
+<vault>/AgenvoyMem/
+├── conversations/   # 對話歷史與 tool history
+├── knowledge/       # 已解決的錯誤模式與知識片段
+└── agenvoy.md       # 系統索引（自動管理）
+```
+
+### API 擴充
+
+將 JSON 檔案放入 `~/.config/agenvoy/api_tools/` 以新增自訂 API 工具。每個檔案定義一個可呼叫的工具，啟動時載入：
 
 ```json
 {
   "name": "my_tool",
-  "description": "Agent 選擇工具時看到的說明",
+  "description": "What the agent sees when selecting this tool",
   "endpoint": {
     "url": "https://api.example.com/resource/{id}",
     "method": "GET",
@@ -134,15 +157,8 @@ cp .env.example .env
   "parameters": {
     "id": {
       "type": "string",
-      "description": "資源 ID",
+      "description": "Resource ID",
       "required": true
-    },
-    "status": {
-      "type": "string",
-      "description": "依狀態篩選",
-      "required": false,
-      "default": "active",
-      "enum": ["active", "inactive", "all"]
     }
   },
   "response": {
@@ -153,97 +169,78 @@ cp .env.example .env
 
 | 欄位 | 必要 | 說明 |
 |------|------|------|
-| `name` | 是 | 向 Agent 登錄的 snake_case 工具名稱 |
-| `description` | 是 | LLM 選擇工具時看到的用途描述 |
-| `endpoint.url` | 是 | 目標 URL；`{param}` 佔位符在呼叫時替換為實際值 |
+| `name` | 是 | 註冊給 agent 的 snake_case 工具名稱 |
+| `description` | 是 | 提供給 LLM 做工具挑選的說明 |
+| `endpoint.url` | 是 | 目標 URL；`{param}` 佔位符於呼叫時替換 |
 | `endpoint.method` | 是 | HTTP 方法：`GET`、`POST`、`PUT`、`DELETE`、`PATCH` |
 | `endpoint.content_type` | 否 | `json`（預設）或 `form` |
-| `endpoint.headers` | 否 | 靜態 Header 鍵值對 |
-| `endpoint.timeout` | 否 | 請求逾時秒數（預設：30） |
+| `endpoint.headers` | 否 | 靜態 header map |
+| `endpoint.timeout` | 否 | 請求逾時秒數（預設 30） |
 | `auth.type` | 否 | `bearer` 或 `apikey` |
-| `auth.env` | 否 | 持有憑證的環境變數名稱 |
-| `auth.header` | 否 | `apikey` 類型的 Header 名稱（預設：`X-API-Key`） |
-| `parameters` | 是 | 參數定義的 flat 物件 |
+| `auth.env` | 否 | 憑證所在的環境變數名稱 |
+| `auth.header` | 否 | `apikey` 類型的 header 名稱（預設 `X-API-Key`） |
+| `parameters` | 是 | 參數定義（flat map） |
 | `response.format` | 否 | `json`（預設）或 `text` |
 
 每個參數支援：`type`（`string` / `integer` / `number` / `boolean`）、`description`、`required`、`default`、`enum`。
 
-#### 內嵌公開 API Extension
+#### 嵌入的公開 API 擴充
 
-以下 API Extension 已內嵌並於啟動時自動載入：
+啟動時自動載入下列嵌入擴充：
 
-| Extension | 分類 | 說明 |
-|-----------|------|------|
-| `nominatim` | 地理編碼 | OpenStreetMap 地理編碼與反向地理編碼 |
-| `coingecko` | 金融 | 加密貨幣價格與市場數據 |
-| `wikipedia` | 資料 | Wikipedia 文章搜尋與內容 |
-| `world-bank` | 資料 | 世界銀行發展指標 |
-| `usgs-earthquake` | 資料 | USGS 地震數據 |
-| `themealdb` | 資料 | 食譜與餐點資料庫 |
-| `hackernews` | 資料 | Hacker News 熱門文章與項目 |
-| `rest-countries` | 資料 | 國家資訊與元數據 |
-| `exchange-rate` | 金融 | 貨幣匯率 |
-| `ip-api` | 網路 | IP 地理位置查詢 |
-| `open-meteo` | 天氣 | 開源天氣預報 API |
-| `youtube` | 媒體 | YouTube 影片 metadata（標題、描述、頻道、時長） |
+| 擴充 | 類別 | 說明 |
+|------|------|------|
+| `nominatim` | Geocoding | OpenStreetMap 地理編碼與反向地理編碼 |
+| `coingecko` | Finance | 加密貨幣價格與市場資料 |
+| `wikipedia` | Data | Wikipedia 文章搜尋與內容 |
+| `world-bank` | Data | World Bank 發展指標 |
+| `usgs-earthquake` | Data | USGS 地震資料 |
+| `themealdb` | Data | 食譜與料理資料庫 |
+| `hackernews` | Data | Hacker News 頭條與項目 |
+| `rest-countries` | Data | 國家資訊與 metadata |
+| `exchange-rate` | Finance | 貨幣匯率 |
+| `ip-api` | Network | IP 地理定位查詢 |
+| `open-meteo` | Weather | 開源天氣預報 API |
+| `youtube` | Media | YouTube 影片 metadata（標題、說明、頻道、時長） |
 
-### Script Tool Extension
+### Script 工具擴充
 
-在 `~/.config/agenvoy/script_tools/`（或 `<workdir>/.config/agenvoy/script_tools/`）放入包含 `tool.json` + `script.js`/`script.py` 的子目錄，執行器在啟動時自動掃描並以 `script_` 前綴登錄工具。
+將包含 `tool.json` + `script.js` 或 `script.py` 的子目錄放入 `~/.config/agenvoy/script_tools/`（或 `<workdir>/.config/agenvoy/script_tools/`）。啟動時會掃描兩個路徑並以 `script_` 前綴註冊每個工具。
 
-#### 內建 Extension 安裝腳本
+#### 內建安裝腳本
 
-本儲存庫附帶跨平台安裝腳本，可一行指令完成 Script Tool 部署：
+repo 附有跨平台安裝腳本：
 
 ```bash
-# 安裝 Threads API 工具（發布文字/圖片/輪播、配額查詢、Token 刷新）
+# 安裝 Threads API 工具
 bash install_threads.sh
 
-# 安裝 yt-dlp 工具（影片資訊、下載含檔名正規化）
+# 安裝 yt-dlp 工具
 bash install_youtube.sh
 ```
 
-兩支腳本均自動偵測作業系統、驗證 Python 及相依套件，並將工具複製至 `~/.config/agenvoy/script_tools/`，下次啟動後即自動登錄。
+兩個腳本會偵測 OS、驗證 Python 與必要套件，並將工具複製到 `~/.config/agenvoy/script_tools/`。
 
-| 內建工具 | 語言 | 說明 |
-|---|---|---|
-| `script_threads_get_quota` | Python | 查詢 Threads API 使用配額 |
-| `script_threads_publish_text` | Python | 發布文字貼文（含 500 字元前置驗證） |
-| `script_threads_publish_image` | Python | 發布圖片貼文附說明文字 |
-| `script_threads_publish_carousel` | Python | 發布多圖輪播貼文 |
-| `script_threads_refresh_token` | Python | 刷新 Threads 長效存取 Token |
-| `script_yt_dlp_info` | JS / Python | 不下載直接擷取影片 metadata |
-| `script_yt_dlp_downloader` | Python | 下載影片並 NFC 正規化檔名 |
+| 內建工具 | Script | 說明 |
+|----------|--------|------|
+| `script_threads_get_quota` | Python | 取得 Threads API 用量配額 |
+| `script_threads_publish_text` | Python | 發佈純文字（前置 500 字驗證） |
+| `script_threads_publish_image` | Python | 發佈含字幕的圖片 |
+| `script_threads_publish_carousel` | Python | 發佈多圖輪播 |
+| `script_threads_refresh_token` | Python | 刷新長效 Threads token |
+| `script_yt_dlp_info` | JS / Python | 取得影片 metadata |
+| `script_yt_dlp_downloader` | Python | NFC 檔名下載影片 |
 
-Script tool 目錄結構：
+Script 工具目錄結構：
 
 ```
 ~/.config/agenvoy/script_tools/
 └── my-tool/
-    ├── tool.json       # 工具描述檔
+    ├── tool.json       # 工具 manifest
     └── script.py       # 或 script.js
 ```
 
-`tool.json` 格式：
-
-```json
-{
-  "name": "my_tool",
-  "description": "Agent 選擇工具時看到的說明",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "input": {
-        "type": "string",
-        "description": "輸入值"
-      }
-    },
-    "required": ["input"]
-  }
-}
-```
-
-Script I/O 契約 — 執行器將工具參數以 JSON 透過 stdin 傳入，從 stdout 讀取結果：
+I/O 契約 — executor 將工具參數以 JSON 寫入 stdin 並從 stdout 讀取結果：
 
 ```python
 #!/usr/bin/env python3
@@ -254,83 +251,195 @@ result = {"output": params.get("input", "").upper()}
 print(json.dumps(result))
 ```
 
-```js
-const chunks = [];
-process.stdin.on("data", d => chunks.push(d));
-process.stdin.on("end", () => {
-  const params = JSON.parse(Buffer.concat(chunks).toString() || "{}");
-  console.log(JSON.stringify({ output: (params.input || "").toUpperCase() }));
-});
-```
+### Skill 擴充
 
-使用 `script-tool-creator` Skill 自動產生新工具骨架：
+Skill 擴充是帶 YAML frontmatter 的 Markdown 檔案。啟動時 `SyncSkills` 會從嵌入 FS 將 repo 內 `extensions/skills` 下尚未存在的 skill 目錄複製到 `~/.config/agenvoy/skills/`，再由 scanner 掃描 9 個標準路徑。
 
-```bash
-agenvoy run-allow "建立一個可以查詢城市天氣的 script tool"
-```
-
-### Skill Extension
-
-Skill Extension 是帶有 YAML Frontmatter 標頭的 Markdown 檔。啟動時 SyncSkills 會從 GitHub 儲存庫的 `extensions/skills` 下載本地尚不存在的 Skill 目錄，儲存至 `~/.config/agenvoy/skills/`。Agent 接著掃描所有 9 個標準路徑以建立可用 Skill 清單。
-
-Skill 檔案格式（`SKILL.md`）：
+Skill 檔案格式：
 
 ```markdown
 ---
 name: my-skill
-description: 顯示給 Agent 選擇時的一行摘要
+description: One-line summary shown to the agent for skill selection
 ---
 
 # My Skill
 
-此 Skill 被選中時 Agent 遵循的指令...
+Instructions the agent follows when this skill is selected...
 ```
 
-掃描路徑（依優先順序）：
+## 使用方式
 
-| 優先級 | 路徑 |
-|--------|------|
-| 1 | `~/.config/agenvoy/skills/`（從 GitHub 同步 + 使用者自訂） |
-| 2–9 | XDG config 目錄、home 目錄與專案本地路徑 |
+### Make 指令
+
+由 repo 根目錄執行：
+
+| 目標 | 指令 | 說明 |
+|------|------|------|
+| `make build` | `go build -o agen ./cmd/app/ && sudo mv agen /usr/local/bin/agen` | 建置 binary 並安裝到 `/usr/local/bin/agen` |
+| `make app` | `go run ./cmd/app/` | 啟動統一應用（TUI + Discord + REST API） |
+| `make add` | `go run ./cmd/app/ add` | 互動式新增 provider / 模型 |
+| `make remove` | `go run ./cmd/app/ remove` | 移除已設定的 provider |
+| `make planner` | `go run ./cmd/app/ planner` | 設定 planner 模型 |
+| `make reasoning` | `go run ./cmd/app/ reasoning` | 設定 reasoning level |
+| `make models` | `go run ./cmd/app/ list` | 列出已設定模型 |
+| `make skills` | `go run ./cmd/app/ list skill` | 列出可用 skill |
+| `make cli <input...>` | `go run ./cmd/app/ cli <input>` | 執行 agent（工具逐一確認） |
+| `make run <input...>` | `go run ./cmd/app/ run <input>` | 執行 agent（自動核准所有工具） |
+| `make obsidian <args>` | `go run ./cmd/app/ obsidian <args>` | 管理 Obsidian vault 記憶 |
+
+### 基礎用法
+
+啟動 TUI 應用（預設行為，無參數）：
+
+```bash
+agen
+```
+
+列出已設定模型：
+
+```bash
+agen list
+```
+
+列出可用 skill：
+
+```bash
+agen list skill
+```
+
+以互動模式執行 agent（每次工具呼叫前確認）：
+
+```bash
+agen cli "analyze the architecture of this project"
+```
+
+### 進階用法
+
+自動核准模式（跳過所有確認提示）：
+
+```bash
+agen run "generate and write the README documentation"
+```
+
+移除 provider：
+
+```bash
+agen remove
+```
+
+設定 planner（路由）模型：
+
+```bash
+agen planner
+```
+
+## 命令列參考
+
+### 指令
+
+| 指令 | 語法 | 說明 |
+|------|------|------|
+| `(無)` | `agen` | 啟動統一應用（TUI + Discord + REST API） |
+| `add` | `agen add` | 互動式註冊 AI provider |
+| `remove` | `agen remove` | 移除已設定的 provider |
+| `planner` | `agen planner` | 設定 planner（路由）模型 |
+| `reasoning` | `agen reasoning` | 設定某 provider 的 reasoning level |
+| `list` | `agen list [skill]` | 列出已設定模型或可用 skill |
+| `cli` | `agen cli <input...>` | 執行 agent，工具逐一確認 |
+| `run` | `agen run <input...>` | 執行 agent，所有工具呼叫自動核准 |
+| `obsidian` | `agen obsidian [add\|disable]` | 管理 Obsidian vault 記憶 |
+
+### TUI 鍵盤快捷鍵
+
+| 按鍵 | 模式 | 說明 |
+|------|------|------|
+| `:` | Normal | 進入命令輸入模式 |
+| `Esc` | Command | 離開命令輸入模式 |
+| `h` / `j` / `k` / `l` | Normal | vim 風格方向導覽 |
+| `Ctrl+C` | 任一 | 結束 TUI |
+
+### 內建工具
+
+| 工具 | 參數 | 說明 |
+|------|------|------|
+| `search_tools` | `query`, `max_results` | 按需搜尋並注入工具；支援 `select:<name>` 直接啟用、keyword fuzzy search 與 `+term` 必要關鍵字語法 |
+| `read_file` | `path`, `pages` | 讀取檔案內容；會偵測並拒絕 binary；PDF 支援 `pages` 範圍（例如 `"1-5"`） |
+| `read_image` | `path` | 將本地圖片（JPEG/PNG/GIF/WebP，最大 10 MB）讀成 base64 JPEG data URL |
+| `write_file` | `path`, `content` | 以 atomic write 寫入或建立檔案 |
+| `list_files` | `path`, `recursive` | 列出目錄內容 |
+| `glob_files` | `pattern` | Glob 比對（例如 `**/*.go`） |
+| `search_content` | `pattern`, `file_pattern` | 以 regex 搜尋檔案內容 |
+| `patch_edit` | `path`, `old_string`, `new_string` | 首次命中字串替換（比完整重寫安全） |
+| `search_history` | `keyword`, `time_range` | 在 ToriiDB 中查詢當前 session 的歷史紀錄 |
+| `get_tool_error` | `hash` | 以 hash 取回失敗工具呼叫的完整錯誤細節 |
+| `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | 將錯誤解決方案寫入錯誤知識庫 |
+| `search_errors` | `keyword` | 查詢錯誤知識庫 |
+| `memory_search` | `keyword`, `category`, `limit` | 在 Obsidian vault 中以全文關鍵字搜尋（需啟用 Obsidian） |
+| `memory_search_tag` | `tag`, `limit` | 透過 JsonLogic 以 frontmatter tag 精準搜尋 Obsidian 記憶 |
+| `memory_tags` | — | 列出 vault 中所有 tag 與其使用次數 |
+| `memory_list` | `category` | 列出所有記憶項目，可依分類過濾 |
+| `fetch_yahoo_finance` | `symbol`, `interval`, `range` | 取得 Yahoo Finance 報價與 OHLCV；query1/query2 並行，回傳最快者 |
+| `analyze_youtube` | `url` | YouTube 影片 metadata（標題、說明、頻道、時長、觀看數） |
+| `fetch_google_rss` | `keyword`, `time`, `lang` | Google News RSS，含去重 |
+| `send_http_request` | `method`, `url`, `headers`, `body` | 通用 HTTP 請求 |
+| `search_web` | `query`, `time_range` | Google + DuckDuckGo 並行搜尋 |
+| `fetch_page` | `url` | 以 headless Chrome 取得 JS 渲染後的頁面並轉為 Markdown |
+| `download_page` | `href`, `save_to` | 以 headless Chrome 將 JS 渲染頁面存為本地檔案 |
+| `run_command` | `command` | 在 sandbox 中執行白名單 shell 指令（300 秒 timeout） |
+| `add_task` | `at`, `script`, `channel_id` | 排程一次性任務；完成時結果張貼至 Discord channel |
+| `list_tasks` | — | 列出所有待執行的一次性任務 |
+| `remove_task` | `index` | 取消並移除一次性任務 |
+| `add_cron` | `cron_expr`, `script`, `channel_id` | 註冊 cron 任務；每次執行後結果張貼至 Discord channel |
+| `list_crons` | — | 列出所有已註冊 cron 任務 |
+| `remove_cron` | `index` | 以 index 移除 cron 任務 |
+| `skill_git_commit` | `message` | 以給定訊息 commit skill repo 當前變更 |
+| `skill_git_log` | `limit` | 顯示 skill repo 最近 commit |
+| `skill_git_rollback` | `commit` | 將 skill repo 回復到指定 commit hash |
+| `list_tools` | — | 列出所有當前可用工具，包含動態 API 擴充 |
+| `calculate` | `expression` | 評估數學運算式（sqrt、abs、pow、ceil、floor、sin、cos、tan、log） |
+| `call_external_agent` | `agent`, `input` | 將整個任務委派至具名外部 agent（`copilot` / `claude` / `codex`） |
+| `verify_with_external_agent` | `input`, `result` | 將結果平行送至所有宣告的外部 agent 並合併回饋；無外部 agent 時 fallback 到 `review_result` |
+| `review_result` | `input`, `result` | 以優先序最高的可用模型做內部完整性覆核（claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet） |
 
 ## REST API
 
-啟動統一進入點後，REST API 監聽於 `PORT`（預設：`17989`）：
+啟動統一應用後，REST API 會監聽 `PORT`（預設 `17989`）：
 
 ```bash
-./agenvoy-app
-# 或：go run ./cmd/app
+agen
+# 或：make app
 ```
 
-### 端點
+### Endpoint
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
-| `POST` | `/v1/send` | 執行 Agent 並回傳回應（SSE 或 JSON） |
-| `GET` | `/v1/tools` | 列出所有已登錄的工具 |
+| `POST` | `/v1/send` | 執行 agent 並回傳回應（SSE 或 JSON） |
+| `GET` | `/v1/tools` | 列出所有已註冊工具 |
 | `POST` | `/v1/tool/:name` | 直接呼叫單一工具 |
-| `GET` | `/v1/key` | 從 OS Keychain 取得儲存的憑證 |
-| `POST` | `/v1/key` | 儲存憑證至 OS Keychain |
+| `GET` | `/v1/key` | 從 OS Keychain 讀取憑證 |
+| `POST` | `/v1/key` | 將憑證寫入 OS Keychain |
 
 ### POST /v1/send
 
-執行完整的 Agent 迭代迴圈。設定 `"sse": true` 以 Server-Sent Events 串流接收 token。
+執行完整的 agent 執行迴圈。設 `"sse": true` 以 Server-Sent Events 串流接收 token chunks。
 
 **請求：**
 ```json
-{ "content": "幫我整理今天的新聞", "sse": false }
+{ "content": "summarize today's news", "sse": false }
 ```
 
-使用選填的 `model` 欄位可略過自動 Agent 選擇，直接路由至指定模型（格式：`provider@model-name`）：
+使用選用的 `model` 欄位繞過自動 agent 選擇，直接路由到特定模型（key 格式：`provider@model-name`）：
 
 ```json
-{ "content": "幫我整理今天的新聞", "sse": false, "model": "claude@claude-opus-4-6" }
+{ "content": "summarize today's news", "sse": false, "model": "claude@claude-opus-4-6" }
 ```
 
-使用 `exclude_tools` 可僅針對本次請求停用指定工具（不影響其他 Session）：
+使用 `exclude_tools` 僅在此請求中屏蔽特定工具：
 
 ```json
-{ "content": "幫我整理今天的新聞", "sse": false, "exclude_tools": ["run_command", "write_file"] }
+{ "content": "summarize today's news", "sse": false, "exclude_tools": ["run_command", "write_file"] }
 ```
 
 **回應（非 SSE）：**
@@ -338,54 +447,28 @@ description: 顯示給 Agent 選擇時的一行摘要
 { "text": "..." }
 ```
 
-**回應（SSE）：** `Content-Type: text/event-stream`，每行 `data:` 為一個 token chunk；Agent 完成後串流關閉。
+**回應（SSE）：** `Content-Type: text/event-stream` — 每個 `data:` 行為一個 token chunk；agent 完成時 stream 關閉。
 
 ### GET /v1/tools
 
-回傳所有已登錄的工具（內建、API Extension、Script Tool）。
-
-**回應：**
-```json
-{
-  "tools": [
-    { "name": "search_web", "description": "...", "parameters": { ... } }
-  ]
-}
-```
+回傳所有已註冊工具（內建、API 擴充與 script 工具）。
 
 ### POST /v1/tool/:name
 
-依工具名稱直接呼叫工具，request body 直接作為工具參數傳入。
+以 name 直接呼叫單一工具。請求 body 直接作為工具參數傳入。
 
 **請求：**
 ```json
-{ "query": "Bitcoin 價格", "time_range": "1d" }
-```
-
-**回應：**
-```json
-{ "result": "..." }
+{ "query": "Bitcoin price", "time_range": "1d" }
 ```
 
 ### GET /v1/key · POST /v1/key
 
-讀取或寫入 OS Keychain 中的憑證。Script Tool 應透過此端點存取憑證，而非直接操作 Keychain。
+讀取或寫入 OS Keychain 中的憑證項目。Script 工具應透過此 endpoint 存取 keychain，而非直接呼叫。
 
-**POST 請求：**
-```json
-{ "service": "my-service", "key": "secret-value" }
-```
+### 從 script 工具呼叫 API
 
-**GET 請求：** `?service=my-service`
-
-**GET 回應：**
-```json
-{ "key": "secret-value" }
-```
-
-### 在 Script Tool 中呼叫 API
-
-排程任務內執行的腳本可直接透過 `localhost` 呼叫：
+排程執行中的 script 工具可透過 `localhost` 呼叫 API：
 
 ```python
 import json, urllib.request, os
@@ -400,172 +483,24 @@ def call_tool(name, args):
     )
     with urllib.request.urlopen(req) as resp:
         return json.load(resp).get("result", "")
-
-def send(prompt):
-    payload = json.dumps({"content": prompt, "sse": False}).encode()
-    req = urllib.request.Request(
-        f"{BASE}/v1/send",
-        data=payload, headers={"Content-Type": "application/json"}, method="POST"
-    )
-    with urllib.request.urlopen(req) as resp:
-        return json.load(resp).get("text", "")
 ```
 
----
+## Sandbox 隔離
 
-## 使用方式
+所有透過 `run_command` 與 scheduler 腳本執行的指令都在 OS 原生 sandbox 中執行：
 
-### 使用 Make
-
-於專案根目錄執行（需從原始碼 Clone）：
-
-| Target | 實際指令 | 說明 |
-|--------|---------|------|
-| `make app` | `go run ./cmd/app/main.go` | 啟動統一進入點（TUI + Discord + REST API） |
-| `make discord` | `go run ./cmd/server/main.go` | 啟動 Discord Bot Server（舊版） |
-| `make add` | `go run ./cmd/cli/ add` | 互動式新增 Provider／模型 |
-| `make remove` | `go run ./cmd/cli/ remove` | 移除已設定的 Provider |
-| `make planner` | `go run ./cmd/cli/ planner` | 設定 Planner 模型 |
-| `make list` | `go run ./cmd/cli/ list` | 列出已設定的模型 |
-| `make skill-list` | `go run ./cmd/cli/ list skill` | 列出可用的 Skill |
-| `make cli <input...>` | `go run ./cmd/cli/ run <input>` | 以確認模式執行 Agent |
-| `make run <input...>` | `go run ./cmd/cli/ run-allow <input>` | 自動批准所有 Tool Call 並執行 Agent |
-
-### 基礎用法
-
-列出所有已設定的模型：
-
-```bash
-agenvoy list
-```
-
-列出所有可用的 Skill：
-
-```bash
-agenvoy list skills
-```
-
-以互動模式執行（每次 Tool Call 前確認）：
-
-```bash
-agenvoy run "幫我分析這個專案的架構"
-```
-
-### 進階用法
-
-自動批准模式（跳過所有確認提示）：
-
-```bash
-agenvoy run-allow "生成並寫入 README 文件"
-```
-
-附加圖片輸入：
-
-```bash
-agenvoy run --image ./screenshot.png "這張圖在描述什麼？"
-```
-
-附加檔案輸入：
-
-```bash
-agenvoy run --file ./report.pdf "總結這份報告的重點"
-```
-
-移除 Provider：
-
-```bash
-agenvoy remove
-```
-
-## 命令列參考
-
-### 指令
-
-| 指令 | 語法 | 說明 |
-|------|------|------|
-| `add` | `agenvoy add` | 互動式新增 AI Provider 設定 |
-| `remove` | `agenvoy remove` | 移除已設定的 Provider |
-| `planner` | `agenvoy planner` | 設定 Planner（路由器）模型 |
-| `reasoning` | `agenvoy reasoning` | 設定 Provider 的推理層級（Reasoning Level） |
-| `list` | `agenvoy list [skills]` | 列出已設定的模型或可用 Skill |
-| `run` | `agenvoy run <input...> [flags]` | 以互動確認模式執行 Agentic 工作流 |
-| `run-allow` | `agenvoy run-allow <input...> [flags]` | 自動批准所有 Tool Call |
-
-### 旗標（run / run-allow）
-
-| 旗標 | 說明 |
-|------|------|
-| `--image <path>` | 附加圖片輸入 |
-| `--file <path>` | 附加檔案輸入 |
-
-### 內建工具
-
-| 工具 | 參數 | 說明 |
-|------|------|------|
-| `search_tools` | `query`, `max_results` | 按需搜尋並注入工具；支援 `select:<name>` 直接啟用、關鍵字模糊搜尋與 `+term` 必要詞語語法 |
-| `read_file` | `path`, `pages` | 讀取指定路徑的檔案內容；自動偵測二進位檔案；PDF 檔案支援 `pages` 範圍（例如 `"1-5"`） |
-| `read_image` | `path` | 讀取本地圖片檔（JPEG/PNG/GIF/WebP，最大 10 MB），回傳 base64 JPEG data URL 供模型視覺檢視 |
-| `write_file` | `path`, `content` | 寫入或建立檔案（原子性寫入） |
-| `list_files` | `path`, `recursive` | 列出目錄內容 |
-| `glob_files` | `pattern` | Glob 模式比對（如 `**/*.go`） |
-| `search_content` | `pattern`, `file_pattern` | Regex 搜尋檔案內容 |
-| `patch_edit` | `path`, `old_string`, `new_string` | 第一個匹配項字串替換（比全檔覆寫更安全） |
-| `search_history` | `keyword`, `time_range` | 查詢當前 Session 歷史記錄 |
-| `get_tool_error` | `hash` | 透過 hash 取得失敗工具呼叫的完整錯誤詳情 |
-| `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | 儲存工具錯誤決策至知識庫 |
-| `search_errors` | `keyword` | 檢索錯誤知識庫 |
-| `fetch_yahoo_finance` | `symbol`, `interval`, `range` | 查詢 Yahoo Finance 股票行情與 OHLCV K 線資料；並行雙端點抓取（query1/query2），回傳最快回應 |
-| `analyze_youtube` | `url` | YouTube 影片 metadata（標題、描述、頻道、時長、觀看數） |
-| `fetch_google_rss` | `keyword`, `time`, `lang` | Google 新聞 RSS（含去重） |
-| `send_http_request` | `method`, `url`, `headers`, `body` | 通用 HTTP 請求 |
-| `search_web` | `query`, `time_range` | 並行網頁搜尋（Google + DuckDuckGo） |
-| `fetch_page` | `url` | 無頭 Chrome 渲染頁面轉 Markdown（唯讀） |
-| `download_page` | `href`, `save_to` | JS 渲染頁面儲存至本地檔案 |
-| `run_command` | `command` | 於沙箱中執行白名單內的 Shell 指令（300 秒逾時） |
-| `add_task` | `at`, `script`, `channel_id` | 設定一次性定時任務；執行結果傳送至指定 Discord 頻道 |
-| `list_tasks` | — | 列出所有待執行的一次性任務 |
-| `remove_task` | `index` | 依序號取消一次性任務（多個時須先列出） |
-| `add_cron` | `cron_expr`, `script`, `channel_id` | 新增週期性 Cron 任務；每次執行結果傳送至指定 Discord 頻道 |
-| `list_crons` | — | 列出所有已登錄的 Cron 任務 |
-| `remove_cron` | `index` | 依序號移除 Cron 任務（多個時須先列出） |
-| `skill_git_commit` | `message` | 以指定訊息提交 Skill 儲存庫的當前變更 |
-| `skill_git_log` | `limit` | 顯示 Skill 儲存庫的近期提交歷史 |
-| `skill_git_rollback` | `commit` | 將 Skill 儲存庫回滾至指定的 commit hash |
-| `list_tools` | — | 列出所有可用工具，含動態載入的 API Extension |
-| `calculate` | `expression` | 數學運算（sqrt、abs、pow、ceil、floor、sin、cos、tan、log） |
-| `call_external_agent` | `agent`, `input` | 將整個任務委派至指定外部 Agent（`copilot` / `claude` / `codex`） |
-| `verify_with_external_agent` | `input`, `result` | 並行交叉驗證：將當前結果派發至所有已宣告外部 Agent 並整合回饋；無 Agent 宣告時 fallback 至 `review_result` |
-| `review_result` | `input`, `result` | 內部完整性審查，自動選擇最高優先序可用模型（claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet）；審查後 context 裁剪為草稿 + 回饋 |
-
-### 沙箱隔離
-
-所有透過 `run_command` 執行的指令與排程器腳本均在作業系統原生沙箱中執行：
-
-| 特性 | Linux（bwrap） | macOS（sandbox-exec） |
-|------|---------------|----------------------|
-| 檔案系統 | 唯讀根目錄，僅 `$HOME` 可寫 | 預設拒絕，允許 `file-read*`，`file-write*` 限縮至 `$HOME` |
-| 敏感路徑封鎖 | `--tmpfs` 覆蓋敏感目錄、`--ro-bind /dev/null` 覆蓋敏感檔案 | Seatbelt `deny file-read*` / `deny file-write*` 規則 |
-| Namespace 隔離 | `--unshare-user/pid/ipc/uts/cgroup`（逐一探測可用性） | 不支援 |
-| Session 隔離 | `--new-session` | 不支援 |
+| 功能 | Linux（bwrap） | macOS（sandbox-exec） |
+|------|----------------|----------------------|
+| 檔案系統 | 唯讀 root、可寫 `$HOME` | 預設拒絕、`file-read*` 允許、`file-write*` 限於 `$HOME` |
+| 敏感路徑拒絕 | `--tmpfs` / `--ro-bind /dev/null` 套用在敏感路徑 | Seatbelt `deny file-read*` / `deny file-write*` |
+| 命名空間隔離 | `--unshare-user/pid/ipc/uts/cgroup`（逐項探測） | 不適用 |
+| Session 隔離 | `--new-session` | 不適用 |
 | 網路 | 允許（`--share-net`） | 允許（`allow network*`） |
-| 孤兒程序防護 | `--die-with-parent` | 不支援 |
-| 路徑驗證 | `filepath.EvalSymlinks` → 超出 `$HOME` 則拒絕 | 相同 |
-| 自動安裝 | 啟動時偵測，未安裝則自動透過套件管理器安裝 | 內建，無需安裝 |
+| 防孤兒 | `--die-with-parent` | 不適用 |
+| 路徑驗證 | `filepath.EvalSymlinks` → 超出 `$HOME` 即拒絕 | 同 |
+| 自動安裝 | 啟動時偵測，缺少時透過套件管理員自動安裝 | 內建，無需安裝 |
 
-### Token 用量追蹤
-
-每次 LLM API 呼叫回傳 input/output token 數量，在單次執行 Session 內所有迭代中累計（含工具呼叫迴圈與最終摘要）。完成時顯示總量：
-
-- **CLI**：`(耗時) [模型 | in:N out:N]`
-- **Discord**：頁尾 `-# 模型 | in:N out:N`
-
-各 Provider 的格式差異透明處理：Claude（`input_tokens`/`output_tokens`）、OpenAI 相容（`prompt_tokens`/`completion_tokens`）、Gemini（`promptTokenCount`/`candidatesTokenCount`）統一透過自訂 `UnmarshalJSON` 正規化為 `Usage` struct。
-
-### 工具執行錯誤追蹤
-
-任何工具呼叫失敗時，錯誤持久化至 Session 目錄的 `tool_errors/{hash}.json`，Agent 收到 `no data: {hash}` 作為結果。Agent 可呼叫 `get_tool_error` 帶入 8 位元 hex hash 取得完整錯誤資訊（tool 名稱、參數、錯誤訊息）。錯誤同時透過 `EventExecError` 事件即時通知：CLI 模式輸出至 stderr，Discord 模式附加於回覆頁尾。
-
-### Agent 介面
+## Agent 介面
 
 ```go
 type Agent interface {
@@ -576,27 +511,16 @@ type Agent interface {
 }
 ```
 
-`Send` 處理單次 LLM API 呼叫。`Execute` 管理完整的 Skill 執行迴圈，最多 128 次 Tool Call 迭代，達到上限時自動觸發摘要。`MaxInputTokens` 回傳模型的最大輸入 token 數，用於 session 層級的 token-budget 裁剪。
+`Send` 處理單次 LLM API 呼叫。`Execute` 管理完整的 skill 執行迴圈，最多 128 次工具呼叫迭代，達上限時自動觸發摘要。`MaxInputTokens` 回傳模型的最大輸入 token 數，用於 session 層 token 預算裁剪。
 
-### Provider Registry
+## Provider Registry
 
 ```go
-// 取得 Provider 的預設模型名稱
 func Default(provider string) string
-
-// 取得特定模型的 Context 限制與描述
 func Get(provider, model string) ModelItem
-
-// 列出 Provider 所有可用模型
 func Models(provider string) map[string]ModelItem
-
-// 計算最大輸入位元組數（token × 4，適用 UTF-8）
 func InputBytes(provider, model string) int
-
-// 取得最大輸出 Token 數
 func OutputTokens(provider, model string) int
-
-// 確認該模型是否支援 temperature 參數
 func SupportTemperature(provider, model string) bool
 ```
 

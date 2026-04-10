@@ -1,91 +1,83 @@
-# Agenvoy — 架構參考
+# Agenvoy — 架構
 
-七張 Mermaid 圖，涵蓋從進入點到各子系統的完整系統結構。
+> 返回 [README](./README.zh.md)
+
+七張 Mermaid 圖涵蓋從進入點到各子系統的完整系統結構。
 
 ## 1. 系統概覽
 
-所有主要子系統的高層資料流。
+所有主要子系統之間的高階資料流。
 
 ```mermaid
 graph TB
     subgraph Entry ["進入點"]
-        App["cmd/app · TUI 管理介面"]
-        subgraph Managed ["由 cmd/app 統一管理"]
-            CLI["cmd/cli · will deprecate"]
-            Discord["Discord Bot"]
-            API["REST API · /v1/send · /v1/tools · /v1/tool/:name · /v1/key"]
-        end
+        App["cmd/app · 統一 TUI 應用\n(CLI · TUI · Discord · REST API)"]
     end
 
     subgraph Engine ["執行引擎"]
         Run["exec.Run()"]
-        Execute["exec.Execute()\n≤128 次迭代"]
+        Execute["exec.Execute()\n≤128 iterations"]
     end
 
     subgraph Providers ["LLM Providers"]
-        P["Copilot · OpenAI · Claude\nGemini · Nvidia · Compat"]
+        P["Copilot · OpenAI · Codex · Claude\nGemini · Nvidia · Compat"]
     end
 
     subgraph Security ["安全層"]
-        S["沙箱 · 敏感路徑封鎖 · Keychain"]
+        S["Sandbox · Denied Paths · Keychain"]
     end
 
     subgraph Tools ["工具子系統"]
-        T["檔案 · 網路 · API · Script\n排程器 · 錯誤記憶"]
+        T["File · Web · API · Script\nScheduler · Error Memory\nObsidian Memory"]
     end
 
-    subgraph Persistence ["持久化"]
-        PS["Session 摘要 · 對話歷史"]
+    subgraph Memory ["記憶層"]
+        PS["ToriiDB Store\nSession Summary\nObsidian Vault (optional)"]
     end
 
-    App --> CLI
-    App --> Discord
-    App --> API
-    CLI --> Run
-    Discord --> Run
-    API --> Run
+    App --> Run
     Run --> Execute
     Execute -->|"Agent.Send()"| Providers
     Execute -->|"tool calls"| Security
     Security --> Tools
     Tools -->|"results"| Execute
-    Execute --> Persistence
-    Persistence -.->|"注入"| Execute
+    Execute --> Memory
+    Memory -.->|"inject"| Execute
 ```
 
 ---
 
 ## 2. 執行引擎
 
-`exec.Run()` 的內部流程：Skill/Agent 選擇、Token 裁剪，及工具呼叫迭代迴圈。
+`exec.Run()` 經由 skill / agent 選擇、token 裁剪、工具呼叫迭代迴圈的內部流程。
 
 ```mermaid
 flowchart TD
     Run["exec.Run()"]
 
     subgraph Selection ["選擇階段"]
-        SkillScan["SelectSkill()\n9 個掃描路徑（依優先順序）"]
-        AgentScan["SelectAgent()\nPlanner LLM 挑選最適 Provider"]
+        SkillScan["SelectSkill()\n9 個掃描路徑按優先序"]
+        AgentScan["SelectAgent()\nPlanner LLM 挑選最佳 provider"]
     end
 
     subgraph Loop ["迭代迴圈 · exec.Execute()"]
-        Assemble["assembleMessages()\n四個固定段：\nSystemPrompts · OldHistories · UserInput · ToolHistories"]
-        ReactTrim{"Context 超限？"}
-        TrimOld["裁剪 OldHistories\n或 ToolHistories\n（錯誤觸發，reactive）"]
-        Send["Agent.Send()\n統一 Provider 介面"]
-        Parse["解析回應\n擷取 tool_calls"]
-        Dispatch["Dispatch tool calls\n並行執行"]
-        Dedup["Hash 去重\n防止相同呼叫重複"]
+        Assemble["assembleMessages()\n4 段固定區塊：\nSystemPrompts · OldHistories · UserInput · ToolHistories"]
+        ReactTrim{"超過 context length？"}
+        TrimOld["裁剪 OldHistories\n或 ToolHistories\n（錯誤時反應式）"]
+        Send["Agent.Send()\n統一 provider 介面"]
+        Parse["解析回應\n抽取 tool_calls"]
+        Dispatch["派送 tool calls\n並行執行"]
+        Dedup["Hash 去重\n避免相同呼叫重跑"]
         Accum["累積結果\n附加至訊息歷史"]
-        Check{"停止條件？\n無 tool_calls 或\n迭代次數 ≥ 128"}
+        Check{"停止條件？\n無 tool_calls\n或 iteration ≥ 128"}
     end
 
     Done["回傳最終回應"]
 
     Run --> SkillScan
     Run --> AgentScan
-    SkillScan -->|"注入 Skill prompt"| Loop
-    AgentScan -->|"Provider 已選定"| Loop
+    SkillScan -->|"注入 skill prompt"| Loop
+    AgentScan -->|"選定 provider"| Loop
     Assemble --> ReactTrim
     ReactTrim -->|"是"| TrimOld --> Assemble
     ReactTrim -->|"否"| Send
@@ -95,41 +87,43 @@ flowchart TD
     Dedup --> Accum
     Accum --> Check
     Check -->|"繼續"| Assemble
-    Check -->|"完成"| Done
+    Check -->|"結束"| Done
 ```
 
 ---
 
 ## 3. Provider 路由
 
-Planner LLM 如何選擇 Provider，以及各後端如何處理請求。
+Planner LLM 如何挑選 provider，以及各後端如何處理請求。
 
 ```mermaid
 flowchart TD
-    Planner["Planner LLM\n（SelectAgent）\n依任務類型評分各 Provider"]
+    Planner["Planner LLM\n(SelectAgent)\n依任務類型為各 provider 評分"]
 
     subgraph Providers ["Provider 後端"]
-        Copilot["Copilot\ngithub.com token 認證\n401 自動重新登入"]
-        OpenAI["OpenAI\nno_temperature 旗標\n（推理模型用）"]
-        Claude["Claude\n多段 System Prompt 合併"]
-        Gemini["Gemini\n多部分訊息修正"]
-        Nvidia["Nvidia NIM\nOpenAI 相容協定"]
-        Compat["Compat\nOllama / 任意 OpenAI 端點\n具名 compat[{name}] 實例"]
+        Copilot["Copilot\ngithub.com token auth\n401 自動重新登入"]
+        OpenAI["OpenAI\n推理模型標記\nno_temperature"]
+        Codex["OpenAI Codex\nDevice Code Flow\n自動刷新"]
+        Claude["Claude\n多 system prompt 合併"]
+        Gemini["Gemini\nmultipart 訊息修正"]
+        Nvidia["Nvidia NIM\nOpenAI 相容"]
+        Compat["Compat\nOllama / 任一 OpenAI endpoint\n具名 compat[{name}]"]
     end
 
-    subgraph CopilotRouting ["Copilot 雙協定路由"]
+    subgraph CopilotRouting ["Copilot 雙協定"]
         ModelCheck{"模型類型？"}
-        ChatComp["Chat Completions API\n（預設路徑）"]
-        RespAPI["Responses API\n（GPT-5.4 · Codex 模型）"]
-        ImgNorm["圖片正規化\ndecode → re-encode 為 JPEG\n（PNG / GIF / WebP → JPEG）"]
+        ChatComp["Chat Completions API\n(預設路徑)"]
+        RespAPI["Responses API\n(GPT-5.4 · Codex 模型)"]
+        ImgNorm["圖片正規化\n解碼 → 重編為 JPEG\n(PNG / GIF / WebP → JPEG)"]
     end
 
-    subgraph ReasoningLevels ["推理層級（全 Provider）"]
-        RL["各 Provider 可獨立設定\n推理層級\n（low / medium / high）"]
+    subgraph ReasoningLevels ["Reasoning Level（所有 provider）"]
+        RL["逐 provider 設定\nreasoning level\n(low / medium / high)"]
     end
 
     Planner --> Copilot
     Planner --> OpenAI
+    Planner --> Codex
     Planner --> Claude
     Planner --> Gemini
     Planner --> Nvidia
@@ -137,7 +131,7 @@ flowchart TD
 
     Copilot --> ModelCheck
     ModelCheck -->|"GPT-5.4 / Codex"| RespAPI
-    ModelCheck -->|"其餘模型"| ChatComp
+    ModelCheck -->|"其他"| ChatComp
     Copilot --> ImgNorm
 
     Providers --> RL
@@ -147,42 +141,42 @@ flowchart TD
 
 ## 4. 安全層
 
-沙箱隔離、敏感路徑封鎖與憑證儲存。
+Sandbox 隔離、敏感路徑拒絕與憑證儲存。
 
 ```mermaid
 flowchart TD
-    ToolCall["進入的工具呼叫\n（來自 Execute 迴圈）"]
+    ToolCall["進入工具呼叫\n(來自 Execute 迴圈)"]
 
     subgraph PathValidation ["路徑驗證 · filesystem"]
         AbsPath["GetAbsPath()\nsymlink 安全解析"]
-        HomeCheck{"在使用者\nHome 目錄內？"}
+        HomeCheck{"是否在使用者 home？"}
         Reject1["拒絕 · 路徑逃逸"]
     end
 
-    subgraph DeniedPaths ["敏感路徑封鎖 · sandbox"]
-        DenyMap["denied_map.json\n（嵌入式，依 OS 分類規則）"]
-        DenyCheck{"符合封鎖規則？"}
+    subgraph DeniedPaths ["敏感路徑拒絕 · sandbox"]
+        DenyMap["denied_map.json\n(嵌入，依 OS 規則)"]
+        DenyCheck{"命中 deny 規則？"}
         Reject2["拒絕 · 敏感路徑"]
     end
 
     subgraph SandboxExec ["Process 隔離"]
-        OSCheck{"作業系統？"}
-        Bwrap["bubblewrap · Linux\n--unshare-all namespace\n--new-session\n動態探測 + Graceful Fallback"]
+        OSCheck{"OS？"}
+        Bwrap["bubblewrap · Linux\n--unshare-all namespace\n--new-session\n動態 probe + graceful fallback"]
         SandboxExecMac["sandbox-exec · macOS\nApple Seatbelt profile"]
     end
 
-    subgraph Keychain ["憑證儲存 · filesystem"]
-        KC["OS Keychain\nmacOS Keychain / Linux secret-service\nAPI Key 從不明文儲存"]
+    subgraph Keychain ["憑證儲存 · filesystem/keychain"]
+        KC["OS Keychain\nmacOS Keychain / Linux secret-service\nAPI key 從不以明文儲存"]
     end
 
-    Allow["在沙箱中執行工具"]
+    Allow["在 sandbox 中執行工具"]
 
     ToolCall --> AbsPath
     AbsPath --> HomeCheck
-    HomeCheck -->|"在外部"| Reject1
-    HomeCheck -->|"在內部"| DenyCheck
+    HomeCheck -->|"在外"| Reject1
+    HomeCheck -->|"在內"| DenyCheck
     DenyMap --> DenyCheck
-    DenyCheck -->|"封鎖"| Reject2
+    DenyCheck -->|"拒絕"| Reject2
     DenyCheck -->|"允許"| OSCheck
     OSCheck -->|"Linux"| Bwrap
     OSCheck -->|"macOS"| SandboxExecMac
@@ -195,50 +189,54 @@ flowchart TD
 
 ## 5. 工具子系統
 
-所有工具類別、發現路徑與自註冊機制。
+所有工具類別、其發現路徑與註冊機制。
 
 ```mermaid
 flowchart TD
-    Registry["自註冊 Tool Registry\n（取代 switch routing）"]
+    Registry["自註冊 Tool Registry\n(取代 switch 路由)"]
 
     subgraph FileTools ["檔案操作"]
-        FT["read_file · write_file\npatch_edit · glob_files\nlist_files · search_content\nmove_to_trash · run_command"]
+        FT["read_file · write_file · read_image\npatch_edit · glob_files\nlist_files · search_content\nmove_to_trash · run_command"]
     end
 
-    subgraph WebTools ["網路存取"]
-        WT["fetch_page · 無頭 Chrome + stealth JS · Chrome 自動偵測\nsearch_web · Brave + DDG 並行 · SHA-256 快取 5 分鐘 TTL\ngoogle_rss · RSS 訂閱擷取 · 5 分鐘快取\ndownload_page · 原始頁面下載\nanalyze_youtube · metadata 擷取"]
+    subgraph WebTools ["Web 存取（ToriiDB 快取）"]
+        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Google + DDG 並行 · SHA-256 cache\nfetch_google_rss · RSS 抓取\ndownload_page · 原始頁面下載\nanalyze_youtube · metadata 抓取"]
     end
 
-    subgraph APITools ["API Extension · apiAdapter"]
-        AT["14+ 內嵌 JSON 定義\n（CoinGecko · Wikipedia · Open-Meteo\nYahoo Finance · YouTube · 等）"]
-        UserAPI["使用者自訂 Extension\n~/.config/agenvoy/api_tools/*.json\n啟動時自動載入 · 無需重新編譯"]
+    subgraph APITools ["API 擴充 · apiAdapter"]
+        AT["12+ 嵌入 JSON 定義\n(CoinGecko · Wikipedia · Open-Meteo\nYahoo Finance · YouTube · etc.)"]
+        UserAPI["使用者擴充\n~/.config/agenvoy/api_tools/*.json\n啟動時載入 · 無需重新編譯"]
     end
 
-    subgraph ScriptTools ["Script Extension · scriptAdapter"]
+    subgraph ScriptTools ["Script 擴充 · scriptAdapter"]
         ST["掃描路徑\n~/.config/agenvoy/script_tools/\n<workdir>/.config/agenvoy/script_tools/"]
         Manifest["tool.json manifest\nname · description · parameters schema"]
-        Runner["script.js / script.py\nstdin/stdout JSON 協定\nscript_ 前綴自動註冊"]
+        Runner["script.js / script.py\nstdin/stdout JSON 協定\nscript_ 前綴註冊"]
     end
 
     subgraph SkillTools ["Skill Git 工具"]
-        SGT["skill_git_commit\nskill_git_log\nskill_git_rollback\n（作用於 Skill 儲存庫路徑）"]
+        SGT["skill_git_commit\nskill_git_log\nskill_git_rollback\n(對 skill repo 路徑操作)"]
     end
 
-    subgraph SchedulerTools ["排程器 · scheduler"]
-        SchT["Cron 任務 · 週期性\n一次性任務\nJSON 持久化 · 重啟後恢復\n完成時 Discord 回傳"]
-        SchCRUD["add_task · update_task · delete_task\nadd_cron · update_cron · delete_cron"]
+    subgraph SchedulerTools ["Scheduler · scheduler"]
+        SchT["cron 任務 · 循環\n一次性任務\nJSON 持久化 · 重啟還原\n完成時 Discord callback"]
+        SchCRUD["add_task · remove_task · list_tasks\nadd_cron · remove_cron · list_crons"]
     end
 
-    subgraph ErrorMemTools ["錯誤記憶"]
-        EMT["工具呼叫失敗 →\n持久化至 tool_errors/{SHA-256}.json\nsearch_errors · 回溯過去失敗\nremember_error · 持久化解決方案\n跨 Session 學習"]
+    subgraph ErrorMemTools ["錯誤記憶（ToriiDB）"]
+        EMT["工具呼叫失敗 →\n持久化至 ToriiDB store\nsearch_errors · 回憶過往失敗\nremember_error · 持久化解法\n跨 session 學習"]
+    end
+
+    subgraph ObsidianMemTools ["Obsidian Vault 記憶（選用）"]
+        OMT["memory_search · 全文關鍵字\nmemory_search_tag · JsonLogic tag 搜尋\nmemory_tags · 列出 vault 所有 tag\nmemory_list · 依分類列出記憶\n(需 Local REST API 連線)"]
     end
 
     subgraph ExternalAgentTools ["外部 Agent 工具"]
-        EAT["call_external_agent · 委派任務至指定外部 Agent\nverify_with_external_agent · 並行交叉驗證（所有已宣告 Agent）\nreview_result · 內部優先序模型審查\n（claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet）"]
+        EAT["call_external_agent · 委派至具名外部 agent\nverify_with_external_agent · 平行跨驗證所有宣告 agent\nreview_result · 內部優先序覆核\n(claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet)"]
     end
 
-    subgraph SearchTools ["延遲工具 Registry · searchTools"]
-        SRT["search_tools · AlwaysLoad=true · ReadOnly=true\n關鍵字模糊搜尋 + 'select:<name>' 直接啟用\n'+term' 必要詞語語法 · max_results 可設定\n將匹配工具的完整 schema 注入當前請求 Context"]
+    subgraph SearchTools ["延遲工具註冊 · searchTools"]
+        SRT["search_tools · AlwaysLoad=true · ReadOnly=true\nkeyword fuzzy + 'select:<name>' 直接啟用\n'+term' 必要關鍵字語法 · max_results 可設\n將符合的工具 schema 注入當前請求 context"]
     end
 
     Registry --> FileTools
@@ -248,6 +246,7 @@ flowchart TD
     Registry --> SkillTools
     Registry --> SchedulerTools
     Registry --> ErrorMemTools
+    Registry --> ObsidianMemTools
     Registry --> ExternalAgentTools
     Registry --> SearchTools
 
@@ -259,53 +258,69 @@ flowchart TD
 
 ---
 
-## 6. 持久化與記憶
+## 6. 儲存與記憶
 
-Session 摘要深度合併、對話歷史裁剪與錯誤記憶。
+Session 摘要的分塊多階段生成、對話歷史裁剪與 ToriiDB-backed 錯誤記憶、Obsidian Vault 整合。
 
 ```mermaid
 flowchart TD
     subgraph SessionSummary ["Session 摘要 · sessionManager"]
-        SumExtract["摘要擷取\n3 個獨立 regex pattern\n· fenced block\n· XML &lt;summary&gt; tag\n· [summary] bracket"]
-        SumMerge["mergeSummary()\n跨輪次深度合併\n新條目附加\n已有條目原地更新"]
-        SumInject["注入至下一次 Execute()\n作為 system context 置於 history 之前"]
+        SumCron["每小時 cron 觸發\n(非 per-request)"]
+        SumChunk["分塊多階段生成\n長 session 避免 context 溢位"]
+        SumExtract["summary 抽取\n3 組獨立 regex\n· fenced block\n· XML &lt;summary&gt; tag\n· [summary] bracket"]
+        SumMerge["mergeSummary()\n跨輪 deep-merge\n新項目 append\n既有項目 in-place update"]
+        SumInject["注入下一個 Execute()\n作為 history 之前的 system context"]
     end
 
     subgraph HistoryTrim ["對話歷史 · trimMessages()"]
-        Budget["MaxInputTokens()\n各 Provider token 預算"]
-        Preserve["永遠保留\n· system prompt\n· 注入的 summary\n· 最新使用者訊息"]
-        Trim["從最舊輪次開始裁剪\n直到符合預算\n插入省略號標記"]
-        SearchHist["search_history 工具\n關鍵字觸發式回溯\n（非全量重播）"]
+        Budget["MaxInputTokens()\n逐 provider token 預算"]
+        Preserve["一律保留\n· system prompt\n· 注入的 summary\n· 最新 user message"]
+        Trim["由最舊輪次開始裁剪\n直到符合預算\n插入 ellipsis 標記"]
+        SearchHist["search_history 工具\n(ToriiDB store)\n關鍵字觸發回憶\n(非完整重播)"]
+    end
+
+    subgraph ToriiStore ["ToriiDB Store · filesystem/store"]
+        TS["嵌入 KV store\n取代分散 JSON 檔案\n· session 歷史\n· 錯誤記憶\n· fetch_page / search_web / google_rss 快取\n· fetch_page 跳過清單"]
     end
 
     subgraph ErrorMemory ["錯誤記憶 · errorMemory"]
-        ErrHash["SHA-256(tool_name + args)\n每個 Session 的唯一 key"]
-        ErrStore["tool_errors/{hash}.json\n持久化至檔案系統"]
-        ErrRecall["search_errors\n模糊關鍵字比對\n跨所有 Session"]
-        ErrResolve["remember_error\n持久化解決方案決策\n跨 Session 重用"]
+        ErrHash["SHA-256(tool_name + args)\n逐 session key"]
+        ErrStore["ToriiDB store\n取代早期 tool_errors/*.json"]
+        ErrRecall["search_errors\nfuzzy 關鍵字比對\n跨所有 session"]
+        ErrResolve["remember_error\n持久化解法決策\n跨 session 重用"]
     end
 
-    subgraph UsageTracking ["用量追蹤 · usageManager"]
-        UT["逐模型 token 用量\n跨所有工具呼叫迭代累計\n（每次請求）"]
+    subgraph ObsidianMem ["Obsidian Vault（選用） · filesystem/obsidian"]
+        OBConn["Local REST API\nhttps://127.0.0.1:27124"]
+        OBWrite["AgenvoyMem/ 下\n自動寫入 conversations/\n與 knowledge/ markdown"]
+        OBSearch["memory_search_* 工具\n跨 session 語義 / tag 回溯"]
     end
 
-    SumExtract --> SumMerge --> SumInject
+    subgraph UsageTracking ["Usage Tracking · usageManager"]
+        UT["逐模型 token 用量\n跨所有工具呼叫迭代\n累積於每次請求"]
+    end
+
+    SumCron --> SumChunk --> SumExtract --> SumMerge --> SumInject
     Budget --> Preserve --> Trim
     Trim --> SearchHist
+    SearchHist --> TS
     ErrHash --> ErrStore
+    ErrStore --> TS
     ErrStore --> ErrRecall
     ErrRecall --> ErrResolve
+    OBConn --> OBWrite
+    OBWrite --> OBSearch
 ```
 
 ---
 
 ## 7. REST API 層
 
-HTTP 端點路由、Handler dispatch，以及 SSE 與非 SSE 回應路徑。
+HTTP endpoint 路由、handler 派送以及 SSE vs 非 SSE 回應路徑。
 
 ```mermaid
 flowchart TD
-    Client["外部呼叫端\n（script tool · skill · 瀏覽器）"]
+    Client["外部 client\n(script tool · skill · browser)"]
 
     subgraph Router ["Gin Router · internal/routes"]
         R1["GET  /v1/tools"]
@@ -316,22 +331,22 @@ flowchart TD
     end
 
     subgraph Handlers ["Handlers · internal/routes/handler"]
-        H1["ListTools()\n列舉已註冊工具\nname · description · parameters"]
-        H2["CallTool()\n驗證工具存在\n透過 tools.Execute() 執行"]
-        H3SSE["SendSSE()\nstreaming token 輸出\nContent-Type: text/event-stream\n（exclude_tools → 每次請求獨立過濾工具清單）"]
-        H3JSON["Send()\n收集完整回應\n回傳 JSON {text}\n（model 欄位設定時略過 SelectAgent）\n（exclude_tools → 每次請求獨立過濾工具清單）"]
-        H4["GetKey()\n從 OS Keychain 讀取"]
+        H1["ListTools()\n列出註冊工具\nname · description · parameters"]
+        H2["CallTool()\n驗證工具存在\n經由 tools.Execute() 派送"]
+        H3SSE["SendSSE()\n串流 token chunks\nContent-Type: text/event-stream\n(exclude_tools → 逐請求過濾)"]
+        H3JSON["Send()\n收集完整回應\n回傳 JSON {text}\n(model 欄位 → 繞過 SelectAgent)\n(exclude_tools → 逐請求過濾)"]
+        H4["GetKey()\n由 OS Keychain 讀取"]
         H5["SaveKey()\n寫入 OS Keychain"]
     end
 
     subgraph Core ["核心層"]
-        Executor["tools.NewExecutor()\n載入所有已註冊工具"]
+        Executor["tools.NewExecutor()\n載入所有註冊工具"]
         Execute["tools.Execute()\n執行單一工具呼叫"]
-        Run["exec.Run()\n完整 Agent 執行迴圈"]
+        Run["exec.Run()\n完整 agent 執行迴圈"]
         KC["OS Keychain\nmacOS Keychain / Linux secret-service"]
     end
 
-    SSECheck{"sse: true?"}
+    SSECheck{"sse: true？"}
 
     Client --> R1 & R2 & R3 & R4 & R5
     R1 --> H1
@@ -349,3 +364,7 @@ flowchart TD
     H4 --> KC
     H5 --> KC
 ```
+
+***
+
+©️ 2026 [邱敬幃 Pardn Chiu](https://linkedin.com/in/pardnchiu)
