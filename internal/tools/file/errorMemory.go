@@ -5,14 +5,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log/slog"
-	"os"
-	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 )
 
 type ErrorMemory struct {
@@ -24,11 +22,6 @@ type ErrorMemory struct {
 	Cause     string   `json:"cause,omitempty"`
 	Action    string   `json:"action"`
 	Outcome   string   `json:"outcome,omitempty"`
-}
-
-type ErrorMemoryItem struct {
-	Count       int   `json:"count"`
-	LastUpdated int64 `json:"last_updated"`
 }
 
 func classifyErrorText(text string) string {
@@ -83,110 +76,7 @@ func normalizeKeywords(keywords []string) []string {
 	return result
 }
 
-func SearchErrors(keyword string, limit int) (string, error) {
-	if keyword == "" {
-		return "", fmt.Errorf("keyword is required")
-	}
-	if limit <= 0 {
-		limit = 4
-	}
-	if limit > 16 {
-		limit = 16
-	}
-
-	// configDir, err := utils.GetConfigDir("errors")
-	// if err != nil {
-	// 	return "", fmt.Errorf("utils.GetConfigDir: %w", err)
-	// }
-
-	index := getErrorList(filesystem.ErrorsDir)
-	if len(index) == 0 {
-		return "NONE", nil
-	}
-
-	lower := strings.ToLower(keyword)
-	var matched []ErrorMemory
-	for tool := range index {
-		jsonPath := filepath.Join(filesystem.ErrorsDir, tool+".json")
-		records := getErrorMemory(jsonPath)
-		for _, record := range records {
-			if matchErrorMemory(record, lower) {
-				matched = append(matched, record)
-			}
-		}
-	}
-
-	if len(matched) == 0 {
-		return "NONE", nil
-	}
-
-	return formatRecords(matched, limit), nil
-}
-
-func getErrorList(home string) map[string]ErrorMemoryItem {
-	index := make(map[string]ErrorMemoryItem)
-	errorDir := filepath.Join(home, "errors.json")
-	data, err := os.ReadFile(errorDir)
-	if err != nil {
-		return index
-	}
-	err = json.Unmarshal(data, &index)
-	if err != nil {
-		return index
-	}
-	return index
-}
-
-func getErrorMemory(path string) []ErrorMemory {
-	var datas []ErrorMemory
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return datas
-	}
-	err = json.Unmarshal(data, &datas)
-	if err != nil {
-		return datas
-	}
-	return datas
-}
-
-func matchErrorMemory(rec ErrorMemory, lower string) bool {
-	if lower == "" {
-		return true
-	}
-	if strings.Contains(strings.ToLower(rec.ToolName), lower) ||
-		strings.Contains(strings.ToLower(rec.Symptom), lower) ||
-		strings.Contains(strings.ToLower(rec.Cause), lower) {
-		return true
-	}
-	for _, keyword := range rec.Keywords {
-		text := strings.ToLower(keyword)
-		if strings.Contains(text, lower) || strings.Contains(lower, text) {
-			return true
-		}
-	}
-	return false
-}
-
-func formatRecords(records []ErrorMemory, limit int) string {
-	start := max(0, len(records)-limit)
-	slice := make([]ErrorMemory, 0, limit)
-	for i := len(records) - 1; i >= start; i-- {
-		slice = append(slice, records[i])
-	}
-	out, err := json.Marshal(slice)
-	if err != nil {
-		return ""
-	}
-	return string(out)
-}
-
 func SaveErrorMemory(sessionID string, record ErrorMemory) (string, error) {
-	// configDir, err := utils.GetConfigDir("errors")
-	// if err != nil {
-	// 	return "", fmt.Errorf("utils.GetConfigDir: %w", err)
-	// }
-
 	record.Keywords = normalizeKeywords(record.Keywords)
 	errType := classifyErrorText(record.Symptom + "\n" + record.Cause)
 	if errType != "unknown" {
@@ -194,97 +84,137 @@ func SaveErrorMemory(sessionID string, record ErrorMemory) (string, error) {
 	}
 
 	now := time.Now()
-	h := sha256.Sum256([]byte(record.ToolName + strconv.FormatInt(now.Unix(), 10)))
+	h := sha256.Sum256([]byte(record.ToolName + strconv.FormatInt(now.UnixNano(), 10)))
 	record.ID = hex.EncodeToString(h[:])
 	record.Timestamp = now.Unix()
 
-	jsonPath := filepath.Join(filesystem.ErrorsDir, record.ToolName+".json")
-	records := getErrorMemory(jsonPath)
-	records = append(records, record)
-	data, err := json.Marshal(records)
+	raw, err := json.Marshal(record)
 	if err != nil {
 		return "", fmt.Errorf("json.Marshal: %w", err)
 	}
-	if err := filesystem.WriteFile(jsonPath, string(data), 0644); err != nil {
-		return "", fmt.Errorf("utils.WriteFile: %w", err)
-	}
 
-	index := getErrorList(filesystem.ErrorsDir)
-	index[record.ToolName] = ErrorMemoryItem{
-		Count:       len(records),
-		LastUpdated: now.Unix(),
+	key := fmt.Sprintf("%s:%d", record.ToolName, now.UnixNano())
+	if err := store.DB(store.DBErrorMemory).Set(key, string(raw), store.SetDefault, nil); err != nil {
+		return "", fmt.Errorf("store.Set: %w", err)
 	}
-	writeErrorList(filesystem.ErrorsDir, index)
 
 	return fmt.Sprintf("Remember the Error: %s", record.ID), nil
 }
 
-func writeErrorList(home string, index map[string]ErrorMemoryItem) error {
-	data, err := json.Marshal(index)
-	if err != nil {
-		return err
+func SearchErrors(keyword string, limit int) (string, error) {
+	if keyword == "" {
+		return "", fmt.Errorf("keyword is required")
 	}
+	limit = clampLimit(limit)
 
-	if err = filesystem.WriteFile(filepath.Join(home, "errors.json"), string(data), 0644); err != nil {
-		return err
-	}
-	return nil
-}
-
-func SearchErrorMemory(tool, keyword string, limit int) string {
-	errType := classifyErrorText(keyword)
-	if errType != "unknown" {
-		result, err := searchFile(tool, "error_type:"+errType, limit)
-		if err == nil && result != "NONE" {
-			return result
-		}
-	}
-
-	result, err := searchFile(tool, keyword, limit)
-	if err != nil {
-		slog.Warn("searchFile",
-			slog.String("error", err.Error()))
-		return ""
-	}
-	if result == "NONE" {
-		result, err = searchFile(tool, "", limit)
-		if err != nil || result == "NONE" {
-			return ""
-		}
-	}
-	return result
-}
-
-func searchFile(toolName, keyword string, limit int) (string, error) {
-	if limit <= 0 {
-		limit = 4
-	}
-	if limit > 16 {
-		limit = 16
-	}
-
-	// configDir, err := utils.GetConfigDir("errors")
-	// if err != nil {
-	// 	return "", fmt.Errorf("utils.GetConfigDir: %w", err)
-	// }
-
-	jsonPath := filepath.Join(filesystem.ErrorsDir, toolName+".json")
-	records := getErrorMemory(jsonPath)
-	if len(records) == 0 {
-		return "NONE", nil
-	}
-
-	lower := strings.ToLower(keyword)
-	var matched []ErrorMemory
-	for _, record := range records {
-		if matchErrorMemory(record, lower) {
-			matched = append(matched, record)
-		}
-	}
-
+	matched := scanErrorMemory("*", keyword, limit*4)
 	if len(matched) == 0 {
 		return "NONE", nil
 	}
-
 	return formatRecords(matched, limit), nil
+}
+
+func SearchErrorMemory(tool, keyword string, limit int) string {
+	limit = clampLimit(limit)
+	pattern := tool + ":*"
+
+	if errType := classifyErrorText(keyword); errType != "unknown" {
+		records := scanErrorMemoryFiltered(pattern, func(rec ErrorMemory) bool {
+			for _, k := range rec.Keywords {
+				if k == "error_type:"+errType {
+					return true
+				}
+			}
+			return false
+		}, limit)
+		if len(records) > 0 {
+			return formatRecords(records, limit)
+		}
+	}
+
+	if keyword != "" {
+		records := scanErrorMemory(pattern, keyword, limit)
+		if len(records) > 0 {
+			return formatRecords(records, limit)
+		}
+	}
+
+	records := scanErrorMemoryFiltered(pattern, func(ErrorMemory) bool { return true }, limit)
+	if len(records) == 0 {
+		return ""
+	}
+	return formatRecords(records, limit)
+}
+
+func clampLimit(limit int) int {
+	if limit <= 0 {
+		return 4
+	}
+	if limit > 16 {
+		return 16
+	}
+	return limit
+}
+
+func scanErrorMemory(pattern, keyword string, cap int) []ErrorMemory {
+	lower := strings.ToLower(keyword)
+	return scanErrorMemoryFiltered(pattern, func(rec ErrorMemory) bool {
+		if lower == "" {
+			return true
+		}
+		if strings.Contains(strings.ToLower(rec.ToolName), lower) ||
+			strings.Contains(strings.ToLower(rec.Symptom), lower) ||
+			strings.Contains(strings.ToLower(rec.Cause), lower) {
+			return true
+		}
+		for _, kw := range rec.Keywords {
+			text := strings.ToLower(kw)
+			if strings.Contains(text, lower) || strings.Contains(lower, text) {
+				return true
+			}
+		}
+		return false
+	}, cap)
+}
+
+func scanErrorMemoryFiltered(pattern string, match func(ErrorMemory) bool, cap int) []ErrorMemory {
+	db := store.DB(store.DBErrorMemory)
+	keys := db.Keys(pattern)
+	if len(keys) == 0 {
+		return nil
+	}
+
+	out := make([]ErrorMemory, 0, cap)
+	for i := len(keys) - 1; i >= 0; i-- {
+		entry, ok := db.Get(keys[i])
+		if !ok {
+			continue
+		}
+		var rec ErrorMemory
+		if err := json.Unmarshal([]byte(entry.Value), &rec); err != nil {
+			continue
+		}
+		if !match(rec) {
+			continue
+		}
+		out = append(out, rec)
+		if len(out) >= cap {
+			break
+		}
+	}
+	return out
+}
+
+func formatRecords(records []ErrorMemory, limit int) string {
+	sort.SliceStable(records, func(i, j int) bool {
+		return records[i].Timestamp > records[j].Timestamp
+	})
+	if len(records) > limit {
+		records = records[:limit]
+	}
+	out, err := json.Marshal(records)
+	if err != nil {
+		return ""
+	}
+	return string(out)
 }
