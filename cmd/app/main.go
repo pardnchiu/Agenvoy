@@ -20,6 +20,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 	"github.com/pardnchiu/agenvoy/internal/routes"
 	"github.com/pardnchiu/agenvoy/internal/sandbox"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
@@ -89,6 +90,11 @@ func initCLI() {
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+	if err := store.Init(filesystem.StoreDir); err != nil {
+		slog.Error("store.Init",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 	if cfg, err := session.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
@@ -144,6 +150,8 @@ func runList() {
 }
 
 func runAgent(allowAll bool) {
+	defer store.Close()
+
 	userInput := strings.TrimSpace(strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n"))
 
 	registry := buildAgentRegistry()
@@ -175,6 +183,12 @@ func runApp() {
 			slog.String("error", err.Error()))
 		return
 	}
+	if err := store.Init(filesystem.StoreDir); err != nil {
+		slog.Error("store.Init",
+			slog.String("error", err.Error()))
+		return
+	}
+	defer store.Close()
 
 	tui.New()
 	tui.SetSlog()

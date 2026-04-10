@@ -17,6 +17,7 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools"
@@ -292,7 +293,6 @@ func GetSystemPrompt(data ExecData) string {
 	).Replace(configs.SystemPrompt)
 }
 
-
 func actionError(emptyCount *int, events chan<- agentTypes.Event) bool {
 	*emptyCount++
 	if *emptyCount >= MaxEmptyResponses {
@@ -327,6 +327,16 @@ func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSe
 	if err = sessionManager.SaveHistory(session.ID, string(historyBytes)); err != nil {
 		return fmt.Errorf("sessionManager.SaveHistory: %w", err)
 	}
+
+	msgBytes, err := json.Marshal(choice.Message)
+	if err == nil {
+		key := fmt.Sprintf("%s:%d", session.ID, time.Now().UnixNano())
+		if setErr := store.DB(store.DBSessionHist).Set(key, string(msgBytes), store.SetDefault, nil); setErr != nil {
+			slog.Warn("store.DB.Set",
+				slog.String("error", setErr.Error()))
+		}
+	}
+
 	return nil
 }
 
