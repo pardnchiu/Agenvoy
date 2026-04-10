@@ -7,12 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 )
 
 type ResultData struct {
@@ -50,7 +48,7 @@ func (t TimeRange) valid() bool {
 	return false
 }
 
-const cacheExpiry = 5 * time.Minute
+const cacheTTLSeconds = 300
 
 func Search(ctx context.Context, query string, timeRange TimeRange) (*SearchOutput, error) {
 	if strings.TrimSpace(query) == "" {
@@ -61,19 +59,13 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (*SearchOutp
 	}
 
 	hash := sha256.Sum256([]byte(query + "|" + string(timeRange)))
-	cacheKey := hex.EncodeToString(hash[:])
+	cacheKey := "search:" + hex.EncodeToString(hash[:])
 
-	cachedDir := filepath.Join(filesystem.ToolSearchWeb, "cached")
-	cleanCache(cachedDir, cacheExpiry)
-	cachePath := filepath.Join(cachedDir, cacheKey+".json")
-	if info, err := os.Stat(cachePath); err == nil {
-		if time.Since(info.ModTime()) < cacheExpiry {
-			if data, err := os.ReadFile(cachePath); err == nil {
-				var results []ResultData
-				if err := json.Unmarshal(data, &results); err == nil {
-					return &SearchOutput{Results: results, Cached: true}, nil
-				}
-			}
+	db := store.DB(store.DBSearchWeb)
+	if entry, ok := db.Get(cacheKey); ok {
+		var results []ResultData
+		if err := json.Unmarshal([]byte(entry.Value), &results); err == nil {
+			return &SearchOutput{Results: results, Cached: true}, nil
 		}
 	}
 
@@ -92,33 +84,13 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (*SearchOutp
 		return nil, fmt.Errorf("json.Marshal: %w", err)
 	}
 
-	if err = filesystem.WriteFile(cachePath, string(out), 0644); err != nil {
-		slog.Warn("failed to write cache file",
-			slog.String("path", err.Error()))
+	if err = db.Set(cacheKey, string(out), store.SetDefault, store.TTL(cacheTTLSeconds)); err != nil {
+		slog.Warn("store.Set search cache",
+			slog.String("error", err.Error()))
 	}
 
 	return &SearchOutput{
 		Results:    results,
 		DurationMs: time.Since(start).Milliseconds(),
 	}, nil
-}
-
-func cleanCache(dir string, ttl time.Duration) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return
-	}
-	now := time.Now()
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		info, err := entry.Info()
-		if err != nil {
-			continue
-		}
-		if now.Sub(info.ModTime()) > ttl {
-			_ = os.Remove(filepath.Join(dir, entry.Name()))
-		}
-	}
 }
