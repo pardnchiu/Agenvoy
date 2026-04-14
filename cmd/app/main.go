@@ -217,7 +217,7 @@ func runApp() {
 	}
 
 	registry := buildAgentRegistry()
-	go skill.SyncSkills(context.Background(), extensions.Skills)
+	skill.SyncSkills(context.Background(), extensions.Skills)
 	scanner := skill.NewScanner()
 
 	var selectorBot agentTypes.Agent

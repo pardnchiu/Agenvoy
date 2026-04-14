@@ -33,7 +33,8 @@ var (
 	flieLists   []string
 	currentPath string
 
-	cmdInput *tview.InputField
+	cmdInput  *tview.InputField
+	isMsgMode bool
 )
 
 func New() {
@@ -84,7 +85,7 @@ func New() {
 			AddItem(logsView, 0, 2, false)
 
 		cmdInput = tview.NewInputField().
-			SetLabel("> ").
+			SetLabel("$ ").
 			SetFieldBackgroundColor(tcell.ColorDefault).
 			SetLabelColor(tcell.ColorYellow)
 		cmdInput.SetBorder(true).
@@ -95,10 +96,21 @@ func New() {
 			case tcell.KeyEnter:
 				text := cmdInput.GetText()
 				cmdInput.SetText("")
-				executeCommand(text)
+				if isMsgMode {
+					executeMessage(text)
+				} else {
+					executeCommand(text)
+				}
 			case tcell.KeyEscape:
 				hideCommandInput()
 			}
+		})
+		cmdInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			if event.Key() == tcell.KeyTab {
+				toggleInputMode()
+				return nil
+			}
+			return event
 		})
 
 		pages = tview.NewPages().

@@ -8,8 +8,8 @@ description: Create, edit, improve, or audit AgentSkills. Use when creating a ne
 > **Agenvoy 路徑規則（優先於所有其他路徑設定）**：所有 Skill 一律儲存至 `~/.config/agenvoy/skills/<skill-name>/`。步驟三的 `--path` 參數固定使用 `~/.config/agenvoy/skills`，忽略 SKILL.md 其他段落中提及的任何其他路徑。
 
 > **⚠️ 強制執行規則（不可繞過）**：
-> - **建立全新 Skill** — 禁止直接用 `write_file` 建立目錄或 SKILL.md，必須先以 `run_command` 執行 `init_skill.py` 初始化目錄結構，再用 `write_file` 或 `patch_edit` 編輯產生的模板內容。跳過此步驟會導致目錄結構錯誤（生成 `skill-name.md` 而非 `skill-name/SKILL.md`）。
-> - **編輯現有 Skill** — 直接使用 `write_file` 或 `patch_edit` 修改 `skill-name/SKILL.md` 及其資源檔案，不需要執行 `init_skill.py`。
+> - **建立全新 Skill** — 禁止直接用 `write_file` 建立目錄或 SKILL.md，必須先以 `run_command` 執行 `python3 scripts/init_skill.py` 初始化目錄結構，再用 `write_file` 或 `patch_edit` 編輯產生的模板內容。跳過此步驟會導致目錄結構錯誤（生成 `skill-name.md` 而非 `skill-name/SKILL.md`）。
+> - **編輯現有 Skill** — 直接使用 `write_file` 或 `patch_edit` 修改 `skill-name/SKILL.md` 及其資源檔案，不需要執行 `python3 scripts/init_skill.py`。
 
 此 Skill 提供建立有效 Skill 的完整指引。
 
@@ -192,7 +192,7 @@ bigquery-skill/
 
 1. 透過具體範例理解 Skill 的使用情境
 2. 規劃可重用的 Skill 內容（scripts、references、assets）
-3. 初始化 Skill（執行 init_skill.py）
+3. 初始化 Skill（執行 python3 scripts/init_skill.py）
 4. 編輯 Skill（實作資源並撰寫 SKILL.md）
 5. 打包 Skill（執行 package_skill.py）
 6. 依實際使用回饋迭代改善
@@ -252,20 +252,20 @@ bigquery-skill/
 
 只有在 Skill 已存在且需要迭代或打包時才跳過此步驟，此時繼續下一步驟。
 
-從零建立新 Skill 時，務必執行 `init_skill.py` 腳本。此腳本會自動生成包含所有必要元素的 Skill 模板目錄。
+從零建立新 Skill 時，務必執行 `python3 scripts/init_skill.py` 腳本。此腳本會自動生成包含所有必要元素的 Skill 模板目錄。
 
 用法：
 
 ```bash
-scripts/init_skill.py <skill-name> --path <output-directory> [--resources scripts,references,assets] [--examples]
+python3 scripts/init_skill.py <skill-name> --path <output-directory> [--resources scripts,references,assets] [--examples]
 ```
 
 範例：
 
 ```bash
-scripts/init_skill.py my-skill --path skills/public
-scripts/init_skill.py my-skill --path skills/public --resources scripts,references
-scripts/init_skill.py my-skill --path skills/public --resources scripts --examples
+python3 scripts/init_skill.py my-skill --path skills/public
+python3 scripts/init_skill.py my-skill --path skills/public --resources scripts,references
+python3 scripts/init_skill.py my-skill --path skills/public --resources scripts --examples
 ```
 
 此腳本會：

@@ -178,6 +178,17 @@ func hideCommandInput() {
 	app.SetFocus(panels[focusIndex])
 }
 
+func toggleInputMode() {
+	isMsgMode = !isMsgMode
+	if isMsgMode {
+		cmdInput.SetLabel("> ")
+		cmdInput.SetTitle(" Message ")
+	} else {
+		cmdInput.SetLabel("$ ")
+		cmdInput.SetTitle(" Command ")
+	}
+}
+
 func isPopup() bool {
 	focused := app.GetFocus()
 	if slices.Contains(panels, focused) {

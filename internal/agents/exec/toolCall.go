@@ -112,16 +112,16 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 
 		result, err := tools.Execute(ctx, exec, toolName, json.RawMessage(tool.Function.Arguments))
 		if err != nil {
-			errHash := file.SaveToolError(sessionData.ID, toolName, tool.Function.Arguments, err.Error())
+			file.SaveToolError(sessionData.ID, toolName, tool.Function.Arguments, err.Error())
+			events <- agentTypes.Event{
+				Type:     agentTypes.EventExecError,
+				ToolName: toolName,
+				ToolID:   toolID,
+				Text:     err.Error(),
+			}
 			if hint := file.SearchErrorMemory(toolName, err.Error(), 3); hint != "" {
 				result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nrelated_errors: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", toolName, err.Error(), hint, toolName)
 			} else {
-				events <- agentTypes.Event{
-					Type:     agentTypes.EventExecError,
-					ToolName: toolName,
-					ToolID:   toolID,
-					Text:     errHash,
-				}
 				result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", toolName, err.Error(), toolName)
 			}
 			delete(alreadyCall, hash)

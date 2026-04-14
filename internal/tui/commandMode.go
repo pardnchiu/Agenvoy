@@ -8,16 +8,26 @@ import (
 	"time"
 )
 
+func executeMessage(input string) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return
+	}
+	runInSuspend("> "+input, exec.Command("make", "cli", input))
+}
+
 func executeCommand(input string) {
 	input = strings.TrimSpace(input)
 	if input == "" {
 		return
 	}
+	runInSuspend("$ "+input, exec.Command("sh", "-c", input))
+}
 
+func runInSuspend(banner string, cmd *exec.Cmd) {
 	app.Suspend(func() {
-		fmt.Print("\033[H\033[2J$ " + input + "\n")
+		fmt.Print("\033[H\033[2J" + banner + "\n")
 
-		cmd := exec.Command("sh", "-c", input)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
