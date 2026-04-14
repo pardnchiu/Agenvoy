@@ -42,7 +42,7 @@ func AbsPath(workDir, path string, needExclude bool) (string, error) {
 	}
 
 	homePrefix := homeDir + string(filepath.Separator)
-	if !strings.HasPrefix(realPath, homePrefix) {
+	if realPath != homeDir && !strings.HasPrefix(realPath, homePrefix) {
 		return "", fmt.Errorf("only allow path under user home: %s", path)
 	}
 
