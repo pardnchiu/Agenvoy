@@ -20,7 +20,7 @@ func registPatchEdit() {
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "Path to the file (relative to project root or absolute)",
+					"description": "Path to the file. Absolute path preferred; relative paths resolve against the work directory shown in the system prompt. `~` expands to user home.",
 				},
 				"old_string": map[string]any{
 					"type":        "string",

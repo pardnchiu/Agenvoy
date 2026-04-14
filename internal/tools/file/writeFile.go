@@ -23,7 +23,7 @@ func registWriteFile() {
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "Path to the file (relative to project root or absolute). When executable is true, provide only the filename (e.g. 'notify.sh') — path components are ignored.",
+					"description": "Path to the file. Absolute path preferred; relative paths resolve against the work directory shown in the system prompt. `~` expands to user home. When executable is true, provide only the filename (e.g. 'notify.sh') — path components are ignored.",
 				},
 				"name": map[string]any{
 					"type":        "string",

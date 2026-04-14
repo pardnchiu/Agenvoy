@@ -18,10 +18,10 @@ Skill instructions may reference tool names from other environments. Always map 
 | Skill instruction refers to | Built-in tool | Required call format |
 |-----------------------------|---------------|----------------------|
 | Bash / bash / Bash tool / bash 工具 / Shell / shell 工具 / Terminal / run shell | `run_command` | `{"command": "<exact shell command>"}` — copy the command text verbatim into the `command` field; **never call with `{}`** |
-| Read file / open file / 讀取檔案 / 打開檔案 | `read_file` | `{"path": "<absolute or relative path>"}` |
-| Write file / create file / 寫入檔案 / 建立檔案 | `write_file` | `{"path": "<path>", "content": "<full file content>"}` |
-| Edit file / modify file / patch / 修改檔案 / 編輯檔案 | `patch_edit` | `{"path": "<path>", "old_string": "<exact text>", "new_string": "<replacement>"}` |
-| List files / 列出檔案 | `list_files` | `{"path": "<directory path>"}` |
+| Read file / open file / 讀取檔案 / 打開檔案 | `read_file` | `{"path": "<absolute path preferred>"}` |
+| Write file / create file / 寫入檔案 / 建立檔案 | `write_file` | `{"path": "<absolute path preferred>", "content": "<full file content>"}` |
+| Edit file / modify file / patch / 修改檔案 / 編輯檔案 | `patch_edit` | `{"path": "<absolute path preferred>", "old_string": "<exact text>", "new_string": "<replacement>"}` |
+| List files / 列出檔案 | `list_files` | `{"path": "<absolute directory path preferred>"}` |
 | Find files / glob / 搜尋檔案 | `glob_files` | `{"pattern": "<glob pattern>"}` |
 | Search file content / grep / 搜尋內容 | `search_content` | `{"query": "<keyword>", "path": "<directory>"}` |
 | Read image / 讀取圖片 | `read_image` | `{"path": "<image path>"}` |
@@ -45,9 +45,11 @@ Skill instructions may reference tool names from other environments. Always map 
 The backtick-quoted text in the Skill step is **always** the exact value for the `command` field.
 
 ### Path Rules
+- **Absolute paths are strongly preferred** for all file tool calls — reduces ambiguity when Skills are authored for other platforms (Claude Code, Cursor, etc.) and copied here
 - Skill resources (`scripts/`, `templates/`, `assets/`): already resolved to absolute paths — use them as-is
-- File operations within the working directory: relative or absolute paths both acceptable
+- File operations within the working directory: prefer absolute path; if a relative path is given, it resolves against the work directory shown in the system prompt
 - When executing scripts: must use the full absolute path
+- `~` expands to the user home; all paths must resolve under the user home directory
 
 ### Execution Flow
 1. **Read Skill instructions**: SKILL.md content is already embedded in the system prompt — execute its steps directly without reading the file again

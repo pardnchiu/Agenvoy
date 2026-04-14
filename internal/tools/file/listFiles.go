@@ -21,7 +21,7 @@ func registListFiles() {
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "Directory path to list (relative to project root or absolute). Use '.' for the current directory.",
+					"description": "Directory path to list. Absolute path preferred; relative paths resolve against the work directory shown in the system prompt. `~` expands to user home. Use '.' for the work directory.",
 				},
 				"recursive": map[string]any{
 					"type":        "boolean",
