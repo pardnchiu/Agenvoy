@@ -93,9 +93,13 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 }
 
 type sseEvent struct {
-	Type  string `json:"type"`
-	Delta string `json:"delta"`
-	Item  *struct {
+	Type        string `json:"type"`
+	Delta       string `json:"delta"`
+	ItemID      string `json:"item_id"`
+	OutputIndex int    `json:"output_index"`
+	Arguments   string `json:"arguments"`
+	Item        *struct {
+		ID        string `json:"id"`
 		Type      string `json:"type"`
 		CallID    string `json:"call_id"`
 		Name      string `json:"name"`
@@ -104,12 +108,32 @@ type sseEvent struct {
 	Response *copilotResponse.Output `json:"response"`
 }
 
+type pendingCall struct {
+	itemID string
+	callID string
+	name   string
+	args   string
+}
+
 func parseSSEStream(resp *http.Response) (*agentTypes.Output, error) {
 	var (
 		textBuf   strings.Builder
 		toolCalls []agentTypes.ToolCall
 		usage     agentTypes.Usage
+		argsBuf   = map[string]*strings.Builder{}
+		pending   []pendingCall
 	)
+	getBuf := func(key string) *strings.Builder {
+		if key == "" {
+			return nil
+		}
+		b, ok := argsBuf[key]
+		if !ok {
+			b = &strings.Builder{}
+			argsBuf[key] = b
+		}
+		return b
+	}
 
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 1<<20), 1<<20)
@@ -132,19 +156,55 @@ func parseSSEStream(resp *http.Response) (*agentTypes.Output, error) {
 		case "response.output_text.delta":
 			textBuf.WriteString(ev.Delta)
 
+		case "response.function_call_arguments.delta":
+			if b := getBuf(ev.ItemID); b != nil {
+				b.WriteString(ev.Delta)
+			}
+
+		case "response.function_call_arguments.done":
+			if ev.Arguments != "" {
+				if b := getBuf(ev.ItemID); b != nil {
+					b.Reset()
+					b.WriteString(ev.Arguments)
+				}
+			}
+
+		case "response.output_item.added":
+			if ev.Item != nil && ev.Item.Type == "function_call" {
+				pending = append(pending, pendingCall{
+					itemID: ev.Item.ID,
+					callID: ev.Item.CallID,
+					name:   ev.Item.Name,
+					args:   ev.Item.Arguments,
+				})
+			}
+
 		case "response.output_item.done":
 			if ev.Item != nil && ev.Item.Type == "function_call" {
-				toolCalls = append(toolCalls, agentTypes.ToolCall{
-					ID:   ev.Item.CallID,
-					Type: "function",
-					Function: struct {
-						Name      string `json:"name"`
-						Arguments string `json:"arguments"`
-					}{
-						Name:      ev.Item.Name,
-						Arguments: ev.Item.Arguments,
-					},
-				})
+				found := false
+				for i := range pending {
+					if pending[i].itemID == ev.Item.ID || (pending[i].callID != "" && pending[i].callID == ev.Item.CallID) {
+						if ev.Item.Arguments != "" {
+							pending[i].args = ev.Item.Arguments
+						}
+						if pending[i].name == "" {
+							pending[i].name = ev.Item.Name
+						}
+						if pending[i].callID == "" {
+							pending[i].callID = ev.Item.CallID
+						}
+						found = true
+						break
+					}
+				}
+				if !found {
+					pending = append(pending, pendingCall{
+						itemID: ev.Item.ID,
+						callID: ev.Item.CallID,
+						name:   ev.Item.Name,
+						args:   ev.Item.Arguments,
+					})
+				}
 			}
 
 		case "response.completed":
@@ -166,6 +226,31 @@ func parseSSEStream(resp *http.Response) (*agentTypes.Output, error) {
 
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("scanner: %w", err)
+	}
+
+	for _, p := range pending {
+		args := p.args
+		if args == "" {
+			if b, ok := argsBuf[p.itemID]; ok {
+				args = b.String()
+			}
+		}
+		if args == "" && len(argsBuf) == 1 {
+			for _, b := range argsBuf {
+				args = b.String()
+			}
+		}
+		toolCalls = append(toolCalls, agentTypes.ToolCall{
+			ID:   p.callID,
+			Type: "function",
+			Function: struct {
+				Name      string `json:"name"`
+				Arguments string `json:"arguments"`
+			}{
+				Name:      p.name,
+				Arguments: args,
+			},
+		})
 	}
 
 	msg := agentTypes.Message{Role: "assistant"}

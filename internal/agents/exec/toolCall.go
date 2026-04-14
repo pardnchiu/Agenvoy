@@ -93,7 +93,34 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			}
 		}
 
-		if earlyErr := validateToolArgs(toolName, toolArg); earlyErr != "" {
+		if exec.StubTools[toolName] {
+			activateArgs, _ := json.Marshal(map[string]any{"query": "select:" + toolName})
+			_, _ = toolRegister.Dispatch(ctx, exec, "search_tools", activateArgs)
+			delete(exec.StubTools, toolName)
+
+			msg := fmt.Sprintf("[%s] tool schema just loaded. Re-invoke %s with the correct arguments — the previous call was made against a stub with empty params.", toolName, toolName)
+			events <- agentTypes.Event{
+				Type:     agentTypes.EventToolCallText,
+				ToolName: toolName,
+				ToolID:   toolID,
+				Text:     msg,
+			}
+			events <- agentTypes.Event{
+				Type:     agentTypes.EventToolCallEnd,
+				ToolName: toolName,
+				ToolID:   toolID,
+			}
+			toolMsg := agentTypes.Message{
+				Role:       "tool",
+				Content:    msg,
+				ToolCallID: toolID,
+			}
+			sessionData.Tools = append(sessionData.Tools, toolMsg)
+			sessionData.ToolHistories = append(sessionData.ToolHistories, toolMsg)
+			continue
+		}
+
+		if earlyErr := validateToolArgs(exec, toolName, toolArg); earlyErr != "" {
 			events <- agentTypes.Event{
 				Type:     agentTypes.EventExecError,
 				ToolName: toolName,
@@ -189,32 +216,65 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 	return sessionData, alreadyCall, nil
 }
 
-func validateToolArgs(toolName, args string) string {
-	args = strings.TrimSpace(args)
-	isEmpty := args == "" || args == "{}" || args == "null"
-
-	type req struct {
-		field   string
-		example string
-	}
-	rules := map[string]req{
-		"run_command":   {"command", `{"command": "git diff --cached"}`},
-		"read_file":     {"path", `{"path": "/path/to/file"}`},
-		"write_file":    {"path", `{"path": "/path/to/file", "content": "..."}`},
-		"patch_edit":    {"path", `{"path": "/path/to/file", "old_string": "...", "new_string": "..."}`},
-		"fetch_page":    {"url", `{"url": "https://..."}`},
-		"download_page": {"url", `{"url": "https://..."}`},
-		"search_web":    {"query", `{"query": "search terms"}`},
-	}
-
-	r, known := rules[toolName]
-	if !known {
+func validateToolArgs(exec *toolTypes.Executor, toolName, args string) string {
+	if exec == nil {
 		return ""
 	}
-	if isEmpty || !strings.Contains(args, `"`+r.field+`"`) {
-		return fmt.Sprintf("missing required field '%s'. Call %s with: %s", r.field, toolName, r.example)
+	required := requiredFields(exec, toolName)
+	if len(required) == 0 {
+		return ""
 	}
-	return ""
+
+	args = strings.TrimSpace(args)
+	var parsed map[string]any
+	if args != "" && args != "null" {
+		if err := json.Unmarshal([]byte(args), &parsed); err != nil {
+			return fmt.Sprintf("invalid JSON for %s: %s. Re-send arguments as a JSON object with required fields: %s",
+				toolName, err.Error(), strings.Join(required, ", "))
+		}
+	}
+
+	var missing []string
+	for _, f := range required {
+		v, ok := parsed[f]
+		if !ok {
+			missing = append(missing, f)
+			continue
+		}
+		if s, isStr := v.(string); isStr && strings.TrimSpace(s) == "" {
+			missing = append(missing, f)
+		}
+	}
+	if len(missing) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("missing required field(s) %s for %s. All required fields: %s",
+		strings.Join(missing, ", "), toolName, strings.Join(required, ", "))
+}
+
+func requiredFields(exec *toolTypes.Executor, toolName string) []string {
+	lookup := func(list []toolTypes.Tool) []string {
+		for _, t := range list {
+			if t.Function.Name != toolName {
+				continue
+			}
+			if len(t.Function.Parameters) == 0 {
+				return nil
+			}
+			var schema struct {
+				Required []string `json:"required"`
+			}
+			if err := json.Unmarshal(t.Function.Parameters, &schema); err != nil {
+				return nil
+			}
+			return schema.Required
+		}
+		return nil
+	}
+	if r := lookup(exec.AllTools); len(r) > 0 {
+		return r
+	}
+	return lookup(exec.Tools)
 }
 
 func injectImageToUserInput(session *agentTypes.AgentSession, dataURL string) {
