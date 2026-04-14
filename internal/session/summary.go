@@ -2,6 +2,7 @@ package session
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -84,7 +85,7 @@ func GetSummaryPrompt(sessionID string, cutoff time.Time) string {
 
 	return strings.NewReplacer(
 		"{{.Summary}}", string(raw),
-	).Replace(strings.TrimSpace(configs.SummaryPrompt))
+	).Replace(strings.TrimSpace(configs.SummaryContext))
 }
 
 func IsNeedSummary() []string {

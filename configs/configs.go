@@ -18,6 +18,9 @@ var SkillExecution string
 //go:embed prompts/summary_prompt.md
 var SummaryPrompt string
 
+//go:embed prompts/summary_context.md
+var SummaryContext string
+
 //go:embed prompts/summary_merge_prompt.md
 var SummaryMergePrompt string
 

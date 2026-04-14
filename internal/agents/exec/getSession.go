@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
-	"regexp"
 	_ "image/gif"
 	"image/jpeg"
 	_ "image/png"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 

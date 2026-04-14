@@ -85,6 +85,12 @@ func generatePass(ctx context.Context, agent agentTypes.Agent, oldSummary string
 		}
 		messages = append(messages, agentTypes.Message{Role: h.Role, Content: s})
 	}
+	if n := len(messages); n > 0 && messages[n-1].Role == "assistant" {
+		messages = append(messages, agentTypes.Message{
+			Role:    "user",
+			Content: "Generate the updated summary now per the rules above. Output raw JSON only.",
+		})
+	}
 
 	return sendAndParse(ctx, agent, messages, "generatePass")
 }
@@ -97,6 +103,7 @@ func mergePass(ctx context.Context, agent agentTypes.Agent, oldSummary, newSumma
 
 	messages := []agentTypes.Message{
 		{Role: "system", Content: prompt},
+		{Role: "user", Content: "Merge the two summaries now per the rules above. Output raw JSON only."},
 	}
 
 	return sendAndParse(ctx, agent, messages, "mergePass")
