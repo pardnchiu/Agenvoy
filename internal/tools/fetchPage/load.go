@@ -84,7 +84,7 @@ func Load(href string, keepLinks bool) (string, error) {
 	hash := sha256.Sum256([]byte(href + cacheVariant))
 	cacheKey := "page:" + hex.EncodeToString(hash[:])
 
-	db := store.DB(store.DBFetchPage)
+	db := store.DB(store.DBToolCache)
 	if entry, ok := db.Get(cacheKey); ok {
 		return formatForAgent(truncate(entry.Value)), nil
 	}

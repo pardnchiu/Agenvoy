@@ -20,13 +20,9 @@ const (
 type Entry = toriidb.Entry
 
 const (
-	DBSearchWeb    = 0 // Web search
-	DBGoogleRSS    = 1 // Google RSS
-	DBFetchPage    = 2 // Fetch page
-	DBFetchSkip4xx = 3 // Fetch page 4xx
-	DBFetchSkip5xx = 4 // Fetch page 5xx
-	DBSessionHist  = 5 // Session conversation
-	DBErrorMemory  = 6 // Tool error
+	DBToolCache   = 0 // All tool cache
+	DBSessionHist = 1 // Session conversation
+	DBErrorMemory = 2 // Tool error
 )
 
 var (

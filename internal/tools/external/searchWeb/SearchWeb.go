@@ -61,7 +61,7 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (*SearchOutp
 	hash := sha256.Sum256([]byte(query + "|" + string(timeRange)))
 	cacheKey := "search:" + hex.EncodeToString(hash[:])
 
-	db := store.DB(store.DBSearchWeb)
+	db := store.DB(store.DBToolCache)
 	if entry, ok := db.Get(cacheKey); ok {
 		var results []ResultData
 		if err := json.Unmarshal([]byte(entry.Value), &results); err == nil {

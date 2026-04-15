@@ -4,10 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sync"
 
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+)
+
+var (
+	timeIntervals = []string{
+		"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo",
+	}
+	timeRanges = []string{
+		"1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max",
+	}
 )
 
 func init() {
@@ -27,16 +35,18 @@ func init() {
 					"type":        "string",
 					"description": "K 線週期，預設 1m",
 					"default":     "1m",
-					"enum":        []string{"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo"},
+					"enum":        timeIntervals,
 				},
 				"range": map[string]any{
 					"type":        "string",
 					"description": "查詢時間範圍，預設 1d",
 					"default":     "1d",
-					"enum":        []string{"1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"},
+					"enum":        timeRanges,
 				},
 			},
-			"required": []string{"symbol"},
+			"required": []string{
+				"symbol",
+			},
 		},
 		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -54,48 +64,7 @@ func init() {
 			if params.Symbol == "" {
 				return "", fmt.Errorf("symbol is required")
 			}
-			if params.Interval == "" {
-				params.Interval = "1m"
-			}
-			if params.Range == "" {
-				params.Range = "1d"
-			}
-
-			type result struct {
-				val string
-				err error
-			}
-
-			ch := make(chan result, 2)
-
-			for _, host := range []string{"query1.finance.yahoo.com", "query2.finance.yahoo.com"} {
-				go func(h string) {
-					val, err := fetch(ctx, h, params.Symbol, params.Interval, params.Range)
-					ch <- result{val, err}
-				}(host)
-			}
-
-			winCh := make(chan result, 1)
-			go func() {
-				var once sync.Once
-				var lastErr error
-				for i := 0; i < 2; i++ {
-					r := <-ch
-					if r.err == nil {
-						once.Do(func() { winCh <- r })
-					} else {
-						lastErr = r.err
-					}
-				}
-				once.Do(func() { winCh <- result{err: lastErr} })
-			}()
-
-			select {
-			case <-ctx.Done():
-				return "", ctx.Err()
-			case r := <-winCh:
-				return r.val, r.err
-			}
+			return Fetch(ctx, params.Symbol, params.Interval, params.Range)
 		},
 	})
 }

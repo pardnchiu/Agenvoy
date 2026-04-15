@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"slices"
 	"strings"
@@ -20,10 +21,6 @@ const (
 	path = "https://news.google.com/rss/search"
 	ttl  = 300
 )
-
-var timeRanges = []string{
-	"1h", "3h", "6h", "12h", "24h", "7d",
-}
 
 type data struct {
 	Channel struct {
@@ -67,8 +64,7 @@ func Fetch(ctx context.Context, keyword, timeRange, language string) (string, er
 
 	hash := sha256.Sum256([]byte(keyword + "|" + timeRange + "|" + language))
 	cacheKey := "rss:" + hex.EncodeToString(hash[:])
-
-	db := store.DB(store.DBGoogleRSS)
+	db := store.DB(store.DBToolCache)
 	if entry, ok := db.Get(cacheKey); ok {
 		return entry.Value, nil
 	}
@@ -78,7 +74,7 @@ func Fetch(ctx context.Context, keyword, timeRange, language string) (string, er
 
 	items, err := fetch(ctx, requsetPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch: %w", err)
+		return "", fmt.Errorf("failed to fetch google rss: %w", err)
 	}
 
 	if err = db.Set(cacheKey, items, store.SetDefault, store.TTL(ttl)); err != nil {
@@ -90,11 +86,16 @@ func Fetch(ctx context.Context, keyword, timeRange, language string) (string, er
 }
 
 func fetch(ctx context.Context, path string) (string, error) {
-	data, _, err := go_utils_http.GET[data](ctx, nil, path, map[string]string{
+	data, status, err := go_utils_http.GET[data](ctx, nil, path, map[string]string{
 		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 		"Accept":     "application/xml",
 	})
-
+	if err != nil {
+		return "", err
+	}
+	if status != http.StatusOK {
+		return "", fmt.Errorf("status %d", status)
+	}
 	if len(data.Channel.Items) == 0 {
 		return "", fmt.Errorf("no result")
 	}
@@ -104,12 +105,11 @@ func fetch(ctx context.Context, path string) (string, error) {
 		items = items[:10]
 	}
 
-	out, err := json.Marshal(items)
+	bytes, err := json.Marshal(items)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal: %w", err)
+		return "", err
 	}
-
-	return string(out), nil
+	return string(bytes), nil
 }
 
 func deduplicate(items []item) []item {

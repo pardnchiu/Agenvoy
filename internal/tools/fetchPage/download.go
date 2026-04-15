@@ -45,7 +45,7 @@ func Download(href, saveTo string) (string, error) {
 	hash := sha256.Sum256([]byte(href + "|download"))
 	cacheKey := "page:" + hex.EncodeToString(hash[:])
 
-	db := store.DB(store.DBFetchPage)
+	db := store.DB(store.DBToolCache)
 	var content string
 	if entry, ok := db.Get(cacheKey); ok {
 		content = entry.Value

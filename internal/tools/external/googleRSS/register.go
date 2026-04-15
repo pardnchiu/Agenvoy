@@ -9,6 +9,10 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
+var timeRanges = []string{
+	"1h", "3h", "6h", "12h", "24h", "7d",
+}
+
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "fetch_google_rss",
@@ -24,7 +28,7 @@ func init() {
 				"time_range": map[string]any{
 					"type":        "string",
 					"description": "時間範圍，可選值：1h / 3h / 6h / 12h / 24h / 7d",
-					"enum":        []string{"1h", "3h", "6h", "12h", "24h", "7d"},
+					"enum":        timeRanges,
 				},
 				"language": map[string]any{
 					"type":        "string",

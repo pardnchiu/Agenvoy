@@ -8,32 +8,32 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 )
 
-func skipKey(href string) string {
+func skipKey(prefix, href string) string {
 	hash := sha256.Sum256([]byte(href))
-	return "skip:" + hex.EncodeToString(hash[:])
+	return prefix + hex.EncodeToString(hash[:])
 }
 
 func isSkipped(href string) bool {
-	key := skipKey(href)
-	if _, ok := store.DB(store.DBFetchSkip4xx).Get(key); ok {
+	db := store.DB(store.DBToolCache)
+	if _, ok := db.Get(skipKey("skip4xx:", href)); ok {
 		return true
 	}
-	if _, ok := store.DB(store.DBFetchSkip5xx).Get(key); ok {
+	if _, ok := db.Get(skipKey("skip5xx:", href)); ok {
 		return true
 	}
 	return false
 }
 
 func addToSkippedMap(href string, status int) {
-	key := skipKey(href)
+	db := store.DB(store.DBToolCache)
 	if status >= 500 {
-		if err := store.DB(store.DBFetchSkip5xx).Set(key, "1", store.SetDefault, store.TTL(int64(skippedExpired.Seconds()))); err != nil {
+		if err := db.Set(skipKey("skip5xx:", href), "1", store.SetDefault, store.TTL(int64(skippedExpired.Seconds()))); err != nil {
 			slog.Warn("store.DB.Set",
 				slog.String("error", err.Error()))
 		}
 		return
 	}
-	if err := store.DB(store.DBFetchSkip4xx).Set(key, "1", store.SetDefault, nil); err != nil {
+	if err := db.Set(skipKey("skip4xx:", href), "1", store.SetDefault, nil); err != nil {
 		slog.Warn("store.DB.Set",
 			slog.String("error", err.Error()))
 	}
