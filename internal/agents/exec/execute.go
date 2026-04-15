@@ -2,7 +2,9 @@ package exec
 
 import (
 	"context"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -69,6 +71,25 @@ var MaxEmptyResponses = func() int {
 	return 8
 }()
 
+var MaxRetry = func() int {
+	if v := os.Getenv("MAX_SAME_PAYLOAD_RETRY"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 3
+}()
+
+func hashPayload(parts ...any) string {
+	h := sha256.New()
+	for _, p := range parts {
+		b, _ := json.Marshal(p)
+		h.Write(b)
+		h.Write([]byte{0})
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 type ExecData struct {
 	Agent             agentTypes.Agent
 	WorkDir           string
@@ -118,8 +139,11 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
+	toolFailCount := make(map[string]int)
 	emptyCount := 0
 	trimmedToolCalls := false
+	var lastSendSig string
+	sendFailCount := 0
 	for i := 0; i < limit; i++ {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -133,15 +157,28 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
+			sig := hashPayload(assembled, exec.Tools)
+			if sig == lastSendSig {
+				sendFailCount++
+			} else {
+				sendFailCount = 1
+				lastSendSig = sig
+			}
 			if isContextLengthError(err) {
 				trimmedToolCalls = trimmedToolCalls || trimOnContextExceeded(&session.OldHistories, &session.ToolHistories)
 				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange")
 			} else {
 				slog.Warn("data.Agent.Send",
-					slog.String("error", err.Error()))
+					slog.String("error", err.Error()),
+					slog.Int("sameSigCount", sendFailCount))
+			}
+			if sendFailCount >= MaxRetry {
+				return fmt.Errorf("data.Agent.Send failed %d times with identical payload: %w", sendFailCount, err)
 			}
 			continue
 		}
+		lastSendSig = ""
+		sendFailCount = 0
 
 		usage.Input += resp.Usage.Input
 		usage.Output += resp.Usage.Output
@@ -158,7 +195,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 		choice := resp.Choices[0]
 		if len(choice.Message.ToolCalls) > 0 {
-			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall)
+			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, toolFailCount)
 			if err != nil {
 				return err
 			}

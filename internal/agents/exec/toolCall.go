@@ -14,7 +14,7 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string) (*agentTypes.AgentSession, map[string]string, error) {
+func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, toolFailCount map[string]int) (*agentTypes.AgentSession, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 
 	hasExternalAgent := false
@@ -146,12 +146,17 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 				ToolID:   toolID,
 				Text:     err.Error(),
 			}
-			if hint := file.SearchErrorMemory(toolName, err.Error(), 3); hint != "" {
-				result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nrelated_errors: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", toolName, err.Error(), hint, toolName)
+			toolFailCount[hash]++
+			if toolFailCount[hash] >= MaxRetry {
+				result = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次失敗: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", toolName, toolFailCount[hash], err.Error(), toolName)
 			} else {
-				result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", toolName, err.Error(), toolName)
+				if hint := file.SearchErrorMemory(toolName, err.Error(), 3); hint != "" {
+					result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nrelated_errors: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", toolName, err.Error(), hint, toolName)
+				} else {
+					result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", toolName, err.Error(), toolName)
+				}
+				delete(alreadyCall, hash)
 			}
-			delete(alreadyCall, hash)
 		} else if result == "" || result == "no data" {
 			if hint := file.SearchErrorMemory(toolName, "no data", 3); hint != "" {
 				result = hint
