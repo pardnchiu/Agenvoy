@@ -17,21 +17,21 @@ import (
 )
 
 const (
-	apiPath         = "https://news.google.com/rss/search"
-	cacheTTLSeconds = 300
+	path = "https://news.google.com/rss/search"
+	ttl  = 300
 )
 
 var timeRanges = []string{
 	"1h", "3h", "6h", "12h", "24h", "7d",
 }
 
-type responseData struct {
+type data struct {
 	Channel struct {
-		Items []responseItemData `xml:"item"`
+		Items []item `xml:"item"`
 	} `xml:"channel"`
 }
 
-type responseItemData struct {
+type item struct {
 	Title       string `xml:"title"       json:"title"`
 	Link        string `xml:"link"        json:"link"`
 	Description string `xml:"description" json:"description"`
@@ -42,33 +42,24 @@ type responseItemData struct {
 	} `xml:"source" json:"source"`
 }
 
-func Fetch(keyword, timeRange, language string) (string, error) {
-	if keyword == "" {
-		return "", fmt.Errorf("keyword is required")
-	}
-
-	if timeRange == "" {
+func Fetch(ctx context.Context, keyword, timeRange, language string) (string, error) {
+	if timeRange == "" || !slices.Contains(timeRanges, timeRange) {
 		timeRange = "7d"
 	}
 
-	if language == "" {
-		language = "TW:zh-Hant"
-	}
-
-	if !slices.Contains(timeRanges, timeRange) {
-		return "", fmt.Errorf("invalid interval: %s", timeRange)
-	}
-
+	var geo, lang string
 	parts := strings.SplitN(language, ":", 2)
-	if len(parts) != 2 {
-		return "", fmt.Errorf("invalid lang format: %s", language)
+	if language == "" || len(parts) != 2 {
+		language = "TW:zh-Hant"
+		geo, lang = "TW", "zh-Hant"
+	} else {
+		geo, lang = parts[0], parts[1]
 	}
-	geo, lang := parts[0], parts[1]
 
-	q := fmt.Sprintf("%s when:%s", keyword, timeRange)
+	query := fmt.Sprintf("%s when:%s", keyword, timeRange)
 	requsetPath := fmt.Sprintf("%s?q=%s&hl=%s&gl=%s&ceid=%s",
-		apiPath,
-		url.QueryEscape(q),
+		path,
+		url.QueryEscape(query),
 		url.QueryEscape(lang),
 		url.QueryEscape(geo),
 		url.QueryEscape(language),
@@ -82,7 +73,7 @@ func Fetch(keyword, timeRange, language string) (string, error) {
 		return entry.Value, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	items, err := fetch(ctx, requsetPath)
@@ -90,8 +81,8 @@ func Fetch(keyword, timeRange, language string) (string, error) {
 		return "", fmt.Errorf("failed to fetch: %w", err)
 	}
 
-	if err = db.Set(cacheKey, items, store.SetDefault, store.TTL(cacheTTLSeconds)); err != nil {
-		slog.Warn("store.Set rss cache",
+	if err = db.Set(cacheKey, items, store.SetDefault, store.TTL(ttl)); err != nil {
+		slog.Warn("db.Set",
 			slog.String("error", err.Error()))
 	}
 
@@ -99,7 +90,7 @@ func Fetch(keyword, timeRange, language string) (string, error) {
 }
 
 func fetch(ctx context.Context, path string) (string, error) {
-	data, _, err := go_utils_http.GET[responseData](ctx, nil, path, map[string]string{
+	data, _, err := go_utils_http.GET[data](ctx, nil, path, map[string]string{
 		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 		"Accept":     "application/xml",
 	})
@@ -108,7 +99,6 @@ func fetch(ctx context.Context, path string) (string, error) {
 		return "", fmt.Errorf("no result")
 	}
 
-	// * remove duplicates and cap at 10
 	items := deduplicate(data.Channel.Items)
 	if len(items) > 10 {
 		items = items[:10]
@@ -122,9 +112,9 @@ func fetch(ctx context.Context, path string) (string, error) {
 	return string(out), nil
 }
 
-func deduplicate(items []responseItemData) []responseItemData {
+func deduplicate(items []item) []item {
 	done := make(map[uint64]bool)
-	newItems := make([]responseItemData, 0, len(items))
+	newItems := make([]item, 0, len(items))
 
 	for _, item := range items {
 		key := hash(item.Title, item.Source.Name)

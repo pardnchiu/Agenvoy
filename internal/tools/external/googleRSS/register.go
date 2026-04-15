@@ -19,32 +19,36 @@ func init() {
 			"properties": map[string]any{
 				"keyword": map[string]any{
 					"type":        "string",
-					"description": "搜尋關鍵字（支援 Google 搜尋語法，如 'nvidia OR AMD'）",
+					"description": "搜尋關鍵字",
 				},
-				"time": map[string]any{
+				"time_range": map[string]any{
 					"type":        "string",
 					"description": "時間範圍，可選值：1h / 3h / 6h / 12h / 24h / 7d",
 					"enum":        []string{"1h", "3h", "6h", "12h", "24h", "7d"},
 				},
-				"lang": map[string]any{
+				"language": map[string]any{
 					"type":        "string",
 					"description": "語言與地區設定，格式 '{country}:{lang}'，預設 'TW:zh-Hant'",
 					"default":     "TW:zh-Hant",
 				},
 			},
-			"required": []string{"keyword", "time"},
+			"required": []string{
+				"keyword",
+				"time_range",
+			},
 		},
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
-				Keyword string `json:"keyword"`
-				Query   string `json:"query"`
-				Q       string `json:"q"`
-				Time    string `json:"time"`
-				Lang    string `json:"lang"`
+				Keyword   string `json:"keyword"`
+				Query     string `json:"query"`
+				Q         string `json:"q"`
+				TimeRange string `json:"time_range"`
+				Language  string `json:"language"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
+
 			if params.Keyword == "" {
 				params.Keyword = params.Query
 			}
@@ -54,7 +58,7 @@ func init() {
 			if params.Keyword == "" {
 				return "", fmt.Errorf("keyword is required")
 			}
-			return Fetch(params.Keyword, params.Time, params.Lang)
+			return Fetch(ctx, params.Keyword, params.TimeRange, params.Language)
 		},
 	})
 }
