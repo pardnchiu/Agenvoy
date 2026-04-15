@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/go-utils/filesystem/keychain"
-	"github.com/pardnchiu/agenvoy/internal/utils"
+	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
 const (
@@ -33,7 +33,7 @@ type DeviceCode struct {
 }
 
 func (c *Agent) Login(ctx context.Context) (*Token, error) {
-	code, _, err := utils.POST[DeviceCode](ctx, nil, deviceCodeAPI,
+	code, _, err := go_utils_http.POST[DeviceCode](ctx, nil, deviceCodeAPI,
 		map[string]string{},
 		map[string]any{
 			"client_id": clientID,
@@ -101,7 +101,7 @@ type GopilotAccessToken struct {
 }
 
 func (c *Agent) getAccessToken(ctx context.Context, client *http.Client, deviceCode string) (*Token, error) {
-	accessToken, _, err := utils.POST[GopilotAccessToken](ctx, client, oauthAccessTokenAPI,
+	accessToken, _, err := go_utils_http.POST[GopilotAccessToken](ctx, client, oauthAccessTokenAPI,
 		map[string]string{},
 		map[string]any{
 			"client_id":   clientID,

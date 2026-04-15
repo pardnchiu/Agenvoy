@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/utils"
+	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
 var (
@@ -36,12 +36,12 @@ func fetchDDG(ctx context.Context, query string, timeRange TimeRange) ([]ResultD
 		params["df"] = "y"
 	}
 
-	html, _, err := utils.POST[string](ctx, nil, "https://html.duckduckgo.com/html/", map[string]string{
+	html, _, err := go_utils_http.POST[string](ctx, nil, "https://html.duckduckgo.com/html/", map[string]string{
 		"User-Agent":      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 		"Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
 	}, params, "form")
 	if err != nil {
-		return nil, fmt.Errorf("utils.POST: %w", err)
+		return nil, fmt.Errorf("http.POST: %w", err)
 	}
 
 	results := parse(html)

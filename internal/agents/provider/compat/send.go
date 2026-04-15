@@ -8,7 +8,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
-	"github.com/pardnchiu/agenvoy/internal/utils"
+	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
 func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
@@ -35,17 +35,17 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		headers["Authorization"] = "Bearer " + a.apiKey
 	}
 
-	result, _, err := utils.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, headers, map[string]any{
+	result, _, err := go_utils_http.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, headers, map[string]any{
 		"model":       a.model,
 		"messages":    messages,
 		"temperature": 0.2,
 		"tools":       tools,
 	}, "json")
 	if err != nil {
-		return nil, fmt.Errorf("utils.POST: %w", err)
+		return nil, fmt.Errorf("http.POST: %w", err)
 	}
 	if result.Error != nil {
-		return nil, fmt.Errorf("utils.POST: %s", result.Error.Message)
+		return nil, fmt.Errorf("http.POST: %s", result.Error.Message)
 	}
 
 	return &result, nil

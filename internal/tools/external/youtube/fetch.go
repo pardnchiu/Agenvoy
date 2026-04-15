@@ -11,7 +11,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/go-utils/filesystem/keychain"
-	"github.com/pardnchiu/agenvoy/internal/utils"
+	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
 const (
@@ -52,7 +52,7 @@ func Fetch(ctx context.Context, videoURL, prompt string) (string, error) {
 
 	client := &http.Client{Timeout: 3 * time.Minute}
 
-	resp, _, err := utils.POST[geminiResponse](ctx, client, geminiAPI+"?key="+apiKey, nil, map[string]any{
+	resp, _, err := go_utils_http.POST[geminiResponse](ctx, client, geminiAPI+"?key="+apiKey, nil, map[string]any{
 		"contents": []any{
 			map[string]any{
 				"parts": []any{

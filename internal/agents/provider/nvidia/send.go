@@ -9,7 +9,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
-	"github.com/pardnchiu/agenvoy/internal/utils"
+	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
 const (
@@ -47,7 +47,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		merged = append([]agentTypes.Message{{Role: "system", Content: strings.Join(systemParts, "\n\n")}}, merged...)
 	}
 
-	result, _, err := utils.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, map[string]string{
+	result, _, err := go_utils_http.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, map[string]string{
 		"Authorization": "Bearer " + a.apiKey,
 		"Content-Type":  "application/json",
 	}, map[string]any{
@@ -57,10 +57,10 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		"tools":       tools,
 	}, "json")
 	if err != nil {
-		return nil, fmt.Errorf("utils.POST: %w", err)
+		return nil, fmt.Errorf("http.POST: %w", err)
 	}
 	if result.Error != nil {
-		return nil, fmt.Errorf("utils.POST: %s", result.Error.Message)
+		return nil, fmt.Errorf("http.POST: %s", result.Error.Message)
 	}
 
 	return &result, nil

@@ -11,7 +11,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
-	"github.com/pardnchiu/agenvoy/internal/utils"
+	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
 const (
@@ -44,16 +44,16 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	}
 
 	if strings.HasPrefix(a.model, "gpt-5.4") || strings.Contains(a.model, "-codex") {
-		result, _, err := utils.POST[copilotResponse.Output](ctx, a.httpClient, responsesAPI, headers, map[string]any{
+		result, _, err := go_utils_http.POST[copilotResponse.Output](ctx, a.httpClient, responsesAPI, headers, map[string]any{
 			"model": a.model,
 			"input": copilotResponse.ConvertInput(messages),
 			"tools": copilotResponse.ConvertTools(tools),
 		}, "json")
 		if err != nil {
-			return nil, fmt.Errorf("utils.POST: %w", err)
+			return nil, fmt.Errorf("http.POST: %w", err)
 		}
 		if result.Error != nil {
-			return nil, fmt.Errorf("utils.POST: %s", result.Error.Message)
+			return nil, fmt.Errorf("http.POST: %s", result.Error.Message)
 		}
 		out := copilotResponse.ConvertOutput(result)
 		return &out, nil
@@ -71,12 +71,12 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		body["reasoning_effort"] = provider.GetReasoningLevel()
 	}
 
-	result, _, err := utils.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, headers, body, "json")
+	result, _, err := go_utils_http.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, headers, body, "json")
 	if err != nil {
-		return nil, fmt.Errorf("utils.POST: %w", err)
+		return nil, fmt.Errorf("http.POST: %w", err)
 	}
 	if result.Error != nil {
-		return nil, fmt.Errorf("utils.POST: %s", result.Error.Message)
+		return nil, fmt.Errorf("http.POST: %s", result.Error.Message)
 	}
 
 	return &result, nil

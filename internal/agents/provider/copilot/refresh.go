@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/utils"
+	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
 const (
@@ -26,13 +26,13 @@ func (c *Agent) checkExpires(ctx context.Context) error {
 }
 
 func (c *Agent) refresh(ctx context.Context) error {
-	token, code, err := utils.GET[RefreshToken](ctx, nil, copilotTokenAPI, map[string]string{
+	token, code, err := go_utils_http.GET[RefreshToken](ctx, nil, copilotTokenAPI, map[string]string{
 		"Authorization":  "token " + c.Token.AccessToken,
 		"Accept":         "application/json",
 		"Editor-Version": "vscode/1.95.0",
 	})
 	if err != nil {
-		return fmt.Errorf("utils.GET: %w", err)
+		return fmt.Errorf("http.GET: %w", err)
 	}
 	if code == http.StatusUnauthorized {
 		ctx2, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
@@ -45,10 +45,10 @@ func (c *Agent) refresh(ctx context.Context) error {
 		return c.refresh(ctx)
 	}
 	if code == http.StatusForbidden || code == http.StatusNotFound {
-		return fmt.Errorf("utils.GET: token refresh failed")
+		return fmt.Errorf("http.GET: token refresh failed")
 	}
 	if code != http.StatusOK {
-		return fmt.Errorf("utils.GET: %d", code)
+		return fmt.Errorf("http.GET: %d", code)
 	}
 
 	c.Refresh = &token
