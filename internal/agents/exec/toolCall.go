@@ -127,9 +127,16 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 				ToolID:   toolID,
 				Text:     earlyErr,
 			}
+			toolFailCount[hash]++
+			var content string
+			if toolFailCount[hash] >= MaxRetry {
+				content = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次以相同參數觸發 validator 錯誤: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", toolName, toolFailCount[hash], earlyErr, toolName)
+			} else {
+				content = fmt.Sprintf("tool=%s dropped (incomplete args: %s). Do NOT re-issue the same call; if still needed, pivot to a different tool or provide the missing fields from context in a differently-shaped call.", toolName, earlyErr)
+			}
 			toolMsg := agentTypes.Message{
 				Role:       "tool",
-				Content:    fmt.Sprintf("tool=%s dropped (incomplete args: %s). Do NOT re-issue the same call; if still needed, pivot to a different tool or provide the missing fields from context in a differently-shaped call.", toolName, earlyErr),
+				Content:    content,
 				ToolCallID: toolID,
 			}
 			sessionData.Tools = append(sessionData.Tools, toolMsg)

@@ -44,11 +44,31 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	}
 
 	if strings.HasPrefix(a.model, "gpt-5.4") || strings.Contains(a.model, "-codex") {
-		result, _, err := go_utils_http.POST[copilotResponse.Output](ctx, a.httpClient, responsesAPI, headers, map[string]any{
-			"model": a.model,
-			"input": copilotResponse.ConvertInput(messages),
-			"tools": copilotResponse.ConvertTools(tools),
-		}, "json")
+		var instructions string
+		nonSystem := make([]agentTypes.Message, 0, len(messages))
+		for _, m := range messages {
+			if m.Role == "system" {
+				if s, ok := m.Content.(string); ok {
+					if instructions != "" {
+						instructions += "\n"
+					}
+					instructions += s
+				}
+				continue
+			}
+			nonSystem = append(nonSystem, m)
+		}
+
+		body := map[string]any{
+			"model":               a.model,
+			"input":               copilotResponse.ConvertInput(nonSystem),
+			"tools":               copilotResponse.ConvertTools(tools),
+			"instructions":        instructions,
+			"store":               false,
+			"parallel_tool_calls": false,
+		}
+
+		result, _, err := go_utils_http.POST[copilotResponse.Output](ctx, a.httpClient, responsesAPI, headers, body, "json")
 		if err != nil {
 			return nil, fmt.Errorf("http.POST: %w", err)
 		}
