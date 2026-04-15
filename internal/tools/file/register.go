@@ -50,6 +50,7 @@ func init() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "remember_error",
+		ReadOnly:    true,
 		Description: "Record a tool error decision to persistent storage so future sessions can reference the root cause and resolution directly.",
 		Parameters: map[string]any{
 			"type": "object",
@@ -79,10 +80,11 @@ func init() {
 				},
 				"outcome": map[string]any{
 					"type":        "string",
-					"description": "Result of the action: resolved / failed / partial",
+					"enum":        []string{"resolved", "failed", "abandoned"},
+					"description": "resolved = fix worked; failed = specific strategy confirmed non-working (negative hint to avoid); abandoned = 3+ approaches tried, path given up",
 				},
 			},
-			"required": []string{"tool_name", "keywords", "symptom", "action"},
+			"required": []string{"tool_name", "keywords", "symptom", "action", "outcome"},
 		},
 		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {

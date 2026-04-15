@@ -129,7 +129,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			}
 			toolMsg := agentTypes.Message{
 				Role:       "tool",
-				Content:    fmt.Sprintf("[RETRY_REQUIRED] tool=%s: %s", toolName, earlyErr),
+				Content:    fmt.Sprintf("tool=%s dropped (incomplete args: %s). Do NOT re-issue the same call; if still needed, pivot to a different tool or provide the missing fields from context in a differently-shaped call.", toolName, earlyErr),
 				ToolCallID: toolID,
 			}
 			sessionData.Tools = append(sessionData.Tools, toolMsg)
