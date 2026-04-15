@@ -14,6 +14,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
+	goutilsrod "github.com/pardnchiu/go-utils/rod"
 )
 
 func Download(href, saveTo string) (string, error) {
@@ -54,12 +55,12 @@ func Download(href, saveTo string) (string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
 		defer cancel()
 
-		data, err := fetchAndParse(ctx, href, false)
+		data, err := fetch(ctx, href, false)
 		if err != nil {
 			status := 503
-			var fetchErr *FetchError
-			if errors.As(err, &fetchErr) {
-				status = fetchErr.Status
+			var fe *goutilsrod.FetchError
+			if errors.As(err, &fe) {
+				status = fe.Status
 			}
 			addToSkippedMap(href, status)
 			return skippedMessage(href), nil
@@ -70,7 +71,7 @@ func Download(href, saveTo string) (string, error) {
 			return skippedMessage(href), nil
 		}
 
-		content = data.Markdown
+		content = buildFrontmatter(data)
 		if err := db.Set(cacheKey, content, store.SetDefault, store.TTL(int64(cacheExpired.Seconds()))); err != nil {
 			slog.Warn("db.Set",
 				slog.String("error", err.Error()))
