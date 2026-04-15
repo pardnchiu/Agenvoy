@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
+	"github.com/pardnchiu/go-utils/filesystem/keychain"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 

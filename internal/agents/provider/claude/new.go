@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
+	"github.com/pardnchiu/go-utils/filesystem/keychain"
 )
 
 type Agent struct {

@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
+	"github.com/pardnchiu/go-utils/filesystem/keychain"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )

@@ -11,7 +11,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
+	"github.com/pardnchiu/go-utils/filesystem/keychain"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"golang.org/x/term"
 )

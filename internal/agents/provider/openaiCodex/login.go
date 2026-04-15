@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/keychain"
+	"github.com/pardnchiu/go-utils/filesystem/keychain"
 )
 
 func (a *Agent) Login(ctx context.Context) (*StoredToken, error) {

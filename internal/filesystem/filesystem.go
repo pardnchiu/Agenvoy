@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/pardnchiu/go-utils/filesystem/keychain"
 )
 
 var (
@@ -95,6 +97,8 @@ func Init() error {
 			return fmt.Errorf("os.MkdirAll: %w", err)
 		}
 	}
+
+	keychain.Init(projectName, AgenvoyDir)
 
 	return nil
 }
