@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,7 +18,11 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-const responsesAPI = "https://chatgpt.com/backend-api/codex/responses"
+const (
+	responsesAPI      = "https://chatgpt.com/backend-api/codex/responses"
+	promptCachePrefix = "agenvoy-"
+	promptCacheKeyLen = 24
+)
 
 func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
 	data := exec.ExecData{
@@ -62,6 +68,9 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		"stream":              true,
 		"parallel_tool_calls": false,
 	}
+	if key := promptCacheKey(instructions); key != "" {
+		body["prompt_cache_key"] = key
+	}
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
@@ -91,6 +100,14 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	}
 
 	return parseSSEStream(resp)
+}
+
+func promptCacheKey(instructions string) string {
+	if instructions == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(instructions))
+	return promptCachePrefix + hex.EncodeToString(sum[:])[:promptCacheKeyLen]
 }
 
 type sseEvent struct {
