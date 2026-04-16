@@ -51,17 +51,6 @@ Always apply the Exclusion Rule keywords (`flash`, `lite`, `nano`, `haiku`, `fla
 **Tier fallback order**: Recommended → Acceptable → Lightweight → Rejected (last resort only).
 If a task requires Recommended tier but none is available, fall through to Acceptable. Lightweight tier is ONLY valid for tasks explicitly marked "Lightweight" in P1 — it is NOT a fallback target for Recommended / Acceptable tasks. Rejected tier is reachable only when no agent exists in any other tier AND P0 was not triggered.
 
-### Codex Restriction
-Agents whose name contains `codex` must only be selected for **pure code generation** tasks (P1 row: Code generation, refactor, debug, code review, code completion).
-
-`codex` agents are explicitly excluded from:
-- Skill execution of any kind (`[執行 Skill]` prefix)
-- Git operations (commit, diff, log, status, branch)
-- Commit message generation
-- Any task that primarily calls shell commands or reads files
-
-For all other task types, `codex` agents must be treated as lowest priority — only selected if no other agent is available.
-
 ### Skill Model Tier Rule
 Skill execution (`[執行 Skill]` prefix) is always **Recommended tier only** — apply the global Tier Definition above. If no Recommended-tier agent exists under the preferred provider, fall through to the next provider in P1 order rather than dropping to Acceptable tier from the current provider.
 
@@ -70,15 +59,15 @@ Each task type specifies a required tier (see Tier Definition above). Apply the 
 
 | Task characteristic | Required tier | Provider preference (in order) |
 |---------------------|---------------|-------------------------------|
-| Skill execution (Skill already matched) | **Recommended** | claude > openai > gemini > copilot > nvidia |
-| Image analysis, visual understanding, chart interpretation | **Recommended** | claude > gemini > openai > copilot > nvidia |
-| Complex reasoning, deep analysis, long-form generation | **Recommended** | claude > gemini > openai > copilot > nvidia |
+| Skill execution (Skill already matched) | **Recommended** | claude > openai / codex > gemini > copilot > nvidia |
+| Image analysis, visual understanding, chart interpretation | **Recommended** | claude > gemini > openai / codex > copilot > nvidia |
+| Complex reasoning, deep analysis, long-form generation | **Recommended** | claude > gemini > openai / codex > copilot > nvidia |
 | Code generation, refactor, debug, code review, code completion | **Recommended** | claude(opus) > codex > claude(sonnet≥4.5) > gemini > openai > copilot > nvidia |
-| Multi-source search integration, cross-referencing | **Recommended** | claude > gemini > openai > copilot > nvidia |
-| File operations involving §9 pivot / error heal (patch_edit retries, multi-file verification, tool error recovery) | **Recommended** | claude > openai > gemini > copilot > nvidia |
-| Multi-step tool chain (3+ tool calls, forced routing scenarios) | **Recommended** | claude > openai > gemini > copilot > nvidia |
-| Pure data retrieval: weather, exchange rate, news headline | **Acceptable** | claude > gemini > openai > copilot > nvidia |
-| General Q&A, single-turn factual lookup, no distinctive task feature | **Acceptable** | claude > gemini > openai > copilot > nvidia |
+| Multi-source search integration, cross-referencing | **Recommended** | claude > gemini > openai / codex > copilot > nvidia |
+| File operations involving §9 pivot / error heal (patch_edit retries, multi-file verification, tool error recovery) | **Recommended** | claude > openai / codex > gemini > copilot > nvidia |
+| Multi-step tool chain (3+ tool calls, forced routing scenarios) | **Recommended** | claude > openai / codex > gemini > copilot > nvidia |
+| Pure data retrieval: weather, exchange rate, news headline | **Acceptable** | claude > gemini > openai / codex > copilot > nvidia |
+| General Q&A, single-turn factual lookup, no distinctive task feature | **Acceptable** | claude > gemini > openai / codex > copilot > nvidia |
 | Short translation (single sentence / paragraph, no context chain) | **Lightweight** | openai(mini) > copilot > nvidia > [fallback to Acceptable if no mini available] |
 | Smalltalk, greetings, brief acknowledgements (should rarely reach agent selection) | **Lightweight** | openai(mini) > copilot > nvidia > [fallback to Acceptable if no mini available] |
 

@@ -42,7 +42,7 @@ Examples:
 **內部審查 vs 外部驗證：**
 - `review_result`：依審查內容類型選擇內部優先序模型執行完整性審查；觸發條件：用戶要求「review」、「審查」、「有沒有遺漏」、「完整性確認」、「檢查結果」等，**不依賴外部 agent 宣告**
   - **Code result**（程式碼、重構、debug、code review 相關）：`claude-opus > codex gpt-5.x > openai gpt-5.x > gemini-3.x-pro > gemini-2.x-pro > claude-sonnet`
-  - **General result**（一般文檔、分析、報告等）：`claude-opus > openai gpt-5.x > gemini-3.x-pro > gemini-2.x-pro > claude-sonnet`；`codex` 標籤永遠排最後
+  - **General result**（一般文檔、分析、報告等）：`claude-opus > openai gpt-5.x / codex gpt-5.x > gemini-3.x-pro > gemini-2.x-pro > claude-sonnet`
 - `verify_with_external_agent`：將結果送交所有可用外部 agent 並行交叉確認；觸發條件：用戶**明確指定**「外部驗證」、「多方驗證」、「交叉驗證」、「多角度驗證」、「多源驗證」、「cross-check」、「second opinion」、「交叉比對」、「多重確認」，且 `{{.ExternalAgents}}` 已宣告；若無宣告則 fallback 到 `review_result`。「驗證結果」、「驗證後回傳」等不含外部／多方語意的用語一律路由到 `review_result`
 
 **Forced routing — must call the specified tool directly. Never output JSON text or an empty response:**

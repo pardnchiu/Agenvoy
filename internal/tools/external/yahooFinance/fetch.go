@@ -16,7 +16,13 @@ import (
 	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
-const cacheTTL = 60
+const (
+	ttl = 60
+)
+
+var (
+	paths = []string{"query1.finance.yahoo.com", "query2.finance.yahoo.com"}
+)
 
 func Fetch(ctx context.Context, symbol, timeInterval, timeRange string) (string, error) {
 	if timeInterval == "" || !slices.Contains(timeIntervals, timeInterval) {
@@ -41,7 +47,7 @@ func Fetch(ctx context.Context, symbol, timeInterval, timeRange string) (string,
 
 	ch := make(chan result, 2)
 
-	for _, host := range []string{"query1.finance.yahoo.com", "query2.finance.yahoo.com"} {
+	for _, host := range paths {
 		go func(h string) {
 			data, err := fetch(ctx, h, symbol, timeInterval, timeRange)
 			if err != nil {
@@ -73,7 +79,7 @@ func Fetch(ctx context.Context, symbol, timeInterval, timeRange string) (string,
 
 	case r := <-winCh:
 		if r.err == nil && r.data != "" {
-			if err := db.Set(cacheKey, r.data, store.SetDefault, store.TTL(cacheTTL)); err != nil {
+			if err := db.Set(cacheKey, r.data, store.SetDefault, store.TTL(ttl)); err != nil {
 				slog.Warn("db.Set",
 					slog.String("error", err.Error()))
 			}
@@ -89,9 +95,9 @@ func fetch(ctx context.Context, host, symbol, interval, rangeStr string) (string
 	q := url.Values{}
 	q.Set("interval", interval)
 	q.Set("range", rangeStr)
-	endpoint := fmt.Sprintf("https://%s/v8/finance/chart/%s?%s", host, url.PathEscape(symbol), q.Encode())
+	path := fmt.Sprintf("https://%s/v8/finance/chart/%s?%s", host, url.PathEscape(symbol), q.Encode())
 
-	data, status, err := go_utils_http.GET[any](ctx, nil, endpoint, map[string]string{
+	data, status, err := go_utils_http.GET[any](ctx, nil, path, map[string]string{
 		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 		"Accept":          "application/json",
 		"Accept-Language": "en-US,en;q=0.9",
