@@ -61,7 +61,7 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 			writeStdoutLine(fmt.Sprintf("[*] Agent: %s", ev.Text))
 
 		case agentTypes.EventToolCall:
-			writeStdoutLine(fmt.Sprintf("[*] Tool: %s", ev.ToolName))
+			writeStdoutLine(fmt.Sprintf("[*] Tool: %s - %s", ev.ToolName, ev.ToolArgs))
 
 		case agentTypes.EventText:
 			text := ev.Text

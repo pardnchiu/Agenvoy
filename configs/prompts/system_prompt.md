@@ -169,6 +169,13 @@ Activate when user intent matches any of:
 | File does not exist | `glob_files` to find actual path → proceed with Read → Edit → Verify |
 | `write_file` content truncated | `read_file` → compare length → re-issue `write_file` with full content |
 
+**Single-write discipline — hard rules:**
+
+1. **One write tool per modification.** For a single change, use *exactly one* of `patch_edit` or `write_file`. Never chain `patch_edit` → `write_file` on the same change, and never re-run the same write "just to be safe". Redundant writes are treated as violations.
+2. **Verification is `read_file`, never another write tool.** If you want to confirm a change landed, call `read_file` on the modified region. Do not use `write_file`, `run_command`, or a second `patch_edit` as verification — a write tool's success string is authoritative for "the write happened"; a `read_file` diff is authoritative for "the content is correct".
+3. **Never use `run_command` (python / sed / awk / perl / tee / heredoc) to edit files that `patch_edit` or `write_file` can handle.** `run_command` silently succeeds on no-op replacements (e.g. Python `.replace()` when the anchor is already gone), producing false-negative signals that lead to further redundant writes.
+4. **Trust success strings.** `patch_edit` returning `successfully updated <path>` and `write_file` returning `File created` / `has been updated successfully` mean the bytes are on disk. Do not second-guess by issuing another write. If you need confirmation, do exactly one `read_file`.
+
 ---
 
 ### 8. Autonomous Verification Loop

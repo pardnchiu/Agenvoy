@@ -16,9 +16,12 @@ import (
 
 	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
+	_ "github.com/pardnchiu/agenvoy/internal/agents/subagent"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 	"github.com/pardnchiu/agenvoy/internal/routes"
@@ -168,6 +171,8 @@ func runAgent(allowAll bool) {
 		selectorBot = registry.Fallback
 	}
 
+	host.Set(selectorBot, registry, scanner)
+
 	if err := runEvents(ctx, cancel, func(ch chan<- agentTypes.Event) error {
 		return exec.Run(ctx, selectorBot, registry, scanner, userInput, nil, nil, ch, allowAll)
 	}); err != nil && ctx.Err() == nil {
@@ -229,6 +234,8 @@ func runApp() {
 	if selectorBot == nil {
 		selectorBot = registry.Fallback
 	}
+
+	host.Set(selectorBot, registry, scanner)
 
 	if selectorBot != nil {
 		slog.Info("agent registry built",

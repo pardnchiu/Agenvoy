@@ -25,7 +25,10 @@ var (
 func isExclude(workDir, absPath string) bool {
 	relPath, err := filepath.Rel(workDir, absPath)
 	if err != nil {
-		relPath = absPath
+		return false
+	}
+	if relPath == ".." || strings.HasPrefix(relPath, ".."+string(filepath.Separator)) {
+		return false
 	}
 
 	isExcluded := false
