@@ -9,7 +9,6 @@
 - Go 1.25 or higher
 - At least one AI provider credential (GitHub Copilot subscription or any API key)
 - Discord Bot Token (Discord mode only)
-- Obsidian + Local REST API plugin (optional, required only for Obsidian vault memory)
 
 ### Sandbox Dependencies
 
@@ -108,33 +107,6 @@ cp .env.example .env
 ```
 
 > Files named with `.example` (e.g., `.env.example`) bypass the env prefix deny rule and are safe to read.
-
-### Enabling Obsidian Vault Memory (Optional)
-
-Connect to the Obsidian Local REST API to write session history, tool records, and error knowledge into your vault, and expose four tools (`memory_search` / `memory_search_tag` / `memory_tags` / `memory_list`) for cross-session recall.
-
-Prerequisites:
-
-- Obsidian desktop is running
-- **Local REST API** plugin is installed and enabled (default: `https://127.0.0.1:27124`)
-- API key is obtained from Obsidian → Settings → Local REST API
-
-Binding:
-
-```bash
-agen obsidian add        # interactive prompt for vault path and API key
-agen obsidian            # show current binding status
-agen obsidian disable    # disable and clear the binding
-```
-
-Once enabled, all memory entries live under an `AgenvoyMem/` subfolder inside the vault:
-
-```
-<vault>/AgenvoyMem/
-├── conversations/   # Conversation history and tool history
-├── knowledge/       # Resolved error patterns and knowledge fragments
-└── agenvoy.md       # System index (auto-managed)
-```
 
 ### API Extensions
 
@@ -284,7 +256,6 @@ From the project root:
 | `make skills` | `go run ./cmd/app/ list skill` | List available skills |
 | `make cli <input...>` | `go run ./cmd/app/ cli <input>` | Run agent with tool confirmation |
 | `make run <input...>` | `go run ./cmd/app/ run <input>` | Run agent with all tools auto-approved |
-| `make obsidian <args>` | `go run ./cmd/app/ obsidian <args>` | Manage Obsidian vault memory |
 
 ### Basic
 
@@ -346,7 +317,6 @@ agen planner
 | `list` | `agen list [skill]` | List configured models or available skills |
 | `cli` | `agen cli <input...>` | Execute agentic workflow with interactive confirmation |
 | `run` | `agen run <input...>` | Execute with all tool calls auto-approved |
-| `obsidian` | `agen obsidian [add\|disable]` | Manage Obsidian vault memory |
 
 ### TUI Keyboard Shortcuts
 
@@ -373,15 +343,11 @@ agen planner
 | `get_tool_error` | `hash` | Retrieve full error details for a failed tool call by hash |
 | `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | Persist tool error decisions to the error knowledge base |
 | `search_errors` | `keyword` | Retrieve error knowledge base entries |
-| `memory_search` | `keyword`, `category`, `limit` | Full-text keyword search across the Obsidian vault (requires Obsidian) |
-| `memory_search_tag` | `tag`, `limit` | Precise tag-based search via JsonLogic against frontmatter tags |
-| `memory_tags` | — | List all tags in the Obsidian vault with usage counts |
-| `memory_list` | `category` | List all memory entries, optionally filtered by category |
 | `fetch_yahoo_finance` | `symbol`, `interval`, `range` | Fetch Yahoo Finance stock quotes and OHLCV candlesticks; concurrent query1/query2 fetch, returns fastest |
 | `analyze_youtube` | `url` | YouTube video metadata (title, description, channel, duration, view count) |
 | `fetch_google_rss` | `keyword`, `time`, `lang` | Google News RSS feed with deduplication |
 | `send_http_request` | `method`, `url`, `headers`, `body` | Generic HTTP request |
-| `search_web` | `query`, `time_range` | Concurrent web search (Google + DuckDuckGo) |
+| `search_web` | `query`, `time_range` | DuckDuckGo lite-endpoint web search; `time_range` accepts `1d` / `7d` / `1m` / `1y` |
 | `fetch_page` | `url` | JS-rendered page content as Markdown (headless Chrome) |
 | `download_page` | `href`, `save_to` | JS-rendered page saved to a local file |
 | `run_command` | `command` | Execute whitelisted shell commands in sandbox (300s timeout) |
@@ -399,6 +365,7 @@ agen planner
 | `call_external_agent` | `agent`, `input` | Delegate the entire task to a named external agent (`copilot` / `claude` / `codex`) |
 | `verify_with_external_agent` | `input`, `result` | Parallel cross-validation: dispatch to all declared external agents and merge feedback; falls back to `review_result` when none are declared |
 | `review_result` | `input`, `result` | Internal completeness review using the highest-priority available model (claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet) |
+| `invoke_subagent` | `task`, `model?`, `system_prompt?`, `exclude_tools?` | In-process sub-agent delegation with an isolated temp session; `invoke_subagent` is force-excluded inside the child to prevent recursion |
 
 ## REST API
 

@@ -90,10 +90,6 @@ graph TB
 
 > `make build` · `agen` (unified CLI / TUI / Discord / REST API) · [Documentation](./doc/doc.md)
 
-### TUI Dashboard with Vim-Style Controls
-
-Consolidates CLI, Discord bot, and REST API into a single terminal interface with vim-style navigation keys and a `:` command input mode.
-
 ### Multi-Provider LLM with Intelligent Routing
 
 Seven backends (Copilot / OpenAI / Codex / Claude / Gemini / Nvidia / Compat) behind a unified `Agent` interface, with a planner LLM picking the right provider per task.
@@ -110,29 +106,13 @@ All commands run inside bubblewrap (Linux) or `sandbox-exec` (macOS), with path 
 
 Tool failures are SHA-256 indexed into a knowledge base that the agent recalls and reuses across sessions.
 
-### Obsidian Vault Memory Integration
+### In-Process Sub-Agent Delegation
 
-When connected to Obsidian Local REST API, `memory_search` / `memory_search_tag` / `memory_tags` / `memory_list` provide cross-session semantic and tag-based recall directly against the vault.
-
-### ToriiDB Storage Layer
-
-Session history, error memory, and `fetch_page` / `search_web` / `google_rss` caches are backed by ToriiDB, replacing scattered JSON file storage.
-
-### Chunked Multi-Pass Summarization
-
-Summary generation runs on an hourly cron with chunked multi-pass processing so long sessions never overflow the context window in a single call.
+`invoke_subagent` spawns an isolated sub-agent directly inside the host process — independent session, optional model / system-prompt / tool overrides, forced self-exclusion to prevent recursion, and no HTTP hop.
 
 ### Deferred Tool Loading via search_tools
 
 `search_tools` is always on — the agent injects tools on demand through fuzzy search, `select:<name>` direct activation, or `+term` required-match syntax, with no upfront schema load.
-
-### Prompt Caching Across All Providers
-
-Repeated system prompts and context segments are cached at the Claude, Gemini, and Copilot endpoints, cutting latency and token cost on subsequent calls within the same context.
-
-### External Agent Verification & Internal Review
-
-`review_result` runs a priority-ordered internal model for self-review, `verify_with_external_agent` dispatches the result to all declared external agents in parallel and merges feedback, and `call_external_agent` delegates an entire task to a named agent.
 
 ## Concepts
 
@@ -186,43 +166,11 @@ agenvoy/
 
 ## Version History
 
-- **v0.18.0** (unreleased) — Add vim-style TUI navigation keys and `:` command input mode. Migrate session history, error memory, and `fetch_page` / `search_web` / `google_rss` caches to the ToriiDB store. Replace per-request summary with an hourly cron running chunked multi-pass generation. Consolidate `cmd/cli` and `cmd/server` into a single `cmd/app` entry and rename the binary to `agen`. Add Obsidian Local REST API memory integration (`memory_search` / `memory_search_tag` / `memory_tags` / `memory_list`).
-- **v0.17.4** — Add OpenAI Codex as a standalone OAuth provider (Device Code Flow with auto-refresh, default model `gpt-5.3-codex`). Add `read_image` tool to read local image files as base64 data URLs — supports JPEG, PNG, GIF, WebP up to 10 MB, decoded and re-encoded as JPEG. Restore Yahoo Finance as a native Go tool (`fetch_yahoo_finance`) with concurrent dual-endpoint fetch (query1/query2) replacing the removed JSON API extensions. Fix summary generation reliability by completing the summary workflow before final completion signaling. Fix tool fallback handling for `search_history` and `fetch_google_rss` when models send `query` instead of `keyword`. Fix event logging crashes on tool errors without `Err`. Fix stale `discussion_log` retention by filtering entries older than the oldest active context. Fix nil-safe operations and fill missing CRUD coverage in scheduler task and cron flows.
-- **v0.17.3** — Add `search_tools` deferred tool loading — agents discover and activate tools on demand using keyword fuzzy search or `select:<name>` direct selection, reducing context overhead on large tool sets. Add `exclude_tools` parameter to `/v1/send` for per-request tool filtering. Add prompt caching across Claude, Gemini, and Copilot providers to reduce latency and token cost. Auto-prompt LLM to record error patterns after successful tool retry. Refactor scheduler into `crons/` / `tasks/` / `script/` sub-packages with file-based state persistence; replace network skill sync with embedded FS copy.
-- **v0.17.2** — Add `call_external_agent`, `verify_with_external_agent`, and `review_result` tools for external delegation and internal priority-model review. Refactor session message assembly into 4 fixed segments (SystemPrompts / OldHistories / UserInput / ToolHistories) with reactive context trimming on context-length errors. Add `model` field to `/v1/send` request to bypass automatic agent selection.
-- **v0.17.1** — Fix build break caused by importing the missing `externalAgent` package before it existed in the repository.
-- **v0.17.0** — Full REST API layer with `/v1/send` (SSE + non-SSE), `/v1/key`, `/v1/tools`, `/v1/tool/:name` endpoints. TUI dashboard complete with file browser, session viewer, and live log stream. Discord bot and REST API unified under `cmd/app`. Copilot token migrated to system keychain. Renamed `browser` package to `fetchPage`.
-
-<details>
-<summary>Earlier versions</summary>
-
-- **v0.16.1** — Bundled Threads and yt-dlp script tool extensions with cross-platform `install_threads.sh` / `install_youtube.sh`. Refactor `toolAdapter` into `api/` and `script/` sub-packages; move session management to `internal/session`; split filesystem into single-responsibility files. Fix Darwin sandbox keychain directory access.
-- **v0.16.0** — Script tool runtime (`scriptAdapter`): drop a `tool.json` + `script.js`/`script.py` into `~/.config/agenvoy/script_tools/` and it is auto-discovered as a `script_`-prefixed tool; stdin/stdout JSON protocol mirrors API tool contract. Copilot token auto-relogin on 401.
-- **v0.15.2** — Add YouTube metadata fetch tool (`analyze_youtube`); Discord Modal-based API key management; per-model token usage tracking via `usageManager`; configurable reasoning level across all providers; browser iteration limits configurable via `MAX_TOOL_ITERATIONS`, `MAX_SKILL_ITERATIONS`, `MAX_EMPTY_RESPONSES`.
-- **v0.15.1** — Fix Copilot Claude/Gemini image validation failure: all uploaded images are decoded and re-encoded as JPEG; summary regex split into three independent patterns; system prompts moved after history to improve model instruction adherence.
-- **v0.15.0** — Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint); session-level token-budget message trimming; sensitive path denial rules for macOS and Linux sandbox; Linux bwrap restores `--unshare-all` namespace isolation.
-- **v0.14.0** — OS-native sandbox isolation (bubblewrap on Linux, sandbox-exec on macOS); per-request token usage tracking accumulated across all tool-call iterations; symlink-safe path resolution in `GetAbsPath`.
-- **v0.13.0** — Self-registering tool Registry replacing switch-based routing; scheduler persistent JSON storage with full CRUD; keychain migrated under `filesystem`; absolute path restriction to user home directory.
-- **v0.12.0** — Full scheduler subsystem (cron + one-time tasks with Discord callbacks); centralize `filesystem` + `configs` packages; replace custom cron parser with `go-scheduler`.
-- **v0.11.2** — Fix bidirectional error-memory keyword matching; fix Claude multi-system-prompt merge; pre-tool text suppression rule in system prompt.
-- **v0.11.1** — Tool execution error tracking (hash-based `tool_errors/`); atomic writes (`utils.WriteFile`); Gemini multipart message fix; 8 new public API extensions.
-- **v0.11.0** — Declarative Extension architecture — built-in Go API tools migrated to JSON extensions; `SyncSkills` from GitHub; switch license to **Apache-2.0**.
-- **v0.10.2** — Fix `temperature` for OpenAI reasoning models; `no_temperature` model flag; `planner` CLI command; `makefile`.
-- **v0.10.1** — Provider model registry with embedded JSON configs; interactive model selection UI; uniform `temperature=0.2` across all providers.
-- **v0.10.0** — Discord bot mode with full slash command support; `download_page` browser tool; multi-layer sensitive path security (`denied.json`); HTML-to-Markdown converter.
-- **v0.9.0** — File injection (`--file`), image input (`--image`); `remember_error` / `search_errors` tools; web search SHA-256 cache (1-hour TTL); `remove` command; public API (`GetSession`, `SelectAgent`, `SelectSkill`).
-- **v0.8.0** — Rename to **Agenvoy** (AGPL-3.0); OS Keychain integration for secure API key storage; named `compat[{name}]` instances; GitHub Actions CI + unit tests.
-- **v0.7.2** — Split CLI entry into focused modules; `mergeSummary` deep-merge strategy; API example configs (exchange-rate, ip-api).
-- **v0.7.1** — Fix race conditions across all providers (instance-level `model` field); fix Context chain in `runCommand` / `moveToTrash`.
-- **v0.7.0** — LLM-driven automatic agent routing; OpenAI-compatible (`compat`) provider / Ollama support; `search_history` tool; file-locking for concurrent sessions; split monolithic `exec.go` into sub-package.
-- **v0.6.0** — Summary-based persistent memory; session history (`history.json`); tool action logging; centralized `utils.ConfigDir()`.
-- **v0.5.0** — Add `fetch_page` (headless Chrome + stealth JS), `search_web` (Brave + DDG concurrent), `calculate`; Context propagation through the full tool chain.
-- **v0.4.0** — Built-in API tools (weather, stock, news, HTTP); JSON-driven API adapter; `patch_edit` tool; skill auto-matching engine; `io.Writer` → Event Channel output model.
-- **v0.3.0** — Multi-agent backend support: OpenAI, Claude, Gemini, Nvidia; unified `Agent` interface; concurrent goroutine skill scanner.
-- **v0.2.0** — Add full filesystem toolchain (`list_files`, `glob_files`, `write_file`, `search_content`, `run_command`), command whitelist, interactive confirmation, `--allow` flag.
-- **v0.1.0** — Initial release — GitHub Copilot CLI with skill execution loop and automatic token refresh.
-
-</details>
+- **v0.19.0** (unreleased) — Add in-process sub-agent delegation (`invoke_subagent`) with isolated temp sessions, per-call model / system-prompt / tool overrides, and mandatory self-exclusion. Add three-pass concurrent tool-call dispatcher with a `Concurrent` registry flag, fan-out for `fetch_page` / `invoke_subagent` / `calculate`, and a batch-scoped stub-activation guard. Add same-payload retry circuit breaker for provider and tool calls; add `prompt_cache_key` to the Codex Responses API; switch `search_web` from `html.duckduckgo.com` to `lite.duckduckgo.com/lite/` with new anchor/snippet parsing; drop DDG-unsupported sub-day time ranges; harden `fetch_page` soft-404 detection via `err=404/403/410` query-param redirects; strengthen agent tier routing and memory-driven tool recovery.
+- **v0.18.0–v0.18.3** — Add vim-style TUI navigation keys and `:` command input mode. Migrate session history, error memory, and `fetch_page` / `search_web` / `google_rss` caches to the ToriiDB store. Replace per-request summary with an hourly cron running chunked multi-pass generation. Consolidate `cmd/cli` and `cmd/server` into a single `cmd/app` entry and rename the binary to `agen`. Add Obsidian Local REST API memory integration (`memory_search` / `memory_search_tag` / `memory_tags` / `memory_list`). Replace internal keychain / HTTP client / `fetchPage` internals with `go-utils` packages. Add stub-tool handling and schema-derived required-arg validation.
+- **v0.17.0–v0.17.4** — Ship the full REST API layer (`/v1/send` with SSE + non-SSE, `/v1/key`, `/v1/tools`, `/v1/tool/:name`), unify Discord bot and REST API under `cmd/app`, and move the Copilot token into the system keychain. Add `call_external_agent` / `verify_with_external_agent` / `review_result` for external delegation and internal priority-model review, plus a `model` field on `/v1/send` to bypass agent selection. Add `search_tools` deferred tool loading (keyword fuzzy search + `select:<name>` direct activation), `exclude_tools` per-request filtering, and prompt caching across Claude / Gemini / Copilot providers. Add OpenAI Codex as a standalone OAuth provider (Device Code Flow), `read_image` for local image input, and restore Yahoo Finance as a native Go tool (`fetch_yahoo_finance`) with concurrent query1/query2 fetch. Refactor session message assembly into 4 fixed segments with reactive context trimming, scheduler into `crons/` / `tasks/` / `script/` sub-packages, and rename `browser` → `fetchPage`.
+- **v0.16.0–v0.16.1** — Ship the script tool runtime (`scriptAdapter`): drop a `tool.json` + `script.js`/`script.py` into `~/.config/agenvoy/script_tools/` and it is auto-discovered as a `script_`-prefixed tool via stdin/stdout JSON that mirrors the API tool contract. Bundle Threads and yt-dlp script extensions with cross-platform `install_threads.sh` / `install_youtube.sh`. Add Copilot token 401 auto-relogin. Refactor `toolAdapter` into `api/` and `script/` sub-packages, move session management into `internal/session`, split filesystem into single-responsibility files, and fix Darwin sandbox keychain directory access.
+- **v0.15.0–v0.15.2** — Add Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint), session-level token-budget message trimming, sensitive-path denial rules for macOS and Linux sandbox, and restore Linux bwrap `--unshare-all` namespace isolation. Fix Copilot Claude/Gemini image validation by decoding and re-encoding every upload as JPEG; split the summary regex into three independent patterns; move system prompts after history to strengthen instruction adherence. Add the `analyze_youtube` metadata tool, Discord Modal-based API key management, per-model token usage tracking via `usageManager`, configurable reasoning level across all providers, and browser iteration limits via `MAX_TOOL_ITERATIONS` / `MAX_SKILL_ITERATIONS` / `MAX_EMPTY_RESPONSES`.
 
 ## License
 

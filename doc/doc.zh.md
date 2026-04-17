@@ -9,7 +9,6 @@
 - Go 1.25 或更新版本
 - 至少一組 AI provider 憑證（GitHub Copilot 訂閱或任一 API key）
 - Discord Bot Token（僅 Discord 模式需要）
-- Obsidian + Local REST API 外掛（選用，啟用 Obsidian vault 記憶時需要）
 
 ### Sandbox 依賴
 
@@ -108,33 +107,6 @@ cp .env.example .env
 ```
 
 > 名稱含 `.example` 的檔案（例如 `.env.example`）會繞過 env 前綴 deny 規則，可以直接讀取。
-
-### 啟用 Obsidian Vault 記憶（選用）
-
-連接 Obsidian Local REST API 即可將 session 歷史、工具記錄與錯誤知識寫入 vault，並提供 `memory_search` / `memory_search_tag` / `memory_tags` / `memory_list` 四個工具做跨 session 回溯。
-
-前置需求：
-
-- Obsidian 桌面版已開啟
-- 已安裝 **Local REST API** 外掛並啟用（預設埠 `https://127.0.0.1:27124`）
-- 在 Obsidian → Settings → Local REST API 取得 API key
-
-綁定：
-
-```bash
-agen obsidian add        # 互動式輸入 vault 路徑與 API key
-agen obsidian            # 顯示當前綁定狀態
-agen obsidian disable    # 停用並清除記錄
-```
-
-啟用後，所有記憶會儲存在 vault 下的 `AgenvoyMem/` 子資料夾：
-
-```
-<vault>/AgenvoyMem/
-├── conversations/   # 對話歷史與 tool history
-├── knowledge/       # 已解決的錯誤模式與知識片段
-└── agenvoy.md       # 系統索引（自動管理）
-```
 
 ### API 擴充
 
@@ -286,7 +258,6 @@ Instructions the agent follows when this skill is selected...
 | `make skills` | `go run ./cmd/app/ list skill` | 列出可用 skill |
 | `make cli <input...>` | `go run ./cmd/app/ cli <input>` | 執行 agent（工具逐一確認） |
 | `make run <input...>` | `go run ./cmd/app/ run <input>` | 執行 agent（自動核准所有工具） |
-| `make obsidian <args>` | `go run ./cmd/app/ obsidian <args>` | 管理 Obsidian vault 記憶 |
 
 ### 基礎用法
 
@@ -348,7 +319,6 @@ agen planner
 | `list` | `agen list [skill]` | 列出已設定模型或可用 skill |
 | `cli` | `agen cli <input...>` | 執行 agent，工具逐一確認 |
 | `run` | `agen run <input...>` | 執行 agent，所有工具呼叫自動核准 |
-| `obsidian` | `agen obsidian [add\|disable]` | 管理 Obsidian vault 記憶 |
 
 ### TUI 鍵盤快捷鍵
 
@@ -375,15 +345,11 @@ agen planner
 | `get_tool_error` | `hash` | 以 hash 取回失敗工具呼叫的完整錯誤細節 |
 | `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | 將錯誤解決方案寫入錯誤知識庫 |
 | `search_errors` | `keyword` | 查詢錯誤知識庫 |
-| `memory_search` | `keyword`, `category`, `limit` | 在 Obsidian vault 中以全文關鍵字搜尋（需啟用 Obsidian） |
-| `memory_search_tag` | `tag`, `limit` | 透過 JsonLogic 以 frontmatter tag 精準搜尋 Obsidian 記憶 |
-| `memory_tags` | — | 列出 vault 中所有 tag 與其使用次數 |
-| `memory_list` | `category` | 列出所有記憶項目，可依分類過濾 |
 | `fetch_yahoo_finance` | `symbol`, `interval`, `range` | 取得 Yahoo Finance 報價與 OHLCV；query1/query2 並行，回傳最快者 |
 | `analyze_youtube` | `url` | YouTube 影片 metadata（標題、說明、頻道、時長、觀看數） |
 | `fetch_google_rss` | `keyword`, `time`, `lang` | Google News RSS，含去重 |
 | `send_http_request` | `method`, `url`, `headers`, `body` | 通用 HTTP 請求 |
-| `search_web` | `query`, `time_range` | Google + DuckDuckGo 並行搜尋 |
+| `search_web` | `query`, `time_range` | DuckDuckGo lite endpoint 網頁搜尋；`time_range` 僅接受 `1d` / `7d` / `1m` / `1y` |
 | `fetch_page` | `url` | 以 headless Chrome 取得 JS 渲染後的頁面並轉為 Markdown |
 | `download_page` | `href`, `save_to` | 以 headless Chrome 將 JS 渲染頁面存為本地檔案 |
 | `run_command` | `command` | 在 sandbox 中執行白名單 shell 指令（300 秒 timeout） |
@@ -401,6 +367,7 @@ agen planner
 | `call_external_agent` | `agent`, `input` | 將整個任務委派至具名外部 agent（`copilot` / `claude` / `codex`） |
 | `verify_with_external_agent` | `input`, `result` | 將結果平行送至所有宣告的外部 agent 並合併回饋；無外部 agent 時 fallback 到 `review_result` |
 | `review_result` | `input`, `result` | 以優先序最高的可用模型做內部完整性覆核（claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet） |
+| `invoke_subagent` | `task`, `model?`, `system_prompt?`, `exclude_tools?` | In-process 子 agent 委派，獨立暫時 session；子 agent 強制排除 `invoke_subagent` 以避免無限巢狀 |
 
 ## REST API
 

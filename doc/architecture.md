@@ -2,7 +2,7 @@
 
 > Back to [README](../README.md)
 
-Seven Mermaid diagrams covering the full system, from entry points down to individual subsystems.
+Eight Mermaid diagrams covering the full system, from entry points down to individual subsystems.
 
 ## 1. System Overview
 
@@ -28,11 +28,11 @@ graph TB
     end
 
     subgraph Tools ["Tool Subsystem"]
-        T["File · Web · API · Script\nScheduler · Error Memory\nObsidian Memory"]
+        T["File · Web · API · Script\nScheduler · Error Memory · Sub-Agent"]
     end
 
     subgraph Memory ["Memory Layer"]
-        PS["ToriiDB Store\nSession Summary\nObsidian Vault (optional)"]
+        PS["ToriiDB Store\nSession Summary"]
     end
 
     App --> Run
@@ -227,12 +227,12 @@ flowchart TD
         EMT["Tool call fails →\npersist to ToriiDB store\nsearch_errors · recall past failures\nremember_error · persist resolution\ncross-session learning"]
     end
 
-    subgraph ObsidianMemTools ["Obsidian Vault Memory (optional)"]
-        OMT["memory_search · full-text keyword\nmemory_search_tag · JsonLogic tag search\nmemory_tags · list all vault tags\nmemory_list · list memories by category\n(requires Local REST API)"]
-    end
-
     subgraph ExternalAgentTools ["External Agent Tools"]
         EAT["call_external_agent · delegate task to named external agent\nverify_with_external_agent · parallel cross-validation across all declared agents\nreview_result · internal priority-model review\n(claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet)"]
+    end
+
+    subgraph SubAgentTools ["In-Process Sub-Agent · agents/subagent"]
+        SAT["invoke_subagent · Concurrent=true · ReadOnly=true\nin-process dispatch via exec.Execute() · no HTTP\nisolated temp-sub-* session · 1h idle TTL\noverrides: model · system_prompt · exclude_tools\nforce-excludes invoke_subagent to prevent recursion\nhost singleton (agents/host) for Planner · Registry · Scanner\nblank-imported in cmd/app/main.go to avoid tools → subagent cycle"]
     end
 
     subgraph SearchTools ["Deferred Tool Registry · searchTools"]
@@ -246,9 +246,10 @@ flowchart TD
     Registry --> SkillTools
     Registry --> SchedulerTools
     Registry --> ErrorMemTools
-    Registry --> ObsidianMemTools
     Registry --> ExternalAgentTools
+    Registry --> SubAgentTools
     Registry --> SearchTools
+    SAT -.->|"re-enter"| Registry
 
     AT --> UserAPI
     ST --> Manifest
@@ -258,9 +259,59 @@ flowchart TD
 
 ---
 
-## 6. Persistence & Memory
+## 6. Sub-Agent Flow
 
-Chunked multi-pass summary generation, conversation history trimming, ToriiDB-backed error memory, and Obsidian vault integration.
+End-to-end lifecycle of `invoke_subagent`: how the parent agent dispatches an in-process child via `exec.Execute()`, isolates its session, and receives its final response — all without crossing an HTTP boundary.
+
+```mermaid
+flowchart TD
+    subgraph Parent ["Parent Agent · exec.Execute()"]
+        PLoop["Iteration loop\ntool_call dispatch"]
+        PCheck{"tool_name ==\ninvoke_subagent?"}
+        PWait["Wait for child result\n(Concurrent=true · fan-out ok)"]
+        PResult["Receive child final response\nas tool result\ncontinue iteration"]
+    end
+
+    subgraph Handler ["invoke_subagent Handler · internal/agents/subagent"]
+        Args["Parse args\n· task (required)\n· model? · system_prompt?\n· exclude_tools?"]
+        Host["host singleton lookup\nPlanner · Registry · Scanner\n(set by cmd/app/main.go)"]
+        Session["Create temp-sub-{uuid} session\nisolated history & context\n1h idle TTL"]
+        ForceEx["Force-add invoke_subagent\nto exclude_tools\n→ prevent infinite nesting"]
+        Overrides["Apply overrides\n· swap model (if provided)\n· override system_prompt\n· filter Registry by exclude_tools"]
+    end
+
+    subgraph Child ["Child Agent · exec.Execute() re-entry"]
+        CRun["Independent iteration loop\n≤128 iterations\nown error memory · own tool history"]
+        CTools["Filtered tool registry\n(invoke_subagent absent\n+ user exclusions)"]
+        CFinal["Final response text\nreturned as string"]
+    end
+
+    subgraph Lifecycle ["Session Lifecycle"]
+        IdleGC["Idle watcher\npurges temp-sub-* sessions\nafter 1h inactivity"]
+        NoHTTP["NO HTTP hop\nNO subprocess\n→ CLI / TUI / App parity"]
+    end
+
+    PLoop --> PCheck
+    PCheck -->|"yes"| Args
+    Args --> Host
+    Host --> Session
+    Session --> ForceEx
+    ForceEx --> Overrides
+    Overrides --> CRun
+    CRun --> CTools
+    CTools --> CFinal
+    CFinal --> PWait
+    PWait --> PResult
+    PResult --> PLoop
+    Session -.->|"TTL expiry"| IdleGC
+    Handler -.-> NoHTTP
+```
+
+---
+
+## 7. Persistence & Memory
+
+Chunked multi-pass summary generation, conversation history trimming, and ToriiDB-backed error memory.
 
 ```mermaid
 flowchart TD
@@ -290,12 +341,6 @@ flowchart TD
         ErrResolve["remember_error\npersist resolution decision\ncross-session reuse"]
     end
 
-    subgraph ObsidianMem ["Obsidian Vault (optional) · filesystem/obsidian"]
-        OBConn["Local REST API\nhttps://127.0.0.1:27124"]
-        OBWrite["AgenvoyMem/ subfolder\nconversations/ and knowledge/\nauto-persisted as markdown"]
-        OBSearch["memory_search_* tools\ncross-session semantic / tag recall"]
-    end
-
     subgraph UsageTracking ["Usage Tracking · usageManager"]
         UT["Per-model token usage\naccumulated across all\ntool-call iterations per request"]
     end
@@ -308,13 +353,11 @@ flowchart TD
     ErrStore --> TS
     ErrStore --> ErrRecall
     ErrRecall --> ErrResolve
-    OBConn --> OBWrite
-    OBWrite --> OBSearch
 ```
 
 ---
 
-## 7. REST API Layer
+## 8. REST API Layer
 
 HTTP endpoint routing, handler dispatch, and SSE vs. non-SSE response paths.
 

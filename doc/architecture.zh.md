@@ -2,7 +2,7 @@
 
 > 返回 [README](./README.zh.md)
 
-七張 Mermaid 圖涵蓋從進入點到各子系統的完整系統結構。
+八張 Mermaid 圖涵蓋從進入點到各子系統的完整系統結構。
 
 ## 1. 系統概覽
 
@@ -28,11 +28,11 @@ graph TB
     end
 
     subgraph Tools ["工具子系統"]
-        T["File · Web · API · Script\nScheduler · Error Memory\nObsidian Memory"]
+        T["File · Web · API · Script\nScheduler · Error Memory · Sub-Agent"]
     end
 
     subgraph Memory ["記憶層"]
-        PS["ToriiDB Store\nSession Summary\nObsidian Vault (optional)"]
+        PS["ToriiDB Store\nSession Summary"]
     end
 
     App --> Run
@@ -227,12 +227,12 @@ flowchart TD
         EMT["工具呼叫失敗 →\n持久化至 ToriiDB store\nsearch_errors · 回憶過往失敗\nremember_error · 持久化解法\n跨 session 學習"]
     end
 
-    subgraph ObsidianMemTools ["Obsidian Vault 記憶（選用）"]
-        OMT["memory_search · 全文關鍵字\nmemory_search_tag · JsonLogic tag 搜尋\nmemory_tags · 列出 vault 所有 tag\nmemory_list · 依分類列出記憶\n(需 Local REST API 連線)"]
-    end
-
     subgraph ExternalAgentTools ["外部 Agent 工具"]
         EAT["call_external_agent · 委派至具名外部 agent\nverify_with_external_agent · 平行跨驗證所有宣告 agent\nreview_result · 內部優先序覆核\n(claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet)"]
+    end
+
+    subgraph SubAgentTools ["In-Process 子 Agent · agents/subagent"]
+        SAT["invoke_subagent · Concurrent=true · ReadOnly=true\n以 exec.Execute() in-process 派送 · 不走 HTTP\n獨立 temp-sub-* session · 1 小時 idle TTL\n可覆寫：model · system_prompt · exclude_tools\n強制排除 invoke_subagent 自身避免無限巢狀\nhost singleton (agents/host) 提供 Planner · Registry · Scanner\ncmd/app/main.go blank-import 註冊 · 避免 tools → subagent import cycle"]
     end
 
     subgraph SearchTools ["延遲工具註冊 · searchTools"]
@@ -246,9 +246,10 @@ flowchart TD
     Registry --> SkillTools
     Registry --> SchedulerTools
     Registry --> ErrorMemTools
-    Registry --> ObsidianMemTools
     Registry --> ExternalAgentTools
+    Registry --> SubAgentTools
     Registry --> SearchTools
+    SAT -.->|"重新進入"| Registry
 
     AT --> UserAPI
     ST --> Manifest
@@ -258,9 +259,59 @@ flowchart TD
 
 ---
 
-## 6. 儲存與記憶
+## 6. 子 Agent 流程
 
-Session 摘要的分塊多階段生成、對話歷史裁剪與 ToriiDB-backed 錯誤記憶、Obsidian Vault 整合。
+`invoke_subagent` 的完整生命週期：主 agent 如何以 in-process 方式透過 `exec.Execute()` 派送子 agent、隔離 session、並接收最終回應 — 全程不跨越 HTTP 邊界。
+
+```mermaid
+flowchart TD
+    subgraph Parent ["主 Agent · exec.Execute()"]
+        PLoop["迭代迴圈\ntool_call 派送"]
+        PCheck{"tool_name ==\ninvoke_subagent？"}
+        PWait["等待子 agent 結果\n(Concurrent=true · 可併發 fan-out)"]
+        PResult["接收子 agent 最終回應\n作為 tool result\n繼續迭代"]
+    end
+
+    subgraph Handler ["invoke_subagent Handler · internal/agents/subagent"]
+        Args["解析 args\n· task（必填）\n· model? · system_prompt?\n· exclude_tools?"]
+        Host["host singleton 查詢\nPlanner · Registry · Scanner\n(由 cmd/app/main.go 設定)"]
+        Session["建立 temp-sub-{uuid} session\n獨立 history 與 context\n1 小時 idle TTL"]
+        ForceEx["強制加入 invoke_subagent\n至 exclude_tools\n→ 防止無限巢狀"]
+        Overrides["套用 overrides\n· 切換 model（若有指定）\n· 覆寫 system_prompt\n· 依 exclude_tools 過濾 Registry"]
+    end
+
+    subgraph Child ["子 Agent · exec.Execute() 重新進入"]
+        CRun["獨立迭代迴圈\n≤128 iterations\n獨立錯誤記憶 · 獨立 tool 歷史"]
+        CTools["已過濾 tool registry\n(invoke_subagent 已移除\n+ 使用者指定排除項)"]
+        CFinal["最終回應文字\n以 string 回傳"]
+    end
+
+    subgraph Lifecycle ["Session 生命週期"]
+        IdleGC["Idle watcher\n清除 temp-sub-* sessions\n閒置 1 小時後移除"]
+        NoHTTP["不經 HTTP\n不開 subprocess\n→ CLI / TUI / App 行為一致"]
+    end
+
+    PLoop --> PCheck
+    PCheck -->|"是"| Args
+    Args --> Host
+    Host --> Session
+    Session --> ForceEx
+    ForceEx --> Overrides
+    Overrides --> CRun
+    CRun --> CTools
+    CTools --> CFinal
+    CFinal --> PWait
+    PWait --> PResult
+    PResult --> PLoop
+    Session -.->|"TTL 到期"| IdleGC
+    Handler -.-> NoHTTP
+```
+
+---
+
+## 7. 儲存與記憶
+
+Session 摘要的分塊多階段生成、對話歷史裁剪與 ToriiDB-backed 錯誤記憶。
 
 ```mermaid
 flowchart TD
@@ -290,12 +341,6 @@ flowchart TD
         ErrResolve["remember_error\n持久化解法決策\n跨 session 重用"]
     end
 
-    subgraph ObsidianMem ["Obsidian Vault（選用） · filesystem/obsidian"]
-        OBConn["Local REST API\nhttps://127.0.0.1:27124"]
-        OBWrite["AgenvoyMem/ 下\n自動寫入 conversations/\n與 knowledge/ markdown"]
-        OBSearch["memory_search_* 工具\n跨 session 語義 / tag 回溯"]
-    end
-
     subgraph UsageTracking ["Usage Tracking · usageManager"]
         UT["逐模型 token 用量\n跨所有工具呼叫迭代\n累積於每次請求"]
     end
@@ -308,13 +353,11 @@ flowchart TD
     ErrStore --> TS
     ErrStore --> ErrRecall
     ErrRecall --> ErrResolve
-    OBConn --> OBWrite
-    OBWrite --> OBSearch
 ```
 
 ---
 
-## 7. REST API 層
+## 8. REST API 層
 
 HTTP endpoint 路由、handler 派送以及 SSE vs 非 SSE 回應路徑。
 
