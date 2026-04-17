@@ -23,6 +23,8 @@ const (
 
 func init() {
 	toolRegister.Regist(toolRegister.Def{
+		ReadOnly:    true,
+		Concurrent:  true,
 		Name:        toolName,
 		Description: `分派一個獨立子 agent 處理子任務並回傳結果，用於工作流程拆解、平行委派與專長模型分工。子 agent 擁有獨立 session 與 context，與主 agent 完全隔離；僅回傳最終文字結果，主 agent 自行整合。子 agent 預設禁止再次呼叫 invoke_subagent，避免無限巢狀。`,
 		Parameters: map[string]any{

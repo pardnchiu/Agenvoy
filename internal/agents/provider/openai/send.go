@@ -56,12 +56,11 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		}
 
 		body := map[string]any{
-			"model":               a.model,
-			"input":               copilotResponse.ConvertInput(nonSystem),
-			"tools":               copilotResponse.ConvertTools(tools),
-			"instructions":        instructions,
-			"store":               false,
-			"parallel_tool_calls": false,
+			"model":        a.model,
+			"input":        copilotResponse.ConvertInput(nonSystem),
+			"tools":        copilotResponse.ConvertTools(tools),
+			"instructions": instructions,
+			"store":        false,
 		}
 
 		result, _, err := go_utils_http.POST[copilotResponse.Output](ctx, a.httpClient, responsesAPI, headers, body, "json")

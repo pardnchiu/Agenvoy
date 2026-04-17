@@ -20,6 +20,7 @@ type Def struct {
 	Handler     Handler
 	ReadOnly    bool
 	AlwaysLoad  bool
+	Concurrent  bool
 }
 
 var handlerMap = map[string]Handler{}
@@ -27,6 +28,7 @@ var groupHandlerMap = map[string]GroupHandler{}
 var defList []toolTypes.Tool
 var readOnlySet = map[string]bool{}
 var alwaysLoadSet = map[string]bool{}
+var concurrentSet = map[string]bool{}
 
 func Regist(d Def) {
 	params, _ := json.Marshal(d.Parameters)
@@ -46,6 +48,9 @@ func Regist(d Def) {
 	if d.AlwaysLoad {
 		alwaysLoadSet[d.Name] = true
 	}
+	if d.Concurrent {
+		concurrentSet[d.Name] = true
+	}
 }
 
 func IsAlwaysLoad(name string) bool {
@@ -54,6 +59,10 @@ func IsAlwaysLoad(name string) bool {
 
 func IsReadOnly(name string) bool {
 	return readOnlySet[name]
+}
+
+func IsConcurrent(name string) bool {
+	return concurrentSet[name]
 }
 
 func JSON() []byte {

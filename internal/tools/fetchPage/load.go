@@ -103,6 +103,11 @@ func Load(href string, keepLinks bool) (string, error) {
 		return skippedMessage(href), nil
 	}
 
+	if isRedirected404(result.FinalURL) {
+		addToSkippedMap(href, 404)
+		return skippedMessage(href), nil
+	}
+
 	if detect4xx(result.Title) {
 		addToSkippedMap(href, 404)
 		return skippedMessage(href), nil
@@ -127,6 +132,21 @@ func fetch(ctx context.Context, href string, keepLinks bool) (*go_utils_rod.Fetc
 		MaxLength: maxMarkdownLength,
 		KeepLinks: keepLinks,
 	})
+}
+
+func isRedirected404(finalURL string) bool {
+	if finalURL == "" {
+		return false
+	}
+	u, err := url.Parse(finalURL)
+	if err != nil {
+		return false
+	}
+	switch u.Query().Get("err") {
+	case "404", "403", "410":
+		return true
+	}
+	return false
 }
 
 func detect4xx(title string) bool {

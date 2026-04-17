@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -14,39 +15,77 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
+const (
+	slotReady          = 0
+	slotCached         = 1
+	slotSkipped        = 2
+	slotStubActivated  = 3
+	slotValidateFailed = 4
+)
+
+type toolSlot struct {
+	idx  int
+	id   string
+	name string
+	args string
+	hash string
+
+	state    int
+	preMsg   string
+	isImage  bool
+	imageURL string
+
+	result  string
+	execErr string
+}
+
 func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, toolFailCount map[string]int) (*agentTypes.AgentSession, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 
-	hasExternalAgent := false
-	hasReviewResult := false
-	for i, tool := range choice.Message.ToolCalls {
+	calls := choice.Message.ToolCalls
+	slots := make([]toolSlot, len(calls))
+	activatedInBatch := make(map[string]bool)
+
+	for i, tool := range calls {
 		toolID := strings.TrimSpace(tool.ID)
 		toolArg := strings.TrimSpace(tool.Function.Arguments)
 		toolName := strings.TrimSpace(tool.Function.Name)
 		if idx := strings.Index(toolName, "<|"); idx != -1 {
 			toolName = toolName[:idx]
 		}
-
 		hash := fmt.Sprintf("%v|%v", toolName, toolArg)
+
+		slots[i] = toolSlot{
+			idx:   i,
+			id:    toolID,
+			name:  toolName,
+			args:  toolArg,
+			hash:  hash,
+			state: slotReady,
+		}
+
 		if cached, ok := alreadyCall[hash]; ok && cached != "" {
 			cachedContent := strings.TrimSpace(cached)
 			if strings.HasPrefix(cached, "data:image/") {
 				cachedContent = fmt.Sprintf("[%s] image loaded", toolName)
-				injectImageToUserInput(sessionData, cached)
+				slots[i].isImage = true
+				slots[i].imageURL = cached
 			}
-			sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
-				Role:       "tool",
-				Content:    cachedContent,
-				ToolCallID: toolID,
-			})
+			slots[i].state = slotCached
+			slots[i].preMsg = cachedContent
 			continue
 		}
 
-		events <- agentTypes.Event{
-			Type:     agentTypes.EventToolCall,
-			ToolName: toolName,
-			ToolArgs: toolArg,
-			ToolID:   toolID,
+		if exec.StubTools[toolName] || activatedInBatch[toolName] {
+			if exec.StubTools[toolName] {
+				activateArgs, _ := json.Marshal(map[string]any{"query": "select:" + toolName})
+				_, _ = toolRegister.Dispatch(ctx, exec, "search_tools", activateArgs)
+				delete(exec.StubTools, toolName)
+			}
+			activatedInBatch[toolName] = true
+			slots[i].state = slotStubActivated
+			slots[i].preMsg = fmt.Sprintf("[%s] tool schema just loaded. Re-invoke %s with the correct arguments — the previous call was made against a stub with empty params.", toolName, toolName)
+			continue
 		}
 
 		if !allowAll && !toolRegister.IsReadOnly(toolName) && !strings.HasPrefix(toolName, "api_") {
@@ -65,62 +104,19 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 					ToolName: toolName,
 					ToolID:   toolID,
 				}
-				sessionData.Tools = append(sessionData.Tools, agentTypes.Message{
-					Role:       "tool",
-					Content:    "Skipped by user",
-					ToolCallID: toolID,
-				})
-				sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
-					Role:       "tool",
-					Content:    "Skipped by user",
-					ToolCallID: toolID,
-				})
+				slots[i].state = slotSkipped
+				slots[i].preMsg = "Skipped by user"
 				continue
 			}
 		}
 
-		events <- agentTypes.Event{
-			Type:     agentTypes.EventToolCallStart,
-			ToolName: toolName,
-			ToolID:   toolID,
-		}
-
-		if i > 0 && strings.HasPrefix(toolName, "api_") {
-			select {
-			case <-time.After(300 * time.Millisecond):
-			case <-ctx.Done():
-				return sessionData, alreadyCall, ctx.Err()
-			}
-		}
-
-		if exec.StubTools[toolName] {
-			activateArgs, _ := json.Marshal(map[string]any{"query": "select:" + toolName})
-			_, _ = toolRegister.Dispatch(ctx, exec, "search_tools", activateArgs)
-			delete(exec.StubTools, toolName)
-
-			msg := fmt.Sprintf("[%s] tool schema just loaded. Re-invoke %s with the correct arguments — the previous call was made against a stub with empty params.", toolName, toolName)
-			events <- agentTypes.Event{
-				Type:     agentTypes.EventToolCallText,
-				ToolName: toolName,
-				ToolID:   toolID,
-				Text:     msg,
-			}
-			events <- agentTypes.Event{
-				Type:     agentTypes.EventToolCallEnd,
-				ToolName: toolName,
-				ToolID:   toolID,
-			}
-			toolMsg := agentTypes.Message{
-				Role:       "tool",
-				Content:    msg,
-				ToolCallID: toolID,
-			}
-			sessionData.Tools = append(sessionData.Tools, toolMsg)
-			sessionData.ToolHistories = append(sessionData.ToolHistories, toolMsg)
-			continue
-		}
-
 		if earlyErr := validateToolArgs(exec, toolName, toolArg); earlyErr != "" {
+			events <- agentTypes.Event{
+				Type:     agentTypes.EventToolCall,
+				ToolName: toolName,
+				ToolArgs: toolArg,
+				ToolID:   toolID,
+			}
 			events <- agentTypes.Event{
 				Type:     agentTypes.EventExecError,
 				ToolName: toolName,
@@ -134,82 +130,117 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			} else {
 				content = fmt.Sprintf("tool=%s dropped (incomplete args: %s). Do NOT re-issue the same call; if still needed, pivot to a different tool or provide the missing fields from context in a differently-shaped call.", toolName, earlyErr)
 			}
-			toolMsg := agentTypes.Message{
-				Role:       "tool",
-				Content:    content,
-				ToolCallID: toolID,
+			slots[i].state = slotValidateFailed
+			slots[i].preMsg = content
+			continue
+		}
+	}
+
+	var wg sync.WaitGroup
+	seqCount := 0
+	for i := range slots {
+		s := &slots[i]
+		if s.state != slotReady {
+			continue
+		}
+		if toolRegister.IsConcurrent(s.name) {
+			wg.Add(1)
+			go func(s *toolSlot) {
+				defer wg.Done()
+				runToolExec(ctx, exec, s, events)
+			}(s)
+			continue
+		}
+		if seqCount > 0 && (strings.HasPrefix(s.name, "api_") || s.name == "search_web") {
+			select {
+			case <-time.After(300 * time.Millisecond):
+			case <-ctx.Done():
+				wg.Wait()
+				return sessionData, alreadyCall, ctx.Err()
 			}
-			sessionData.Tools = append(sessionData.Tools, toolMsg)
-			sessionData.ToolHistories = append(sessionData.ToolHistories, toolMsg)
+		}
+		seqCount++
+		runToolExec(ctx, exec, s, events)
+	}
+	wg.Wait()
+
+	if err := ctx.Err(); err != nil {
+		return sessionData, alreadyCall, err
+	}
+
+	hasExternalAgent := false
+	hasReviewResult := false
+
+	for i := range slots {
+		s := &slots[i]
+
+		switch s.state {
+		case slotCached:
+			if s.isImage {
+				injectImageToUserInput(sessionData, s.imageURL)
+			}
+			sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
+				Role:       "tool",
+				Content:    s.preMsg,
+				ToolCallID: s.id,
+			})
+			continue
+		case slotSkipped, slotStubActivated, slotValidateFailed:
+			msg := agentTypes.Message{
+				Role:       "tool",
+				Content:    s.preMsg,
+				ToolCallID: s.id,
+			}
+			sessionData.Tools = append(sessionData.Tools, msg)
+			sessionData.ToolHistories = append(sessionData.ToolHistories, msg)
 			continue
 		}
 
-		result, err := tools.Execute(ctx, exec, toolName, json.RawMessage(tool.Function.Arguments))
-		if err != nil {
-			file.SaveToolError(sessionData.ID, toolName, tool.Function.Arguments, err.Error())
-			events <- agentTypes.Event{
-				Type:     agentTypes.EventExecError,
-				ToolName: toolName,
-				ToolID:   toolID,
-				Text:     err.Error(),
-			}
-			toolFailCount[hash]++
-			if toolFailCount[hash] >= MaxRetry {
-				result = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次失敗: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", toolName, toolFailCount[hash], err.Error(), toolName)
+		result := s.result
+		if s.execErr != "" {
+			file.SaveToolError(sessionData.ID, s.name, s.args, s.execErr)
+			toolFailCount[s.hash]++
+			if toolFailCount[s.hash] >= MaxRetry {
+				result = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次失敗: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", s.name, toolFailCount[s.hash], s.execErr, s.name)
 			} else {
-				if hint := file.SearchErrorMemory(toolName, err.Error(), 3); hint != "" {
-					result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nrelated_errors: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", toolName, err.Error(), hint, toolName)
+				if hint := file.SearchErrorMemory(s.name, s.execErr, 3); hint != "" {
+					result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nrelated_errors: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", s.name, s.execErr, hint, s.name)
 				} else {
-					result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", toolName, err.Error(), toolName)
+					result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", s.name, s.execErr, s.name)
 				}
-				delete(alreadyCall, hash)
+				delete(alreadyCall, s.hash)
 			}
 		} else if result == "" || result == "no data" {
-			if hint := file.SearchErrorMemory(toolName, "no data", 3); hint != "" {
+			if hint := file.SearchErrorMemory(s.name, "no data", 3); hint != "" {
 				result = hint
 			} else {
 				result = "no data"
 			}
 		}
 
-		if result != "" {
-			events <- agentTypes.Event{
-				Type:     agentTypes.EventToolCallText,
-				ToolName: toolName,
-				ToolID:   toolID,
-				Text:     result,
-			}
-		}
-
-		events <- agentTypes.Event{
-			Type:     agentTypes.EventToolCallEnd,
-			ToolName: toolName,
-			ToolID:   toolID,
-		}
-
-		alreadyCall[hash] = result
+		alreadyCall[s.hash] = result
 
 		events <- agentTypes.Event{
 			Type:     agentTypes.EventToolResult,
-			ToolName: toolName,
-			ToolID:   toolID,
+			ToolName: s.name,
+			ToolID:   s.id,
 			Result:   result,
 		}
 
-		toolMsgContent := strings.TrimSpace(fmt.Sprintf("[%s] %s", toolName, result))
+		toolMsgContent := strings.TrimSpace(fmt.Sprintf("[%s] %s", s.name, result))
 		if strings.HasPrefix(result, "data:image/") {
-			toolMsgContent = fmt.Sprintf("[%s] image loaded", toolName)
+			toolMsgContent = fmt.Sprintf("[%s] image loaded", s.name)
 			injectImageToUserInput(sessionData, result)
 		}
 		toolMsg := agentTypes.Message{
 			Role:       "tool",
 			Content:    toolMsgContent,
-			ToolCallID: toolID,
+			ToolCallID: s.id,
 		}
 		sessionData.Tools = append(sessionData.Tools, toolMsg)
 		sessionData.ToolHistories = append(sessionData.ToolHistories, toolMsg)
 
-		switch toolName {
+		switch s.name {
 		case "verify_with_external_agent":
 			hasExternalAgent = true
 		case "review_result":
@@ -226,6 +257,51 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		}
 	}
 	return sessionData, alreadyCall, nil
+}
+
+func runToolExec(ctx context.Context, exec *toolTypes.Executor, s *toolSlot, events chan<- agentTypes.Event) {
+	events <- agentTypes.Event{
+		Type:     agentTypes.EventToolCall,
+		ToolName: s.name,
+		ToolArgs: s.args,
+		ToolID:   s.id,
+	}
+	events <- agentTypes.Event{
+		Type:     agentTypes.EventToolCallStart,
+		ToolName: s.name,
+		ToolID:   s.id,
+	}
+	result, err := tools.Execute(ctx, exec, s.name, json.RawMessage(s.args))
+	if err != nil {
+		events <- agentTypes.Event{
+			Type:     agentTypes.EventExecError,
+			ToolName: s.name,
+			ToolID:   s.id,
+			Text:     err.Error(),
+		}
+		s.execErr = err.Error()
+		events <- agentTypes.Event{
+			Type:     agentTypes.EventToolCallEnd,
+			ToolName: s.name,
+			ToolID:   s.id,
+		}
+		return
+	}
+
+	if result != "" {
+		events <- agentTypes.Event{
+			Type:     agentTypes.EventToolCallText,
+			ToolName: s.name,
+			ToolID:   s.id,
+			Text:     result,
+		}
+	}
+	events <- agentTypes.Event{
+		Type:     agentTypes.EventToolCallEnd,
+		ToolName: s.name,
+		ToolID:   s.id,
+	}
+	s.result = result
 }
 
 func validateToolArgs(exec *toolTypes.Executor, toolName, args string) string {
