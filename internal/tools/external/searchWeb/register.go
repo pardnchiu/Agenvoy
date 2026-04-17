@@ -24,8 +24,8 @@ func init() {
 				},
 				"range": map[string]any{
 					"type":        "string",
-					"description": "Time range filter: 1h, 3h, 6h, 12h (hours), 1d (day), 7d (week), 1m (month), 1y (year). Omit for no restriction.",
-					"enum":        []string{"1h", "3h", "6h", "12h", "1d", "7d", "1m", "1y"},
+					"description": "Time range filter: 1d (day), 7d (week), 1m (month), 1y (year). Omit for no restriction. DuckDuckGo does not support sub-day granularity.",
+					"enum":        timeRanges,
 				},
 			},
 			"required": []string{"query"},

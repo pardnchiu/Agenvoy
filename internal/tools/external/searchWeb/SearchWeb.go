@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -26,13 +27,11 @@ type SearchOutput struct {
 	Cached     bool         `json:"cached,omitempty"`
 }
 
+var timeRanges = []string{"1d", "7d", "1m", "1y"}
+
 type TimeRange string
 
 const (
-	TimeRange1h    TimeRange = "1h"
-	TimeRange3h    TimeRange = "3h"
-	TimeRange6h    TimeRange = "6h"
-	TimeRange12h   TimeRange = "12h"
 	TimeRange1d    TimeRange = "1d"
 	TimeRange7d    TimeRange = "7d"
 	TimeRangeMonth TimeRange = "1m"
@@ -40,12 +39,7 @@ const (
 )
 
 func (t TimeRange) valid() bool {
-	switch t {
-	case TimeRange1h, TimeRange3h, TimeRange6h, TimeRange12h,
-		TimeRange1d, TimeRange7d, TimeRangeMonth, TimeRangeYear:
-		return true
-	}
-	return false
+	return slices.Contains(timeRanges, string(t))
 }
 
 const cacheTTLSeconds = 300
@@ -55,7 +49,7 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (*SearchOutp
 		return nil, fmt.Errorf("query is empty")
 	}
 	if timeRange != "" && !timeRange.valid() {
-		return nil, fmt.Errorf("invalid time range %q: must be one of 1h, 3h, 6h, 12h, 1d, 7d, 1m, 1y", timeRange)
+		return nil, fmt.Errorf("invalid time range %q: must be one of %s", timeRange, strings.Join(timeRanges, ", "))
 	}
 
 	hash := sha256.Sum256([]byte(query + "|" + string(timeRange)))
@@ -74,7 +68,7 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (*SearchOutp
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	results, err := fetchDDG(ctx, query, timeRange)
+	results, err := fetch(ctx, query, timeRange)
 	if err != nil {
 		return nil, err
 	}
