@@ -215,3 +215,34 @@ func (s *SkillScanner) List() []string {
 	sort.Strings(names)
 	return names
 }
+
+func (s *SkillScanner) MatchSkillCall(input string) (*Skill, string) {
+	trimmed := strings.TrimLeft(input, " \t\r\n")
+	if !strings.HasPrefix(trimmed, "/") {
+		return nil, input
+	}
+	rest := trimmed[1:]
+	token := rest
+	tail := ""
+	if idx := strings.IndexAny(rest, " \t\r\n"); idx >= 0 {
+		token = rest[:idx]
+		tail = strings.TrimLeft(rest[idx:], " \t\r\n")
+	}
+	if token == "" {
+		return nil, input
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.Skills == nil {
+		return nil, input
+	}
+	skill, ok := s.Skills.ByName[token]
+	if !ok {
+		return nil, input
+	}
+	if tail == "" {
+		tail = trimmed
+	}
+	return skill, tail
+}

@@ -25,6 +25,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
 	"github.com/pardnchiu/agenvoy/internal/tools/skillTool"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 var timestampHeaderRegex = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
@@ -120,6 +121,10 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	}
 
 	exec.ActiveSkill = data.Skill
+
+	if data.Skill != nil {
+		assignSkill(session, data.Skill)
+	}
 
 	if len(data.ExcludeTools) > 0 {
 		excluded := make(map[string]bool, len(data.ExcludeTools))
@@ -387,6 +392,29 @@ func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSe
 	}
 
 	return nil
+}
+
+func assignSkill(session *agentTypes.AgentSession, s *skill.Skill) {
+	id := "skill-assign-" + utils.NewID("skill", s.Name)
+	argsJSON, _ := json.Marshal(map[string]string{"skill": s.Name})
+	call := agentTypes.ToolCall{
+		ID:   id,
+		Type: "function",
+	}
+	call.Function.Name = skillTool.ToolName
+	call.Function.Arguments = string(argsJSON)
+
+	session.ToolHistories = append(session.ToolHistories,
+		agentTypes.Message{
+			Role:      "assistant",
+			ToolCalls: []agentTypes.ToolCall{call},
+		},
+		agentTypes.Message{
+			Role:       "tool",
+			Content:    skillTool.RenderActivation(s),
+			ToolCallID: id,
+		},
+	)
 }
 
 func buildExternalAgentsPrompt() string {

@@ -12,6 +12,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
+	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -23,24 +24,26 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 
 	dcBot.SkillScanner.Scan()
 
-	// fileNames := make([]string, len(receiveMessage.FileInputs))
-	// for i, f := range receiveMessage.FileInputs {
-	// 	fileNames[i] = f.Name
-	// }
-	// skill := exec.SelectSkill(ctx, dcBot.PlannerAgent, dcBot.SkillScanner, receiveMessage.Content, fileNames)
-	// if skill != nil {
-	// 	slog.Info("skill", slog.String("skill", skill.Name))
-	// }
-	agent := exec.SelectAgent(ctx, dcBot.PlannerAgent, dcBot.AgentRegistry, receiveMessage.Content, false)
+	content := receiveMessage.Content
+	var matchedSkill *skill.Skill
+	if dcBot.SkillScanner != nil {
+		if m, effective := dcBot.SkillScanner.MatchSkillCall(content); m != nil {
+			matchedSkill = m
+			content = strings.TrimSpace(effective)
+			slog.Info("skill", slog.String("skill", m.Name))
+		}
+	}
+
+	agent := exec.SelectAgent(ctx, dcBot.PlannerAgent, dcBot.AgentRegistry, content, matchedSkill != nil)
 
 	execData := exec.ExecData{
 		Agent:   agent,
 		WorkDir: workDir,
-		// Skill:   skill,
-		Content: receiveMessage.Content,
+		Skill:   matchedSkill,
+		Content: content,
 	}
 
-	session, err := getSession(ctx, dcSession, receiveMessage.GuildID, receiveMessage.ChannelID, receiveMessage.AuthorID, dcMessageCreate.ID, receiveMessage.AuthorName, receiveMessage.Content, receiveMessage.ImageInputs, receiveMessage.FileInputs, execData)
+	session, err := getSession(ctx, dcSession, receiveMessage.GuildID, receiveMessage.ChannelID, receiveMessage.AuthorID, dcMessageCreate.ID, receiveMessage.AuthorName, content, receiveMessage.ImageInputs, receiveMessage.FileInputs, execData)
 	if err != nil {
 		return fmt.Errorf("loadDiscordSession: %w", err)
 	}

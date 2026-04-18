@@ -58,14 +58,14 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 
 			trimContent := strings.TrimSpace(req.Content)
 
-			// events <- agentTypes.Event{Type: agentTypes.EventSkillSelect}
-			// skill := exec.SelectSkill(ctx, bot, scanner, trimContent, nil)
-			// if skill != nil {
-			// 	events <- agentTypes.Event{Type: agentTypes.EventSkillResult, Text: skill.Name}
-			// } else {
-			// 	events <- agentTypes.Event{Type: agentTypes.EventSkillResult, Text: "none"}
-			// }
-			_ = scanner
+			var matchedSkill *skill.Skill
+			if scanner != nil {
+				if m, effective := scanner.MatchSkillCall(trimContent); m != nil {
+					matchedSkill = m
+					trimContent = strings.TrimSpace(effective)
+					events <- agentTypes.Event{Type: agentTypes.EventSkillResult, Text: strings.TrimSpace(m.Name)}
+				}
+			}
 
 			events <- agentTypes.Event{Type: agentTypes.EventAgentSelect}
 			var agent agentTypes.Agent
@@ -83,6 +83,7 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 			data := exec.ExecData{
 				Agent:             agent,
 				WorkDir:           workDir,
+				Skill:             matchedSkill,
 				Content:           trimContent,
 				ExcludeTools:      req.ExcludeTools,
 				ExtraSystemPrompt: req.SystemPrompt,

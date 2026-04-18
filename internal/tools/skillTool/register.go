@@ -99,7 +99,11 @@ func handle(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (str
 	}
 
 	e.ActiveSkill = s
-	return renderSkill(s), nil
+	return RenderActivation(s), nil
+}
+
+func RenderActivation(s *skill.Skill) string {
+	return renderSkill(s)
 }
 
 func renderSkill(s *skill.Skill) string {
