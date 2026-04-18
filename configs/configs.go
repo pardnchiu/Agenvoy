@@ -9,9 +9,6 @@ import (
 //go:embed prompts/agent_selector.md
 var AgentSelector string
 
-//go:embed prompts/skill_selector.md
-var SkillSelector string
-
 //go:embed prompts/skill_execution.md
 var SkillExecution string
 

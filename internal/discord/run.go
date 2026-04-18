@@ -79,8 +79,7 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 		case agentTypes.EventDone:
 			doneEvent = e
 		// * use full name for remindering
-		case agentTypes.EventSkillSelect,
-			agentTypes.EventSkillResult,
+		case agentTypes.EventSkillResult,
 			agentTypes.EventAgentSelect,
 			agentTypes.EventAgentResult,
 			agentTypes.EventToolCall,

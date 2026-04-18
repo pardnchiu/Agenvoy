@@ -44,7 +44,7 @@ func EventLog(tag string, event agentTypes.Event, sessionID string, input string
 	}
 
 	switch event.Type {
-	case agentTypes.EventSkillSelect, agentTypes.EventAgentSelect:
+	case agentTypes.EventAgentSelect:
 		slog.Info(tag,
 			slog.String("session", sessionLog),
 			slog.String("event", event.Type.String()))

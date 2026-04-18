@@ -39,22 +39,12 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 		execErr = fn(ch)
 	}()
 
-	skillNone := false
 	for ev := range ch {
 		switch ev.Type {
-		case agentTypes.EventSkillSelect:
-			writeStdoutLine("[~] Selecting skill…")
-
 		case agentTypes.EventSkillResult:
-			if ev.Text == "none" {
-				skillNone = true
-				writeStdoutLine("[*] Skill: none")
-			} else {
-				writeStdoutLine(fmt.Sprintf("[*] Skill: %s", ev.Text))
-			}
+			writeStdoutLine(fmt.Sprintf("[*] Skill: %s", ev.Text))
 
 		case agentTypes.EventAgentSelect:
-			_ = skillNone
 			writeStdoutLine("[~] Selecting agent…")
 
 		case agentTypes.EventAgentResult:
