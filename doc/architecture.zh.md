@@ -2,7 +2,7 @@
 
 > 返回 [README](./README.zh.md)
 
-八張 Mermaid 圖涵蓋從進入點到各子系統的完整系統結構。
+九張 Mermaid 圖涵蓋從進入點到各子系統的完整系統結構。
 
 ## 1. 系統概覽
 
@@ -49,24 +49,27 @@ graph TB
 
 ## 2. 執行引擎
 
-`exec.Run()` 經由 skill / agent 選擇、token 裁剪、工具呼叫迭代迴圈的內部流程。
+流程順序：`exec.Run()` 先偵測 `/skill-name` 前綴（僅標記，不啟用），接著 `SelectAgent()` 挑選 provider，然後交給 `Execute()`。Skill 啟用發生在**迭代迴圈內**，以工具呼叫形式完成 — 絕非獨立前置步驟。
 
 ```mermaid
 flowchart TD
     Run["exec.Run()"]
+    PrefixDetect["scanner.MatchSkillCall()\n僅偵測 '/skill-name' 前綴\n標記 matchedSkill 並剝除前綴"]
+    AgentScan["SelectAgent()\nPlanner LLM 挑選最佳 provider\n（以 matchedSkill 作為 hint）"]
+    Enter["exec.Execute() 進入點"]
 
-    subgraph Selection ["選擇階段"]
-        SkillScan["SelectSkill()\n9 個掃描路徑按優先序"]
-        AgentScan["SelectAgent()\nPlanner LLM 挑選最佳 provider"]
+    subgraph Preseed ["Pre-loop · 僅當 matchedSkill != nil"]
+        AssignSynth["assignSkill()\n合成 select_skill 的\ntool_call + tool_result\n寫入 ToolHistories\n（skill body + 執行指引）"]
     end
 
     subgraph Loop ["迭代迴圈 · exec.Execute()"]
-        Assemble["assembleMessages()\n4 段固定區塊：\nSystemPrompts · OldHistories · UserInput · ToolHistories"]
+        Assemble["assembleMessages()\n4 段固定區塊：\nSystemPrompts · OldHistories · UserInput · ToolHistories\n（system prompt 透過\nskillTool.ListBlock\n攜帶 '## Skills' 清單）"]
         ReactTrim{"超過 context length？"}
         TrimOld["裁剪 OldHistories\n或 ToolHistories\n（錯誤時反應式）"]
         Send["Agent.Send()\n統一 provider 介面"]
         Parse["解析回應\n抽取 tool_calls"]
         Dispatch["派送 tool calls\n並行執行"]
+        SkillToolCall["select_skill handler\nRenderActivation(skill)\n作為 tool_result 回傳\n（LLM 主動名稱比對路徑）"]
         Dedup["Hash 去重\n避免相同呼叫重跑"]
         Accum["累積結果\n附加至訊息歷史"]
         Check{"停止條件？\n無 tool_calls\n或 iteration ≥ 128"}
@@ -74,15 +77,19 @@ flowchart TD
 
     Done["回傳最終回應"]
 
-    Run --> SkillScan
-    Run --> AgentScan
-    SkillScan -->|"注入 skill prompt"| Loop
-    AgentScan -->|"選定 provider"| Loop
+    Run --> PrefixDetect
+    PrefixDetect --> AgentScan
+    AgentScan --> Enter
+    Enter --> AssignSynth
+    Enter -.->|"無前綴命中"| Loop
+    AssignSynth --> Loop
     Assemble --> ReactTrim
     ReactTrim -->|"是"| TrimOld --> Assemble
     ReactTrim -->|"否"| Send
     Send --> Parse
     Parse --> Dispatch
+    Dispatch -->|"name == select_skill"| SkillToolCall
+    SkillToolCall --> Accum
     Dispatch --> Dedup
     Dedup --> Accum
     Accum --> Check
@@ -214,7 +221,8 @@ flowchart TD
         Runner["script.js / script.py\nstdin/stdout JSON 協定\nscript_ 前綴註冊"]
     end
 
-    subgraph SkillTools ["Skill Git 工具"]
+    subgraph SkillTools ["Skill 啟用與 Git 工具"]
+        SST["select_skill · AlwaysLoad=true · ReadOnly=true\n以精確名稱啟用 '## Skills' 清單中的 skill\n回傳 RenderActivation(skill)：body + 執行指引\n'/skill-name' 前綴由 assignSkill() 自動合成呼叫\n（合成 tool_call/tool_result 寫入 ToolHistories）"]
         SGT["skill_git_commit\nskill_git_log\nskill_git_rollback\n(對 skill repo 路徑操作)"]
     end
 
@@ -259,7 +267,60 @@ flowchart TD
 
 ---
 
-## 6. 子 Agent 流程
+## 6. 延遲載入機制
+
+兩條並行的 lazy-load 路徑共同壓低 system prompt 體積。**工具 schema**：executor 初始化時，非 `AlwaysLoad` 的工具以空 stub schema（`{"type":"object","properties":{}}`）曝露；首次呼叫觸發 `search_tools select:<name>` 啟用並回覆 `Re-invoke...` 而非執行。**Skill body**：system prompt 的 `## Skills` 清單僅攜帶 name + description（≤200 runes）；完整 body + 執行指引僅在 `select_skill` 被呼叫時以 tool result 回傳。兩者同一 `索引 → 啟用 → 完整內容` 模式。
+
+```mermaid
+flowchart TD
+    subgraph ToolLazy ["工具 Schema 延遲載入 · internal/tools/executor.go"]
+        ExecInit["NewExecutor()"]
+        Classify{"AlwaysLoad\n標記？"}
+        AlwaysReal["曝露真實 schema\n(select_skill · search_tools\n+ api_*、ReadOnly 類)"]
+        Stub["曝露 stub schema\n{type:object, properties:{}}\n標記 StubTools[name]=true"]
+        LLM1["LLM 首次呼叫\n常以空參數或\nbest-effort 參數"]
+        StubHit["toolCall.go Pass 1 偵測\nStubTools[name] == true"]
+        Activate["dispatch search_tools\nselect:<name>\n→ 將真實 schema 注入\n當前請求工具清單"]
+        DeleteStub["delete StubTools[name]\n標記 activatedInBatch[name]"]
+        ReInvoke["回覆：'[name] tool schema\njust loaded. Re-invoke...'\n跳過 validator + executor"]
+        SameBatch["同輪重複 stub 呼叫：\nactivatedInBatch 短路\n回覆相同 Re-invoke"]
+        LLM2["下一輪\nLLM 看到真實 schema\n以正確參數呼叫"]
+    end
+
+    subgraph SkillLazy ["Skill Body 延遲載入 · internal/tools/skillTool"]
+        SysPrompt["system prompt ##Skills 清單\nskillTool.ListBlock(scanner)\nname + description ≤200 runes\n(maxDescLen 截斷)"]
+        LLMPick["LLM 依使用者請求\n配對清單中的 skill 名稱\n或 '/skill-name' 前綴\n(scanner.MatchSkillCall)"]
+        CallPath{"啟用\n路徑？"}
+        LLMCall["LLM 主動呼叫\nselect_skill(skill=name)"]
+        AssignCall["assignSkill() 合成\ntool_call + tool_result\n寫入 ToolHistories"]
+        Handler["select_skill handler\nRenderActivation(skill)：\n啟用名稱 + 路徑\n+ SkillExecution 指引\n+ 完整 skill body"]
+        ToolResult["以 tool_result 回傳\n作為後續迭代的\n繫結指令"]
+    end
+
+    ExecInit --> Classify
+    Classify -->|"true"| AlwaysReal
+    Classify -->|"false"| Stub
+    Stub --> LLM1
+    LLM1 --> StubHit
+    StubHit --> Activate
+    Activate --> DeleteStub
+    DeleteStub --> ReInvoke
+    ReInvoke --> LLM2
+    LLM1 -.->|"同批重複"| SameBatch
+    SameBatch --> ReInvoke
+
+    SysPrompt --> LLMPick
+    LLMPick --> CallPath
+    CallPath -->|"LLM 主動"| LLMCall
+    CallPath -->|"/skill-name 前綴"| AssignCall
+    LLMCall --> Handler
+    AssignCall --> Handler
+    Handler --> ToolResult
+```
+
+---
+
+## 7. 子 Agent 流程
 
 `invoke_subagent` 的完整生命週期：主 agent 如何以 in-process 方式透過 `exec.Execute()` 派送子 agent、隔離 session、並接收最終回應 — 全程不跨越 HTTP 邊界。
 
@@ -309,7 +370,7 @@ flowchart TD
 
 ---
 
-## 7. 儲存與記憶
+## 8. 儲存與記憶
 
 Session 摘要的分塊多階段生成、對話歷史裁剪與 ToriiDB-backed 錯誤記憶。
 
@@ -357,7 +418,7 @@ flowchart TD
 
 ---
 
-## 8. REST API 層
+## 9. REST API 層
 
 HTTP endpoint 路由、handler 派送以及 SSE vs 非 SSE 回應路徑。
 

@@ -2,7 +2,7 @@
 
 > Back to [README](../README.md)
 
-Eight Mermaid diagrams covering the full system, from entry points down to individual subsystems.
+Nine Mermaid diagrams covering the full system, from entry points down to individual subsystems.
 
 ## 1. System Overview
 
@@ -49,24 +49,27 @@ graph TB
 
 ## 2. Execution Engine
 
-Internal flow of `exec.Run()` through skill/agent selection, token trimming, and the tool-call iteration loop.
+Flow ordering: `exec.Run()` first detects any `/skill-name` prefix (flag only, no activation), then runs `SelectAgent()` to pick the provider, then hands off to `Execute()`. Skill activation happens **inside** the iteration loop as a tool call — never as a separate pre-call.
 
 ```mermaid
 flowchart TD
     Run["exec.Run()"]
+    PrefixDetect["scanner.MatchSkillCall()\n'/skill-name' prefix detect only\nflags matchedSkill, strips prefix"]
+    AgentScan["SelectAgent()\nPlanner LLM picks best provider\n(takes matchedSkill as hint)"]
+    Enter["exec.Execute() entry"]
 
-    subgraph Selection ["Selection Phase"]
-        SkillScan["SelectSkill()\n9 scan paths in priority order"]
-        AgentScan["SelectAgent()\nPlanner LLM picks best provider"]
+    subgraph Preseed ["Pre-loop · only if matchedSkill != nil"]
+        AssignSynth["assignSkill()\nsynthesize select_skill\ntool_call + tool_result\ninto ToolHistories\n(skill body + execution guidance)"]
     end
 
     subgraph Loop ["Iteration Loop · exec.Execute()"]
-        Assemble["assembleMessages()\n4 fixed segments:\nSystemPrompts · OldHistories · UserInput · ToolHistories"]
+        Assemble["assembleMessages()\n4 fixed segments:\nSystemPrompts · OldHistories · UserInput · ToolHistories\n(system prompt carries '## Skills' list\nvia skillTool.ListBlock)"]
         ReactTrim{"Context length\nexceeded?"}
         TrimOld["Trim OldHistories\nor ToolHistories\n(reactive, on error)"]
         Send["Agent.Send()\nunified provider interface"]
         Parse["Parse response\nextract tool_calls"]
         Dispatch["Dispatch tool calls\nparallel execution"]
+        SkillToolCall["select_skill handler\nRenderActivation(skill)\nreturned as tool_result\n(LLM-initiated name-match path)"]
         Dedup["Hash-based deduplication\nprevent identical repeat calls"]
         Accum["Accumulate results\nappend to message history"]
         Check{"Stop condition?\nno tool_calls OR\niteration ≥ 128"}
@@ -74,15 +77,19 @@ flowchart TD
 
     Done["Return final response"]
 
-    Run --> SkillScan
-    Run --> AgentScan
-    SkillScan -->|"skill prompt injected"| Loop
-    AgentScan -->|"provider selected"| Loop
+    Run --> PrefixDetect
+    PrefixDetect --> AgentScan
+    AgentScan --> Enter
+    Enter --> AssignSynth
+    Enter -.->|"no prefix match"| Loop
+    AssignSynth --> Loop
     Assemble --> ReactTrim
     ReactTrim -->|"yes"| TrimOld --> Assemble
     ReactTrim -->|"no"| Send
     Send --> Parse
     Parse --> Dispatch
+    Dispatch -->|"name == select_skill"| SkillToolCall
+    SkillToolCall --> Accum
     Dispatch --> Dedup
     Dedup --> Accum
     Accum --> Check
@@ -214,7 +221,8 @@ flowchart TD
         Runner["script.js / script.py\nstdin/stdout JSON protocol\nscript_ prefix registration"]
     end
 
-    subgraph SkillTools ["Skill Git Tools"]
+    subgraph SkillTools ["Skill Activation & Git Tools"]
+        SST["select_skill · AlwaysLoad=true · ReadOnly=true\nactivates skill by exact name from '## Skills' list\nreturns RenderActivation(skill): body + execution guidance\nauto-invoked for '/skill-name' prefix via assignSkill()\n(synthetic tool_call/tool_result into ToolHistories)"]
         SGT["skill_git_commit\nskill_git_log\nskill_git_rollback\n(operates on skill repo path)"]
     end
 
@@ -259,7 +267,60 @@ flowchart TD
 
 ---
 
-## 6. Sub-Agent Flow
+## 6. Lazy-Load Mechanism
+
+Two parallel lazy-load patterns keep the system prompt minimal. **Tool schemas**: non-`AlwaysLoad` tools expose an empty stub schema (`{"type":"object","properties":{}}`) on executor init; first call triggers activation via `search_tools select:<name>` and replies `Re-invoke...` instead of running. **Skill bodies**: `## Skills` list in the system prompt only carries name + description (≤200 runes); the full body + execution guidance loads only as the `select_skill` tool result. Same `index → activate → full content` pattern.
+
+```mermaid
+flowchart TD
+    subgraph ToolLazy ["Tool Schema Lazy-Load · internal/tools/executor.go"]
+        ExecInit["NewExecutor()"]
+        Classify{"AlwaysLoad\nflag?"}
+        AlwaysReal["expose real schema\n(select_skill · search_tools\n+ api_*, ReadOnly flagged ones)"]
+        Stub["expose stub schema\n{type:object, properties:{}}\nmark StubTools[name]=true"]
+        LLM1["LLM first call\noften with empty or\nbest-effort args"]
+        StubHit["toolCall.go Pass 1 detects\nStubTools[name] == true"]
+        Activate["dispatch search_tools\nselect:<name>\n→ injects real schema into\ncurrent request tool list"]
+        DeleteStub["delete StubTools[name]\nmark activatedInBatch[name]"]
+        ReInvoke["reply: '[name] tool schema\njust loaded. Re-invoke...'\nSKIP validator + executor"]
+        SameBatch["same-turn dup stub calls:\nactivatedInBatch short-circuits\nto same Re-invoke reply"]
+        LLM2["next iteration\nLLM sees real schema\ncalls with correct args"]
+    end
+
+    subgraph SkillLazy ["Skill Body Lazy-Load · internal/tools/skillTool"]
+        SysPrompt["system prompt ##Skills list\nskillTool.ListBlock(scanner)\nname + description ≤200 runes\n(maxDescLen truncation)"]
+        LLMPick["LLM matches user request\nto listed skill name\nOR '/skill-name' prefix match\n(scanner.MatchSkillCall)"]
+        CallPath{"activation\npath?"}
+        LLMCall["LLM calls\nselect_skill(skill=name)"]
+        AssignCall["assignSkill() synthesizes\ntool_call + tool_result\ninto ToolHistories"]
+        Handler["select_skill handler\nRenderActivation(skill):\nactive name + path\n+ SkillExecution guidance\n+ full skill body"]
+        ToolResult["return as tool_result\nbinding for subsequent\niterations"]
+    end
+
+    ExecInit --> Classify
+    Classify -->|"true"| AlwaysReal
+    Classify -->|"false"| Stub
+    Stub --> LLM1
+    LLM1 --> StubHit
+    StubHit --> Activate
+    Activate --> DeleteStub
+    DeleteStub --> ReInvoke
+    ReInvoke --> LLM2
+    LLM1 -.->|"dup in same batch"| SameBatch
+    SameBatch --> ReInvoke
+
+    SysPrompt --> LLMPick
+    LLMPick --> CallPath
+    CallPath -->|"LLM-initiated"| LLMCall
+    CallPath -->|"/skill-name prefix"| AssignCall
+    LLMCall --> Handler
+    AssignCall --> Handler
+    Handler --> ToolResult
+```
+
+---
+
+## 7. Sub-Agent Flow
 
 End-to-end lifecycle of `invoke_subagent`: how the parent agent dispatches an in-process child via `exec.Execute()`, isolates its session, and receives its final response — all without crossing an HTTP boundary.
 
@@ -309,7 +370,7 @@ flowchart TD
 
 ---
 
-## 7. Persistence & Memory
+## 8. Persistence & Memory
 
 Chunked multi-pass summary generation, conversation history trimming, and ToriiDB-backed error memory.
 
@@ -357,7 +418,7 @@ flowchart TD
 
 ---
 
-## 8. REST API Layer
+## 9. REST API Layer
 
 HTTP endpoint routing, handler dispatch, and SSE vs. non-SSE response paths.
 

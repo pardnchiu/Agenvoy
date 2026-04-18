@@ -38,6 +38,7 @@ The agent learns from past failures across sessions, routes each task to the rig
 
 - [Architecture](#architecture)
 - [Features](#features)
+- [Dependencies](#dependencies)
 - [Concepts](#concepts)
 - [File Structure](#file-structure)
 - [Version History](#version-history)
@@ -56,8 +57,8 @@ graph TB
     end
 
     subgraph Engine ["Execution Engine"]
-        Run["exec.Run()"]
-        Execute["exec.Execute()\n≤128 iterations"]
+        Run["exec.Run()\nprefix detect → SelectAgent → Execute"]
+        Execute["exec.Execute()\n≤128 iterations\nskill activates via select_skill tool"]
     end
 
     subgraph Providers ["LLM Providers"]
@@ -69,11 +70,11 @@ graph TB
     end
 
     subgraph Tools ["Tool Subsystem"]
-        T["File · Web · API · Script\nScheduler · Error Memory"]
+        T["File · Web · API · Script · Skill (select_skill)\nScheduler · Error Memory · Sub-Agent"]
     end
 
     subgraph Memory ["Memory Layer"]
-        M["ToriiDB Store · Session Summary\nObsidian Vault (optional)"]
+        M["ToriiDB Store · Session Summary"]
     end
 
     App --> Run
@@ -114,13 +115,21 @@ Tool failures are SHA-256 indexed into a knowledge base that the agent recalls a
 
 `search_tools` is always on — the agent injects tools on demand through fuzzy search, `select:<name>` direct activation, or `+term` required-match syntax, with no upfront schema load.
 
-## Concepts
+## Dependencies
 
-Three prior projects from the same author directly informed Agenvoy's architecture:
+First-party packages Agenvoy pulls in directly from its author's ecosystem.
 
 ### Embedded Store as Memory Backbone — [pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)
 
-[pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB) is a lightweight embedded key-value store designed around the idea that process-local state should be durable, observable, and free of external dependencies. Agenvoy adopts it as the single backbone for all persistence — session history, error memory, and web tool caches (`fetch_page` / `search_web` / `fetch_google_rss`) all live behind a thin `filesystem/store` wrapper instead of scattered JSON files. This collapses what used to be per-subsystem file formats into one indexed, atomic store, lets `search_history` and `search_errors` scan sessions without walking the filesystem, and makes cache invalidation a matter of deleting a key rather than orchestrating file locks.
+A lightweight embedded key-value store that serves as Agenvoy's single persistence backbone. Session history, error memory, and web tool caches (`fetch_page` / `search_web` / `fetch_google_rss`) all live behind a thin `internal/filesystem/store` wrapper instead of scattered JSON files. This collapses per-subsystem file formats into one indexed, atomic store, lets `search_history` and `search_errors` scan sessions without walking the filesystem, and reduces cache invalidation to a single key delete.
+
+### Shared Utility Library — [pardnchiu/go-utils](https://github.com/pardnchiu/go-utils)
+
+A cross-cutting utility package providing the HTTP, browser, keychain, and helper primitives Agenvoy builds on. `go-utils/http` supplies the generic `GET[T]` / `POST[T]` / `PUT[T]` / `PATCH[T]` / `DELETE[T]` client used by every provider (`claude` / `openai` / `copilot` / `compat` / `gemini` / `nvidia`) and every native API tool (`yahooFinance` / `youtube` / `googleRSS` / `searchWeb`). `go-utils/rod` owns the headless-Chrome stack behind `fetch_page` — stealth JS, listener-settle detection, viewport handling, typed `FetchError{Status}`, `KeepLinks`, and a process-singleton browser with idle-TTL eviction. `go-utils/filesystem/keychain` powers credential storage (macOS `security` / Linux `secret-tool` / file fallback), and `go-utils/utils.UUID()` provides the shared ID generator.
+
+## Concepts
+
+Two prior projects from the same author directly informed Agenvoy's architecture:
 
 ### Script Tool as FaaS — [pardnchiu/go-faas](https://github.com/pardnchiu/go-faas)
 
@@ -128,7 +137,7 @@ Three prior projects from the same author directly informed Agenvoy's architectu
 
 ### Cognitive Imperfect Memory — [pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype)
 
-[pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype) argues that perfect memory is a cognitive burden — based on research showing multi-turn LLM performance drops 39% when full conversation history is replayed verbatim ([LLMs Get Lost In Multi-Turn Conversation](https://arxiv.org/abs/2505.06120)). The system maintains a structured rolling summary and retrieves relevant fragments via fuzzy search only when triggered, mirroring how humans selectively recall rather than replay. Agenvoy's session layer reflects this directly: `trimMessages()` enforces a token budget rather than replaying full history, `summary` is persisted and deep-merged across turns, and `search_history` / `memory_search` provide keyword-triggered recall rather than injecting all past context.
+[pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype) argues that perfect memory is a cognitive burden — based on research showing multi-turn LLM performance drops 39% when full conversation history is replayed verbatim ([LLMs Get Lost In Multi-Turn Conversation](https://arxiv.org/abs/2505.06120)). The system maintains a structured rolling summary and retrieves relevant fragments via fuzzy search only when triggered, mirroring how humans selectively recall rather than replay. Agenvoy's session layer reflects this directly: `trimMessages()` enforces a token budget rather than replaying full history, `summary` is persisted and deep-merged across turns, and `search_history` provides keyword-triggered recall rather than injecting all past context.
 
 ## File Structure
 
@@ -148,8 +157,7 @@ agenvoy/
 │   ├── discord/                # Discord slash commands + file attachments
 │   ├── filesystem/
 │   │   ├── keychain/           # OS Keychain API key storage
-│   │   ├── store/              # ToriiDB store wrapper
-│   │   └── obsidian.go         # Obsidian Local REST API client
+│   │   └── store/              # ToriiDB store wrapper
 │   ├── routes/                 # Gin router and REST API handlers
 │   ├── sandbox/                # bubblewrap / sandbox-exec isolation
 │   ├── scheduler/              # cron / one-time tasks + script runner
@@ -166,8 +174,8 @@ agenvoy/
 
 ## Version History
 
-- **v0.19.0** (unreleased) — Add in-process sub-agent delegation (`invoke_subagent`) with isolated temp sessions, per-call model / system-prompt / tool overrides, and mandatory self-exclusion. Add three-pass concurrent tool-call dispatcher with a `Concurrent` registry flag, fan-out for `fetch_page` / `invoke_subagent` / `calculate`, and a batch-scoped stub-activation guard. Add same-payload retry circuit breaker for provider and tool calls; add `prompt_cache_key` to the Codex Responses API; switch `search_web` from `html.duckduckgo.com` to `lite.duckduckgo.com/lite/` with new anchor/snippet parsing; drop DDG-unsupported sub-day time ranges; harden `fetch_page` soft-404 detection via `err=404/403/410` query-param redirects; strengthen agent tier routing and memory-driven tool recovery.
-- **v0.18.0–v0.18.3** — Add vim-style TUI navigation keys and `:` command input mode. Migrate session history, error memory, and `fetch_page` / `search_web` / `google_rss` caches to the ToriiDB store. Replace per-request summary with an hourly cron running chunked multi-pass generation. Consolidate `cmd/cli` and `cmd/server` into a single `cmd/app` entry and rename the binary to `agen`. Add Obsidian Local REST API memory integration (`memory_search` / `memory_search_tag` / `memory_tags` / `memory_list`). Replace internal keychain / HTTP client / `fetchPage` internals with `go-utils` packages. Add stub-tool handling and schema-derived required-arg validation.
+- **v0.19.0** — Add in-process sub-agent delegation (`invoke_subagent`) with isolated temp sessions, per-call model / system-prompt / tool overrides, and mandatory self-exclusion. Add three-pass concurrent tool-call dispatcher with a `Concurrent` registry flag, fan-out for `fetch_page` / `invoke_subagent` / `calculate`, and a batch-scoped stub-activation guard. Add same-payload retry circuit breaker for provider and tool calls; add `prompt_cache_key` to the Codex Responses API; switch `search_web` from `html.duckduckgo.com` to `lite.duckduckgo.com/lite/` with new anchor/snippet parsing; drop DDG-unsupported sub-day time ranges; harden `fetch_page` soft-404 detection via `err=404/403/410` query-param redirects; strengthen agent tier routing and memory-driven tool recovery.
+- **v0.18.0–v0.18.3** — Add vim-style TUI navigation keys and `:` command input mode. Migrate session history, error memory, and `fetch_page` / `search_web` / `google_rss` caches to the ToriiDB store. Replace per-request summary with an hourly cron running chunked multi-pass generation. Consolidate `cmd/cli` and `cmd/server` into a single `cmd/app` entry and rename the binary to `agen`. Replace internal keychain / HTTP client / `fetchPage` internals with `go-utils` packages. Add stub-tool handling and schema-derived required-arg validation.
 - **v0.17.0–v0.17.4** — Ship the full REST API layer (`/v1/send` with SSE + non-SSE, `/v1/key`, `/v1/tools`, `/v1/tool/:name`), unify Discord bot and REST API under `cmd/app`, and move the Copilot token into the system keychain. Add `call_external_agent` / `verify_with_external_agent` / `review_result` for external delegation and internal priority-model review, plus a `model` field on `/v1/send` to bypass agent selection. Add `search_tools` deferred tool loading (keyword fuzzy search + `select:<name>` direct activation), `exclude_tools` per-request filtering, and prompt caching across Claude / Gemini / Copilot providers. Add OpenAI Codex as a standalone OAuth provider (Device Code Flow), `read_image` for local image input, and restore Yahoo Finance as a native Go tool (`fetch_yahoo_finance`) with concurrent query1/query2 fetch. Refactor session message assembly into 4 fixed segments with reactive context trimming, scheduler into `crons/` / `tasks/` / `script/` sub-packages, and rename `browser` → `fetchPage`.
 - **v0.16.0–v0.16.1** — Ship the script tool runtime (`scriptAdapter`): drop a `tool.json` + `script.js`/`script.py` into `~/.config/agenvoy/script_tools/` and it is auto-discovered as a `script_`-prefixed tool via stdin/stdout JSON that mirrors the API tool contract. Bundle Threads and yt-dlp script extensions with cross-platform `install_threads.sh` / `install_youtube.sh`. Add Copilot token 401 auto-relogin. Refactor `toolAdapter` into `api/` and `script/` sub-packages, move session management into `internal/session`, split filesystem into single-responsibility files, and fix Darwin sandbox keychain directory access.
 - **v0.15.0–v0.15.2** — Add Copilot Responses API support (GPT-5.4 and Codex models auto-switch endpoint), session-level token-budget message trimming, sensitive-path denial rules for macOS and Linux sandbox, and restore Linux bwrap `--unshare-all` namespace isolation. Fix Copilot Claude/Gemini image validation by decoding and re-encoding every upload as JPEG; split the summary regex into three independent patterns; move system prompts after history to strengthen instruction adherence. Add the `analyze_youtube` metadata tool, Discord Modal-based API key management, per-model token usage tracking via `usageManager`, configurable reasoning level across all providers, and browser iteration limits via `MAX_TOOL_ITERATIONS` / `MAX_SKILL_ITERATIONS` / `MAX_EMPTY_RESPONSES`.
