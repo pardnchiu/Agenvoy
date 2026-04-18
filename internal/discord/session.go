@@ -21,6 +21,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
@@ -43,7 +44,7 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 
 	session.SystemPrompts = []agentTypes.Message{
 		{Role: "system", Content: configs.DiscordSystemPrompt},
-		{Role: "system", Content: exec.GetSystemPrompt(data)},
+		{Role: "system", Content: exec.GetSystemPrompt(data.WorkDir, data.ExtraSystemPrompt, host.Scanner())},
 	}
 	if summary := sessionManager.GetSummaryPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
 		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}

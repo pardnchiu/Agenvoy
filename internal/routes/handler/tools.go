@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
@@ -15,7 +16,7 @@ import (
 func ListTools() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		workDir, _ := os.UserHomeDir()
-		executor, err := tools.NewExecutor(workDir, "api-"+utils.UUID())
+		executor, err := tools.NewExecutor(workDir, "api-"+utils.UUID(), host.Scanner())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -50,7 +51,7 @@ func CallTool() gin.HandlerFunc {
 		}
 
 		workDir, _ := os.UserHomeDir()
-		executor, err := tools.NewExecutor(workDir, "api-"+utils.UUID())
+		executor, err := tools.NewExecutor(workDir, "api-"+utils.UUID(), host.Scanner())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

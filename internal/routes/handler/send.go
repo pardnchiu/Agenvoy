@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
@@ -57,13 +58,14 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 
 			trimContent := strings.TrimSpace(req.Content)
 
-			events <- agentTypes.Event{Type: agentTypes.EventSkillSelect}
-			skill := exec.SelectSkill(ctx, bot, scanner, trimContent, nil)
-			if skill != nil {
-				events <- agentTypes.Event{Type: agentTypes.EventSkillResult, Text: skill.Name}
-			} else {
-				events <- agentTypes.Event{Type: agentTypes.EventSkillResult, Text: "none"}
-			}
+			// events <- agentTypes.Event{Type: agentTypes.EventSkillSelect}
+			// skill := exec.SelectSkill(ctx, bot, scanner, trimContent, nil)
+			// if skill != nil {
+			// 	events <- agentTypes.Event{Type: agentTypes.EventSkillResult, Text: skill.Name}
+			// } else {
+			// 	events <- agentTypes.Event{Type: agentTypes.EventSkillResult, Text: "none"}
+			// }
+			_ = scanner
 
 			events <- agentTypes.Event{Type: agentTypes.EventAgentSelect}
 			var agent agentTypes.Agent
@@ -73,7 +75,7 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 				}
 			}
 			if agent == nil {
-				agent = exec.SelectAgent(ctx, bot, registry, trimContent, skill != nil)
+				agent = exec.SelectAgent(ctx, bot, registry, trimContent, false)
 			}
 			events <- agentTypes.Event{Type: agentTypes.EventAgentResult, Text: agent.Name()}
 
@@ -81,7 +83,6 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 			data := exec.ExecData{
 				Agent:             agent,
 				WorkDir:           workDir,
-				Skill:             skill,
 				Content:           trimContent,
 				ExcludeTools:      req.ExcludeTools,
 				ExtraSystemPrompt: req.SystemPrompt,
@@ -114,7 +115,11 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 		Histories: []agentTypes.Message{},
 	}
 
-	session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: exec.GetSystemPrompt(data)}}
+	scanner := data.SkillScanner
+	if scanner == nil {
+		scanner = host.Scanner()
+	}
+	session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: exec.GetSystemPrompt(data.WorkDir, data.ExtraSystemPrompt, scanner)}}
 
 	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 	session.Histories = oldHistory

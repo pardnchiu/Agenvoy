@@ -9,13 +9,14 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/skill"
 	apiAdapter "github.com/pardnchiu/agenvoy/internal/toolAdapter/api"
 	scriptAdapter "github.com/pardnchiu/agenvoy/internal/toolAdapter/script"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func NewExecutor(workPath, sessionID string) (*toolTypes.Executor, error) {
+func NewExecutor(workPath, sessionID string, scanner *skill.SkillScanner) (*toolTypes.Executor, error) {
 	var tools []toolTypes.Tool
 	if err := json.Unmarshal(toolRegister.JSON(), &tools); err != nil {
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
@@ -107,6 +108,7 @@ func NewExecutor(workPath, sessionID string) (*toolTypes.Executor, error) {
 		StubTools:      stubTools,
 		APIToolbox:     apiToolbox,
 		ScriptToolbox:  scriptToolbox,
+		SkillScanner:   scanner,
 	}, nil
 }
 

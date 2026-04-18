@@ -18,25 +18,27 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 
 	trimInput := strings.TrimSpace(userInput)
 
-	events <- agentTypes.Event{
-		Type: agentTypes.EventSkillSelect,
-	}
-	fileNames := make([]string, len(fileInputs))
-	for i, f := range fileInputs {
-		fileNames[i] = f
-	}
-	matchedSkill := SelectSkill(ctx, bot, scanner, trimInput, fileNames)
-	if matchedSkill != nil {
-		events <- agentTypes.Event{
-			Type: agentTypes.EventSkillResult,
-			Text: strings.TrimSpace(matchedSkill.Name),
-		}
-	} else {
-		events <- agentTypes.Event{
-			Type: agentTypes.EventSkillResult,
-			Text: "none",
-		}
-	}
+	// events <- agentTypes.Event{
+	// 	Type: agentTypes.EventSkillSelect,
+	// }
+	// fileNames := make([]string, len(fileInputs))
+	// for i, f := range fileInputs {
+	// 	fileNames[i] = f
+	// }
+	// matchedSkill := SelectSkill(ctx, bot, scanner, trimInput, fileNames)
+	// if matchedSkill != nil {
+	// 	events <- agentTypes.Event{
+	// 		Type: agentTypes.EventSkillResult,
+	// 		Text: strings.TrimSpace(matchedSkill.Name),
+	// 	}
+	// } else {
+	// 	events <- agentTypes.Event{
+	// 		Type: agentTypes.EventSkillResult,
+	// 		Text: "none",
+	// 	}
+	// }
+	var matchedSkill *skill.Skill
+	_ = scanner
 
 	events <- agentTypes.Event{
 		Type: agentTypes.EventAgentSelect,

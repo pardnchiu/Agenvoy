@@ -18,6 +18,7 @@ import (
 
 	_ "golang.org/x/image/webp"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
@@ -65,7 +66,11 @@ func buildContent(content string, imageInputs []string, fileInputs []string) any
 }
 
 func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
-	prompt := GetSystemPrompt(execData)
+	scanner := execData.SkillScanner
+	if scanner == nil {
+		scanner = host.Scanner()
+	}
+	prompt := GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner)
 	trimInput := strings.TrimSpace(execData.Content)
 	session := agentTypes.AgentSession{
 		Tools:     []agentTypes.Message{},

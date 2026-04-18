@@ -23,20 +23,20 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 
 	dcBot.SkillScanner.Scan()
 
-	fileNames := make([]string, len(receiveMessage.FileInputs))
-	for i, f := range receiveMessage.FileInputs {
-		fileNames[i] = f.Name
-	}
-	skill := exec.SelectSkill(ctx, dcBot.PlannerAgent, dcBot.SkillScanner, receiveMessage.Content, fileNames)
-	if skill != nil {
-		slog.Info("skill", slog.String("skill", skill.Name))
-	}
-	agent := exec.SelectAgent(ctx, dcBot.PlannerAgent, dcBot.AgentRegistry, receiveMessage.Content, skill != nil)
+	// fileNames := make([]string, len(receiveMessage.FileInputs))
+	// for i, f := range receiveMessage.FileInputs {
+	// 	fileNames[i] = f.Name
+	// }
+	// skill := exec.SelectSkill(ctx, dcBot.PlannerAgent, dcBot.SkillScanner, receiveMessage.Content, fileNames)
+	// if skill != nil {
+	// 	slog.Info("skill", slog.String("skill", skill.Name))
+	// }
+	agent := exec.SelectAgent(ctx, dcBot.PlannerAgent, dcBot.AgentRegistry, receiveMessage.Content, false)
 
 	execData := exec.ExecData{
 		Agent:   agent,
 		WorkDir: workDir,
-		Skill:   skill,
+		// Skill:   skill,
 		Content: receiveMessage.Content,
 	}
 
@@ -47,9 +47,6 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	utils.EventLog("[Discord]", agentTypes.Event{}, session.ID, strings.TrimSpace(regexp.MustCompile(`<[^>]+>`).ReplaceAllString(receiveMessage.Content, "")))
 
 	interactionMax := 128
-	if skill == nil {
-		interactionMax = 16
-	}
 	events := make(chan agentTypes.Event, interactionMax)
 
 	go func() {

@@ -107,7 +107,7 @@ func handle(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (s
 		time.Now().Format("2006-01-02 15:04:05"), task)
 	session := &agentTypes.AgentSession{
 		ID:            sessionID,
-		SystemPrompts: []agentTypes.Message{{Role: "system", Content: exec.GetSystemPrompt(execData)}},
+		SystemPrompts: []agentTypes.Message{{Role: "system", Content: exec.GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, host.Scanner())}},
 		OldHistories:  []agentTypes.Message{},
 		ToolHistories: []agentTypes.Message{},
 		Tools:         []agentTypes.Message{},

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
@@ -24,6 +24,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
+	"github.com/pardnchiu/agenvoy/internal/tools/skillTool"
 )
 
 var timestampHeaderRegex = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
@@ -94,6 +95,7 @@ type ExecData struct {
 	Agent             agentTypes.Agent
 	WorkDir           string
 	Skill             *skill.Skill
+	SkillScanner      *skill.SkillScanner
 	Content           string
 	ImageInputs       []string
 	FileInputs        []string
@@ -107,10 +109,17 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		data.Skill = nil
 	}
 
-	exec, err := tools.NewExecutor(data.WorkDir, session.ID)
+	scanner := data.SkillScanner
+	if scanner == nil {
+		scanner = host.Scanner()
+	}
+
+	exec, err := tools.NewExecutor(data.WorkDir, session.ID, scanner)
 	if err != nil {
 		return fmt.Errorf("tools.NewExecutor: %w", err)
 	}
+
+	exec.ActiveSkill = data.Skill
 
 	if len(data.ExcludeTools) > 0 {
 		excluded := make(map[string]bool, len(data.ExcludeTools))
@@ -132,10 +141,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		}
 	}
 
-	limit := MaxToolIterations
-	if data.Skill != nil {
-		limit = MaxSkillIterations
-	}
+	limit := MaxSkillIterations
 
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
@@ -293,38 +299,44 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	return nil
 }
 
-func GetSystemPrompt(data ExecData) string {
+func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.SkillScanner) string {
 	systemOS := runtime.GOOS
+	// var skillPath string
+	// var skillExt string
+	// var content string
+	// if data.Skill == nil {
+	// 	skillPath = "None"
+	// } else {
+	// 	skillPath = data.Skill.Path
+	// 	skillExt = configs.SkillExecution
+	// 	content = data.Skill.Content
 
-	var skillPath string
-	var skillExt string
-	var content string
-	if data.Skill == nil {
-		skillPath = "None"
-	} else {
-		skillPath = data.Skill.Path
-		skillExt = configs.SkillExecution
-		content = data.Skill.Content
+	// 	// * add skill path, ensure path is correct
+	// 	for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
+	// 		resolved := filepath.Join(data.Skill.Path, prefix)
 
-		// * add skill path, ensure path is correct
-		for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
-			resolved := filepath.Join(data.Skill.Path, prefix)
-
-			if _, err := os.Stat(resolved); err == nil {
-				content = strings.ReplaceAll(content, prefix, resolved+string(filepath.Separator))
-			}
-		}
-	}
+	// 		if _, err := os.Stat(resolved); err == nil {
+	// 			content = strings.ReplaceAll(content, prefix, resolved+string(filepath.Separator))
+	// 		}
+	// 	}
+	// }
 	var extraSection string
-	if extra := strings.TrimSpace(data.ExtraSystemPrompt); extra != "" {
+	if extra := strings.TrimSpace(extraSystemPrompt); extra != "" {
 		extraSection = "---\n\n## Additional Instructions\n\n" + extra + "\n\n---\n\n"
 	}
+
+	skillsSection := ""
+	if list := skillTool.ListBlock(scanner); list != "" {
+		skillsSection = "## Skills\n\nCall `select_skill` with one of these exact names to activate. The tool result returns the skill body + execution guidance — treat it as binding instructions for subsequent iterations. Never answer from prior knowledge when the user requests a listed skill by name.\n\n" + list
+	}
+
 	return strings.NewReplacer(
 		"{{.SystemOS}}", systemOS,
-		"{{.WorkPath}}", data.WorkDir,
-		"{{.SkillPath}}", skillPath,
-		"{{.SkillExt}}", skillExt,
-		"{{.Content}}", content,
+		"{{.WorkPath}}", workDir,
+		// "{{.SkillPath}}", skillPath,
+		// "{{.SkillExt}}", skillExt,
+		// "{{.Content}}", content,
+		"{{.AvailableSkills}}", skillsSection,
 		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
 		"{{.ExtraSystemPrompt}}", extraSection,
 	).Replace(configs.SystemPrompt)

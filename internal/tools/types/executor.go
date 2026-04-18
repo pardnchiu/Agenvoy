@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/pardnchiu/agenvoy/internal/skill"
 	apiAdapter "github.com/pardnchiu/agenvoy/internal/toolAdapter/api"
 )
 
@@ -24,6 +25,9 @@ type Executor struct {
 	ExcludeTools   map[string]bool
 	APIToolbox     *apiAdapter.Translator
 	ScriptToolbox  ScriptToolExecutor
+
+	ActiveSkill  *skill.Skill
+	SkillScanner *skill.SkillScanner
 }
 
 type Tool struct {
