@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"slices"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
@@ -25,14 +24,6 @@ var (
 )
 
 func Fetch(ctx context.Context, symbol, timeInterval, timeRange string) (string, error) {
-	if timeInterval == "" || !slices.Contains(timeIntervals, timeInterval) {
-		timeInterval = "1m"
-	}
-
-	if timeRange == "" || !slices.Contains(timeRanges, timeRange) {
-		timeRange = "1d"
-	}
-
 	hash := sha256.Sum256([]byte(symbol + "|" + timeInterval + "|" + timeRange))
 	cacheKey := "yahoo:" + hex.EncodeToString(hash[:])
 	db := store.DB(store.DBToolCache)
@@ -95,7 +86,11 @@ func fetch(ctx context.Context, host, symbol, interval, rangeStr string) (string
 	q := url.Values{}
 	q.Set("interval", interval)
 	q.Set("range", rangeStr)
-	path := fmt.Sprintf("https://%s/v8/finance/chart/%s?%s", host, url.PathEscape(symbol), q.Encode())
+	path := fmt.Sprintf("https://%s/v8/finance/chart/%s?%s",
+		host,
+		url.PathEscape(symbol),
+		q.Encode(),
+	)
 
 	data, status, err := go_utils_http.GET[any](ctx, nil, path, map[string]string{
 		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
