@@ -1,4 +1,4 @@
-package exec
+package summary
 
 import (
 	"regexp"
@@ -22,4 +22,3 @@ func isSummaryJSON(m map[string]any) bool {
 	}
 	return matched >= 2
 }
-

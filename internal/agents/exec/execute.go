@@ -8,12 +8,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
+
+	go_utils_utils "github.com/pardnchiu/go-utils/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
@@ -46,41 +46,17 @@ func StripModelResponse(text string) string {
 	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
-var MaxToolIterations = func() int {
-	if v := os.Getenv("MAX_TOOL_ITERATIONS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			return n
-		}
-	}
-	return 16
-}()
+var MaxToolIterations = positiveEnvInt("MAX_TOOL_ITERATIONS", 16)
+var MaxSkillIterations = positiveEnvInt("MAX_SKILL_ITERATIONS", 128)
+var MaxEmptyResponses = positiveEnvInt("MAX_EMPTY_RESPONSES", 8)
+var MaxRetry = positiveEnvInt("MAX_SAME_PAYLOAD_RETRY", 3)
 
-var MaxSkillIterations = func() int {
-	if v := os.Getenv("MAX_SKILL_ITERATIONS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			return n
-		}
+func positiveEnvInt(key string, def int) int {
+	if n := go_utils_utils.GetWithDefaultInt(key, def); n > 0 {
+		return n
 	}
-	return 128
-}()
-
-var MaxEmptyResponses = func() int {
-	if v := os.Getenv("MAX_EMPTY_RESPONSES"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			return n
-		}
-	}
-	return 8
-}()
-
-var MaxRetry = func() int {
-	if v := os.Getenv("MAX_SAME_PAYLOAD_RETRY"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			return n
-		}
-	}
-	return 3
-}()
+	return def
+}
 
 func hashPayload(parts ...any) string {
 	h := sha256.New()

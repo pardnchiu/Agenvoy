@@ -1,4 +1,4 @@
-package exec
+package summary
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func GenerateSummary(ctx context.Context, agent agentTypes.Agent, sessionID string, histories []agentTypes.Message) {
+func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, histories []agentTypes.Message) {
 	raw, _ := sessionManager.EnsureSummary(sessionID)
 
 	var oldSummary string
@@ -159,7 +159,7 @@ func sendAndParse(ctx context.Context, agent agentTypes.Agent, messages []agentT
 	return nil
 }
 
-func GetSummaryHistories(histories []agentTypes.Message) []agentTypes.Message {
+func Get(histories []agentTypes.Message) []agentTypes.Message {
 	var filtered []agentTypes.Message
 	for _, h := range histories {
 		if h.Role == "user" || h.Role == "assistant" {

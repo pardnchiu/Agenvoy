@@ -14,6 +14,7 @@ import (
 
 	"github.com/joho/godotenv"
 	go_utils_sandbox "github.com/pardnchiu/go-utils/sandbox"
+	go_utils_utils "github.com/pardnchiu/go-utils/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/extensions"
@@ -21,6 +22,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	_ "github.com/pardnchiu/agenvoy/internal/agents/subagent"
+	"github.com/pardnchiu/agenvoy/internal/agents/summary"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
 
@@ -254,10 +256,7 @@ func runApp() {
 
 		route := routes.New(selectorBot, registry, scanner)
 
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = "17989"
-		}
+		port := go_utils_utils.GetWithDefault("PORT", "17989")
 
 		server := &http.Server{
 			Addr:    ":" + port,
@@ -319,13 +318,13 @@ func setSummaryCron(bot agentTypes.Agent, registry agentTypes.AgentRegistry) {
 
 		for _, sid := range sessions {
 			histories, _ := session.GetHistory(sid)
-			summaryHistories := exec.GetSummaryHistories(histories)
+			summaryHistories := summary.Get(histories)
 			if len(summaryHistories) == 0 {
 				continue
 			}
 			bgCtx := context.Background()
 			summaryAgent := exec.SelectAgent(bgCtx, bot, registry, "[summary] 整理對話摘要，選擇最輕量可完成任務的模型", false)
-			exec.GenerateSummary(bgCtx, summaryAgent, sid, summaryHistories)
+			summary.Generate(bgCtx, summaryAgent, sid, summaryHistories)
 			slog.Info("summary done",
 				slog.String("session", sid))
 		}

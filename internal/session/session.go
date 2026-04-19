@@ -10,10 +10,11 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	go_utils_utils "github.com/pardnchiu/go-utils/utils"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -133,10 +134,8 @@ func GetChannelID(sessionID string) (string, error) {
 }
 
 var MaxHistoryMessages = func() int {
-	if v := os.Getenv("MAX_HISTORY_MESSAGES"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			return n
-		}
+	if n := go_utils_utils.GetWithDefaultInt("MAX_HISTORY_MESSAGES", 16); n > 0 {
+		return n
 	}
 	return 16
 }()

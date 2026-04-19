@@ -12,8 +12,10 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	go_utils_utils "github.com/pardnchiu/go-utils/utils"
 	"github.com/rivo/tview"
+
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 func globalShortcut(event *tcell.EventKey) *tcell.EventKey {
@@ -226,10 +228,7 @@ func openEditor() bool {
 		}
 
 		app.Suspend(func() {
-			editor := os.Getenv("EDITOR")
-			if editor == "" {
-				editor = "vi"
-			}
+			editor := go_utils_utils.GetWithDefault("EDITOR", "vi")
 			cmd := exec.Command(editor, filrPath)
 			cmd.Stdin = os.Stdin
 			cmd.Stdout = os.Stdout

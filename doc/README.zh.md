@@ -126,6 +126,10 @@ graph TB
 
 橫向切面的工具套件，提供 HTTP、瀏覽器、sandbox、keychain 與輔助原語。`go-utils/http` 提供泛型 `GET[T]` / `POST[T]` / `PUT[T]` / `PATCH[T]` / `DELETE[T]` client，供所有 provider（`claude` / `openai` / `copilot` / `compat` / `gemini` / `nvidia`）與原生 API 工具（`yahooFinance` / `youtube` / `googleRSS` / `searchWeb`）共用。`go-utils/rod` 收斂 `fetch_page` 背後的 headless Chrome 堆疊 — stealth JS、listener-settle 偵測、viewport、typed `FetchError{Status}`、`KeepLinks`，process-singleton 瀏覽器加上 idle-TTL 汰除。`go-utils/sandbox` 收斂 `run_command` 與所有 script 工具的 OS 原生 process 隔離 — macOS `sandbox-exec` seatbelt profile、Linux `bwrap` bubblewrap 並自動探測可用的 `--unshare-*` namespace、`CheckDependence()` 在 Linux 缺 bubblewrap 時自動安裝，以 `New(denyMapJSON)` 一次性載入來自 `configs/jsons/denied_map.json` 的敏感路徑黑名單。`go-utils/filesystem/keychain` 驅動憑證儲存（macOS `security` / Linux `secret-tool` / 檔案 fallback），`go-utils/utils.UUID()` 為共用 ID 產生器。
 
+### 原生 Cron 引擎 — [pardnchiu/go-scheduler](https://github.com/pardnchiu/go-scheduler)
+
+`agen` binary 內建的 in-process cron runtime，將週期性排程做為一等公民 — 不依賴系統 `crontab`、不依賴 `systemd` timer、不需要任何外部 daemon。`internal/scheduler` 以 `once.Do` 把 `goCron.New(...)` 包裝成 process singleton，對外暴露最小介面 `schedulerCron`（`Start` / `Stop` / `Add(spec, action, args...)` / `Remove`），同一套引擎同時驅動每小時摘要 cron 與 agent 主動建立的排程。對 LLM 暴露為四組工具 — `add_cron` / `list_crons` / `get_cron` / `remove_cron` 處理 cron 表達式排程、`add_task` / `list_tasks` / `get_task` / `remove_task` 處理由 `time.Timer` 支援的一次性任務 — 兩者皆透過 `internal/filesystem` 持久化並於啟動時重載。所有排程都在 agent process 內執行，TUI／CLI／Discord／REST 四個模式共享同一份排程狀態、工具可用性與執行 context；binary 結束即全部停止（`Stop()` 會取消所有 timer 並透過 `c.Stop()` 排空 cron）。
+
 ## 概念
 
 此專案直接承接作者先前兩個專案的架構思路：
