@@ -11,22 +11,25 @@ import (
 
 func init() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "analyze_youtube",
-		ReadOnly:    true,
-		Description: "分析 YouTube 影片內容，透過 Gemini 進行語音轉文字（STT），返回含時間戳記的完整逐字稿。",
+		Name:     "analyze_youtube",
+		ReadOnly: true,
+		Description: `
+Analyze YouTube video content using Gemini for speech-to-text (STT), returning a complete transcript with timestamps.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"url": map[string]any{
 					"type":        "string",
-					"description": "YouTube 影片網址（支援 watch?v=、shorts/、youtu.be/ 格式）",
+					"description": "YouTube video URL (supports watch?v=, shorts/, youtu.be/ formats)",
 				},
 				"prompt": map[string]any{
 					"type":        "string",
-					"description": "自訂分析提示詞，預設為全文逐字稿含時間戳記",
+					"description": "Additional analysis instructions appended after the default full-transcript-with-timestamps prompt",
 				},
 			},
-			"required": []string{"url"},
+			"required": []string{
+				"url",
+			},
 		},
 		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -35,6 +38,10 @@ func init() {
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
+			}
+
+			if params.URL == "" {
+				return "", fmt.Errorf("url is required")
 			}
 			return Fetch(ctx, params.URL, params.Prompt)
 		},
