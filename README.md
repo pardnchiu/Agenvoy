@@ -40,7 +40,6 @@ The agent learns from past failures across sessions, routes each task to the rig
 - [Features](#features)
 - [Dependencies](#dependencies)
 - [Concepts](#concepts)
-- [File Structure](#file-structure)
 - [Version History](#version-history)
 - [License](#license)
 - [Author](#author)
@@ -111,10 +110,6 @@ Tool failures are SHA-256 indexed into a knowledge base that the agent recalls a
 
 `invoke_subagent` spawns an isolated sub-agent directly inside the host process — independent session, optional model / system-prompt / tool overrides, forced self-exclusion to prevent recursion, and no HTTP hop.
 
-### Deferred Tool Loading via search_tools
-
-`search_tools` is always on — the agent injects tools on demand through fuzzy search, `select:<name>` direct activation, or `+term` required-match syntax, with no upfront schema load.
-
 ## Dependencies
 
 First-party packages Agenvoy pulls in directly from its author's ecosystem.
@@ -125,7 +120,7 @@ A lightweight embedded key-value store that serves as Agenvoy's single persisten
 
 ### Shared Utility Library — [pardnchiu/go-utils](https://github.com/pardnchiu/go-utils)
 
-A cross-cutting utility package providing the HTTP, browser, keychain, and helper primitives Agenvoy builds on. `go-utils/http` supplies the generic `GET[T]` / `POST[T]` / `PUT[T]` / `PATCH[T]` / `DELETE[T]` client used by every provider (`claude` / `openai` / `copilot` / `compat` / `gemini` / `nvidia`) and every native API tool (`yahooFinance` / `youtube` / `googleRSS` / `searchWeb`). `go-utils/rod` owns the headless-Chrome stack behind `fetch_page` — stealth JS, listener-settle detection, viewport handling, typed `FetchError{Status}`, `KeepLinks`, and a process-singleton browser with idle-TTL eviction. `go-utils/filesystem/keychain` powers credential storage (macOS `security` / Linux `secret-tool` / file fallback), and `go-utils/utils.UUID()` provides the shared ID generator.
+A cross-cutting utility package providing the HTTP, browser, sandbox, keychain, and helper primitives Agenvoy builds on. `go-utils/http` supplies the generic `GET[T]` / `POST[T]` / `PUT[T]` / `PATCH[T]` / `DELETE[T]` client used by every provider (`claude` / `openai` / `copilot` / `compat` / `gemini` / `nvidia`) and every native API tool (`yahooFinance` / `youtube` / `googleRSS` / `searchWeb`). `go-utils/rod` owns the headless-Chrome stack behind `fetch_page` — stealth JS, listener-settle detection, viewport handling, typed `FetchError{Status}`, `KeepLinks`, and a process-singleton browser with idle-TTL eviction. `go-utils/sandbox` owns the OS-native process isolation wrapped around `run_command` and every script tool — macOS `sandbox-exec` seatbelt profiles, Linux `bwrap` bubblewrap with auto-probed `--unshare-*` namespaces, `CheckDependence()` auto-installing `bubblewrap` on Linux, and a one-time `New(denyMapJSON)` to seed sensitive-path denylists sourced from `configs/jsons/denied_map.json`. `go-utils/filesystem/keychain` powers credential storage (macOS `security` / Linux `secret-tool` / file fallback), and `go-utils/utils.UUID()` provides the shared ID generator.
 
 ## Concepts
 
@@ -138,39 +133,6 @@ Two prior projects from the same author directly informed Agenvoy's architecture
 ### Cognitive Imperfect Memory — [pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype)
 
 [pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype) argues that perfect memory is a cognitive burden — based on research showing multi-turn LLM performance drops 39% when full conversation history is replayed verbatim ([LLMs Get Lost In Multi-Turn Conversation](https://arxiv.org/abs/2505.06120)). The system maintains a structured rolling summary and retrieves relevant fragments via fuzzy search only when triggered, mirroring how humans selectively recall rather than replay. Agenvoy's session layer reflects this directly: `trimMessages()` enforces a token budget rather than replaying full history, `summary` is persisted and deep-merged across turns, and `search_history` provides keyword-triggered recall rather than injecting all past context.
-
-## File Structure
-
-```
-agenvoy/
-├── cmd/
-│   └── app/                    # Unified entry: CLI + TUI + Discord bot + REST API
-├── configs/
-│   ├── jsons/                  # Provider model defs, denied_map, whitelist
-│   └── prompts/                # Embedded system prompts and selectors
-├── extensions/
-│   ├── apis/                   # Embedded API extensions (12+ JSON)
-│   ├── scripts/                # Bundled script tools (Threads, yt-dlp)
-│   └── skills/                 # Embedded skill extensions (Markdown)
-├── internal/
-│   ├── agents/                 # Execution engine, 7 provider backends, Agent interface
-│   ├── discord/                # Discord slash commands + file attachments
-│   ├── filesystem/
-│   │   ├── keychain/           # OS Keychain API key storage
-│   │   └── store/              # ToriiDB store wrapper
-│   ├── routes/                 # Gin router and REST API handlers
-│   ├── sandbox/                # bubblewrap / sandbox-exec isolation
-│   ├── scheduler/              # cron / one-time tasks + script runner
-│   ├── session/                # Session state, config, rolling summary
-│   ├── skill/                  # Markdown skill scanner
-│   ├── toolAdapter/            # api / script tool translation and dispatch
-│   ├── tools/                  # 30+ self-registering tools + external agent + search_tools
-│   └── tui/                    # Terminal UI (tview) with vim-style shortcuts
-├── install_threads.sh          # Cross-platform installer for Threads script tools
-├── install_youtube.sh          # Cross-platform installer for yt-dlp script tools
-├── go.mod
-└── LICENSE
-```
 
 ## Version History
 

@@ -160,16 +160,16 @@ flowchart TD
         Reject1["拒絕 · 路徑逃逸"]
     end
 
-    subgraph DeniedPaths ["敏感路徑拒絕 · sandbox"]
-        DenyMap["denied_map.json\n(嵌入，依 OS 規則)"]
+    subgraph DeniedPaths ["敏感路徑拒絕 · go-utils/sandbox"]
+        DenyMap["denied_map.json\n(嵌入，依 OS 規則)\n以 sandbox.New(configs.DeniedMap) 一次性載入"]
         DenyCheck{"命中 deny 規則？"}
         Reject2["拒絕 · 敏感路徑"]
     end
 
-    subgraph SandboxExec ["Process 隔離"]
+    subgraph SandboxExec ["Process 隔離 · go-utils/sandbox v0.6.0"]
         OSCheck{"OS？"}
-        Bwrap["bubblewrap · Linux\n--unshare-all namespace\n--new-session\n動態 probe + graceful fallback"]
-        SandboxExecMac["sandbox-exec · macOS\nApple Seatbelt profile"]
+        Bwrap["bubblewrap · Linux\n自動探測 --unshare-* namespace\n--new-session · --die-with-parent\nCheckDependence() 自動安裝 bwrap"]
+        SandboxExecMac["sandbox-exec · macOS\nApple Seatbelt profile\n為 Security.framework 重新允許 keychain"]
     end
 
     subgraph Keychain ["憑證儲存 · filesystem/keychain"]

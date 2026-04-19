@@ -160,16 +160,16 @@ flowchart TD
         Reject1["Reject · path escape"]
     end
 
-    subgraph DeniedPaths ["Sensitive Path Denial · sandbox"]
-        DenyMap["denied_map.json\n(embedded, OS-specific rules)"]
+    subgraph DeniedPaths ["Sensitive Path Denial · go-utils/sandbox"]
+        DenyMap["denied_map.json\n(embedded, OS-specific rules)\nseeded once via sandbox.New(configs.DeniedMap)"]
         DenyCheck{"Matches deny rule?"}
         Reject2["Reject · sensitive path"]
     end
 
-    subgraph SandboxExec ["Process Isolation"]
+    subgraph SandboxExec ["Process Isolation · go-utils/sandbox v0.6.0"]
         OSCheck{"OS?"}
-        Bwrap["bubblewrap · Linux\n--unshare-all namespace\n--new-session\ndynamic probe + graceful fallback"]
-        SandboxExecMac["sandbox-exec · macOS\nApple Seatbelt profile"]
+        Bwrap["bubblewrap · Linux\nauto-probed --unshare-* namespaces\n--new-session · --die-with-parent\nCheckDependence() auto-installs bwrap"]
+        SandboxExecMac["sandbox-exec · macOS\nApple Seatbelt profile\nkeychain re-allow for Security.framework"]
     end
 
     subgraph Keychain ["Credential Storage · filesystem/keychain"]
