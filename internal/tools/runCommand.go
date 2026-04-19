@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/sandbox"
+	go_utils_sandbox "github.com/pardnchiu/go-utils/sandbox"
+
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -98,9 +99,9 @@ func runCommand(ctx context.Context, e *toolTypes.Executor, command string) (str
 		err         error
 	)
 	if hasShellOps {
-		wrappedBin, wrappedArgs, err = sandbox.Wrap(binary, args, e.WorkDir)
+		wrappedBin, wrappedArgs, err = go_utils_sandbox.Wrap(binary, args, e.WorkDir)
 	} else {
-		wrappedBin, wrappedArgs, err = sandbox.Wrap(args[0], args[1:], e.WorkDir)
+		wrappedBin, wrappedArgs, err = go_utils_sandbox.Wrap(args[0], args[1:], e.WorkDir)
 	}
 	if err != nil {
 		return "", fmt.Errorf("sandbox.Wrap: %w", err)

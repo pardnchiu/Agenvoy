@@ -92,6 +92,8 @@ github.com/pardnchiu/go-scheduler v1.2.0 h1:DBmFWOPjGUzQEKYHZNeLS9v9PmJrKk/VwxQe
 github.com/pardnchiu/go-scheduler v1.2.0/go.mod h1:JtHqK0I/ha8E9Eo86rVaw+cvLgREcL5LfT8p9DmY3Lg=
 github.com/pardnchiu/go-utils v0.5.0 h1:cjLXhqST3DCJjo8Y+TotMSlPejOMCHSSicXwYXj2QwU=
 github.com/pardnchiu/go-utils v0.5.0/go.mod h1:/XkiaIWQJbGm89ibOJ1JHzUuzG6ZBmQcrgA7tJsCLQs=
+github.com/pardnchiu/go-utils v0.6.0 h1:lgn0CIRvu0B145/ulJYIgnQ9o0dCA66p+XyS9toBtJo=
+github.com/pardnchiu/go-utils v0.6.0/go.mod h1:/XkiaIWQJbGm89ibOJ1JHzUuzG6ZBmQcrgA7tJsCLQs=
 github.com/pelletier/go-toml/v2 v2.2.4 h1:mye9XuhQ6gvn5h28+VilKrrPoQVanw5PMw/TB0t5Ec4=
 github.com/pelletier/go-toml/v2 v2.2.4/go.mod h1:2gIqNv+qfxSVS7cM2xJQKtLSTLUE9V8t9Stt+h56mCY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	go_utils_sandbox "github.com/pardnchiu/go-utils/sandbox"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
@@ -25,7 +27,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 	"github.com/pardnchiu/agenvoy/internal/routes"
-	"github.com/pardnchiu/agenvoy/internal/sandbox"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
 	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
 	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
@@ -39,6 +40,7 @@ func init() {
 		slog.Warn("godotenv.Load",
 			slog.String("error", err.Error()))
 	}
+	go_utils_sandbox.New(configs.DeniedMap)
 }
 
 func main() {
@@ -83,7 +85,7 @@ func main() {
 }
 
 func initCLI() {
-	if err := sandbox.CheckDependence(); err != nil {
+	if err := go_utils_sandbox.CheckDependence(); err != nil {
 		slog.Error("sandbox.CheckDependence",
 			slog.String("error", err.Error()))
 		os.Exit(1)
@@ -198,7 +200,7 @@ func runApp() {
 	tui.New()
 	tui.SetSlog()
 
-	if err := sandbox.CheckDependence(); err != nil {
+	if err := go_utils_sandbox.CheckDependence(); err != nil {
 		slog.Error("sandbox.CheckDependence",
 			slog.String("error", err.Error()))
 	}

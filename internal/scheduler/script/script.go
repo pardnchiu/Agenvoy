@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/sandbox"
+	go_utils_sandbox "github.com/pardnchiu/go-utils/sandbox"
 )
 
 func Run(caller, scriptPath string) string {
@@ -21,7 +21,7 @@ func Run(caller, scriptPath string) string {
 	}
 
 	workDir := filepath.Dir(scriptPath)
-	wrappedBin, wrappedArgs, err := sandbox.Wrap(binary, []string{scriptPath}, workDir)
+	wrappedBin, wrappedArgs, err := go_utils_sandbox.Wrap(binary, []string{scriptPath}, workDir)
 	if err != nil {
 		slog.Error(caller,
 			slog.String("script", filepath.Base(scriptPath)),
