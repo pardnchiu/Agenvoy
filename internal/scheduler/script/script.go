@@ -1,10 +1,10 @@
 package script
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -21,7 +21,7 @@ func Run(caller, scriptPath string) string {
 	}
 
 	workDir := filepath.Dir(scriptPath)
-	wrappedBin, wrappedArgs, err := go_utils_sandbox.Wrap(binary, []string{scriptPath}, workDir)
+	cmd, err := go_utils_sandbox.Wrap(context.Background(), binary, []string{scriptPath}, workDir, nil)
 	if err != nil {
 		slog.Error(caller,
 			slog.String("script", filepath.Base(scriptPath)),
@@ -29,7 +29,6 @@ func Run(caller, scriptPath string) string {
 		return fmt.Sprintf("error: %s", err.Error())
 	}
 
-	cmd := exec.Command(wrappedBin, wrappedArgs...)
 	cmd.Env = append(os.Environ(),
 		"PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin",
 	)

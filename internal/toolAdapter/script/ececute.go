@@ -34,13 +34,11 @@ func (t *Translator) Execute(ctx context.Context, name string, args json.RawMess
 	execCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	wrappedBin, wrappedArgs, err := go_utils_sandbox.Wrap(runtime, []string{data.scriptPath}, workDir)
+	cmd, err := go_utils_sandbox.Wrap(execCtx, runtime, []string{data.scriptPath}, workDir, nil)
 	if err != nil {
 		return "", fmt.Errorf("sandbox.Wrap: %w", err)
 	}
 
-	cmd := exec.CommandContext(execCtx, wrappedBin, wrappedArgs...)
-	cmd.Dir = workDir
 	cmd.Stdin = strings.NewReader(input)
 
 	var stdout, stderr strings.Builder

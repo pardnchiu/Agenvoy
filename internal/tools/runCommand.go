@@ -94,21 +94,17 @@ func runCommand(ctx context.Context, e *toolTypes.Executor, command string) (str
 	defer cancel()
 
 	var (
-		wrappedBin  string
-		wrappedArgs []string
-		err         error
+		cmd *exec.Cmd
+		err error
 	)
 	if hasShellOps {
-		wrappedBin, wrappedArgs, err = go_utils_sandbox.Wrap(binary, args, e.WorkDir)
+		cmd, err = go_utils_sandbox.Wrap(ctx, binary, args, e.WorkDir, nil)
 	} else {
-		wrappedBin, wrappedArgs, err = go_utils_sandbox.Wrap(args[0], args[1:], e.WorkDir)
+		cmd, err = go_utils_sandbox.Wrap(ctx, args[0], args[1:], e.WorkDir, nil)
 	}
 	if err != nil {
 		return "", fmt.Errorf("sandbox.Wrap: %w", err)
 	}
-
-	cmd := exec.CommandContext(ctx, wrappedBin, wrappedArgs...)
-	cmd.Dir = e.WorkDir
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
