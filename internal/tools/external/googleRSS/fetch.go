@@ -93,7 +93,7 @@ func fetch(ctx context.Context, reqPath string) (string, error) {
 
 	bytes, err := json.Marshal(items)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("json.Marshal: %w", err)
 	}
 	return string(bytes), nil
 }

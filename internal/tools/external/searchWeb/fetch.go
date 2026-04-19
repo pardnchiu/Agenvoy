@@ -2,16 +2,25 @@ package searchWeb
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
-const path = "https://lite.duckduckgo.com/lite/"
+const (
+	path = "https://lite.duckduckgo.com/lite/"
+	ttl  = 300
+)
 
 var (
 	regexLiteAnchor  = regexp.MustCompile(`(?is)<a[^>]*class=['"]result-link['"][^>]*>.*?</a>`)
@@ -21,21 +30,42 @@ var (
 	regexTag         = regexp.MustCompile(`<[^>]+>`)
 )
 
-func fetch(ctx context.Context, query string, timeRange TimeRange) ([]ResultData, error) {
+type data struct {
+	Position    int    `json:"position"`
+	Title       string `json:"title"`
+	URL         string `json:"url"`
+	Description string `json:"description,omitempty"`
+}
+
+func Fetch(ctx context.Context, query, timeRange string) (string, error) {
+	hash := sha256.Sum256([]byte(query + "|" + string(timeRange)))
+	cacheKey := "search:" + hex.EncodeToString(hash[:])
+	db := store.DB(store.DBToolCache)
+	if entry, ok := db.Get(cacheKey); ok {
+		return entry.Value(), nil
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	items, err := fetch(ctx, query, timeRange)
+	if err != nil {
+		return "", err
+	}
+
+	if err = db.Set(cacheKey, items, store.SetDefault, store.TTL(ttl)); err != nil {
+		slog.Warn("db.Set",
+			slog.String("error", err.Error()))
+	}
+
+	return items, nil
+}
+
+func fetch(ctx context.Context, query, timeRange string) (string, error) {
 	params := map[string]any{
 		"q":  query,
 		"kl": "tw-tzh",
-	}
-
-	switch timeRange {
-	case TimeRange1d:
-		params["df"] = "d"
-	case TimeRange7d:
-		params["df"] = "w"
-	case TimeRangeMonth:
-		params["df"] = "m"
-	case TimeRangeYear:
-		params["df"] = "y"
+		"df": timeRange,
 	}
 
 	html, status, err := go_utils_http.POST[string](ctx, nil, path, map[string]string{
@@ -43,24 +73,29 @@ func fetch(ctx context.Context, query string, timeRange TimeRange) ([]ResultData
 		"Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
 	}, params, "form")
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if status != http.StatusOK {
-		return nil, fmt.Errorf("status %d", status)
+		return "", fmt.Errorf("status %d", status)
 	}
 
-	results := parse(html)
-	if len(results) == 0 {
-		return nil, fmt.Errorf("parse: %s", query)
+	items := parse(html)
+	if len(items) == 0 {
+		return "", fmt.Errorf("no result")
 	}
-	return results, nil
+
+	bytes, err := json.Marshal(items)
+	if err != nil {
+		return "", fmt.Errorf("json.Marshal: %w", err)
+	}
+	return string(bytes), nil
 }
 
-func parse(html string) []ResultData {
+func parse(html string) []data {
 	const limit = 10
 	anchors := regexLiteAnchor.FindAllStringIndex(html, -1)
 
-	var results []ResultData
+	var results []data
 	for i, pos := range anchors {
 		if len(results) >= limit {
 			break
@@ -92,7 +127,7 @@ func parse(html string) []ResultData {
 			desc = extractText(m[1])
 		}
 
-		results = append(results, ResultData{
+		results = append(results, data{
 			Position:    len(results) + 1,
 			Title:       title,
 			URL:         href,
