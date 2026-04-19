@@ -11,8 +11,9 @@ import (
 
 func init() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:     "analyze_youtube",
-		ReadOnly: true,
+		Name:       "analyze_youtube",
+		ReadOnly:   true,
+		Concurrent: true,
 		Description: `
 Analyze YouTube video content using Gemini for speech-to-text (STT), returning a complete transcript with timestamps.`,
 		Parameters: map[string]any{

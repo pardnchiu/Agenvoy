@@ -21,8 +21,9 @@ var (
 
 func init() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:     "fetch_yahoo_finance",
-		ReadOnly: true,
+		Name:       "fetch_yahoo_finance",
+		ReadOnly:   true,
+		Concurrent: true,
 		Description: `
 Query Yahoo Finance stock quotes and K-line data, returning current price, intraday high/low, 52-week high/low, volume, and historical OHLCV.
 Also send requests to query1 / query2 and use the fastest response.`,

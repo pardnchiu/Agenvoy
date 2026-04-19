@@ -12,39 +12,43 @@ import (
 
 func init() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "send_http_request",
-		ReadOnly:    true,
-		Description: "發送 HTTP 請求並返回回應內容。支援 GET、POST（JSON/Form）等方法。適合呼叫 REST API、Webhook 或其他 HTTP 服務。",
+		Name:       "send_http_request",
+		ReadOnly:   true,
+		Concurrent: true,
+		Description: `
+Send an HTTP request and return the response content. Supports methods such as GET and POST (JSON/Form).
+
+Suitable for calling REST APIs, webhooks, or other HTTP services.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"url": map[string]any{
 					"type":        "string",
-					"description": "完整的 URL（需包含 http:// 或 https://）",
+					"description": "Full URL (must include http:// or https://)",
 				},
 				"method": map[string]any{
 					"type":        "string",
-					"description": "HTTP 方法",
+					"description": "HTTP method",
 					"enum":        []string{"GET", "POST", "PUT", "DELETE", "PATCH"},
 					"default":     "GET",
 				},
 				"headers": map[string]any{
 					"type":        "object",
-					"description": "請求標頭（key-value 格式），例如 {\"Authorization\": \"Bearer token\"}",
+					"description": "Request headers (key-value format), e.g. {\"Authorization\": \"Bearer token\"}",
 				},
 				"body": map[string]any{
 					"type":        "object",
-					"description": "請求本體（JSON 格式），適用於 POST/PUT/PATCH",
+					"description": "Request body (JSON format), suitable for POST/PUT/PATCH",
 				},
 				"content_type": map[string]any{
 					"type":        "string",
-					"description": "Content-Type，可選值：json（預設）、form",
+					"description": "Content-Type, optional values: json (default), form",
 					"enum":        []string{"json", "form"},
 					"default":     "json",
 				},
 				"timeout": map[string]any{
 					"type":        "integer",
-					"description": "請求超時秒數，預設 30 秒，最大 300 秒。一般 REST API 用 30；需要運算的 API（如 AI 生圖、語音合成、影片處理）建議設 120 以上",
+					"description": "Request timeout in seconds, default 30 seconds, maximum 300 seconds. Use 30 for general REST APIs; for computational APIs (such as AI image generation, speech synthesis, video processing), 120+ is recommended",
 					"default":     30,
 				},
 			},

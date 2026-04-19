@@ -17,8 +17,9 @@ var timeRanges = []string{
 
 func init() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:     "fetch_google_rss",
-		ReadOnly: true,
+		Name:       "fetch_google_rss",
+		ReadOnly:   true,
+		Concurrent: true,
 		Description: `
 Search Google News RSS for news and return the title, summary, and the original article link.
 
