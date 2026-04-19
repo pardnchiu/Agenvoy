@@ -65,7 +65,7 @@ func registReadFile() {
 				return "", fmt.Errorf("image file detected, use read_image instead")
 			}
 
-			content, _, err := readFile(e, params.Path)
+			content, _, err := readFile(e, params.Path, true)
 			if err != nil {
 				return "", err
 			}
@@ -108,8 +108,8 @@ func registReadFile() {
 	})
 }
 
-func readFile(e *toolTypes.Executor, path string) (string, string, error) {
-	absPath, err := filesystem.AbsPath(e.WorkDir, path, true)
+func readFile(e *toolTypes.Executor, path string, needExclude bool) (string, string, error) {
+	absPath, err := filesystem.AbsPath(e.WorkDir, path, needExclude)
 	if err != nil {
 		return "", "", fmt.Errorf("filesystem.AbsPath: %w", err)
 	}

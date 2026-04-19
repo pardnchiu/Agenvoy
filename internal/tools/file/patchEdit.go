@@ -52,7 +52,7 @@ func registPatchEdit() {
 				return "", fmt.Errorf("old_string and new_string are identical: no changes to make")
 			}
 
-			content, absPath, err := readFile(e, params.Path)
+			content, absPath, err := readFile(e, params.Path, false)
 			if err != nil {
 				return "", fmt.Errorf("file.readFile: %w", err)
 			}
