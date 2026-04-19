@@ -138,6 +138,7 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 		Role:    "user",
 		Content: userText,
 	})
+	exec.SaveUserInputHistory(sessionID, userText)
 
 	return session, nil
 }

@@ -58,7 +58,7 @@ func Search(ctx context.Context, query string, timeRange TimeRange) (*SearchOutp
 	db := store.DB(store.DBToolCache)
 	if entry, ok := db.Get(cacheKey); ok {
 		var results []ResultData
-		if err := json.Unmarshal([]byte(entry.Value), &results); err == nil {
+		if err := json.Unmarshal([]byte(entry.Value()), &results); err == nil {
 			return &SearchOutput{Results: results, Cached: true}, nil
 		}
 	}

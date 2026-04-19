@@ -191,7 +191,7 @@ func scanErrorMemoryFiltered(pattern string, match func(ErrorMemory) bool, cap i
 			continue
 		}
 		var rec ErrorMemory
-		if err := json.Unmarshal([]byte(entry.Value), &rec); err != nil {
+		if err := json.Unmarshal([]byte(entry.Value()), &rec); err != nil {
 			continue
 		}
 		if !match(rec) {

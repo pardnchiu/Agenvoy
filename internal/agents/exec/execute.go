@@ -382,16 +382,35 @@ func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSe
 		return fmt.Errorf("sessionManager.SaveHistory: %w", err)
 	}
 
-	msgBytes, err := json.Marshal(choice.Message)
-	if err == nil {
-		key := fmt.Sprintf("%s:%d", session.ID, time.Now().UnixNano())
-		if setErr := store.DB(store.DBSessionHist).Set(key, string(msgBytes), store.SetDefault, nil); setErr != nil {
+	writeSessionHistEntry(session.ID, choice.Message)
+	return nil
+}
+
+func SaveUserInputHistory(sessionID, userText string) {
+	if sessionID == "" || strings.TrimSpace(userText) == "" {
+		return
+	}
+	writeSessionHistEntry(sessionID, agentTypes.Message{
+		Role:    "user",
+		Content: userText,
+	})
+}
+
+func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+	key := fmt.Sprintf("%s:%d", sessionID, time.Now().UnixNano())
+	db := store.DB(store.DBSessionHist)
+	value := string(msgBytes)
+
+	if setErr := db.SetVector(context.Background(), key, value, store.SetDefault, nil); setErr != nil {
+		if setErr = db.Set(key, value, store.SetDefault, nil); setErr != nil {
 			slog.Warn("store.DB.Set",
 				slog.String("error", setErr.Error()))
 		}
 	}
-
-	return nil
 }
 
 func assignSkill(session *agentTypes.AgentSession, s *skill.Skill) {

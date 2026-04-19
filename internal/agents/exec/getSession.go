@@ -136,6 +136,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			Role:    "user",
 			Content: buildContent(userText, execData.ImageInputs, execData.FileInputs),
 		}
+		SaveUserInputHistory(sessionID, userText)
 
 	case os.IsNotExist(configErr):
 		// * config is not exist
@@ -157,6 +158,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			Role:    "user",
 			Content: buildContent(userText, execData.ImageInputs, execData.FileInputs),
 		}
+		SaveUserInputHistory(sessionID, userText)
 
 		indexDataBytes, err := json.Marshal(IndexData{SessionID: sessionID})
 		if err != nil {

@@ -104,6 +104,7 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 		Role:    "user",
 		Content: userContent,
 	}
+	exec.SaveUserInputHistory(sessionID, userText)
 
 	return session, nil
 }

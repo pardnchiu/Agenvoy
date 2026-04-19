@@ -388,11 +388,11 @@ flowchart TD
         Budget["MaxInputTokens()\nper-provider token budget"]
         Preserve["Always preserve\n· system prompt\n· injected summary\n· latest user message"]
         Trim["Trim oldest turns first\nuntil within budget\nellipsis markers inserted"]
-        SearchHist["search_history tool\n(ToriiDB store)\nkeyword-triggered recall\n(not full replay)"]
+        SearchHist["search_history tool\n(ToriiDB store)\npre: drop newest MaxHistoryMessages keys\n(already in LLM context window)\nalways: keyword (8) ∪ semantic (8)\n· keyword: literal substring + time_range\n· semantic: VSearch cosine top-K (no time_range,\n  silent empty when OPENAI_API_KEY missing)\npost: key dedup (max 16), chronological sort,\nRFC3339 · role prefix"]
     end
 
     subgraph ToriiStore ["ToriiDB Store · filesystem/store"]
-        TS["Embedded KV store\nreplaces scattered JSON files\n· session history\n· error memory\n· fetch_page / search_web / google_rss cache\n· fetch_page skip list"]
+        TS["Embedded KV store\nreplaces scattered JSON files\n· session history (SetVector on write)\n· error memory\n· fetch_page / search_web / google_rss cache\n· fetch_page skip list"]
     end
 
     subgraph ErrorMemory ["Error Memory · errorMemory"]

@@ -48,7 +48,7 @@ func Download(href, saveTo string) (string, error) {
 	db := store.DB(store.DBToolCache)
 	var content string
 	if entry, ok := db.Get(cacheKey); ok {
-		content = entry.Value
+		content = entry.Value()
 	}
 
 	if content == "" {

@@ -86,8 +86,8 @@ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/reflect2 v1.0.2 h1:xBagoLtFs94CBntxluKeaWgTMpvLxC4ur3nMaC9Gz0M=
 github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
-github.com/pardnchiu/ToriiDB v0.4.3 h1:wQRj/Y0gOU9ankuuC2rx+qi9CYDwYx/kQv1F+rsyFOI=
-github.com/pardnchiu/ToriiDB v0.4.3/go.mod h1:jIRE8cCMFnut+21wwTZx6fQsnViyKDG/nK9Sk7FWf4o=
+github.com/pardnchiu/ToriiDB v0.5.1 h1:+jEtX4L1Pb1CZMYk485f6ulkR0w6I3jvz69fzmge0Ho=
+github.com/pardnchiu/ToriiDB v0.5.1/go.mod h1:0p0IsrySqXyXvKIJswKKG1Zi6wQ2TD/LdKcKx4It/EA=
 github.com/pardnchiu/go-scheduler v1.2.0 h1:DBmFWOPjGUzQEKYHZNeLS9v9PmJrKk/VwxQeVO754Ns=
 github.com/pardnchiu/go-scheduler v1.2.0/go.mod h1:JtHqK0I/ha8E9Eo86rVaw+cvLgREcL5LfT8p9DmY3Lg=
 github.com/pardnchiu/go-utils v0.5.0 h1:cjLXhqST3DCJjo8Y+TotMSlPejOMCHSSicXwYXj2QwU=

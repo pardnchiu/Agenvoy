@@ -86,7 +86,7 @@ func Load(href string, keepLinks bool) (string, error) {
 
 	db := store.DB(store.DBToolCache)
 	if entry, ok := db.Get(cacheKey); ok {
-		return formatForAgent(truncate(entry.Value)), nil
+		return formatForAgent(truncate(entry.Value())), nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)

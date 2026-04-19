@@ -37,7 +37,7 @@ func Fetch(ctx context.Context, symbol, timeInterval, timeRange string) (string,
 	cacheKey := "yahoo:" + hex.EncodeToString(hash[:])
 	db := store.DB(store.DBToolCache)
 	if entry, ok := db.Get(cacheKey); ok {
-		return entry.Value, nil
+		return entry.Value(), nil
 	}
 
 	type result struct {
