@@ -6,11 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
@@ -39,30 +39,16 @@ type item struct {
 	} `xml:"source" json:"source"`
 }
 
-func Fetch(ctx context.Context, keyword, timeRange, language string) (string, error) {
-	if timeRange == "" || !slices.Contains(timeRanges, timeRange) {
-		timeRange = "7d"
-	}
-
-	var geo, lang string
-	parts := strings.SplitN(language, ":", 2)
-	if language == "" || len(parts) != 2 {
-		language = "TW:zh-Hant"
-		geo, lang = "TW", "zh-Hant"
-	} else {
-		geo, lang = parts[0], parts[1]
-	}
-
-	query := fmt.Sprintf("%s when:%s", keyword, timeRange)
-	requsetPath := fmt.Sprintf("%s?q=%s&hl=%s&gl=%s&ceid=%s",
+func Fetch(ctx context.Context, keyword, timeRange, ceid, geo, lang string) (string, error) {
+	reqPath := fmt.Sprintf("%s?q=%s&hl=%s&gl=%s&ceid=%s",
 		path,
-		url.QueryEscape(query),
+		url.QueryEscape(fmt.Sprintf("%s when:%s", keyword, timeRange)),
 		url.QueryEscape(lang),
 		url.QueryEscape(geo),
-		url.QueryEscape(language),
+		url.QueryEscape(ceid),
 	)
 
-	hash := sha256.Sum256([]byte(keyword + "|" + timeRange + "|" + language))
+	hash := sha256.Sum256([]byte(keyword + "|" + timeRange + "|" + ceid))
 	cacheKey := "rss:" + hex.EncodeToString(hash[:])
 	db := store.DB(store.DBToolCache)
 	if entry, ok := db.Get(cacheKey); ok {
@@ -72,7 +58,7 @@ func Fetch(ctx context.Context, keyword, timeRange, language string) (string, er
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	items, err := fetch(ctx, requsetPath)
+	items, err := fetch(ctx, reqPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch google rss: %w", err)
 	}
@@ -85,8 +71,8 @@ func Fetch(ctx context.Context, keyword, timeRange, language string) (string, er
 	return items, nil
 }
 
-func fetch(ctx context.Context, path string) (string, error) {
-	data, status, err := go_utils_http.GET[data](ctx, nil, path, map[string]string{
+func fetch(ctx context.Context, reqPath string) (string, error) {
+	data, status, err := go_utils_http.GET[data](ctx, nil, reqPath, map[string]string{
 		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 		"Accept":     "application/xml",
 	})
@@ -129,15 +115,9 @@ func deduplicate(items []item) []item {
 }
 
 func hash(parts ...string) uint64 {
-	const (
-		offset64 = 14695981039346656037
-		prime64  = 1099511628211
-	)
-	s := strings.Join(parts, "")
-	hash := uint64(offset64)
-	for i := 0; i < len(s); i++ {
-		hash ^= uint64(s[i])
-		hash *= prime64
+	h := fnv.New64a()
+	for _, p := range parts {
+		io.WriteString(h, p)
 	}
-	return hash
+	return h.Sum64()
 }

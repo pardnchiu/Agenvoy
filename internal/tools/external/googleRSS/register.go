@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
 
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -15,24 +17,32 @@ var timeRanges = []string{
 
 func init() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "fetch_google_rss",
-		ReadOnly:    true,
-		Description: "透過 Google News RSS 搜尋新聞，返回標題、摘要與真實文章連結。【重要】RSS 僅提供標題與片段摘要，不含完整內容。若任務具有研究性質（整理、分析、週報、深度調查等），必須對每一筆返回的連結繼續呼叫 fetch_page 以取得完整文章內容，不得僅依賴 RSS 摘要作為資料來源。",
+		Name:     "fetch_google_rss",
+		ReadOnly: true,
+		Description: `
+Search Google News RSS for news and return the title, summary, and the original article link.
+
+[Important]
+RSS only provides titles and short excerpt summaries, not full content.
+
+For research-oriented tasks (compilation, analysis, weekly reports, in-depth investigations, etc.),
+you must continue calling fetch_page for each returned link to obtain the full article content,
+and must not rely solely on RSS summaries as the source of truth.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"keyword": map[string]any{
 					"type":        "string",
-					"description": "搜尋關鍵字",
+					"description": "Search keywords",
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "時間範圍，可選值：1h / 3h / 6h / 12h / 24h / 7d",
+					"description": "Time range, available values: 1h / 3h / 6h / 12h / 24h / 7d",
 					"enum":        timeRanges,
 				},
-				"language": map[string]any{
+				"ceid": map[string]any{
 					"type":        "string",
-					"description": "語言與地區設定，格式 '{country}:{lang}'，預設 'TW:zh-Hant'",
+					"description": "Custom Edition ID, format '{country}:{lang}', default 'TW:zh-Hant'",
 					"default":     "TW:zh-Hant",
 				},
 			},
@@ -44,10 +54,11 @@ func init() {
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Keyword   string `json:"keyword"`
-				Query     string `json:"query"`
-				Q         string `json:"q"`
 				TimeRange string `json:"time_range"`
-				Language  string `json:"language"`
+				CEID      string `json:"ceid"`
+				// avoid small agent like 4.1 be stupid to call with different parameter name
+				Query string `json:"query"`
+				Q     string `json:"q"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
@@ -62,7 +73,21 @@ func init() {
 			if params.Keyword == "" {
 				return "", fmt.Errorf("keyword is required")
 			}
-			return Fetch(ctx, params.Keyword, params.TimeRange, params.Language)
+
+			// avoid small agent like 4.1 be stupid to call with not support value
+			if params.TimeRange == "" || !slices.Contains(timeRanges, params.TimeRange) {
+				params.TimeRange = "7d"
+			}
+
+			var geo, lang string
+			parts := strings.SplitN(params.CEID, ":", 2)
+			if params.CEID == "" || len(parts) != 2 {
+				params.CEID = "TW:zh-Hant"
+				geo, lang = "TW", "zh-Hant"
+			} else {
+				geo, lang = parts[0], parts[1]
+			}
+			return Fetch(ctx, params.Keyword, params.TimeRange, params.CEID, geo, lang)
 		},
 	})
 }
