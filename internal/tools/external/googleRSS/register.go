@@ -16,7 +16,7 @@ var timeRanges = []string{
 	"1h", "3h", "6h", "12h", "24h", "7d",
 }
 
-func init() {
+func Register() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "fetch_google_rss",
 		ReadOnly:   true,
@@ -94,7 +94,7 @@ and must not rely solely on RSS summaries as the source of truth.`,
 			} else {
 				geo, lang = parts[0], parts[1]
 			}
-			return Fetch(ctx, keyword, timeRange, ceid, geo, lang)
+			return handler(ctx, keyword, timeRange, ceid, geo, lang)
 		},
 	})
 }

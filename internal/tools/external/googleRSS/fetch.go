@@ -39,7 +39,7 @@ type item struct {
 	} `xml:"source" json:"source"`
 }
 
-func Fetch(ctx context.Context, keyword, timeRange, ceid, geo, lang string) (string, error) {
+func handler(ctx context.Context, keyword, timeRange, ceid, geo, lang string) (string, error) {
 	reqPath := fmt.Sprintf("%s?q=%s&hl=%s&gl=%s&ceid=%s",
 		path,
 		url.QueryEscape(fmt.Sprintf("%s when:%s", keyword, timeRange)),

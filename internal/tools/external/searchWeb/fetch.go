@@ -37,7 +37,7 @@ type data struct {
 	Description string `json:"description,omitempty"`
 }
 
-func Fetch(ctx context.Context, query, timeRange string) (string, error) {
+func handler(ctx context.Context, query, timeRange string) (string, error) {
 	hash := sha256.Sum256([]byte(query + "|" + string(timeRange)))
 	cacheKey := "search:" + hex.EncodeToString(hash[:])
 	db := store.DB(store.DBToolCache)

@@ -10,7 +10,7 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func init() {
+func Register() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "analyze_youtube",
 		ReadOnly:   true,
@@ -49,7 +49,7 @@ Analyze YouTube video content using Gemini for speech-to-text (STT), returning a
 			}
 
 			prompt := strings.TrimSpace(params.Prompt)
-			return Fetch(ctx, url, prompt)
+			return handler(ctx, url, prompt)
 		},
 	})
 }

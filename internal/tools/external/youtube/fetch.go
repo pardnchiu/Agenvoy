@@ -36,7 +36,7 @@ type data struct {
 	} `json:"usageMetadata"`
 }
 
-func Fetch(ctx context.Context, videoURL, prompt string) (string, error) {
+func handler(ctx context.Context, videoURL, prompt string) (string, error) {
 	apiKey := keychain.Get("GEMINI_API_KEY")
 	if apiKey == "" {
 		return "", fmt.Errorf("GEMINI_API_KEY is required")

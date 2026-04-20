@@ -21,7 +21,7 @@ var (
 	}
 )
 
-func init() {
+func Register() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "fetch_yahoo_finance",
 		ReadOnly:   true,
@@ -84,7 +84,7 @@ Also send requests to query1 / query2 and use the fastest response.`,
 				slog.Warn("invalid time_range, fallback to '1d'")
 				timeRange = "1d"
 			}
-			return Fetch(ctx, symbol, timeInterval, timeRange)
+			return handler(ctx, symbol, timeInterval, timeRange)
 		},
 	})
 }

@@ -1,6 +1,6 @@
 package fetchPage
 
-func init() {
+func Register() {
 	registFetchPage()
 	registSavePageToFile()
 }

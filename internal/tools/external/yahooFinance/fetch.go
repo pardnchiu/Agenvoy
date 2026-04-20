@@ -23,7 +23,7 @@ var (
 	paths = []string{"query1.finance.yahoo.com", "query2.finance.yahoo.com"}
 )
 
-func Fetch(ctx context.Context, symbol, timeInterval, timeRange string) (string, error) {
+func handler(ctx context.Context, symbol, timeInterval, timeRange string) (string, error) {
 	hash := sha256.Sum256([]byte(symbol + "|" + timeInterval + "|" + timeRange))
 	cacheKey := "yahoo:" + hex.EncodeToString(hash[:])
 	db := store.DB(store.DBToolCache)

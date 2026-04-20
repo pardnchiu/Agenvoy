@@ -16,7 +16,7 @@ var timeRanges = []string{
 	"d", "w", "m", "y",
 }
 
-func init() {
+func Register() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:     "search_web",
 		ReadOnly: true,
@@ -69,7 +69,7 @@ Suitable for general queries, technical documentation, and product research.`,
 				slog.Warn("invalid time_range, fallback to 'w'")
 				params.TimeRange = "w"
 			}
-			return Fetch(ctx, query, timeRange)
+			return handler(ctx, query, timeRange)
 		},
 	})
 }

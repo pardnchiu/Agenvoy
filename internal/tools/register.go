@@ -5,17 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pardnchiu/agenvoy/internal/tools/external"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 
 	_ "github.com/pardnchiu/agenvoy/internal/tools/calculator"
-	_ "github.com/pardnchiu/agenvoy/internal/tools/external"
-	_ "github.com/pardnchiu/agenvoy/internal/tools/external/googleRSS"
-	_ "github.com/pardnchiu/agenvoy/internal/tools/external/searchWeb"
-	_ "github.com/pardnchiu/agenvoy/internal/tools/external/yahooFinance"
-	_ "github.com/pardnchiu/agenvoy/internal/tools/external/youtube"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
-	_ "github.com/pardnchiu/agenvoy/internal/tools/fetchPage"
+	"github.com/pardnchiu/agenvoy/internal/tools/fetchPage"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/file"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/git"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/schedulerTools"
@@ -24,6 +20,9 @@ import (
 )
 
 func init() {
+	external.Register()
+	fetchPage.Register()
+
 	toolRegister.RegistGroup("api_", func(_ context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
 		if e.APIToolbox == nil || !e.APIToolbox.IsExist(name) {
 			return "", fmt.Errorf("not exist: %s", name)
