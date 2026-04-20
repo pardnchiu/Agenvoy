@@ -207,7 +207,7 @@ flowchart TD
     end
 
     subgraph WebTools ["Web 存取（ToriiDB 快取）"]
-        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Google + DDG 並行 · SHA-256 cache\nfetch_google_rss · RSS 抓取\ndownload_page · 原始頁面下載\nanalyze_youtube · metadata 抓取"]
+        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Google + DDG 並行 · SHA-256 cache\nfetch_google_rss · RSS 抓取\nsave_page_to_file · 原始頁面下載\nanalyze_youtube · metadata 抓取"]
     end
 
     subgraph APITools ["API 擴充 · apiAdapter"]

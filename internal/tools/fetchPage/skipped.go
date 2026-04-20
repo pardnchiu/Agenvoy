@@ -2,16 +2,17 @@ package fetchPage
 
 import (
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"log/slog"
+	"strings"
+	"text/template"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
 )
 
-func skipKey(prefix, href string) string {
-	hash := sha256.Sum256([]byte(href))
-	return prefix + hex.EncodeToString(hash[:])
-}
+//go:embed embed/skipped.md
+var skippedPrompt string
 
 func isSkipped(href string) bool {
 	db := store.DB(store.DBToolCache)
@@ -22,6 +23,23 @@ func isSkipped(href string) bool {
 		return true
 	}
 	return false
+}
+
+func skippedMessage(href string) string {
+	tmpl, err := template.New("skipped").Parse(skippedPrompt)
+	if err != nil {
+		return href
+	}
+	var sb strings.Builder
+	if err := tmpl.Execute(&sb, struct{ Href string }{href}); err != nil {
+		return href
+	}
+	return sb.String()
+}
+
+func skipKey(prefix, href string) string {
+	hash := sha256.Sum256([]byte(href))
+	return prefix + hex.EncodeToString(hash[:])
 }
 
 func addToSkippedMap(href string, status int) {

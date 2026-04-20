@@ -27,7 +27,7 @@ Skill instructions may reference tool names from other environments. Always map 
 | Read image / 讀取圖片 | `read_image` | `{"path": "<image path>"}` |
 | Search web / Google / web search / 搜尋網路 | `search_web` | `{"query": "<search terms>"}` |
 | Fetch page / open URL / 讀取網頁 / 開啟連結 | `fetch_page` | `{"url": "<full URL>"}` |
-| Download page / save URL / 下載網頁 | `download_page` | `{"url": "<full URL>"}` |
+| Download page / save URL / 下載網頁 | `save_page_to_file` | `{"url": "<full URL>"}` |
 | News / RSS / 新聞 | `fetch_google_rss` | `{"query": "<topic>"}` |
 | Stock / finance / 股票 / 財務 | `fetch_yahoo_finance` | `{"symbol": "<ticker>"}` |
 | YouTube / 影片分析 | `analyze_youtube` | `{"url": "<YouTube URL>"}` |

@@ -207,7 +207,7 @@ flowchart TD
     end
 
     subgraph WebTools ["Web Access (ToriiDB cached)"]
-        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Google + DDG concurrent · SHA-256 cache\nfetch_google_rss · RSS feed fetch\ndownload_page · raw page download\nanalyze_youtube · metadata fetch"]
+        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Google + DDG concurrent · SHA-256 cache\nfetch_google_rss · RSS feed fetch\nsave_page_to_file · raw page download\nanalyze_youtube · metadata fetch"]
     end
 
     subgraph APITools ["API Extensions · apiAdapter"]

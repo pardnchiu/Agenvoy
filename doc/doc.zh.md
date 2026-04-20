@@ -19,7 +19,7 @@
 
 ### 瀏覽器依賴（選用）
 
-- Chromium 或 Google Chrome — 由 `fetch_page` / `download_page` 以 headless 模式使用
+- Chromium 或 Google Chrome — 由 `fetch_page` / `save_page_to_file` 以 headless 模式使用
 - 若系統沒有 Chrome，`go-rod` 會在首次使用時自動下載 Chromium
 
 ### Go 相依
@@ -351,7 +351,7 @@ agen planner
 | `send_http_request` | `method`, `url`, `headers`, `body` | 通用 HTTP 請求 |
 | `search_web` | `query`, `time_range` | DuckDuckGo lite endpoint 網頁搜尋；`time_range` 僅接受 `1d` / `7d` / `1m` / `1y` |
 | `fetch_page` | `url` | 以 headless Chrome 取得 JS 渲染後的頁面並轉為 Markdown |
-| `download_page` | `href`, `save_to` | 以 headless Chrome 將 JS 渲染頁面存為本地檔案 |
+| `save_page_to_file` | `href`, `save_to` | 以 headless Chrome 將 JS 渲染頁面存為本地檔案 |
 | `run_command` | `command` | 在 sandbox 中執行白名單 shell 指令（300 秒 timeout） |
 | `add_task` | `at`, `script`, `channel_id` | 排程一次性任務；完成時結果張貼至 Discord channel |
 | `list_tasks` | — | 列出所有待執行的一次性任務 |

@@ -19,7 +19,7 @@
 
 ### Browser Dependencies (Optional)
 
-- Chromium or Google Chrome — used by `fetch_page` and `download_page` in headless mode
+- Chromium or Google Chrome — used by `fetch_page` and `save_page_to_file` in headless mode
 - `go-rod` auto-downloads Chromium on first use if not present
 
 ### Go Dependencies
@@ -349,7 +349,7 @@ agen planner
 | `send_http_request` | `method`, `url`, `headers`, `body` | Generic HTTP request |
 | `search_web` | `query`, `time_range` | DuckDuckGo lite-endpoint web search; `time_range` accepts `1d` / `7d` / `1m` / `1y` |
 | `fetch_page` | `url` | JS-rendered page content as Markdown (headless Chrome) |
-| `download_page` | `href`, `save_to` | JS-rendered page saved to a local file |
+| `save_page_to_file` | `href`, `save_to` | JS-rendered page saved to a local file |
 | `run_command` | `command` | Execute whitelisted shell commands in sandbox (300s timeout) |
 | `add_task` | `at`, `script`, `channel_id` | Schedule a one-time task; result posted to Discord channel on completion |
 | `list_tasks` | — | List all pending one-time tasks |
