@@ -1,6 +1,6 @@
 package externalAgent
 
-func init() {
+func Register() {
 	registInvokeExternalAgent()
 	registCrossReviewWithExternalAgents()
 	registReviewResult()

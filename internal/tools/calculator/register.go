@@ -9,7 +9,7 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func init() {
+func Register() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "calculate",
 		ReadOnly:    true,
