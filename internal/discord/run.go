@@ -10,6 +10,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
@@ -25,8 +26,13 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	dcBot.SkillScanner.Scan()
 
 	content := receiveMessage.Content
+	externalAgent, externalEffective := external.MatchExternal(content)
+	if externalAgent != "" {
+		content = strings.TrimSpace(externalEffective)
+	}
+
 	var matchedSkill *skill.Skill
-	if dcBot.SkillScanner != nil {
+	if externalAgent == "" && dcBot.SkillScanner != nil {
 		if m, effective := dcBot.SkillScanner.MatchSkillCall(content); m != nil {
 			matchedSkill = m
 			content = strings.TrimSpace(effective)
@@ -34,7 +40,10 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 		}
 	}
 
-	agent := exec.SelectAgent(ctx, dcBot.PlannerAgent, dcBot.AgentRegistry, content, matchedSkill != nil)
+	var agent agentTypes.Agent
+	if externalAgent == "" {
+		agent = exec.SelectAgent(ctx, dcBot.PlannerAgent, dcBot.AgentRegistry, content, matchedSkill != nil)
+	}
 
 	execData := exec.ExecData{
 		Agent:   agent,
@@ -53,10 +62,15 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	events := make(chan agentTypes.Event, interactionMax)
 
 	go func() {
-		err := exec.Execute(ctx, execData, session, events, true)
-		if err != nil {
-			slog.Warn("exec.Execute",
-				slog.String("error", err.Error()))
+		var execErr error
+		if externalAgent != "" {
+			execErr = exec.CallExternal(ctx, session.ID, externalAgent, content, events)
+		} else {
+			execErr = exec.Execute(ctx, execData, session, events, true)
+		}
+		if execErr != nil {
+			slog.Warn("exec",
+				slog.String("error", execErr.Error()))
 		}
 		close(events)
 	}()

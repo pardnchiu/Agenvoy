@@ -16,6 +16,7 @@ import (
 	go_utils_utils "github.com/pardnchiu/go-utils/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -23,7 +24,6 @@ import (
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools"
-	"github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
 	"github.com/pardnchiu/agenvoy/internal/tools/skillTool"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
@@ -413,7 +413,7 @@ func assignSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 }
 
 func buildExternalAgentsPrompt() string {
-	agents := externalAgent.GetAgents()
+	agents := external.Agents()
 	if len(agents) == 0 {
 		return `## 外部 Agent
 目前無宣告的外部 agent，禁止呼叫 verify_with_external_agent 與 call_external_agent。`

@@ -243,6 +243,8 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		switch s.name {
 		case "verify_with_external_agent":
 			hasExternalAgent = true
+			sessionData.VerifyRounds++
+			sessionData.VerifyFeedbacks = append(sessionData.VerifyFeedbacks, result)
 		case "review_result":
 			hasReviewResult = true
 		}
@@ -251,7 +253,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 	if hasExternalAgent || hasReviewResult {
 		sessionData.OldHistories = nil
 		if hasExternalAgent {
-			sessionData.ToolHistories = trimMessageContext(sessionData.ToolHistories)
+			sessionData.ToolHistories = trimMessageContext(sessionData.ToolHistories, sessionData.VerifyRounds, sessionData.VerifyFeedbacks)
 		} else {
 			sessionData.ToolHistories = trimReviewContext(sessionData.ToolHistories)
 		}
@@ -381,7 +383,9 @@ func injectImageToUserInput(session *agentTypes.AgentSession, dataURL string) {
 	}
 }
 
-func trimMessageContext(toolCall []agentTypes.Message) []agentTypes.Message {
+const MaxVerifyRounds = 3
+
+func trimMessageContext(toolCall []agentTypes.Message, rounds int, feedbacks []string) []agentTypes.Message {
 	var firstVersion, feedback string
 
 	for _, m := range toolCall {
@@ -389,21 +393,23 @@ func trimMessageContext(toolCall []agentTypes.Message) []agentTypes.Message {
 			continue
 		}
 		for _, tc := range m.ToolCalls {
-			if tc.Function.Name != "call_external_agent" {
+			if tc.Function.Name != "verify_with_external_agent" && tc.Function.Name != "call_external_agent" {
 				continue
 			}
 
 			var params struct {
 				Result string `json:"result"`
 			}
-			if err := json.Unmarshal([]byte(tc.Function.Arguments), &params); err == nil {
+			if err := json.Unmarshal([]byte(tc.Function.Arguments), &params); err == nil && params.Result != "" {
 				firstVersion = params.Result
 			}
 
 			for _, tm := range toolCall {
 				if tm.Role == "tool" && tm.ToolCallID == tc.ID {
 					if s, ok := tm.Content.(string); ok {
-						feedback = strings.TrimPrefix(s, "[call_external_agent] ")
+						s = strings.TrimPrefix(s, "[verify_with_external_agent] ")
+						s = strings.TrimPrefix(s, "[call_external_agent] ")
+						feedback = s
 					}
 					break
 				}
@@ -418,10 +424,24 @@ func trimMessageContext(toolCall []agentTypes.Message) []agentTypes.Message {
 			Content: firstVersion,
 		})
 	}
+
+	if rounds >= MaxVerifyRounds {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("已完成 %d 輪外部驗證仍未全員通過，**停止重試**，禁止再次呼叫 verify_with_external_agent。請以當前草稿為基礎直接輸出最終結果，並在文末新增 `## 外部驗證未通過理由` 區塊，依序列出各輪 agent 指出的具體問題。\n\n", rounds))
+		for i, fb := range feedbacks {
+			sb.WriteString(fmt.Sprintf("### Round %d\n%s\n\n", i+1, fb))
+		}
+		compact = append(compact, agentTypes.Message{
+			Role:    "user",
+			Content: sb.String(),
+		})
+		return compact
+	}
+
 	if feedback != "" {
 		compact = append(compact, agentTypes.Message{
 			Role:    "user",
-			Content: "以下是外部驗證回饋，請針對指出的每個問題，**重新呼叫工具查詢**以修正錯誤或補充缺漏，完成後再輸出最終結果：\n\n" + feedback,
+			Content: fmt.Sprintf("以下是第 %d 輪外部驗證回饋（上限 %d 輪），請針對指出的每個問題，**重新呼叫工具查詢**以修正錯誤或補充缺漏，完成後再輸出最終結果：\n\n%s", rounds, MaxVerifyRounds, feedback),
 		})
 	}
 	return compact

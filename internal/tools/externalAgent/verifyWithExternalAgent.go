@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -38,11 +39,11 @@ func registVerifyWithExternalAgent() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			if len(GetAgents()) == 0 {
+			if len(external.Agents()) == 0 {
 				return `外部驗證已忽略：未宣告任何外部 agent。若需外部驗證，請在環境變數設定 EXTERNAL_CODEX=true / EXTERNAL_COPILOT=true / EXTERNAL_CLAUDE=true，並安裝對應 CLI。`, nil
 			}
 
-			agents, errors := checkUsefulAgents()
+			agents, errors := external.CheckAgents()
 			if len(agents) == 0 {
 				var sb strings.Builder
 				sb.WriteString("無可用外部 agent，忽略外部驗證：\n")
@@ -64,7 +65,7 @@ func registVerifyWithExternalAgent() {
 請直接指出問題（如有），或確認通過。`,
 				params.Input, params.Result,
 			)
-			results := runParallel(ctx, agents, prompt)
+			results := external.RunParallel(ctx, agents, prompt)
 			output := formatFeedback(results)
 			if len(errors) > 0 {
 				var note strings.Builder
@@ -79,36 +80,7 @@ func registVerifyWithExternalAgent() {
 	})
 }
 
-func checkUsefulAgents() ([]string, map[string]error) {
-	var agents []string
-	errors := make(map[string]error)
-	for _, a := range GetAgents() {
-		if err := checkCLI(a); err != nil {
-			errors[a] = err
-		} else {
-			agents = append(agents, a)
-		}
-	}
-	return agents, errors
-}
-
-func runParallel(ctx context.Context, agents []string, prompt string) []agentResult {
-	ch := make(chan agentResult, len(agents))
-	for _, a := range agents {
-		go func(agent string) {
-			out, err := runOne(ctx, agent, prompt)
-			ch <- agentResult{Agent: agent, Output: out, Err: err}
-		}(a)
-	}
-
-	results := make([]agentResult, 0, len(agents))
-	for range agents {
-		results = append(results, <-ch)
-	}
-	return results
-}
-
-func formatFeedback(results []agentResult) string {
+func formatFeedback(results []external.Result) string {
 	var sb strings.Builder
 	sb.WriteString("外部驗證回饋結果\n\n")
 	for _, r := range results {

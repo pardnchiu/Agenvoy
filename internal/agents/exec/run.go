@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
@@ -18,8 +19,13 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 
 	trimInput := strings.TrimSpace(userInput)
 
+	externalAgent, externalEffective := external.MatchExternal(trimInput)
+	if externalAgent != "" {
+		trimInput = strings.TrimSpace(externalEffective)
+	}
+
 	var matchedSkill *skill.Skill
-	if scanner != nil {
+	if externalAgent == "" && scanner != nil {
 		if m, effective := scanner.MatchSkillCall(trimInput); m != nil {
 			matchedSkill = m
 			trimInput = strings.TrimSpace(effective)
@@ -31,12 +37,18 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		Type: agentTypes.EventAgentSelect,
 	}
 
-	// SelectTools(ctx, bot, trimInput, fileNames)
-
-	agent := SelectAgent(ctx, bot, registry, trimInput, matchedSkill != nil)
-	events <- agentTypes.Event{
-		Type: agentTypes.EventAgentResult,
-		Text: strings.TrimSpace(agent.Name()),
+	var agent agentTypes.Agent
+	if externalAgent != "" {
+		events <- agentTypes.Event{
+			Type: agentTypes.EventAgentResult,
+			Text: "external:" + externalAgent,
+		}
+	} else {
+		agent = SelectAgent(ctx, bot, registry, trimInput, matchedSkill != nil)
+		events <- agentTypes.Event{
+			Type: agentTypes.EventAgentResult,
+			Text: strings.TrimSpace(agent.Name()),
+		}
 	}
 
 	execData := ExecData{
@@ -51,6 +63,11 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	if err != nil {
 		return fmt.Errorf("GetSession: %w", err)
 	}
+
+	if externalAgent != "" {
+		return CallExternal(ctx, session.ID, externalAgent, trimInput, events)
+	}
+
 	doneEvents := make(chan agentTypes.Event, 4)
 	forwardEvents := make(chan agentTypes.Event, 16)
 	execErrCh := make(chan error, 1)

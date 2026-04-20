@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"slices"
 	"strings"
-	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -41,21 +40,21 @@ func registCallExternalAgent() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			if !slices.Contains(GetAgents(), params.Agent) {
+			if !slices.Contains(external.Agents(), params.Agent) {
 				return fmt.Sprintf(
 					"外部呼叫已忽略：%s 未宣告（請設定 EXTERNAL_%s=true）。",
 					params.Agent, strings.ToUpper(params.Agent),
 				), nil
 			}
 
-			if err := checkCLI(params.Agent); err != nil {
+			if err := external.Check(params.Agent); err != nil {
 				return fmt.Sprintf(
 					"外部呼叫已忽略（%s: %s）",
 					params.Agent, err.Error(),
 				), nil
 			}
 
-			out, err := runOne(ctx, params.Agent, params.Prompt)
+			out, err := external.Run(ctx, params.Agent, params.Prompt)
 			if err != nil {
 				return fmt.Sprintf(
 					"外部呼叫失敗（%s: %s）",
@@ -66,34 +65,4 @@ func registCallExternalAgent() {
 			return fmt.Sprintf("[外部呼叫 · %s]\n%s", params.Agent, out), nil
 		},
 	})
-}
-
-func runOne(ctx context.Context, agent, prompt string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
-	var cmd *exec.Cmd
-	switch agent {
-	case "codex":
-		cmd = exec.CommandContext(ctx, "codex", "exec", prompt)
-	case "copilot":
-		cmd = exec.CommandContext(ctx, "gh", "copilot", "-p", prompt)
-	case "claude":
-		cmd = exec.CommandContext(ctx, "claude", "-p", prompt)
-	default:
-		return "", fmt.Errorf("%s not supported", agent)
-	}
-
-	out, err := cmd.CombinedOutput()
-	output := strings.TrimSpace(string(out))
-	if err != nil {
-		if output != "" {
-			return "", fmt.Errorf("%s: %s", err.Error(), output)
-		}
-		return "", err
-	}
-	if output == "" {
-		return "", fmt.Errorf("empty response from %s", agent)
-	}
-	return output, nil
 }

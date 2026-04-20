@@ -11,6 +11,7 @@ import (
 	"github.com/pardnchiu/go-utils/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
@@ -58,8 +59,13 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 
 			trimContent := strings.TrimSpace(req.Content)
 
+			externalAgent, externalEffective := external.MatchExternal(trimContent)
+			if externalAgent != "" {
+				trimContent = strings.TrimSpace(externalEffective)
+			}
+
 			var matchedSkill *skill.Skill
-			if scanner != nil {
+			if externalAgent == "" && scanner != nil {
 				if m, effective := scanner.MatchSkillCall(trimContent); m != nil {
 					matchedSkill = m
 					trimContent = strings.TrimSpace(effective)
@@ -69,15 +75,19 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 
 			events <- agentTypes.Event{Type: agentTypes.EventAgentSelect}
 			var agent agentTypes.Agent
-			if req.Model != "" {
-				if a, ok := registry.Registry[req.Model]; ok {
-					agent = a
+			if externalAgent != "" {
+				events <- agentTypes.Event{Type: agentTypes.EventAgentResult, Text: "external:" + externalAgent}
+			} else {
+				if req.Model != "" {
+					if a, ok := registry.Registry[req.Model]; ok {
+						agent = a
+					}
 				}
+				if agent == nil {
+					agent = exec.SelectAgent(ctx, bot, registry, trimContent, false)
+				}
+				events <- agentTypes.Event{Type: agentTypes.EventAgentResult, Text: agent.Name()}
 			}
-			if agent == nil {
-				agent = exec.SelectAgent(ctx, bot, registry, trimContent, false)
-			}
-			events <- agentTypes.Event{Type: agentTypes.EventAgentResult, Text: agent.Name()}
 
 			workDir, _ := os.UserHomeDir()
 			data := exec.ExecData{
@@ -92,6 +102,13 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 			session, err := newSession(data, sessionID)
 			if err != nil {
 				events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
+				return
+			}
+
+			if externalAgent != "" {
+				if err := exec.CallExternal(ctx, session.ID, externalAgent, trimContent, events); err != nil {
+					events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
+				}
 				return
 			}
 

@@ -1,19 +1,21 @@
-package externalAgent
+package external
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
-type agentResult struct {
+type Result struct {
 	Agent  string
 	Output string
 	Err    error
 }
 
-func GetAgents() []string {
+func Agents() []string {
 	var agents []string
 	for _, name := range []string{"codex", "copilot", "claude"} {
 		if os.Getenv("EXTERNAL_"+strings.ToUpper(name)) == "true" {
@@ -23,7 +25,7 @@ func GetAgents() []string {
 	return agents
 }
 
-func checkCLI(agent string) error {
+func Check(agent string) error {
 	switch agent {
 	case "codex":
 		return checkCodex()
@@ -34,6 +36,65 @@ func checkCLI(agent string) error {
 	default:
 		return fmt.Errorf("%s not supported", agent)
 	}
+}
+
+func CheckAgents() ([]string, map[string]error) {
+	var agents []string
+	errors := make(map[string]error)
+	for _, a := range Agents() {
+		if err := Check(a); err != nil {
+			errors[a] = err
+		} else {
+			agents = append(agents, a)
+		}
+	}
+	return agents, errors
+}
+
+func Run(ctx context.Context, agent, prompt string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	var cmd *exec.Cmd
+	switch agent {
+	case "codex":
+		cmd = exec.CommandContext(ctx, "codex", "exec", prompt)
+	case "copilot":
+		cmd = exec.CommandContext(ctx, "gh", "copilot", "-p", prompt)
+	case "claude":
+		cmd = exec.CommandContext(ctx, "claude", "-p", prompt)
+	default:
+		return "", fmt.Errorf("%s not supported", agent)
+	}
+
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
+	if err != nil {
+		if output != "" {
+			return "", fmt.Errorf("%s: %s", err.Error(), output)
+		}
+		return "", err
+	}
+	if output == "" {
+		return "", fmt.Errorf("empty response from %s", agent)
+	}
+	return output, nil
+}
+
+func RunParallel(ctx context.Context, agents []string, prompt string) []Result {
+	ch := make(chan Result, len(agents))
+	for _, a := range agents {
+		go func(agent string) {
+			out, err := Run(ctx, agent, prompt)
+			ch <- Result{Agent: agent, Output: out, Err: err}
+		}(a)
+	}
+
+	results := make([]Result, 0, len(agents))
+	for range agents {
+		results = append(results, <-ch)
+	}
+	return results
 }
 
 func checkCodex() error {

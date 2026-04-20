@@ -33,4 +33,7 @@ type AgentSession struct {
 	ToolHistories  []Message
 	Tools          []Message
 	Histories      []Message
+
+	VerifyRounds    int
+	VerifyFeedbacks []string
 }
