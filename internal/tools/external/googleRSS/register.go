@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 
@@ -38,19 +39,18 @@ and must not rely solely on RSS summaries as the source of truth.`,
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "Time range, available values: 1h / 3h / 6h / 12h / 24h / 7d, defaut: 7d",
+					"description": "(Optional) Time range, available values: 1h / 3h / 6h / 12h / 24h / 7d",
 					"default":     "7d",
 					"enum":        timeRanges,
 				},
 				"ceid": map[string]any{
 					"type":        "string",
-					"description": "Custom Edition ID, format '{country}:{lang}', default: 'TW:zh-Hant'",
+					"description": "(Optional) Custom Edition ID, format '{country}:{lang}'",
 					"default":     "TW:zh-Hant",
 				},
 			},
 			"required": []string{
 				"keyword",
-				"time_range",
 			},
 		},
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
@@ -66,30 +66,35 @@ and must not rely solely on RSS summaries as the source of truth.`,
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			if params.Keyword == "" {
-				params.Keyword = params.Query
+			keyword := strings.TrimSpace(params.Keyword)
+			if keyword == "" {
+				keyword = strings.TrimSpace(params.Query)
 			}
-			if params.Keyword == "" {
-				params.Keyword = params.Q
+			if keyword == "" {
+				keyword = strings.TrimSpace(params.Q)
 			}
-			if params.Keyword == "" {
+			if keyword == "" {
 				return "", fmt.Errorf("keyword is required")
 			}
 
 			// avoid small agent like 4.1 be stupid to call with not support value
-			if params.TimeRange == "" || !slices.Contains(timeRanges, params.TimeRange) {
-				params.TimeRange = "7d"
+			timeRange := strings.TrimSpace(params.TimeRange)
+			if timeRange != "" && !slices.Contains(timeRanges, timeRange) {
+				slog.Warn("invalid time_range, fallback to '7d'")
+				timeRange = "7d"
 			}
 
 			var geo, lang string
-			parts := strings.SplitN(params.CEID, ":", 2)
+			ceid := strings.TrimSpace(params.CEID)
+			parts := strings.SplitN(ceid, ":", 2)
 			if params.CEID == "" || len(parts) != 2 {
+				slog.Warn("invalid CEID, fallback to 'TW:zh-Hant'")
 				params.CEID = "TW:zh-Hant"
 				geo, lang = "TW", "zh-Hant"
 			} else {
 				geo, lang = parts[0], parts[1]
 			}
-			return Fetch(ctx, params.Keyword, params.TimeRange, params.CEID, geo, lang)
+			return Fetch(ctx, keyword, timeRange, ceid, geo, lang)
 		},
 	})
 }

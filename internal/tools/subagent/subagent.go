@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,60 +18,89 @@ import (
 )
 
 const (
-	toolName       = "invoke_subagent"
 	defaultTimeout = 10 * time.Minute
 )
 
-func init() {
+func Register() {
+	models := []string{}
+	for _, m := range exec.GetAgent() {
+		if m.Name != "" {
+			models = append(models, m.Name)
+		}
+	}
+
 	toolRegister.Regist(toolRegister.Def{
+		Name:       "invoke_subagent",
 		ReadOnly:   true,
 		Concurrent: true,
-		Name:       toolName,
-		Description: `分派一個**內部**子 agent 處理子任務並回傳結果，用於工作流程拆解、平行委派與專長模型分工。子 agent 走本專案 exec 引擎，共用 model registry 與所有本專案 tool（檔案、搜尋、git 等），擁有獨立 session 與 context，與主 agent 完全隔離；僅回傳最終文字結果，主 agent 自行整合。子 agent 預設禁止再次呼叫 invoke_subagent，避免無限巢狀。
+		Description: `
+Dispatch an **internal** subagent to handle a subtask and return the result,
+useful for workflow decomposition, parallel delegation, and specialist model division of labor.
 
-與 invoke_external_agent 的差別：本 tool 是**內部**委派（共用本專案 tool 與 model registry）；invoke_external_agent 是呼叫外部 CLI（codex／copilot／claude），外部 agent 無法存取本專案 tool。需要本專案 tool 協助完成的任務一律用 invoke_subagent。`,
+The subagent runs through this project's exec engine, sharing the model registry and all tools in this project (files, search, git, etc.).
+It has an independent session and context, fully isolated from the main agent; it only returns the final text result, which the main agent integrates on its own.
+
+By default, the subagent is prohibited from calling **invoke_subagent** again to avoid infinite nesting.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"task": map[string]any{
 					"type":        "string",
-					"description": "子 agent 要處理的完整任務描述（自包含，子 agent 看不到主 agent 的對話歷史）",
+					"description": "The subagent's complete task description (self-contained; the subagent cannot see the main agent's conversation history)",
 				},
 				"model": map[string]any{
 					"type":        "string",
-					"description": "（可選）指定 worker model 名稱，必須是已註冊的 model；留空則由 planner 自動挑選",
+					"description": "(Optional) Specify the worker model name; it must be a registered model. Leave blank to let the planner choose automatically",
+					"default":     "",
+					"enum":        models,
 				},
 				"system_prompt": map[string]any{
 					"type":        "string",
-					"description": "（可選）追加給子 agent 的角色／限制；會插入到 system prompt 的 Additional Instructions 區塊",
+					"description": "(Optional) Additional role or constraints for the subagent; will be inserted into the 'Additional Instructions' section of the system prompt.",
+					"default":     "",
 				},
 				"exclude_tools": map[string]any{
 					"type":        "array",
 					"items":       map[string]any{"type": "string"},
-					"description": "（可選）額外排除的 tool 名稱清單；invoke_subagent 自身一律強制排除",
+					"description": "(Optional) Additional list of tool names to exclude; invoke_subagent itself is always forcibly excluded",
+					"default":     []string{},
 				},
 			},
-			"required": []string{"task"},
+			"required": []string{
+				"task",
+			},
 		},
-		Handler: handle,
+		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
+			var params struct {
+				Task         string   `json:"task"`
+				Model        string   `json:"model,omitempty"`
+				SystemPrompt string   `json:"system_prompt,omitempty"`
+				ExcludeTools []string `json:"exclude_tools,omitempty"`
+			}
+			if err := json.Unmarshal(args, &params); err != nil {
+				return "", fmt.Errorf("json.Unmarshal: %w", err)
+			}
+
+			task := strings.TrimSpace(params.Task)
+			if task == "" {
+				return "", fmt.Errorf("task is required")
+			}
+
+			// avoid small agent like 4.1 be stupid to call with not support value
+			model := strings.TrimSpace(params.Model)
+			if model != "" && !slices.Contains(models, model) {
+				slog.Warn("invalid model, fallback to auto-select")
+				model = ""
+			}
+
+			systemPrompt := strings.TrimSpace(params.SystemPrompt)
+
+			return Exec(ctx, task, model, systemPrompt, params.ExcludeTools)
+		},
 	})
 }
 
-func handle(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
-	var params struct {
-		Task         string   `json:"task"`
-		Model        string   `json:"model,omitempty"`
-		SystemPrompt string   `json:"system_prompt,omitempty"`
-		ExcludeTools []string `json:"exclude_tools,omitempty"`
-	}
-	if err := json.Unmarshal(args, &params); err != nil {
-		return "", fmt.Errorf("json.Unmarshal: %w", err)
-	}
-	task := strings.TrimSpace(params.Task)
-	if task == "" {
-		return "", fmt.Errorf("task is required")
-	}
-
+func Exec(ctx context.Context, task, model, systemPrompt string, excludedTools []string) (string, error) {
 	registry := host.Registry()
 	planner := host.Planner()
 	if planner == nil || len(registry.Registry) == 0 {
@@ -78,12 +108,8 @@ func handle(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (s
 	}
 
 	var agent agentTypes.Agent
-	if params.Model != "" {
-		if a, ok := registry.Registry[params.Model]; ok {
-			agent = a
-		} else {
-			return "", fmt.Errorf("model not found: %s", params.Model)
-		}
+	if model != "" {
+		agent = registry.Registry[model]
 	} else {
 		agent = exec.SelectAgent(ctx, planner, registry, task, false)
 	}
@@ -93,16 +119,16 @@ func handle(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (s
 
 	sessionID, err := sessionManager.CreateSession("temp-sub-")
 	if err != nil {
-		return "", fmt.Errorf("CreateSession: %w", err)
+		return "", fmt.Errorf("sessionManager.CreateSession: %w", err)
 	}
 
-	excluded := append([]string{toolName}, params.ExcludeTools...)
+	excluded := append([]string{"invoke_subagent"}, excludedTools...)
 	execData := exec.ExecData{
 		Agent:             agent,
 		WorkDir:           ".",
 		Content:           task,
 		ExcludeTools:      excluded,
-		ExtraSystemPrompt: params.SystemPrompt,
+		ExtraSystemPrompt: systemPrompt,
 	}
 
 	userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s",

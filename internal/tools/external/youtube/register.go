@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -25,7 +26,8 @@ Analyze YouTube video content using Gemini for speech-to-text (STT), returning a
 				},
 				"prompt": map[string]any{
 					"type":        "string",
-					"description": "Additional analysis instructions appended after the default full-transcript-with-timestamps prompt",
+					"description": "(Optional) Additional analysis instructions appended after the default full-transcript-with-timestamps prompt",
+					"default":     "",
 				},
 			},
 			"required": []string{
@@ -41,10 +43,13 @@ Analyze YouTube video content using Gemini for speech-to-text (STT), returning a
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			if params.URL == "" {
+			url := strings.TrimSpace(params.URL)
+			if url == "" {
 				return "", fmt.Errorf("url is required")
 			}
-			return Fetch(ctx, params.URL, params.Prompt)
+
+			prompt := strings.TrimSpace(params.Prompt)
+			return Fetch(ctx, url, prompt)
 		},
 	})
 }

@@ -21,10 +21,10 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
-	_ "github.com/pardnchiu/agenvoy/internal/agents/subagent"
 	"github.com/pardnchiu/agenvoy/internal/agents/summary"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
+	"github.com/pardnchiu/agenvoy/internal/tools/subagent"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
@@ -105,6 +105,7 @@ func initCLI() {
 	if cfg, err := session.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
+	subagent.Register()
 }
 
 func runList() {
@@ -224,6 +225,7 @@ func runApp() {
 	if cfg, err := session.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
+	subagent.Register()
 
 	registry := buildAgentRegistry()
 	skill.SyncSkills(context.Background(), extensions.Skills)

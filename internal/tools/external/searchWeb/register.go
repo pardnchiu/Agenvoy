@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"slices"
+	"strings"
 
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -33,12 +35,14 @@ Suitable for general queries, technical documentation, and product research.`,
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "Time range, available values: d (day) / w (week) / m (month) / y (year), default: w. Omit for no restriction. DuckDuckGo does not support sub-day granularity.",
+					"description": "(Optional) Time range, available values: d (day) / w (week) / m (month) / y (year), default: w. Omit for no restriction. DuckDuckGo does not support sub-day granularity.",
 					"default":     "w",
 					"enum":        timeRanges,
 				},
 			},
-			"required": []string{"query"},
+			"required": []string{
+				"query",
+			},
 		},
 		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -51,18 +55,21 @@ Suitable for general queries, technical documentation, and product research.`,
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			if params.Query == "" {
-				params.Query = params.Q
+			query := strings.TrimSpace(params.Query)
+			if query == "" {
+				query = strings.TrimSpace(params.Q)
 			}
-			if params.Query == "" {
+			if query == "" {
 				return "", fmt.Errorf("query is required")
 			}
 
 			// avoid small agent like 4.1 be stupid to call with not support value
-			if params.TimeRange == "" || !slices.Contains(timeRanges, params.TimeRange) {
+			timeRange := strings.TrimSpace(params.TimeRange)
+			if timeRange != "" && !slices.Contains(timeRanges, params.TimeRange) {
+				slog.Warn("invalid time_range, fallback to 'w'")
 				params.TimeRange = "w"
 			}
-			return Fetch(ctx, params.Query, params.TimeRange)
+			return Fetch(ctx, query, timeRange)
 		},
 	})
 }

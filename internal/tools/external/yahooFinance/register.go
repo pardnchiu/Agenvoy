@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"slices"
+	"strings"
 
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -36,13 +38,13 @@ Also send requests to query1 / query2 and use the fastest response.`,
 				},
 				"time_interval": map[string]any{
 					"type":        "string",
-					"description": "K-line interval, available values: 1m / 2m / 5m / 15m / 30m / 60m / 90m / 1h / 1d / 5d / 1wk / 1mo / 3mo, default: 1m",
+					"description": "(Optional) K-line interval, available values: 1m / 2m / 5m / 15m / 30m / 60m / 90m / 1h / 1d / 5d / 1wk / 1mo / 3mo, default: 1m",
 					"default":     "1m",
 					"enum":        timeIntervals,
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "Time range, available values: 1d / 5d / 1mo / 3mo / 6mo / 1y / 2y / 5y / 10y / ytd / max, default: 1d",
+					"description": "(Optional) Time range, available values: 1d / 5d / 1mo / 3mo / 6mo / 1y / 2y / 5y / 10y / ytd / max, default: 1d",
 					"default":     "1d",
 					"enum":        timeRanges,
 				},
@@ -63,21 +65,26 @@ Also send requests to query1 / query2 and use the fastest response.`,
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			if params.Symbol == "" {
-				params.Symbol = params.Ticker
+			symbol := strings.TrimSpace(params.Symbol)
+			if symbol == "" {
+				symbol = strings.TrimSpace(params.Ticker)
 			}
-			if params.Symbol == "" {
+			if symbol == "" {
 				return "", fmt.Errorf("symbol is required")
 			}
 
-			if params.TimeInterval == "" || !slices.Contains(timeIntervals, params.TimeInterval) {
-				params.TimeInterval = "1m"
+			timeInterval := strings.TrimSpace(params.TimeInterval)
+			if timeInterval != "" && !slices.Contains(timeIntervals, params.TimeInterval) {
+				slog.Warn("invalid time_interval, fallback to '1m'")
+				timeInterval = "1m"
 			}
 
-			if params.TimeRange == "" || !slices.Contains(timeRanges, params.TimeRange) {
-				params.TimeRange = "1d"
+			timeRange := strings.TrimSpace(params.TimeRange)
+			if timeRange != "" && !slices.Contains(timeRanges, params.TimeRange) {
+				slog.Warn("invalid time_range, fallback to '1d'")
+				timeRange = "1d"
 			}
-			return Fetch(ctx, params.Symbol, params.TimeInterval, params.TimeRange)
+			return Fetch(ctx, symbol, timeInterval, timeRange)
 		},
 	})
 }
