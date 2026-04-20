@@ -416,13 +416,13 @@ func buildExternalAgentsPrompt() string {
 	agents := external.Agents()
 	if len(agents) == 0 {
 		return `## 外部 Agent
-目前無宣告的外部 agent，禁止呼叫 verify_with_external_agent 與 call_external_agent。`
+目前無宣告的外部 agent，禁止呼叫 cross_review_with_external_agents 與 invoke_external_agent。`
 	}
 	return fmt.Sprintf(
 		`## 外部 Agent
 已宣告（呼叫時仍即時驗證安裝與登入）：%s
-- verify_with_external_agent：所有可用 agent 並行驗證，回傳獨立回饋供主 agent 參考修正
-- call_external_agent：指定單一 agent 直接生成結果
+- cross_review_with_external_agents：對已產出的結果，送所有可用 agent 並行交叉審查，回傳獨立回饋供修正
+- invoke_external_agent：指定單一 agent 直接生成結果
 
 未列出的 agent 禁止使用。`,
 		strings.Join(agents, "、"),

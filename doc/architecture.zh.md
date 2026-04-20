@@ -236,7 +236,7 @@ flowchart TD
     end
 
     subgraph ExternalAgentTools ["外部 Agent 工具"]
-        EAT["call_external_agent · 委派至具名外部 agent\nverify_with_external_agent · 平行跨驗證所有宣告 agent\nreview_result · 內部優先序覆核\n(claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet)"]
+        EAT["invoke_external_agent · 委派至具名外部 agent\ncross_review_with_external_agents · 平行跨驗證所有宣告 agent\nreview_result · 內部優先序覆核\n(claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet)"]
     end
 
     subgraph SubAgentTools ["In-Process 子 Agent · agents/subagent"]

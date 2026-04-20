@@ -10,7 +10,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
-func CallExternal(ctx context.Context, sessionID, agent, prompt string, events chan<- agentTypes.Event) error {
+func CallExternal(ctx context.Context, sessionID, agent, prompt string, readOnly bool, events chan<- agentTypes.Event) error {
 	label := "external:" + agent
 
 	if !slices.Contains(external.Agents(), agent) {
@@ -27,7 +27,7 @@ func CallExternal(ctx context.Context, sessionID, agent, prompt string, events c
 		return nil
 	}
 
-	out, err := external.Run(ctx, agent, prompt)
+	out, err := external.Run(ctx, agent, prompt, readOnly)
 	if err != nil {
 		msg := fmt.Sprintf("外部呼叫失敗（%s）：%s", agent, err.Error())
 		events <- agentTypes.Event{Type: agentTypes.EventText, Text: msg}

@@ -2,17 +2,22 @@ package external
 
 import "strings"
 
-var prefixToAgent = map[string]string{
-	"claude":  "claude",
-	"codex":   "codex",
-	"gh":      "copilot",
-	"copilot": "copilot",
+var prefixToAgent = map[string]struct {
+	agent    string
+	readOnly bool
+}{
+	"claude":       {"claude", true},
+	"claude-allow": {"claude", false},
+	"codex":        {"codex", true},
+	"codex-allow":  {"codex", false},
+	"gh":           {"copilot", true},
+	"copilot":      {"copilot", true},
 }
 
-func MatchExternal(input string) (agent, effective string) {
+func MatchExternal(input string) (agent, effective string, readOnly bool) {
 	trimmed := strings.TrimLeft(input, " \t\r\n")
 	if !strings.HasPrefix(trimmed, "/") {
-		return "", input
+		return "", input, true
 	}
 	rest := trimmed[1:]
 	token := rest
@@ -22,11 +27,11 @@ func MatchExternal(input string) (agent, effective string) {
 		tail = strings.TrimLeft(rest[idx:], " \t\r\n")
 	}
 	if token == "" {
-		return "", input
+		return "", input, true
 	}
 	resolved, ok := prefixToAgent[token]
 	if !ok {
-		return "", input
+		return "", input, true
 	}
-	return resolved, tail
+	return resolved.agent, tail, resolved.readOnly
 }

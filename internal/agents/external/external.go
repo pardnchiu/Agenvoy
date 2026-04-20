@@ -5,9 +5,41 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
+
+func runCodex(ctx context.Context, prompt string, readOnly bool) (string, error) {
+	outFile := filepath.Join(os.TempDir(), fmt.Sprintf("agenvoy-codex-%d.txt", time.Now().UnixNano()))
+	defer os.Remove(outFile)
+
+	args := []string{"exec", "--output-last-message", outFile, "--skip-git-repo-check"}
+	if !readOnly {
+		args = append(args, "--dangerously-bypass-approvals-and-sandbox")
+	}
+	args = append(args, prompt)
+
+	cmd := exec.CommandContext(ctx, "codex", args...)
+	combined, err := cmd.CombinedOutput()
+	if err != nil {
+		trimmed := strings.TrimSpace(string(combined))
+		if trimmed != "" {
+			return "", fmt.Errorf("%s: %s", err.Error(), trimmed)
+		}
+		return "", err
+	}
+
+	data, readErr := os.ReadFile(outFile)
+	if readErr != nil {
+		return "", fmt.Errorf("read codex output: %w", readErr)
+	}
+	output := strings.TrimSpace(string(data))
+	if output == "" {
+		return "", fmt.Errorf("empty response from codex")
+	}
+	return output, nil
+}
 
 type Result struct {
 	Agent  string
@@ -51,18 +83,31 @@ func CheckAgents() ([]string, map[string]error) {
 	return agents, errors
 }
 
-func Run(ctx context.Context, agent, prompt string) (string, error) {
+func Run(ctx context.Context, agent, prompt string, readOnly bool) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
+	if agent == "codex" {
+		return runCodex(ctx, prompt, readOnly)
+	}
+
 	var cmd *exec.Cmd
 	switch agent {
-	case "codex":
-		cmd = exec.CommandContext(ctx, "codex", "exec", prompt)
 	case "copilot":
-		cmd = exec.CommandContext(ctx, "gh", "copilot", "-p", prompt)
+		args := []string{"copilot", "-s", "-p", prompt}
+		if !readOnly {
+			args = append(args, "--allow-all-tools", "--allow-all-paths", "--allow-all-urls")
+		}
+		cmd = exec.CommandContext(ctx, "gh", args...)
 	case "claude":
-		cmd = exec.CommandContext(ctx, "claude", "-p", prompt)
+		args := []string{"-p"}
+		if readOnly {
+			args = append(args, "--disallowedTools=Edit,Write,NotebookEdit")
+		} else {
+			args = append(args, "--permission-mode", "acceptEdits")
+		}
+		args = append(args, prompt)
+		cmd = exec.CommandContext(ctx, "claude", args...)
 	default:
 		return "", fmt.Errorf("%s not supported", agent)
 	}
@@ -81,11 +126,11 @@ func Run(ctx context.Context, agent, prompt string) (string, error) {
 	return output, nil
 }
 
-func RunParallel(ctx context.Context, agents []string, prompt string) []Result {
+func RunParallel(ctx context.Context, agents []string, prompt string, readOnly bool) []Result {
 	ch := make(chan Result, len(agents))
 	for _, a := range agents {
 		go func(agent string) {
-			out, err := Run(ctx, agent, prompt)
+			out, err := Run(ctx, agent, prompt, readOnly)
 			ch <- Result{Agent: agent, Output: out, Err: err}
 		}(a)
 	}
@@ -101,7 +146,7 @@ func checkCodex() error {
 	if _, err := exec.LookPath("codex"); err != nil {
 		return fmt.Errorf("please install first: npm install -g @openai/codex")
 	}
-	if out, err := exec.Command("codex", "auth", "status").CombinedOutput(); err != nil {
+	if out, err := exec.Command("codex", "login", "status").CombinedOutput(); err != nil {
 		return fmt.Errorf("please login first: codex login - %s", strings.TrimSpace(string(out)))
 	}
 	return nil

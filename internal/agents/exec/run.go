@@ -19,7 +19,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 
 	trimInput := strings.TrimSpace(userInput)
 
-	externalAgent, externalEffective := external.MatchExternal(trimInput)
+	externalAgent, externalEffective, externalReadOnly := external.MatchExternal(trimInput)
 	if externalAgent != "" {
 		trimInput = strings.TrimSpace(externalEffective)
 	}
@@ -65,7 +65,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	}
 
 	if externalAgent != "" {
-		return CallExternal(ctx, session.ID, externalAgent, trimInput, events)
+		return CallExternal(ctx, session.ID, externalAgent, trimInput, externalReadOnly, events)
 	}
 
 	doneEvents := make(chan agentTypes.Event, 4)

@@ -362,8 +362,8 @@ agen planner
 | `skill_git_rollback` | `commit` | Roll back the skill repository to the specified commit hash |
 | `list_tools` | — | List all currently available tools including dynamic API extensions |
 | `calculate` | `expression` | Evaluate math expressions (sqrt, abs, pow, ceil, floor, sin, cos, tan, log) |
-| `call_external_agent` | `agent`, `input` | Delegate the entire task to a named external agent (`copilot` / `claude` / `codex`) |
-| `verify_with_external_agent` | `input`, `result` | Parallel cross-validation: dispatch to all declared external agents and merge feedback; falls back to `review_result` when none are declared |
+| `invoke_external_agent` | `provider`, `task`, `readonly?` | Delegate the entire task to a named external agent (`copilot` / `claude` / `codex`) |
+| `cross_review_with_external_agents` | `input`, `result` | Parallel cross-validation: dispatch to all declared external agents and merge feedback; falls back to `review_result` when none are declared |
 | `review_result` | `input`, `result` | Internal completeness review using the highest-priority available model (claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet) |
 | `invoke_subagent` | `task`, `model?`, `system_prompt?`, `exclude_tools?` | In-process sub-agent delegation with an isolated temp session; `invoke_subagent` is force-excluded inside the child to prevent recursion |
 

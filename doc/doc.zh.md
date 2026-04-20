@@ -364,8 +364,8 @@ agen planner
 | `skill_git_rollback` | `commit` | 將 skill repo 回復到指定 commit hash |
 | `list_tools` | — | 列出所有當前可用工具，包含動態 API 擴充 |
 | `calculate` | `expression` | 評估數學運算式（sqrt、abs、pow、ceil、floor、sin、cos、tan、log） |
-| `call_external_agent` | `agent`, `input` | 將整個任務委派至具名外部 agent（`copilot` / `claude` / `codex`） |
-| `verify_with_external_agent` | `input`, `result` | 將結果平行送至所有宣告的外部 agent 並合併回饋；無外部 agent 時 fallback 到 `review_result` |
+| `invoke_external_agent` | `provider`, `task`, `readonly?` | 將整個任務委派至具名外部 agent（`copilot` / `claude` / `codex`） |
+| `cross_review_with_external_agents` | `input`, `result` | 將結果平行送至所有宣告的外部 agent 並合併回饋；無外部 agent 時 fallback 到 `review_result` |
 | `review_result` | `input`, `result` | 以優先序最高的可用模型做內部完整性覆核（claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet） |
 | `invoke_subagent` | `task`, `model?`, `system_prompt?`, `exclude_tools?` | In-process 子 agent 委派，獨立暫時 session；子 agent 強制排除 `invoke_subagent` 以避免無限巢狀 |
 

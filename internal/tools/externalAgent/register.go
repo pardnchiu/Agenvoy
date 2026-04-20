@@ -1,7 +1,7 @@
 package externalAgent
 
 func init() {
-	registCallExternalAgent()
-	registVerifyWithExternalAgent()
+	registInvokeExternalAgent()
+	registCrossReviewWithExternalAgents()
 	registReviewResult()
 }

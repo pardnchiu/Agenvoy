@@ -23,10 +23,12 @@ const (
 
 func init() {
 	toolRegister.Regist(toolRegister.Def{
-		ReadOnly:    true,
-		Concurrent:  true,
-		Name:        toolName,
-		Description: `分派一個獨立子 agent 處理子任務並回傳結果，用於工作流程拆解、平行委派與專長模型分工。子 agent 擁有獨立 session 與 context，與主 agent 完全隔離；僅回傳最終文字結果，主 agent 自行整合。子 agent 預設禁止再次呼叫 invoke_subagent，避免無限巢狀。`,
+		ReadOnly:   true,
+		Concurrent: true,
+		Name:       toolName,
+		Description: `分派一個**內部**子 agent 處理子任務並回傳結果，用於工作流程拆解、平行委派與專長模型分工。子 agent 走本專案 exec 引擎，共用 model registry 與所有本專案 tool（檔案、搜尋、git 等），擁有獨立 session 與 context，與主 agent 完全隔離；僅回傳最終文字結果，主 agent 自行整合。子 agent 預設禁止再次呼叫 invoke_subagent，避免無限巢狀。
+
+與 invoke_external_agent 的差別：本 tool 是**內部**委派（共用本專案 tool 與 model registry）；invoke_external_agent 是呼叫外部 CLI（codex／copilot／claude），外部 agent 無法存取本專案 tool。需要本專案 tool 協助完成的任務一律用 invoke_subagent。`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

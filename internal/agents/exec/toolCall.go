@@ -241,7 +241,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		sessionData.ToolHistories = append(sessionData.ToolHistories, toolMsg)
 
 		switch s.name {
-		case "verify_with_external_agent":
+		case "cross_review_with_external_agents":
 			hasExternalAgent = true
 			sessionData.VerifyRounds++
 			sessionData.VerifyFeedbacks = append(sessionData.VerifyFeedbacks, result)
@@ -393,7 +393,7 @@ func trimMessageContext(toolCall []agentTypes.Message, rounds int, feedbacks []s
 			continue
 		}
 		for _, tc := range m.ToolCalls {
-			if tc.Function.Name != "verify_with_external_agent" && tc.Function.Name != "call_external_agent" {
+			if tc.Function.Name != "cross_review_with_external_agents" && tc.Function.Name != "invoke_external_agent" {
 				continue
 			}
 
@@ -407,8 +407,8 @@ func trimMessageContext(toolCall []agentTypes.Message, rounds int, feedbacks []s
 			for _, tm := range toolCall {
 				if tm.Role == "tool" && tm.ToolCallID == tc.ID {
 					if s, ok := tm.Content.(string); ok {
-						s = strings.TrimPrefix(s, "[verify_with_external_agent] ")
-						s = strings.TrimPrefix(s, "[call_external_agent] ")
+						s = strings.TrimPrefix(s, "[cross_review_with_external_agents] ")
+						s = strings.TrimPrefix(s, "[invoke_external_agent] ")
 						feedback = s
 					}
 					break
@@ -427,7 +427,7 @@ func trimMessageContext(toolCall []agentTypes.Message, rounds int, feedbacks []s
 
 	if rounds >= MaxVerifyRounds {
 		var sb strings.Builder
-		sb.WriteString(fmt.Sprintf("已完成 %d 輪外部驗證仍未全員通過，**停止重試**，禁止再次呼叫 verify_with_external_agent。請以當前草稿為基礎直接輸出最終結果，並在文末新增 `## 外部驗證未通過理由` 區塊，依序列出各輪 agent 指出的具體問題。\n\n", rounds))
+		sb.WriteString(fmt.Sprintf("已完成 %d 輪外部驗證仍未全員通過，**停止重試**，禁止再次呼叫 cross_review_with_external_agents。請以當前草稿為基礎直接輸出最終結果，並在文末新增 `## 外部驗證未通過理由` 區塊，依序列出各輪 agent 指出的具體問題。\n\n", rounds))
 		for i, fb := range feedbacks {
 			sb.WriteString(fmt.Sprintf("### Round %d\n%s\n\n", i+1, fb))
 		}

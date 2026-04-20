@@ -59,7 +59,7 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 
 			trimContent := strings.TrimSpace(req.Content)
 
-			externalAgent, externalEffective := external.MatchExternal(trimContent)
+			externalAgent, externalEffective, externalReadOnly := external.MatchExternal(trimContent)
 			if externalAgent != "" {
 				trimContent = strings.TrimSpace(externalEffective)
 			}
@@ -106,7 +106,7 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 			}
 
 			if externalAgent != "" {
-				if err := exec.CallExternal(ctx, session.ID, externalAgent, trimContent, events); err != nil {
+				if err := exec.CallExternal(ctx, session.ID, externalAgent, trimContent, externalReadOnly, events); err != nil {
 					events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 				}
 				return

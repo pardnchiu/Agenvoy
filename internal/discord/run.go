@@ -26,7 +26,7 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	dcBot.SkillScanner.Scan()
 
 	content := receiveMessage.Content
-	externalAgent, externalEffective := external.MatchExternal(content)
+	externalAgent, externalEffective, externalReadOnly := external.MatchExternal(content)
 	if externalAgent != "" {
 		content = strings.TrimSpace(externalEffective)
 	}
@@ -64,7 +64,7 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	go func() {
 		var execErr error
 		if externalAgent != "" {
-			execErr = exec.CallExternal(ctx, session.ID, externalAgent, content, events)
+			execErr = exec.CallExternal(ctx, session.ID, externalAgent, content, externalReadOnly, events)
 		} else {
 			execErr = exec.Execute(ctx, execData, session, events, true)
 		}

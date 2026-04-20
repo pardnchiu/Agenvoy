@@ -236,7 +236,7 @@ flowchart TD
     end
 
     subgraph ExternalAgentTools ["External Agent Tools"]
-        EAT["call_external_agent · delegate task to named external agent\nverify_with_external_agent · parallel cross-validation across all declared agents\nreview_result · internal priority-model review\n(claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet)"]
+        EAT["invoke_external_agent · delegate task to named external agent\ncross_review_with_external_agents · parallel cross-validation across all declared agents\nreview_result · internal priority-model review\n(claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet)"]
     end
 
     subgraph SubAgentTools ["In-Process Sub-Agent · agents/subagent"]
