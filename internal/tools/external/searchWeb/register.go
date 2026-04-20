@@ -21,21 +21,19 @@ func Register() {
 		Name:     "search_web",
 		ReadOnly: true,
 		Description: `
-Search the web via DuckDuckGo Lite and return a ranked list of titles, URLs, and snippets.
-
-You MUST cite sources in your response as markdown hyperlinks: [Title](URL).
-
-Suitable for general queries, technical documentation, and product research.`,
+Search the web via DuckDuckGo Lite; returns top 10 results (Taiwan locale).
+General queries, docs, product research.
+Call fetch_page on each link for full article content.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"query": map[string]any{
 					"type":        "string",
-					"description": "Search keywords or question",
+					"description": "Search keywords (e.g. 'React 19 release notes').",
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "(Optional) Time range, available values: d (day) / w (week) / m (month) / y (year), default: w. Omit for no restriction. DuckDuckGo does not support sub-day granularity.",
+					"description": "Lookback window; omit for no restriction.",
 					"default":     "w",
 					"enum":        timeRanges,
 				},

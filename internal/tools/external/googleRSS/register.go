@@ -22,30 +22,25 @@ func Register() {
 		ReadOnly:   true,
 		Concurrent: true,
 		Description: `
-Search Google News RSS for news and return the title, summary, and the original article link.
-
-[Important]
-RSS only provides titles and short excerpt summaries, not full content.
-
-For research-oriented tasks (compilation, analysis, weekly reports, in-depth investigations, etc.),
-you must continue calling fetch_page for each returned link to obtain the full article content,
-and must not rely solely on RSS summaries as the source of truth.`,
+Search Google News RSS; returns title, summary, link.
+RSS gives snippets only.
+For research tasks (compilation, analysis, reports, investigations), must follow up with fetch_page on each link — do not rely on RSS summaries alone.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"keyword": map[string]any{
 					"type":        "string",
-					"description": "Search keywords",
+					"description": "Search keywords (e.g. 'TSMC earnings').",
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "(Optional) Time range, available values: 1h / 3h / 6h / 12h / 24h / 7d",
+					"description": "Lookback window.",
 					"default":     "7d",
 					"enum":        timeRanges,
 				},
 				"ceid": map[string]any{
 					"type":        "string",
-					"description": "(Optional) Custom Edition ID, format '{country}:{lang}'",
+					"description": "Edition ID (e.g. 'TW:zh-Hant', 'US:en').",
 					"default":     "TW:zh-Hant",
 				},
 			},

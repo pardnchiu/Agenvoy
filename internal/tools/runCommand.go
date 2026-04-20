@@ -17,14 +17,19 @@ import (
 
 func registRunCommand() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "run_command",
-		Description: "Execute a shell command and return its combined stdout/stderr output. IMPORTANT: only call this tool when you have a complete, non-empty command string ready to execute. Never call this tool speculatively or with a placeholder — if the exact command is not yet determined, resolve it first before calling.",
+		Name: "run_command",
+		Description: `
+Run a shell command; returns combined stdout/stderr.
+
+Executes in the work directory — do NOT prefix with 'cd'; it will be rejected.
+
+Resolve the exact command before calling; no placeholders.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"command": map[string]any{
 					"type":        "string",
-					"description": "The exact shell command to execute. Must be a non-empty, fully-formed command string (e.g. \"git status\", \"ls -la /tmp\"). Empty strings and placeholders are not accepted and will result in an error.",
+					"description": "Shell command (e.g. 'git status', 'ls -la /tmp'). No 'cd' prefix; no placeholders.",
 				},
 			},
 			"required": []string{"command"},

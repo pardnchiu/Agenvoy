@@ -9,7 +9,7 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func init() {
+func Register() {
 	registReadFile()
 	registReadImage()
 	registListFiles()

@@ -14,6 +14,14 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
+type file struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	IsDir   bool   `json:"is_dir"`
+	Size    int64  `json:"size"`
+	ModTime string `json:"mod_time"`
+}
+
 func registGlobFiles() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "glob_files",
@@ -21,16 +29,14 @@ func registGlobFiles() {
 		Concurrent: true,
 		Description: `
 Find files matching a glob pattern.
-
-Use to locate specific file types (e.g. '**/*.go' for all Go files).
-
-Supports absolute paths and '~' for user home (e.g. '~/tsmc_report*').`,
+Locate specific file types (e.g. '**/*.go' for Go files).
+Accepts absolute paths and '~' (e.g. '~/tsmc_report*').`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"pattern": map[string]any{
 					"type":        "string",
-					"description": "Glob pattern to match files against (e.g. '**/*.go', 'src/**/*.ts', '*.md', '~/tsmc_report*', '/Users/me/notes/**/*.txt')",
+					"description": "Glob pattern (e.g. '**/*.go', '~/tsmc_report*', '/abs/path/**/*.md').",
 				},
 			},
 			"required": []string{
@@ -52,13 +58,6 @@ Supports absolute paths and '~' for user home (e.g. '~/tsmc_report*').`,
 			return handlerGlobFiles(e, pattern)
 		},
 	})
-}
-
-type file struct {
-	Path    string `json:"path"`
-	IsDir   bool   `json:"is_dir"`
-	Size    int64  `json:"size"`
-	ModTime string `json:"mod_time"`
 }
 
 func handlerGlobFiles(e *toolTypes.Executor, pattern string) (string, error) {
@@ -105,6 +104,7 @@ func handlerGlobFiles(e *toolTypes.Executor, pattern string) (string, error) {
 		}
 
 		results = append(results, file{
+			Name:    info.Name(),
 			Path:    full,
 			IsDir:   info.IsDir(),
 			Size:    info.Size(),

@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
+	"os"
+	"path/filepath"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -13,19 +14,23 @@ import (
 
 func registListFiles() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "list_files",
-		ReadOnly:    true,
-		Description: "List files and directories at the specified path. Use for exploring project structure.",
+		Name:       "list_files",
+		ReadOnly:   true,
+		Concurrent: true,
+		Description: `
+List directory entries.
+Inspect immediate children; recursive=true walks subtree files.
+Accepts absolute paths and '~' (e.g. '~/Desktop').`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "Directory path to list. Absolute path preferred; relative paths resolve against the work directory shown in the system prompt. `~` expands to user home. Use '.' for the work directory.",
+					"description": "Directory to list (e.g. '.', '~/Desktop', '/abs/path').",
 				},
 				"recursive": map[string]any{
 					"type":        "boolean",
-					"description": "If true, list files recursively. Defaults to false.",
+					"description": "Walk subtree files. Default false.",
 				},
 			},
 			"required": []string{"path"},
@@ -39,17 +44,31 @@ func registListFiles() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			var sb strings.Builder
+			absBase, err := filesystem.AbsPath(e.WorkDir, params.Path, false)
+			if err != nil {
+				return "", fmt.Errorf("filesystem.AbsPath: %w", err)
+			}
+
+			results := []file{}
 
 			if params.Recursive {
-				files, err := filesystem.WalkFiles(e.WorkDir, params.Path)
+				walked, err := filesystem.WalkFiles(e.WorkDir, params.Path)
 				if err != nil {
 					return "", fmt.Errorf("filesystem.WalkFiles: %w", err)
 				}
-				for _, f := range files {
-					sb.WriteString("[file] ")
-					sb.WriteString(f)
-					sb.WriteByte('\n')
+				for _, rel := range walked {
+					full := filepath.Join(absBase, rel)
+					info, err := os.Stat(full)
+					if err != nil {
+						continue
+					}
+					results = append(results, file{
+						Name:    info.Name(),
+						Path:    full,
+						IsDir:   info.IsDir(),
+						Size:    info.Size(),
+						ModTime: info.ModTime().Format("2006-01-02 15:04"),
+					})
 				}
 			} else {
 				entries, err := filesystem.ListDir(e.WorkDir, params.Path)
@@ -57,26 +76,26 @@ func registListFiles() {
 					return "", fmt.Errorf("filesystem.ListDir: %w", err)
 				}
 				for _, entry := range entries {
-					info, err := entry.Info()
+					full := filepath.Join(absBase, entry.Name())
+					info, err := os.Stat(full)
 					if err != nil {
 						continue
 					}
-					if entry.IsDir() {
-						sb.WriteString("[dir] ")
-					} else {
-						sb.WriteString("[file] ")
-					}
-					sb.WriteString(entry.Name())
-					sb.WriteString(" / ")
-					sb.WriteString(info.ModTime().Format("2006-01-02 15:04"))
-					sb.WriteByte('\n')
+					results = append(results, file{
+						Name:    info.Name(),
+						Path:    full,
+						IsDir:   info.IsDir(),
+						Size:    info.Size(),
+						ModTime: info.ModTime().Format("2006-01-02 15:04"),
+					})
 				}
 			}
 
-			if sb.Len() == 0 {
-				return fmt.Sprintf("%s no files found", params.Path), nil
+			data, err := json.Marshal(results)
+			if err != nil {
+				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
-			return sb.String(), nil
+			return string(data), nil
 		},
 	})
 }

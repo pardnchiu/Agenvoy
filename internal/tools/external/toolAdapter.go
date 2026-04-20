@@ -24,39 +24,38 @@ func Register() {
 		ReadOnly:   true,
 		Concurrent: true,
 		Description: `
-Send an HTTP request and return the response content. Supports methods such as GET and POST (JSON/Form).
-
-Suitable for calling REST APIs, webhooks, or other HTTP services.`,
+Send an HTTP request.
+REST APIs, webhooks, arbitrary HTTP services.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"url": map[string]any{
 					"type":        "string",
-					"description": "Full URL (must include http:// or https://)",
+					"description": "Full URL (e.g. 'https://api.example.com/v1/items').",
 				},
 				"method": map[string]any{
 					"type":        "string",
-					"description": "HTTP method",
+					"description": "HTTP method.",
 					"enum":        []string{"GET", "POST", "PUT", "DELETE", "PATCH"},
 					"default":     "GET",
 				},
 				"headers": map[string]any{
 					"type":        "object",
-					"description": "Request headers (key-value format), e.g. {\"Authorization\": \"Bearer token\"}",
+					"description": "Headers (e.g. {\"Authorization\": \"Bearer ...\"}).",
 				},
 				"body": map[string]any{
 					"type":        "object",
-					"description": "Request body (JSON format), suitable for POST/PUT/PATCH",
+					"description": "Request body (POST/PUT/PATCH).",
 				},
 				"content_type": map[string]any{
 					"type":        "string",
-					"description": "Content-Type, optional values: json (default), form",
+					"description": "Body encoding.",
 					"enum":        []string{"json", "form"},
 					"default":     "json",
 				},
 				"timeout": map[string]any{
 					"type":        "integer",
-					"description": "Request timeout in seconds, default 30 seconds, maximum 300 seconds. Use 30 for general REST APIs; for computational APIs (such as AI image generation, speech synthesis, video processing), 120+ is recommended",
+					"description": "Timeout seconds (max 300). Use 120+ for compute-heavy APIs.",
 					"default":     30,
 				},
 			},

@@ -16,17 +16,18 @@ func Register() {
 		ReadOnly:   true,
 		Concurrent: true,
 		Description: `
-Analyze YouTube video content using Gemini for speech-to-text (STT), returning a complete transcript with timestamps.`,
+Transcribe YouTube video with timestamps.
+Video → text for analysis, summarization, quote extraction.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"url": map[string]any{
 					"type":        "string",
-					"description": "YouTube video URL (supports watch?v=, shorts/, youtu.be/ formats)",
+					"description": "YouTube URL (watch / shorts / youtu.be).",
 				},
 				"prompt": map[string]any{
 					"type":        "string",
-					"description": "(Optional) Additional analysis instructions appended after the default full-transcript-with-timestamps prompt",
+					"description": "Extra instructions appended to the default transcript prompt.",
 					"default":     "",
 				},
 			},

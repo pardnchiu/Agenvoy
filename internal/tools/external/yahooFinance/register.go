@@ -27,24 +27,24 @@ func Register() {
 		ReadOnly:   true,
 		Concurrent: true,
 		Description: `
-Query Yahoo Finance stock quotes and K-line data, returning current price, intraday high/low, 52-week high/low, volume, and historical OHLCV.
-Also send requests to query1 / query2 and use the fastest response.`,
+Query Yahoo Finance quotes and K-line.
+Equity prices, indices, intraday / historical OHLCV.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"symbol": map[string]any{
 					"type":        "string",
-					"description": "Stock symbol, e.g. AAPL, TSLA, ^SPX, 2330.TW",
+					"description": "Symbol (e.g. 'AAPL', 'TSLA', '^SPX', '2330.TW').",
 				},
 				"time_interval": map[string]any{
 					"type":        "string",
-					"description": "(Optional) K-line interval, available values: 1m / 2m / 5m / 15m / 30m / 60m / 90m / 1h / 1d / 5d / 1wk / 1mo / 3mo, default: 1m",
+					"description": "Candle interval.",
 					"default":     "1m",
 					"enum":        timeIntervals,
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "(Optional) Time range, available values: 1d / 5d / 1mo / 3mo / 6mo / 1y / 2y / 5y / 10y / ytd / max, default: 1d",
+					"description": "Lookback window.",
 					"default":     "1d",
 					"enum":        timeRanges,
 				},
