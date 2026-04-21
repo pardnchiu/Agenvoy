@@ -10,6 +10,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
 	"github.com/pardnchiu/agenvoy/internal/tools/file"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
+	"github.com/pardnchiu/agenvoy/internal/tools/toolError"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 
 	"github.com/pardnchiu/agenvoy/internal/tools/fetchPage"
@@ -24,6 +25,7 @@ func init() {
 	externalAgent.Register()
 	fetchPage.Register()
 	file.Register()
+	toolError.Register()
 
 	toolRegister.RegistGroup("api_", func(_ context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
 		if e.APIToolbox == nil || !e.APIToolbox.IsExist(name) {

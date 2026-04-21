@@ -1,4 +1,4 @@
-package file
+package filesystem
 
 import (
 	"crypto/sha256"
@@ -7,8 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 type ToolError struct {
@@ -36,16 +34,16 @@ func SaveToolError(sessionID, toolName, args, errMsg string) string {
 		return hash
 	}
 
-	dir := filepath.Join(filesystem.SessionsDir, sessionID, "tool_errors")
+	dir := filepath.Join(SessionsDir, sessionID, "tool_errors")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return hash
 	}
-	filesystem.WriteFile(filepath.Join(dir, hash+".json"), string(data), 0644)
+	WriteFile(filepath.Join(dir, hash+".json"), string(data), 0644)
 	return hash
 }
 
 func GetToolError(sessionID, hash string) string {
-	path := filepath.Join(filesystem.SessionsDir, sessionID, "tool_errors", hash+".json")
+	path := filepath.Join(SessionsDir, sessionID, "tool_errors", hash+".json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
