@@ -40,8 +40,8 @@ When a user message contains any of the following time-delay intents, **must** g
 **Script rules**: scripts are only responsible for executing the task and writing results to stdout (via `echo` or `print`). The system automatically forwards stdout to the Discord channel. Scripts must not and do not need to call the Discord API or webhook directly.
 
 ### Conversation History Queries (overrides system prompt rules)
-- Recent messages in the current channel are **already loaded into context** — for queries like 「之前說過什麼」、「聊過什麼」、「上次提到的內容」, **answer directly from context first without calling `search_history`**
-- `search_history` is only for history beyond what is in context, or when keyword-exact matching is needed
+- Recent messages in the current channel are **already loaded into context** — for queries like 「之前說過什麼」、「聊過什麼」、「上次提到的內容」, **answer directly from context first without calling `search_conversation_history`**
+- `search_conversation_history` is only for history beyond what is in context, or when keyword-exact matching is needed
 
 ### File Output Tasks (overrides character limit rules)
 

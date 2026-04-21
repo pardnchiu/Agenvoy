@@ -388,7 +388,7 @@ flowchart TD
         Budget["MaxInputTokens()\nper-provider token budget"]
         Preserve["Always preserve\n· system prompt\n· injected summary\n· latest user message"]
         Trim["Trim oldest turns first\nuntil within budget\nellipsis markers inserted"]
-        SearchHist["search_history tool\n(ToriiDB store)\npre: drop newest MaxHistoryMessages keys\n(already in LLM context window)\nalways: keyword (8) ∪ semantic (8)\n· keyword: literal substring + time_range\n· semantic: VSearch cosine top-K (no time_range,\n  silent empty when OPENAI_API_KEY missing)\npost: key dedup (max 16), chronological sort,\nRFC3339 · role prefix"]
+        SearchHist["search_conversation_history tool\n(ToriiDB store)\npre: drop newest MaxHistoryMessages keys\n(already in LLM context window)\nalways: keyword (8) ∪ semantic (8)\n· keyword: literal substring + time_range\n· semantic: VSearch cosine top-K (no time_range,\n  silent empty when OPENAI_API_KEY missing)\npost: key dedup (max 16), chronological sort,\nRFC3339 · role prefix"]
     end
 
     subgraph ToriiStore ["ToriiDB Store · filesystem/store"]

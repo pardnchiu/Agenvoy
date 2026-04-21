@@ -14,8 +14,8 @@ func Register() {
 	registReadImage()
 	registListFiles()
 	registGlobFiles()
-	registSearchContent()
-	registSearchHistory()
+	registSearchFileContent()
+	registSearchConversationHistory()
 	registWriteFile()
 	registPatchEdit()
 

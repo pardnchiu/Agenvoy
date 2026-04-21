@@ -14,6 +14,7 @@ import (
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 type historyHit struct {
@@ -35,70 +36,87 @@ var historyTimeRanges = map[string]time.Duration{
 	"1y": 365 * 24 * time.Hour,
 }
 
-func registSearchHistory() {
+func registSearchConversationHistory() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "search_history",
-		ReadOnly:    true,
-		Description: "Search the current session's conversation history. Runs literal keyword match (respects time_range) and semantic vector search (cosine top-K, ignores time_range) in parallel; each source caps at limit/2 hits, then merges and dedupes. Each hit is expanded with the 2 preceding and 1 following messages as context. Windows from adjacent hits merge into contiguous segments separated by blank lines. Messages already in the current LLM context are excluded (also from context expansion). Output entries are prefixed with RFC3339 timestamps.",
+		Name:       "search_conversation_history",
+		ReadOnly:   true,
+		Concurrent: true,
+		Description: `
+Search this session's past messages by literal keyword and semantic similarity.
+Recall earlier context outside the current window — prior decisions, files discussed, errors seen.
+Each hit returns surrounding messages for scene context.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"keyword": map[string]any{
 					"type":        "string",
-					"description": "Query text. Used for both literal substring match and semantic embedding query.",
-				},
-				"query": map[string]any{
-					"type":        "string",
-					"description": "Fallback alias for keyword. Use keyword when possible.",
+					"description": "Search text (e.g. 'redis TTL', 'bwrap sandbox decision').",
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"enum":        []string{"1d", "7d", "1m", "1y"},
-					"description": "Time range filter applied only to the keyword portion. 1d=1 day, 7d=7 days, 1m=30 days, 1y=365 days. Semantic portion ignores this to preserve cosine ranking. Context window expansion is also unconstrained to preserve scene completeness. Start with 1d; expand only if no results.",
+					"description": "Keyword time window. Semantic match ignores this. Widen only if empty.",
+					"enum":        utils.Keys(historyTimeRanges),
+					"default":     "1d",
 				},
 				"limit": map[string]any{
 					"type":        "integer",
+					"description": "Hit cap per source. Output exceeds limit after context expansion.",
 					"enum":        []int{8, 16, 32},
-					"description": "Hit cap per source (keyword and semantic each take up to limit/2). Default 8. Actual output exceeds limit because each hit expands with 2 preceding + 1 following messages as context (overlapping windows merge into contiguous segments).",
+					"default":     8,
 				},
 			},
-			"required": []string{"keyword"},
+			"required": []string{
+				"keyword",
+			},
 		},
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Keyword   string `json:"keyword"`
-				Query     string `json:"query"`
 				TimeRange string `json:"time_range"`
 				Limit     int    `json:"limit"`
+				// avoid small agent like 4.1 be stupid to call with different parameter name
+				Query string `json:"query"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			if params.Keyword == "" {
-				params.Keyword = params.Query
+
+			sessionId := e.SessionID
+			if sessionId == "" {
+				return "", fmt.Errorf("session not exist")
 			}
-			return searchHistory(ctx, e.SessionID, params.Keyword, params.TimeRange, params.Limit)
+
+			keyword := strings.TrimSpace(params.Keyword)
+			if keyword == "" {
+				keyword = params.Query
+			}
+			if keyword == "" {
+				return "", fmt.Errorf("keyword is required")
+			}
+
+			timeRange := strings.TrimSpace(params.TimeRange)
+			switch timeRange {
+			case "1d", "7d", "1m", "1y":
+			default:
+				timeRange = "1d"
+			}
+
+			limit := params.Limit
+			switch limit {
+			case 8, 16, 32:
+			default:
+				limit = 8
+			}
+			return searchConversationHistoryHandler(ctx, sessionId, keyword, params.TimeRange, limit)
 		},
 	})
 }
 
-func searchHistory(ctx context.Context, sessionID, keyword, timeRange string, limit int) (string, error) {
-	switch limit {
-	case 8, 16, 32:
-	default:
-		limit = 8
-	}
-	if sessionID == "" {
-		return "", fmt.Errorf("sessionID is required")
-	}
-	if keyword == "" {
-		return "", fmt.Errorf("keyword is required")
-	}
-
+func searchConversationHistoryHandler(ctx context.Context, sessionID, keyword, timeRange string, limit int) (string, error) {
 	db := store.DB(store.DBSessionHist)
 	allKeys := db.Keys(sessionID + ":*")
 	if len(allKeys) == 0 {
-		return "no history found for current session", nil
+		return "no history found", nil
 	}
 
 	keyIdx := make(map[string]int, len(allKeys))
@@ -107,26 +125,20 @@ func searchHistory(ctx context.Context, sessionID, keyword, timeRange string, li
 	}
 
 	_, maxHistory := sessionManager.GetHistory(sessionID)
-	skip := len(maxHistory) + 1
-	if skip > len(allKeys) {
-		skip = len(allKeys)
-	}
-
+	skip := min(len(maxHistory)+1, len(allKeys))
 	excludeKeys := make(map[string]struct{}, skip)
 	if skip > 0 {
 		for _, k := range allKeys[len(allKeys)-skip:] {
 			excludeKeys[k] = struct{}{}
 		}
 	}
+
 	searchKeys := allKeys
 	if skip > 0 {
 		searchKeys = allKeys[:len(allKeys)-skip]
 	}
 
-	perSource := limit / 2
-	if perSource < 1 {
-		perSource = 1
-	}
+	perSource := max(1, limit/2)
 
 	var afterNano int64
 	if d, ok := historyTimeRanges[timeRange]; ok {

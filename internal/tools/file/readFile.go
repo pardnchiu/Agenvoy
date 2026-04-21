@@ -21,8 +21,9 @@ const (
 
 func registReadFile() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:     "read_file",
-		ReadOnly: true,
+		Name:       "read_file",
+		ReadOnly:   true,
+		Concurrent: true,
 		Description: `
 Read the contents of a text or .pdf file.
 Inspect source code, config, notes, or extract text from a PDF.
@@ -86,6 +87,9 @@ func readFileHandler(path string, offset, limit int) (string, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 	if ext == ".pdf" {
 		return readPDFHandler(path, offset, limit)
+	}
+	if ext == ".csv" || ext == ".tsv" {
+		return readCSVHandler(path, offset, limit)
 	}
 	if imageExts[ext] {
 		return "", fmt.Errorf("image file detected, use `read_image` instead")

@@ -332,14 +332,14 @@ agen planner
 | Tool | Parameters | Description |
 |------|------------|-------------|
 | `search_tools` | `query`, `max_results` | Search and inject tools on demand; supports `select:<name>` direct activation, keyword fuzzy search, and `+term` required-match syntax |
-| `read_file` | `path`, `pages` | Read file content; binary files are detected and rejected; PDF files support `pages` range (e.g. `"1-5"`) |
+| `read_file` | `path`, `offset`, `limit` | Read file content; binary files are detected and rejected; PDF dispatched by extension (page-based); CSV/TSV emitted as JSON 2D array `[[header...], [row1...], ...]` (BOM stripped, header always included, rows normalized to header width) |
 | `read_image` | `path` | Read a local image file (JPEG/PNG/GIF/WebP, max 10 MB) and return it as a base64 JPEG data URL |
 | `write_file` | `path`, `content` | Write or create a file (atomic write) |
 | `list_files` | `path`, `recursive` | List directory contents |
 | `glob_files` | `pattern` | Glob pattern matching (e.g., `**/*.go`) |
 | `search_content` | `pattern`, `file_pattern` | Regex search across file contents |
 | `patch_edit` | `path`, `old_string`, `new_string` | First-match string replace (safer than full rewrite) |
-| `search_history` | `keyword`, `time_range` | Query the current session's history records from ToriiDB |
+| `search_conversation_history` | `keyword`, `time_range` | Query the current session's history records from ToriiDB |
 | `get_tool_error` | `hash` | Retrieve full error details for a failed tool call by hash |
 | `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | Persist tool error decisions to the error knowledge base |
 | `search_errors` | `keyword` | Retrieve error knowledge base entries |

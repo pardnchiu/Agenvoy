@@ -27,24 +27,30 @@ var binaryExts = map[string]bool{
 	".a":     true,
 }
 
-func registSearchContent() {
+func registSearchFileContent() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "search_content",
-		ReadOnly:    true,
-		Description: "Search file contents for a pattern. Returns matching lines with file path and line number.",
+		Name:       "search_file_content",
+		ReadOnly:   true,
+		Concurrent: true,
+		Description: `
+Search file contents by RE2 regex.
+Locate code or text when the matching string is known but the file is not.
+Scope with file_pattern glob (e.g. '**/*.go', 'configs/**').`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"pattern": map[string]any{
 					"type":        "string",
-					"description": "Text or regex pattern to search for",
+					"description": "RE2 regex matched per line (e.g. 'func\\s+\\w+Handler', 'TODO:', 'api_key').",
 				},
 				"file_pattern": map[string]any{
 					"type":        "string",
-					"description": "Optional glob pattern to filter files (e.g. '**/*.go')",
+					"description": "Glob to narrow files (e.g. '**/*.go', 'configs/**/*.json').",
 				},
 			},
-			"required": []string{"pattern"},
+			"required": []string{
+				"pattern",
+			},
 		},
 		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -54,32 +60,42 @@ func registSearchContent() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			return search(e, params.Pattern, params.FilePattern)
+
+			textPattern := strings.TrimSpace(params.Pattern)
+			if textPattern == "" {
+				return "", fmt.Errorf("text_pattern is required")
+			}
+
+			var filePatterns []string
+			if params.FilePattern != "" {
+				filePatterns = strings.Split(filepath.ToSlash(params.FilePattern), "/")
+			}
+			return searchContentHandler(e, textPattern, filePatterns)
 		},
 	})
 }
 
-func search(e *toolTypes.Executor, pattern, filePattern string) (string, error) {
-	re, err := regexp.Compile(pattern)
+func searchContentHandler(e *toolTypes.Executor, pattern string, filePatterns []string) (string, error) {
+	regex, err := regexp.Compile(pattern)
 	if err != nil {
 		return "", fmt.Errorf("failed to compile regex pattern (%s): %w", pattern, err)
 	}
 
-	var filePatternParts []string
-	if filePattern != "" {
-		filePatternParts = strings.Split(filepath.ToSlash(filePattern), "/")
+	baseDir := e.WorkDir
+	if baseDir == "" {
+		baseDir = filesystem.DownloadDir
 	}
 
 	var result strings.Builder
-
-	err = filepath.Walk(e.WorkDir, func(path string, d os.FileInfo, err error) error {
+	err = filepath.Walk(baseDir, func(path string, d os.FileInfo, err error) error {
 		if err != nil {
-			slog.Warn("failed to access path, just skipping", slog.String("error", err.Error()))
+			slog.Warn("failed to access path, just skipping",
+				slog.String("error", err.Error()))
 			return nil
 		}
 
-		base := filepath.Base(path)
-		if strings.HasPrefix(base, ".") {
+		basePath := filepath.Base(path)
+		if strings.HasPrefix(basePath, ".") {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}
@@ -98,15 +114,16 @@ func search(e *toolTypes.Executor, pattern, filePattern string) (string, error) 
 			return nil
 		}
 
-		relPath, err := filepath.Rel(e.WorkDir, path)
+		relPath, err := filepath.Rel(baseDir, path)
 		if err != nil {
-			slog.Warn("failed to get relative path", slog.String("error", err.Error()))
+			slog.Warn("failed to get relative path",
+				slog.String("error", err.Error()))
 			return nil
 		}
 
-		if len(filePatternParts) > 0 {
+		if len(filePatterns) > 0 {
 			parts := strings.Split(filepath.ToSlash(relPath), "/")
-			if !filesystem.IsMatch(filePatternParts, parts) {
+			if !filesystem.IsMatch(filePatterns, parts) {
 				return nil
 			}
 		}
@@ -126,7 +143,7 @@ func search(e *toolTypes.Executor, pattern, filePattern string) (string, error) 
 		for scanner.Scan() {
 			lineNum++
 			line := scanner.Text()
-			if re.MatchString(line) {
+			if regex.MatchString(line) {
 				result.WriteString(fmt.Sprintf("%s:%d: %s\n", relPath, lineNum, strings.TrimSpace(line)))
 			}
 		}
@@ -137,7 +154,7 @@ func search(e *toolTypes.Executor, pattern, filePattern string) (string, error) 
 	}
 
 	if result.Len() == 0 {
-		return fmt.Sprintf("No files found: %s", pattern), nil
+		return fmt.Sprintf("no files found: %s", pattern), nil
 	}
 	return result.String(), nil
 }

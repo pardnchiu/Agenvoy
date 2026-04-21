@@ -33,8 +33,9 @@ var imageExts = map[string]bool{
 
 func registReadImage() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:     "read_image",
-		ReadOnly: true,
+		Name:       "read_image",
+		ReadOnly:   true,
+		Concurrent: true,
 		Description: `
 Read a local image file as a base64 data URL for visual inspection.
 Inspect JPEG, PNG, GIF, or WebP images referenced in the project.

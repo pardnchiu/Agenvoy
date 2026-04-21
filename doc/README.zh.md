@@ -120,7 +120,7 @@ graph TB
 
 ### 嵌入式儲存作為記憶骨幹 — [pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)
 
-輕量的嵌入式 KV store，作為 Agenvoy 所有持久化層的單一骨幹。session 歷史、錯誤記憶、以及 `fetch_page` / `search_web` / `fetch_google_rss` 的 web 工具快取皆透過薄的 `internal/filesystem/store` wrapper 收斂至此，取代先前散落於各子系統的 JSON 檔案格式。這讓 `search_history` 與 `search_errors` 不再需要走檔案系統掃描即可跨 session 查詢，快取失效也從「協調檔案鎖」收斂為「刪除一把 key」。
+輕量的嵌入式 KV store，作為 Agenvoy 所有持久化層的單一骨幹。session 歷史、錯誤記憶、以及 `fetch_page` / `search_web` / `fetch_google_rss` 的 web 工具快取皆透過薄的 `internal/filesystem/store` wrapper 收斂至此，取代先前散落於各子系統的 JSON 檔案格式。這讓 `search_conversation_history` 與 `search_errors` 不再需要走檔案系統掃描即可跨 session 查詢，快取失效也從「協調檔案鎖」收斂為「刪除一把 key」。
 
 ### 共用工具函式庫 — [pardnchiu/go-utils](https://github.com/pardnchiu/go-utils)
 
@@ -140,7 +140,7 @@ graph TB
 
 ### 認知式不完美記憶 — [pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype)
 
-[pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype) 主張完美記憶是認知負擔 — 基於 LLM 在完整歷史重播下多輪表現下降 39% 的研究（[LLMs Get Lost In Multi-Turn Conversation](https://arxiv.org/abs/2505.06120)）。它以結構化 rolling summary 維持狀態，只在被觸發時以 fuzzy search 取出相關片段，模仿人類選擇性回憶。Agenvoy 的 session 層直接反映此思路：`trimMessages()` 強制 token 預算而非重播完整歷史、`summary` 在每輪之間 deep-merge 並持久化、`search_history` 提供關鍵字觸發的回憶而非注入所有過往 context。
+[pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype) 主張完美記憶是認知負擔 — 基於 LLM 在完整歷史重播下多輪表現下降 39% 的研究（[LLMs Get Lost In Multi-Turn Conversation](https://arxiv.org/abs/2505.06120)）。它以結構化 rolling summary 維持狀態，只在被觸發時以 fuzzy search 取出相關片段，模仿人類選擇性回憶。Agenvoy 的 session 層直接反映此思路：`trimMessages()` 強制 token 預算而非重播完整歷史、`summary` 在每輪之間 deep-merge 並持久化、`search_conversation_history` 提供關鍵字觸發的回憶而非注入所有過往 context。
 
 ## 版本歷史
 

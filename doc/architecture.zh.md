@@ -388,7 +388,7 @@ flowchart TD
         Budget["MaxInputTokens()\n逐 provider token 預算"]
         Preserve["一律保留\n· system prompt\n· 注入的 summary\n· 最新 user message"]
         Trim["由最舊輪次開始裁剪\n直到符合預算\n插入 ellipsis 標記"]
-        SearchHist["search_history 工具\n(ToriiDB store)\n前置：剔除最新 MaxHistoryMessages 筆\n(已在 LLM context 的範圍)\n一律：keyword (8) ∪ semantic (8)\n· keyword：字面 substring + time_range\n· semantic：VSearch 餘弦 top-K（不套 time_range，\n  無 OPENAI_API_KEY 靜默回空）\n後處理：依 key 去重（上限 16）、升冪時間排序、\nRFC3339 · role 前綴"]
+        SearchHist["search_conversation_history 工具\n(ToriiDB store)\n前置：剔除最新 MaxHistoryMessages 筆\n(已在 LLM context 的範圍)\n一律：keyword (8) ∪ semantic (8)\n· keyword：字面 substring + time_range\n· semantic：VSearch 餘弦 top-K（不套 time_range，\n  無 OPENAI_API_KEY 靜默回空）\n後處理：依 key 去重（上限 16）、升冪時間排序、\nRFC3339 · role 前綴"]
     end
 
     subgraph ToriiStore ["ToriiDB Store · filesystem/store"]

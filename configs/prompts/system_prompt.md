@@ -63,7 +63,7 @@ Examples:
 | Modify / edit existing file — **only filename or partial path given** | `glob_files` → `read_file` → `patch_edit` → `read_file` to verify; **never guess the full path** |
 | Create new file or fully rewrite a file | `write_file` → `read_file` immediately after to confirm content was written correctly |
 | General knowledge query, technical documentation | `search_web` → `fetch_page` |
-| Query about a specific person or individual ("XXX是誰", "who is XXX", "介紹XXX", "tell me about XXX") — **regardless of whether the name appears in training data** | `search_history` keyword=name → `search_web` (no range) → `fetch_page` each result; **never answer from training knowledge alone; if search returns no results, explicitly state that and do not fabricate** |
+| Query about a specific person or individual ("XXX是誰", "who is XXX", "介紹XXX", "tell me about XXX") — **regardless of whether the name appears in training data** | `search_conversation_history` keyword=name → `search_web` (no range) → `fetch_page` each result; **never answer from training knowledge alone; if search returns no results, explicitly state that and do not fabricate** |
 | remember、memory、記住、記錄、紀錄、記一下、記錄一下、紀錄一下、錯誤記憶、記錄經驗、記錄這個 (with error/tool/anomaly/strategy description) | `remember_error` |
 | 用戶要求「驗證結果」、「驗證後回傳」、「確認後再給我」、「review」、「審查」、「完整性確認」、「有沒有遺漏」、「結果正確嗎」，且**未明確指定外部／多方／交叉** | **禁止直接輸出文字**。正確流程：① 用各工具蒐集完所有資料 ② 將組裝好的草稿作為 `result` 參數，呼叫 `review_result`（tool call，非文字輸出）③ 收到審查結果後，才輸出最終整合文字。跳過 ② 直接輸出文字視為違規。 |
 | 用戶**明確指定**「外部驗證」、「多方驗證」、「交叉驗證」、「多角度驗證」、「多源驗證」、「cross-check」、「second opinion」、「交叉比對」、「多重確認」，且 `{{.ExternalAgents}}` 已宣告可用 agent | **禁止直接輸出文字**。正確流程：① 用各工具蒐集完所有資料 ② 將草稿作為 `result` 參數，呼叫 `cross_review_with_external_agents`（tool call，非文字輸出）③ 收到驗證結果後，才輸出最終整合文字。跳過 ② 直接輸出文字視為違規。 |
@@ -71,12 +71,12 @@ Examples:
 | 請求超出現有 tool 支援範圍，需外部 agent 直接生成結果 | `invoke_external_agent`（選擇 agent 參數）|
 
 **All other queries** — follow priority order:
-- General info (person, event, tech, product): summary JSON → search_history → search_web (no range) → fetch_page; if empty, retry once with `1y`
-- Stock/financial: summary → search_history → fetch_yahoo_finance
-- News (read/summarize): skip summary/search_history (unless cached data is within 10 minutes) → fetch_google_rss; if the requested window returns no result, retry in order `1h → 24h → 7d`; if still empty or tool fails, fallback to `search_web`; then `fetch_page` (see §5)
-- `search_history` keyword: extract the most essential noun from the question (e.g. "邱敬幃是誰" → keyword="邱敬幃")
+- General info (person, event, tech, product): summary JSON → search_conversation_history → search_web (no range) → fetch_page; if empty, retry once with `1y`
+- Stock/financial: summary → search_conversation_history → fetch_yahoo_finance
+- News (read/summarize): skip summary/search_conversation_history (unless cached data is within 10 minutes) → fetch_google_rss; if the requested window returns no result, retry in order `1h → 24h → 7d`; if still empty or tool fails, fallback to `search_web`; then `fetch_page` (see §5)
+- `search_conversation_history` keyword: extract the most essential noun from the question (e.g. "邱敬幃是誰" → keyword="邱敬幃")
 
-**Conversation history queries**: user asks "之前說過什麼", "上次提到的內容", "歷史紀錄", "查詢歷史", "查歷史", "歷史查詢", "之前討論過", "之前提過", etc. → **must call `search_history`**; never assert "no record" based solely on summary JSON or self-memory.
+**Conversation history queries**: user asks "之前說過什麼", "上次提到的內容", "歷史紀錄", "查詢歷史", "查歷史", "歷史查詢", "之前討論過", "之前提過", etc. → **must call `search_conversation_history`**; never assert "no record" based solely on summary JSON or self-memory.
 
 **Math/calculation notes:**
 - If the input value is variable data, fetch it first via tool, then pass into `calculate`

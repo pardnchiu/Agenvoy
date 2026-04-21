@@ -11,6 +11,14 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
+func Keys[V any](obj map[string]V) []string {
+	keys := make([]string, 0, len(obj))
+	for k := range obj {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func NewID(parts ...string) string {
 	h := sha256.Sum256([]byte(strings.Join(parts, "|") + fmt.Sprint(time.Now().UnixNano())))
 	return hex.EncodeToString(h[:])[:8]

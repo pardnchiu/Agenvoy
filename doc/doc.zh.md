@@ -334,14 +334,14 @@ agen planner
 | 工具 | 參數 | 說明 |
 |------|------|------|
 | `search_tools` | `query`, `max_results` | 按需搜尋並注入工具；支援 `select:<name>` 直接啟用、keyword fuzzy search 與 `+term` 必要關鍵字語法 |
-| `read_file` | `path`, `pages` | 讀取檔案內容；會偵測並拒絕 binary；PDF 支援 `pages` 範圍（例如 `"1-5"`） |
+| `read_file` | `path`, `offset`, `limit` | 讀取檔案內容；偵測並拒絕 binary；PDF 依副檔名分派（按頁分頁）；CSV／TSV 輸出 JSON 2D 陣列 `[[header...], [row1...], ...]`（剝除 BOM、永遠帶回 header、依 header 欄寬對齊） |
 | `read_image` | `path` | 將本地圖片（JPEG/PNG/GIF/WebP，最大 10 MB）讀成 base64 JPEG data URL |
 | `write_file` | `path`, `content` | 以 atomic write 寫入或建立檔案 |
 | `list_files` | `path`, `recursive` | 列出目錄內容 |
 | `glob_files` | `pattern` | Glob 比對（例如 `**/*.go`） |
 | `search_content` | `pattern`, `file_pattern` | 以 regex 搜尋檔案內容 |
 | `patch_edit` | `path`, `old_string`, `new_string` | 首次命中字串替換（比完整重寫安全） |
-| `search_history` | `keyword`, `time_range` | 在 ToriiDB 中查詢當前 session 的歷史紀錄 |
+| `search_conversation_history` | `keyword`, `time_range` | 在 ToriiDB 中查詢當前 session 的歷史紀錄 |
 | `get_tool_error` | `hash` | 以 hash 取回失敗工具呼叫的完整錯誤細節 |
 | `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | 將錯誤解決方案寫入錯誤知識庫 |
 | `search_errors` | `keyword` | 查詢錯誤知識庫 |

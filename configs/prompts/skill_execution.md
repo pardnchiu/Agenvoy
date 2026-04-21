@@ -33,7 +33,7 @@ Skill instructions may reference tool names from other environments. Always map 
 | YouTube / 影片分析 | `analyze_youtube` | `{"url": "<YouTube URL>"}` |
 | HTTP request / API call / 發送請求 | `send_http_request` | `{"url": "<URL>", "method": "<GET|POST|...>"}` |
 | Calculate / math / 計算 | `calculate` | `{"expression": "<math expression>"}` |
-| Search history / 歷史查詢 | `search_history` | `{"keyword": "<search term>"}` |
+| Search history / 歷史查詢 | `search_conversation_history` | `{"keyword": "<search term>"}` |
 
 **Concrete mapping example:**
 > Skill step: "使用 Bash 工具執行 `git diff --cached --name-only` 檢查是否有 staged 檔案"

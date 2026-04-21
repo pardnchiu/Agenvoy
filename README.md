@@ -116,7 +116,7 @@ First-party packages Agenvoy pulls in directly from its author's ecosystem.
 
 ### Embedded Store as Memory Backbone — [pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)
 
-A lightweight embedded key-value store that serves as Agenvoy's single persistence backbone. Session history, error memory, and web tool caches (`fetch_page` / `search_web` / `fetch_google_rss`) all live behind a thin `internal/filesystem/store` wrapper instead of scattered JSON files. This collapses per-subsystem file formats into one indexed, atomic store, lets `search_history` and `search_errors` scan sessions without walking the filesystem, and reduces cache invalidation to a single key delete.
+A lightweight embedded key-value store that serves as Agenvoy's single persistence backbone. Session history, error memory, and web tool caches (`fetch_page` / `search_web` / `fetch_google_rss`) all live behind a thin `internal/filesystem/store` wrapper instead of scattered JSON files. This collapses per-subsystem file formats into one indexed, atomic store, lets `search_conversation_history` and `search_errors` scan sessions without walking the filesystem, and reduces cache invalidation to a single key delete.
 
 ### Shared Utility Library — [pardnchiu/go-utils](https://github.com/pardnchiu/go-utils)
 
@@ -136,7 +136,7 @@ Two prior projects from the same author directly informed Agenvoy's architecture
 
 ### Cognitive Imperfect Memory — [pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype)
 
-[pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype) argues that perfect memory is a cognitive burden — based on research showing multi-turn LLM performance drops 39% when full conversation history is replayed verbatim ([LLMs Get Lost In Multi-Turn Conversation](https://arxiv.org/abs/2505.06120)). The system maintains a structured rolling summary and retrieves relevant fragments via fuzzy search only when triggered, mirroring how humans selectively recall rather than replay. Agenvoy's session layer reflects this directly: `trimMessages()` enforces a token budget rather than replaying full history, `summary` is persisted and deep-merged across turns, and `search_history` provides keyword-triggered recall rather than injecting all past context.
+[pardnchiu/cim-prototype](https://github.com/pardnchiu/cim-prototype) argues that perfect memory is a cognitive burden — based on research showing multi-turn LLM performance drops 39% when full conversation history is replayed verbatim ([LLMs Get Lost In Multi-Turn Conversation](https://arxiv.org/abs/2505.06120)). The system maintains a structured rolling summary and retrieves relevant fragments via fuzzy search only when triggered, mirroring how humans selectively recall rather than replay. Agenvoy's session layer reflects this directly: `trimMessages()` enforces a token budget rather than replaying full history, `summary` is persisted and deep-merged across turns, and `search_conversation_history` provides keyword-triggered recall rather than injecting all past context.
 
 ## Version History
 
