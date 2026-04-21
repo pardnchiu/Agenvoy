@@ -21,26 +21,33 @@ const (
 
 func registReadFile() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "read_file",
-		ReadOnly:    true,
-		Description: "Read the contents of a file. Use to inspect source code, config files, or any text file in the project. Supports .pdf (text extraction).",
+		Name:     "read_file",
+		ReadOnly: true,
+		Description: `
+Read the contents of a text or .pdf file.
+Inspect source code, config, notes, or extract text from a PDF.
+Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "Path to the file. Absolute path preferred; relative paths resolve against the work directory shown in the system prompt. `~` expands to user home.",
+					"description": "File to read (e.g. '/abs/path/foo.go', '~/notes.md', 'relative/file.md').",
 				},
 				"offset": map[string]any{
 					"type":        "integer",
-					"description": "Line number to start reading from (1-based). For .pdf files, interpreted as page number. Omit to read from the beginning.",
+					"description": "1-based line number (or PDF page) to start from. Defaults to 1.",
+					"default":     1,
 				},
 				"limit": map[string]any{
 					"type":        "integer",
-					"description": "Number of lines to read. Defaults to 2048. For .pdf files, interpreted as number of pages. Pass a larger value if the file requires more lines.",
+					"description": "Number of lines (or PDF pages) to read. Defaults to 2048.",
+					"default":     defaultReadLimit,
 				},
 			},
-			"required": []string{"path"},
+			"required": []string{
+				"path",
+			},
 		},
 		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -52,79 +59,81 @@ func registReadFile() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			absPath, err := filesystem.AbsPath(e.WorkDir, params.Path, true)
+			baseDir := e.WorkDir
+			if baseDir == "" {
+				baseDir = filesystem.DownloadDir
+			}
+
+			absPath, err := filesystem.AbsPath(baseDir, params.Path, true)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.AbsPath: %w", err)
 			}
-
-			ext := strings.ToLower(filepath.Ext(absPath))
-			if ext == ".pdf" {
-				return readPDF(absPath, params.Offset, params.Limit)
-			}
-			if isImageExt(ext) {
-				return "", fmt.Errorf("image file detected, use read_image instead")
+			if absPath == "" {
+				return "", fmt.Errorf("path is required")
 			}
 
-			content, _, err := readFile(e, params.Path, true)
-			if err != nil {
-				return "", err
-			}
-
-			if strings.IndexByte(content[:min(len(content), 512)], 0) >= 0 {
-				return "", fmt.Errorf("binary file: %s", params.Path)
-			}
-
-			limit := params.Limit
+			offset := max(params.Offset, 1)
+			limit := max(params.Limit, 0)
 			if limit == 0 {
 				limit = defaultReadLimit
 			}
-			startLine := max(params.Offset, 1)
-
-			var sb strings.Builder
-			scanner := bufio.NewScanner(strings.NewReader(content))
-			scanner.Buffer(make([]byte, maxReadSize), maxReadSize)
-			lineNum := 0
-			written := 0
-			for scanner.Scan() {
-				lineNum++
-				if lineNum < startLine {
-					continue
-				}
-				if written >= limit {
-					break
-				}
-				sb.WriteString(scanner.Text())
-				sb.WriteByte('\n')
-				written++
-			}
-			if err := scanner.Err(); err != nil {
-				return "", fmt.Errorf("bufio.Scanner: %w", err)
-			}
-			if sb.Len() == 0 {
-				return fmt.Sprintf("%s is empty", params.Path), nil
-			}
-			return sb.String(), nil
+			return readFileHandler(absPath, offset, limit)
 		},
 	})
 }
 
-func readFile(e *toolTypes.Executor, path string, needExclude bool) (string, string, error) {
-	absPath, err := filesystem.AbsPath(e.WorkDir, path, needExclude)
-	if err != nil {
-		return "", "", fmt.Errorf("filesystem.AbsPath: %w", err)
+func readFileHandler(path string, offset, limit int) (string, error) {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".pdf" {
+		return readPDFHandler(path, offset, limit)
+	}
+	if imageExts[ext] {
+		return "", fmt.Errorf("image file detected, use `read_image` instead")
 	}
 
-	info, err := os.Stat(absPath)
+	info, err := os.Stat(path)
 	if err != nil {
-		return "", absPath, fmt.Errorf("os.Stat: %w", err)
+		return "", fmt.Errorf("os.Stat: %w", err)
 	}
 	if info.Size() > maxReadSize {
-		return "", absPath, fmt.Errorf("file too large (%d bytes, max 1 MB)", info.Size())
+		return "", fmt.Errorf("file too large (%d bytes, max 1 MB)", info.Size())
 	}
 
-	data, err := os.ReadFile(absPath)
+	fileBytes, err := os.ReadFile(path)
 	if err != nil {
-		return "", absPath, fmt.Errorf("os.ReadFile: %w", err)
+		return "", fmt.Errorf("os.ReadFile: %w", err)
 	}
-	return string(data), absPath, nil
+
+	fileContent := string(fileBytes)
+	if strings.IndexByte(fileContent[:min(len(fileContent), 512)], 0) >= 0 {
+		return "", fmt.Errorf("binary file: %s", path)
+	}
+
+	var sb strings.Builder
+	scanner := bufio.NewScanner(strings.NewReader(fileContent))
+	scanner.Buffer(make([]byte, maxReadSize), maxReadSize)
+	lineNum := 0
+	written := 0
+	for scanner.Scan() {
+		lineNum++
+		if lineNum < offset {
+			continue
+		}
+		if written >= limit {
+			break
+		}
+		sb.WriteString(scanner.Text())
+		sb.WriteByte('\n')
+		written++
+	}
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("bufio.Scanner: %w", err)
+	}
+	if sb.Len() == 0 {
+		if lineNum == 0 {
+			return fmt.Sprintf("%s is empty", path), nil
+		}
+		return fmt.Sprintf("offset %d exceeds total lines %d in %s", offset, lineNum, path), nil
+	}
+	return sb.String(), nil
 }

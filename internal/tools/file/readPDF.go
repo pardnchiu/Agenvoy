@@ -7,7 +7,7 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
-func readPDF(absPath string, offset, limit int) (string, error) {
+func readPDFHandler(absPath string, offset, limit int) (string, error) {
 	file, reader, err := pdf.Open(absPath)
 	if err != nil {
 		return "", fmt.Errorf("pdf.Open: %w", err)

@@ -39,6 +39,7 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 				"executable": map[string]any{
 					"type":        "boolean",
 					"description": "If true, saves .sh or .py to the scheduler scripts directory with a timestamp suffix. Pass the returned filename to add_task or add_cron.",
+					"default":     false,
 				},
 			},
 			"required": []string{

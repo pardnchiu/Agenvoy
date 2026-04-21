@@ -44,7 +44,12 @@ Accepts absolute paths and '~' (e.g. '~/Desktop').`,
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			absBase, err := filesystem.AbsPath(e.WorkDir, params.Path, false)
+			baseDir := e.WorkDir
+			if baseDir == "" {
+				baseDir = filesystem.DownloadDir
+			}
+
+			absBase, err := filesystem.AbsPath(baseDir, params.Path, false)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.AbsPath: %w", err)
 			}
@@ -52,7 +57,7 @@ Accepts absolute paths and '~' (e.g. '~/Desktop').`,
 			results := []file{}
 
 			if params.Recursive {
-				walked, err := filesystem.WalkFiles(e.WorkDir, params.Path)
+				walked, err := filesystem.WalkFiles(baseDir, params.Path)
 				if err != nil {
 					return "", fmt.Errorf("filesystem.WalkFiles: %w", err)
 				}

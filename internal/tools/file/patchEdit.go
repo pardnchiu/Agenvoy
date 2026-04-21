@@ -37,6 +37,7 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 				"replace_all": map[string]any{
 					"type":        "boolean",
 					"description": "If true, replace all occurrences (e.g. when renaming a variable). Defaults to false.",
+					"default":     false,
 				},
 			},
 			"required": []string{

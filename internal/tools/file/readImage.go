@@ -11,13 +11,16 @@ import (
 	"image/jpeg"
 	_ "image/png"
 	"os"
-	"strings"
 
 	_ "golang.org/x/image/webp"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+)
+
+const (
+	maxImageSize = 10 << 20
 )
 
 var imageExts = map[string]bool{
@@ -28,25 +31,25 @@ var imageExts = map[string]bool{
 	".webp": true,
 }
 
-func isImageExt(ext string) bool {
-	return imageExts[strings.ToLower(ext)]
-}
-
 func registReadImage() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:     "read_image",
 		ReadOnly: true,
-		Description: `Read a local image file and return it as a base64 data URL so the model can visually inspect it.
-Supports JPEG, PNG, GIF, WebP.`,
+		Description: `
+Read a local image file as a base64 data URL for visual inspection.
+Inspect JPEG, PNG, GIF, or WebP images referenced in the project.
+Accepts absolute paths and '~' (e.g. '/abs/path/shot.png', '~/Pictures/img.jpg').`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "Path to the image file. Absolute path preferred; relative paths resolve against the work directory shown in the system prompt. `~` expands to user home.",
+					"description": "Image file to read (e.g. '/abs/path/shot.png', '~/Pictures/img.jpg').",
 				},
 			},
-			"required": []string{"path"},
+			"required": []string{
+				"path",
+			},
 		},
 		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -55,41 +58,48 @@ Supports JPEG, PNG, GIF, WebP.`,
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			if params.Path == "" {
-				return "", fmt.Errorf("path is required")
+
+			baseDir := e.WorkDir
+			if baseDir == "" {
+				baseDir = filesystem.DownloadDir
 			}
 
-			absPath, err := filesystem.AbsPath(e.WorkDir, params.Path, false)
+			absPath, err := filesystem.AbsPath(baseDir, params.Path, true)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.AbsPath: %w", err)
 			}
-
-			info, err := os.Stat(absPath)
-			if err != nil {
-				return "", fmt.Errorf("os.Stat: %w", err)
+			if absPath == "" {
+				return "", fmt.Errorf("path is required")
 			}
-			const maxImageSize = 10 << 20
-			if info.Size() > maxImageSize {
-				return "", fmt.Errorf("image too large (%d bytes, max 10 MB)", info.Size())
-			}
-
-			f, err := os.Open(absPath)
-			if err != nil {
-				return "", fmt.Errorf("os.Open: %w", err)
-			}
-			defer f.Close()
-
-			img, _, err := image.Decode(f)
-			if err != nil {
-				return "", fmt.Errorf("image.Decode: %w", err)
-			}
-
-			var buf bytes.Buffer
-			if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85}); err != nil {
-				return "", fmt.Errorf("jpeg.Encode: %w", err)
-			}
-
-			return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
+			return readImageHandler(absPath)
 		},
 	})
+}
+
+func readImageHandler(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("os.Stat: %w", err)
+	}
+	if info.Size() > maxImageSize {
+		return "", fmt.Errorf("image too large (%d bytes, max 10 MB)", info.Size())
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("os.Open: %w", err)
+	}
+	defer file.Close()
+
+	img, _, err := image.Decode(file)
+	if err != nil {
+		return "", fmt.Errorf("image.Decode: %w", err)
+	}
+
+	// * transform to JPEG for better compatibility
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85}); err != nil {
+		return "", fmt.Errorf("jpeg.Encode: %w", err)
+	}
+	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
