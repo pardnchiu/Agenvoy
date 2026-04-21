@@ -64,16 +64,18 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			state: slotReady,
 		}
 
-		if cached, ok := alreadyCall[hash]; ok && cached != "" {
-			cachedContent := strings.TrimSpace(cached)
-			if strings.HasPrefix(cached, "data:image/") {
-				cachedContent = fmt.Sprintf("[%s] image loaded", toolName)
-				slots[i].isImage = true
-				slots[i].imageURL = cached
+		if toolName != "read_file" {
+			if cached, ok := alreadyCall[hash]; ok && cached != "" {
+				cachedContent := strings.TrimSpace(cached)
+				if strings.HasPrefix(cached, "data:image/") {
+					cachedContent = fmt.Sprintf("[%s] image loaded", toolName)
+					slots[i].isImage = true
+					slots[i].imageURL = cached
+				}
+				slots[i].state = slotCached
+				slots[i].preMsg = cachedContent
+				continue
 			}
-			slots[i].state = slotCached
-			slots[i].preMsg = cachedContent
-			continue
 		}
 
 		if exec.StubTools[toolName] || activatedInBatch[toolName] {
@@ -218,7 +220,9 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			}
 		}
 
-		alreadyCall[s.hash] = result
+		if s.name != "read_file" {
+			alreadyCall[s.hash] = result
+		}
 
 		events <- agentTypes.Event{
 			Type:     agentTypes.EventToolResult,

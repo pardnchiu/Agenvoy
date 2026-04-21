@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -13,29 +14,36 @@ import (
 
 func registPatchEdit() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "patch_edit",
-		Description: "Edit a file by exact string match. Replaces the first occurrence unless replace_all is set. Safer than write_file for targeted changes.",
+		Name: "patch_edit",
+		Description: `
+Replace an exact string match inside a file.
+Apply targeted edits to an existing file.
+Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "Path to the file. Absolute path preferred; relative paths resolve against the work directory shown in the system prompt. `~` expands to user home.",
+					"description": "File to edit (e.g. '/abs/path/foo.go', '~/notes.md', 'relative/file.md').",
 				},
 				"old_string": map[string]any{
 					"type":        "string",
-					"description": "Exact string to replace (must match precisely, including indentation). The edit will fail if not found or if it matches multiple locations without replace_all.",
+					"description": "Exact string to replace, including indentation. Must be unique unless replace_all is true.",
 				},
 				"new_string": map[string]any{
 					"type":        "string",
-					"description": "Replacement string. Use empty string to delete old_string.",
+					"description": "Replacement string. Empty string deletes old_string.",
 				},
 				"replace_all": map[string]any{
 					"type":        "boolean",
-					"description": "If true, replace all occurrences. Use when renaming variables or repeated patterns. Defaults to false.",
+					"description": "If true, replace all occurrences (e.g. when renaming a variable). Defaults to false.",
 				},
 			},
-			"required": []string{"path", "old_string", "new_string"},
+			"required": []string{
+				"path",
+				"old_string",
+				"new_string",
+			},
 		},
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -48,47 +56,73 @@ func registPatchEdit() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			if params.OldString == params.NewString {
-				return "", fmt.Errorf("old_string and new_string are identical: no changes to make")
+			baseDir := e.WorkDir
+			if baseDir == "" {
+				baseDir = filesystem.DownloadDir
 			}
 
-			content, absPath, err := readFile(e, params.Path, false)
+			absPath, err := filesystem.AbsPath(baseDir, params.Path, false)
 			if err != nil {
-				return "", fmt.Errorf("file.readFile: %w", err)
+				return "", fmt.Errorf("filesystem.AbsPath: %w", err)
+			}
+			if absPath == "" {
+				return "", fmt.Errorf("path or name is required")
 			}
 
-			count := strings.Count(content, params.OldString)
-			if count == 0 {
-				return "", fmt.Errorf("%s is not found in %s", params.OldString, absPath)
-			}
-			if !params.ReplaceAll && count > 1 {
-				return "", fmt.Errorf("old_string matches %d locations in %s — add more context to make it unique, or set replace_all to true", count, absPath)
-			}
-
-			newContent := applyEdit(content, params.OldString, params.NewString, params.ReplaceAll)
-			if err := filesystem.WriteFile(absPath, newContent, 0644); err != nil {
-				return "", fmt.Errorf("filesystem.WriteFile: %w", err)
+			// * not to trim string, avoid user use " " to indicate indent
+			old := params.OldString
+			new := params.NewString
+			if old == "" {
+				return "", fmt.Errorf("old_string is required")
 			}
 
-			if filesystem.IsSkillsDir(absPath) {
-				skillName := filesystem.GetSkillName(absPath)
-				if err := filesystem.CheckSkillsGit(ctx); err == nil {
-					_ = filesystem.CommitSkills(ctx, "update", skillName)
-				}
+			if old == new {
+				return "", fmt.Errorf("no edit needed")
 			}
-
-			return fmt.Sprintf("successfully updated %s", absPath), nil
+			return patchEditHandler(ctx, absPath, old, new, params.ReplaceAll)
 		},
 	})
 }
 
-func applyEdit(content, oldString, newString string, replaceAll bool) string {
-	target := oldString
-	if newString == "" && !strings.HasSuffix(oldString, "\n") && strings.Contains(content, oldString+"\n") {
-		target = oldString + "\n"
+func patchEditHandler(ctx context.Context, path, old, new string, replaceAll bool) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("os.Stat: %w", err)
+	}
+	if info.Size() > maxReadSize {
+		return "", fmt.Errorf("file too large (%d bytes, max 1 MB)", info.Size())
+	}
+
+	fileBytes, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("os.ReadFile: %w", err)
+	}
+
+	fileContent := string(fileBytes)
+	matchCount := strings.Count(fileContent, old)
+	if matchCount == 0 {
+		return "", fmt.Errorf("%s is not found in %s", old, path)
+	}
+
+	newContent := old
+	if new == "" && !strings.HasSuffix(old, "\n") && strings.Contains(fileContent, old+"\n") {
+		newContent = old + "\n"
 	}
 	if replaceAll {
-		return strings.ReplaceAll(content, target, newString)
+		newContent = strings.ReplaceAll(fileContent, newContent, new)
+	} else {
+		newContent = strings.Replace(fileContent, newContent, new, 1)
 	}
-	return strings.Replace(content, target, newString, 1)
+
+	if err := filesystem.WriteFile(path, newContent, 0644); err != nil {
+		return "", fmt.Errorf("filesystem.WriteFile: %w", err)
+	}
+
+	if filesystem.IsSkillsDir(path) {
+		skillName := filesystem.GetSkillName(path)
+		if err := filesystem.CheckSkillsGit(ctx); err == nil {
+			_ = filesystem.CommitSkills(ctx, "update", skillName)
+		}
+	}
+	return fmt.Sprintf("successfully updated %s", path), nil
 }

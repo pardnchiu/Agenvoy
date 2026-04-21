@@ -16,29 +16,34 @@ import (
 
 func registWriteFile() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "write_file",
-		Description: "Write content to a file. Creates the file if it does not exist, or overwrites it entirely if it does. Use for new files or full rewrites only — for targeted edits to existing files, use patch_edit instead. Auto git-commits when writing to the skills directory. Set executable: true to save a scheduler script (.sh or .py) — the file is stored in the scripts directory with a timestamp suffix and the returned filename must be passed to add_task or add_cron.",
+		Name: "write_file",
+		Description: `
+Write content to a file, overwriting if it exists.
+Create new files or fully rewrite existing ones. Set executable=true for scheduler scripts.
+Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "Path to the file. Absolute path preferred; relative paths resolve against the work directory shown in the system prompt. `~` expands to user home. When executable is true, provide only the filename (e.g. 'notify.sh') — path components are ignored.",
+					"description": "File to write (e.g. '/abs/path/foo.go', '~/notes.md'). When executable is true, provide only the filename (e.g. 'notify.sh').",
 				},
 				"name": map[string]any{
 					"type":        "string",
-					"description": "Alias for path when executable is true. Provide the script filename (e.g. 'notify.sh').",
+					"description": "Alias for path when executable is true (e.g. 'notify.sh').",
 				},
 				"content": map[string]any{
 					"type":        "string",
-					"description": "Content to write to the file",
+					"description": "Content to write.",
 				},
 				"executable": map[string]any{
 					"type":        "boolean",
-					"description": "If true, saves as an executable script (.sh or .py) to the scheduler scripts directory with a UTC timestamp suffix (e.g. notify_1741569300.sh). The returned filename must be passed to add_task or add_cron.",
+					"description": "If true, saves .sh or .py to the scheduler scripts directory with a timestamp suffix. Pass the returned filename to add_task or add_cron.",
 				},
 			},
-			"required": []string{"content"},
+			"required": []string{
+				"content",
+			},
 		},
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -51,61 +56,74 @@ func registWriteFile() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			if params.Path == "" {
-				params.Path = params.Name
-			}
-			if params.Content == "" {
-				return "", fmt.Errorf("content is required")
-			}
-
-			if params.Executable {
-				if params.Path == "" {
-					return "", fmt.Errorf("path or name is required for executable script")
-				}
-				ext := strings.ToLower(filepath.Ext(params.Path))
-				if ext != ".sh" && ext != ".py" {
-					return "", fmt.Errorf("executable scripts only support .sh or .py")
-				}
-				base := strings.TrimSuffix(filepath.Base(params.Path), ext)
-				uniqueName := fmt.Sprintf("%s_%d%s", base, time.Now().UTC().Unix(), ext)
-				absPath := filepath.Join(filesystem.ScriptsDir, uniqueName)
-				if err := filesystem.WriteFile(absPath, params.Content, 0755); err != nil {
-					return "", fmt.Errorf("filesystem.WriteFile: %w", err)
-				}
-				return fmt.Sprintf(`script saved. pass "%s" as the script parameter to add_task or add_cron`, uniqueName), nil
+			path := strings.TrimSpace(params.Path)
+			if path == "" {
+				path = strings.TrimSpace(params.Name)
 			}
 
 			baseDir := e.WorkDir
 			if baseDir == "" {
 				baseDir = filesystem.DownloadDir
 			}
-			absPath, err := filesystem.AbsPath(baseDir, params.Path, false)
+
+			absPath, err := filesystem.AbsPath(baseDir, path, false)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.AbsPath: %w", err)
 			}
-
-			_, statErr := os.Stat(absPath)
-			isNew := os.IsNotExist(statErr)
-
-			if err := filesystem.WriteFile(absPath, params.Content, 0644); err != nil {
-				return "", fmt.Errorf("filesystem.WriteFile: %w", err)
+			if absPath == "" {
+				return "", fmt.Errorf("path or name is required")
 			}
 
-			if filesystem.IsSkillsDir(absPath) {
-				act := "update"
-				if isNew {
-					act = "add"
-				}
-				skillName := filesystem.GetSkillName(absPath)
-				if err := filesystem.CheckSkillsGit(ctx); err == nil {
-					_ = filesystem.CommitSkills(ctx, act, skillName)
-				}
+			content := params.Content
+			if content == "" {
+				return "", fmt.Errorf("content is required")
 			}
-
-			if isNew {
-				return fmt.Sprintf("File created successfully at: %s", absPath), nil
-			}
-			return fmt.Sprintf("The file %s has been updated successfully.", absPath), nil
+			return writeFileHandler(ctx, absPath, content, params.Executable)
 		},
 	})
+}
+
+func writeFileHandler(ctx context.Context, path, content string, executable bool) (string, error) {
+	if executable {
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext != ".sh" && ext != ".py" {
+			return "", fmt.Errorf("executable scripts only support .sh or .py")
+		}
+
+		base := strings.TrimSuffix(filepath.Base(path), ext)
+		uniqueName := fmt.Sprintf("%s_%d%s", base, time.Now().UTC().Unix(), ext)
+		absPath := filepath.Join(filesystem.ScriptsDir, uniqueName)
+		if err := filesystem.WriteFile(absPath, content, 0755); err != nil {
+			return "", fmt.Errorf("filesystem.WriteFile: %w", err)
+		}
+		return fmt.Sprintf(`script saved. pass "%s" as the script parameter to add_task or add_cron`, uniqueName), nil
+	}
+
+	info, err := os.Stat(path)
+	isNew := os.IsNotExist(err)
+	if err != nil && !isNew {
+		return "", fmt.Errorf("os.Stat: %w", err)
+	} else if info != nil && info.Size() > maxReadSize {
+		return "", fmt.Errorf("file too large (%d bytes, max 1 MB)", info.Size())
+	}
+
+	if err := filesystem.WriteFile(path, content, 0644); err != nil {
+		return "", fmt.Errorf("filesystem.WriteFile: %w", err)
+	}
+
+	if filesystem.IsSkillsDir(path) {
+		act := "update"
+		if isNew {
+			act = "add"
+		}
+		skillName := filesystem.GetSkillName(path)
+		if err := filesystem.CheckSkillsGit(ctx); err == nil {
+			_ = filesystem.CommitSkills(ctx, act, skillName)
+		}
+	}
+
+	if isNew {
+		return fmt.Sprintf("successfully created: %s", path), nil
+	}
+	return fmt.Sprintf("successfully updated %s", path), nil
 }
