@@ -8,27 +8,32 @@ import (
 	"strings"
 )
 
-func AbsPath(workDir, path string, needExclude bool) (string, error) {
-	// * expand ~ to home directory
-	if path == "~" || strings.HasPrefix(path, "~/") {
+func AbsPath(root, path string, needExclude bool) (string, error) {
+	path = strings.TrimSpace(path)
+
+	// * resolve starting anchor
+	switch {
+	case path == "":
+		path = root
+	case path == "~" || strings.HasPrefix(path, "~/"):
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("os.UserHomeDir: %w", err)
 		}
 		path = filepath.Join(homeDir, path[1:])
+	case path == "." || strings.HasPrefix(path, "./"):
+		path = filepath.Join(root, strings.TrimPrefix(path, "./"))
+	case !filepath.IsAbs(path):
+		path = filepath.Join(root, path)
 	}
 
-	// * format the path to abs path
+	// * fallback when workDir is also empty
 	if !filepath.IsAbs(path) {
-		if workDir != "" {
-			path = filepath.Join(workDir, path)
-		} else {
-			var err error
-			path, err = filepath.Abs(path)
-			if err != nil {
-				return "", fmt.Errorf("filepath.Abs: %w", err)
-			}
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return "", fmt.Errorf("filepath.Abs: %w", err)
 		}
+		path = abs
 	}
 
 	realPath, err := realPath(path)
@@ -50,7 +55,7 @@ func AbsPath(workDir, path string, needExclude bool) (string, error) {
 		return "", fmt.Errorf("access denied: %s", path)
 	}
 
-	if needExclude && isExclude(workDir, realPath) {
+	if needExclude && isExclude(root, realPath) {
 		return "", fmt.Errorf("path is excluded: %s", path)
 	}
 

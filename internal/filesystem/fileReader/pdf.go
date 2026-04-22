@@ -1,4 +1,4 @@
-package file
+package fileReader
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
-func readPDFHandler(absPath string, offset, limit int) (string, error) {
+func getPDF(absPath string, offset, limit int) (string, error) {
 	file, reader, err := pdf.Open(absPath)
 	if err != nil {
 		return "", fmt.Errorf("pdf.Open: %w", err)

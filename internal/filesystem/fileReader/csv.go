@@ -1,5 +1,5 @@
 // * generate by claude opus 4.7
-package file
+package fileReader
 
 import (
 	"bytes"
@@ -13,7 +13,11 @@ import (
 	"strings"
 )
 
-func readCSVHandler(path string, offset, limit int) (string, error) {
+const (
+	maxReadSize = 1 << 20
+)
+
+func getCSV(path string, offset, limit int) (string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return "", fmt.Errorf("os.Stat: %w", err)
