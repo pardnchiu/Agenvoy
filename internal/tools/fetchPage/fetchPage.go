@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	go_utils_rod "github.com/pardnchiu/go-utils/rod"
@@ -98,7 +98,7 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 	}
 	hash := sha256.Sum256([]byte(link + cacheVariant))
 	cacheKey := "page:" + hex.EncodeToString(hash[:])
-	db := store.DB(store.DBToolCache)
+	db := torii.DB(torii.DBToolCache)
 	var full string
 	if entry, ok := db.Get(cacheKey); ok {
 		if saveTo == nil {
@@ -135,7 +135,7 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 		}
 
 		full = buildFrontmatter(result)
-		if err = db.Set(cacheKey, full, store.SetDefault, store.TTL(int64(cacheExpired.Seconds()))); err != nil {
+		if err = db.Set(cacheKey, full, torii.SetDefault, torii.TTL(int64(cacheExpired.Seconds()))); err != nil {
 			slog.Warn("db.Set",
 				slog.String("error", err.Error()))
 		}

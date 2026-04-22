@@ -20,7 +20,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools"
@@ -378,11 +378,11 @@ func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
 		return
 	}
 	key := fmt.Sprintf("%s:%d", sessionID, time.Now().UnixNano())
-	db := store.DB(store.DBSessionHist)
+	db := torii.DB(torii.DBSessionHist)
 	value := string(msgBytes)
 
-	if setErr := db.SetVector(context.Background(), key, value, store.SetDefault, nil); setErr != nil {
-		if setErr = db.Set(key, value, store.SetDefault, nil); setErr != nil {
+	if setErr := db.SetVector(context.Background(), key, value, torii.SetDefault, nil); setErr != nil {
+		if setErr = db.Set(key, value, torii.SetDefault, nil); setErr != nil {
 			slog.Warn("store.DB.Set",
 				slog.String("error", setErr.Error()))
 		}

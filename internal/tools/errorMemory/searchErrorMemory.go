@@ -1,4 +1,4 @@
-package toolError
+package errorMemory
 
 import (
 	"context"
@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/errorMemory"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func registSearchToolError() {
+func registSearchErrorMemory() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "search_tool_errors",
+		Name:       "search_error_memory",
 		ReadOnly:   true,
 		Concurrent: true,
 		Description: `
@@ -51,7 +51,7 @@ Call first when a tool behaves unexpectedly.`,
 			}
 
 			limit := max(1, min(params.Limit, 16))
-			return filesystem.SearchErrors(keyword, limit)
+			return errorMemory.Search("", keyword, limit), nil
 		},
 	})
 }

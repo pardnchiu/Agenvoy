@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
@@ -26,7 +26,7 @@ var (
 func handler(ctx context.Context, symbol, timeInterval, timeRange string) (string, error) {
 	hash := sha256.Sum256([]byte(symbol + "|" + timeInterval + "|" + timeRange))
 	cacheKey := "yahoo:" + hex.EncodeToString(hash[:])
-	db := store.DB(store.DBToolCache)
+	db := torii.DB(torii.DBToolCache)
 	if entry, ok := db.Get(cacheKey); ok {
 		return entry.Value(), nil
 	}
@@ -70,7 +70,7 @@ func handler(ctx context.Context, symbol, timeInterval, timeRange string) (strin
 
 	case r := <-winCh:
 		if r.err == nil && r.data != "" {
-			if err := db.Set(cacheKey, r.data, store.SetDefault, store.TTL(ttl)); err != nil {
+			if err := db.Set(cacheKey, r.data, torii.SetDefault, torii.TTL(ttl)); err != nil {
 				slog.Warn("db.Set",
 					slog.String("error", err.Error()))
 			}

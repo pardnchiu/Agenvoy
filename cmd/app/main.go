@@ -27,7 +27,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/subagent"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	"github.com/pardnchiu/agenvoy/internal/routes"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
 	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
@@ -97,7 +97,7 @@ func initCLI() {
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	if err := store.Init(filesystem.StoreDir); err != nil {
+	if err := torii.Init(filesystem.StoreDir); err != nil {
 		slog.Error("store.Init",
 			slog.String("error", err.Error()))
 		os.Exit(1)
@@ -158,7 +158,7 @@ func runList() {
 }
 
 func runAgent(allowAll bool) {
-	defer store.Close()
+	defer torii.Close()
 
 	userInput := strings.TrimSpace(strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n"))
 
@@ -193,12 +193,12 @@ func runApp() {
 			slog.String("error", err.Error()))
 		return
 	}
-	if err := store.Init(filesystem.StoreDir); err != nil {
+	if err := torii.Init(filesystem.StoreDir); err != nil {
 		slog.Error("store.Init",
 			slog.String("error", err.Error()))
 		return
 	}
-	defer store.Close()
+	defer torii.Close()
 
 	tui.New()
 	tui.SetSlog()

@@ -1,4 +1,4 @@
-package toolError
+package errorMemory
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/errorMemory/toolError"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -49,7 +49,7 @@ Use when a tool returns "no data: {hash}" and the full context is needed.`,
 				return "", fmt.Errorf("hash is required")
 			}
 
-			result := filesystem.GetToolError(sessionId, hash)
+			result := toolError.Get(sessionId, hash)
 			if result == "" {
 				return "not found", nil
 			}

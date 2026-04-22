@@ -1,4 +1,4 @@
-package toolError
+package errorMemory
 
 import (
 	"context"
@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/errorMemory"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func registRememberToolError() {
+func registRememberError() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:     "remember_tool_error",
+		Name:     "remember_error",
 		ReadOnly: true,
 		Description: `
 Persist a tool-error record for future retrieval via search_tool_errors.
@@ -97,7 +97,7 @@ Call after resolving or abandoning the error.`,
 			if outcome == "" {
 				return "", fmt.Errorf("outcome is required")
 			}
-			return filesystem.SaveErrorMemory(e.SessionID, filesystem.ErrorMemory{
+			return errorMemory.Save(e.SessionID, errorMemory.Record{
 				ToolName: toolName,
 				Keywords: keywords,
 				Symptom:  symptom,

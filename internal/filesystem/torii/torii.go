@@ -1,4 +1,4 @@
-package store
+package torii
 
 import (
 	"fmt"

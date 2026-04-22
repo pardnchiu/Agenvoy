@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	go_utils_http "github.com/pardnchiu/go-utils/http"
 )
 
@@ -50,7 +50,7 @@ func handler(ctx context.Context, keyword, timeRange, ceid, geo, lang string) (s
 
 	hash := sha256.Sum256([]byte(keyword + "|" + timeRange + "|" + ceid))
 	cacheKey := "rss:" + hex.EncodeToString(hash[:])
-	db := store.DB(store.DBToolCache)
+	db := torii.DB(torii.DBToolCache)
 	if entry, ok := db.Get(cacheKey); ok {
 		return entry.Value(), nil
 	}
@@ -63,7 +63,7 @@ func handler(ctx context.Context, keyword, timeRange, ceid, geo, lang string) (s
 		return "", fmt.Errorf("failed to fetch google rss: %w", err)
 	}
 
-	if err = db.Set(cacheKey, items, store.SetDefault, store.TTL(ttl)); err != nil {
+	if err = db.Set(cacheKey, items, torii.SetDefault, torii.TTL(ttl)); err != nil {
 		slog.Warn("db.Set",
 			slog.String("error", err.Error()))
 	}

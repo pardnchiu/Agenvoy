@@ -10,7 +10,7 @@ import (
 	"time"
 
 	toriidb "github.com/pardnchiu/ToriiDB/core/store"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/store"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -113,7 +113,7 @@ Each hit returns surrounding messages for scene context.`,
 }
 
 func searchConversationHistoryHandler(ctx context.Context, sessionID, keyword, timeRange string, limit int) (string, error) {
-	db := store.DB(store.DBSessionHist)
+	db := torii.DB(torii.DBSessionHist)
 	allKeys := db.Keys(sessionID + ":*")
 	if len(allKeys) == 0 {
 		return "no history found", nil
