@@ -21,6 +21,8 @@ import (
 )
 
 func init() {
+	registSearchConversationHistory()
+
 	external.Register()
 	externalAgent.Register()
 	fetchPage.Register()
@@ -49,9 +51,12 @@ func init() {
 	registRunCommand()
 
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "list_tools",
-		ReadOnly:    true,
-		Description: "List all currently available tools, including built-in tools and dynamically loaded API tools (prefixed with api_*). Returns each tool's name and description.",
+		Name:       "list_tools",
+		ReadOnly:   true,
+		Concurrent: true,
+		Description: `
+List all currently available tools, including built-in tools and dynamically loaded API tools (prefixed with api_*).
+Returns each tool's name and description.`,
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},

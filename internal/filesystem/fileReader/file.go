@@ -25,7 +25,7 @@ func ReadFile(path string, offset, limit int) (string, error) {
 		return getCSV(path, offset, limit)
 	}
 	if imageExts[ext] {
-		return "", fmt.Errorf("image file detected, use `read_image` instead")
+		return getImage(path)
 	}
 
 	info, err := os.Stat(path)

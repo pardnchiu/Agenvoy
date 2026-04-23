@@ -13,7 +13,7 @@ const (
 	maxImageSize = 10 << 20
 )
 
-func ReadImage(path string) (string, error) {
+func getImage(path string) (string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return "", fmt.Errorf("os.Stat: %w", err)

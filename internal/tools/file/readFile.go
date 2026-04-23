@@ -22,9 +22,8 @@ func registReadFile() {
 		ReadOnly:   true,
 		Concurrent: true,
 		Description: `
-Read the contents of a text or .pdf file.
-Inspect source code, config, notes, or extract text from a PDF.
-Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
+Read a text, PDF, CSV/TSV, or image file.
+Inspect source, config, notes, tabular data, or screenshots.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -34,12 +33,12 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 				},
 				"offset": map[string]any{
 					"type":        "integer",
-					"description": "1-based line number (or PDF page) to start from. Defaults to 1.",
+					"description": "1-based line (or page for PDF, row for CSV). Defaults to 1.",
 					"default":     1,
 				},
 				"limit": map[string]any{
 					"type":        "integer",
-					"description": "Number of lines (or PDF pages) to read. Defaults to 2048.",
+					"description": "Lines (or pages for PDF, rows for CSV) to read. Defaults to 2048.",
 					"default":     defaultReadLimit,
 				},
 			},

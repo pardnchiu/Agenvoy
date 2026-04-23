@@ -20,9 +20,7 @@ func registRunCommand() {
 		Name: "run_command",
 		Description: `
 Run a shell command; returns combined stdout/stderr.
-
 Executes in the work directory — do NOT prefix with 'cd'; it will be rejected.
-
 Resolve the exact command before calling; no placeholders.`,
 		Parameters: map[string]any{
 			"type": "object",
