@@ -29,7 +29,7 @@ func init() {
 	file.Register()
 	errorMemory.Register()
 
-	toolRegister.RegistGroup("api_", func(_ context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
+	toolRegister.RegistGroup("api_", func(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
 		if e.APIToolbox == nil || !e.APIToolbox.IsExist(name) {
 			return "", fmt.Errorf("not exist: %s", name)
 		}
@@ -38,7 +38,7 @@ func init() {
 		if err := json.Unmarshal(args, &params); err != nil {
 			return "", fmt.Errorf("json.Unmarshal: %w", err)
 		}
-		return e.APIToolbox.Execute(name, params)
+		return e.APIToolbox.Execute(ctx, name, params)
 	})
 
 	toolRegister.RegistGroup("script_", func(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {

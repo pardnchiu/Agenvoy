@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/errorMemory"
@@ -140,7 +139,6 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 	}
 
 	var wg sync.WaitGroup
-	seqCount := 0
 	for i := range slots {
 		s := &slots[i]
 		if s.state != slotReady {
@@ -154,15 +152,6 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			}(s)
 			continue
 		}
-		if seqCount > 0 && strings.HasPrefix(s.name, "api_") {
-			select {
-			case <-time.After(300 * time.Millisecond):
-			case <-ctx.Done():
-				wg.Wait()
-				return sessionData, alreadyCall, ctx.Err()
-			}
-		}
-		seqCount++
 		runToolExec(ctx, exec, s, events)
 	}
 	wg.Wait()

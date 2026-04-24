@@ -5,13 +5,13 @@
 ***
 
 <p align="center">
-<picture>
-<img src="./logo.svg" alt="Agenvoy">
+<picture style="margin-down: 1rem">
+<img src="./logo.svg" alt="Agenvoy"  width="320">
 </picture>
 </p>
 
 <p align="center">
-  <strong>BUILD YOUR OWN OPENCLAW WITH AGENVOY!</strong>
+<strong>BUILD YOUR OWN OPENCLAW WITH AGENVOY!</strong>
 </p>
 
 <p align="center">
@@ -19,8 +19,11 @@
 <a href="https://app.codecov.io/github/pardnchiu/agenvoy/tree/master"><img src="https://img.shields.io/codecov/c/github/pardnchiu/agenvoy/master?include_prereleases&style=for-the-badge" alt="Coverage"></a>
 <a href="LICENSE"><img src="https://img.shields.io/github/v/tag/pardnchiu/agenvoy?include_prereleases&style=for-the-badge" alt="Version"></a>
 <a href="https://github.com/pardnchiu/agenvoy/releases"><img src="https://img.shields.io/github/license/pardnchiu/agenvoy?include_prereleases&style=for-the-badge" alt="License"></a>
-<a href="https://discord.gg/CHTtXmh7Ca"><img src="https://img.shields.io/badge/DISCORD-Agenvoy-5865F2?style=for-the-badge" alt="Discord"></a>
 </p>
+
+<img src="./zh.jpg" alt="Agenvoy" >
+
+<p align="center">Logo 與封面插圖由 ChatGPT Image 2.0 生成。</p>
 
 ***
 
@@ -29,10 +32,6 @@
 > Go AI agent 框架，具備自我進化錯誤記憶、智慧多供應商路由、Python/JS/REST 工具擴充與 OS 原生沙箱執行
 
 agent 會跨 session 從過去的失敗中學習、自動將每個任務路由到最適合的 LLM 供應商，並讓你透過丟一個 script 或 JSON 檔案擴充工具集 — 全部執行在 OS 原生 sandbox 內。
-
-![TUI Dashboard](./tui.png)
-
-> 將 CLI、Discord bot 與 REST API 整合為單一本機介面的 Terminal UI — 檔案瀏覽器、session 內容檢視與即時 log 串流。
 
 ## 目錄
 
@@ -144,7 +143,7 @@ graph TB
 
 ## 版本歷史
 
-- **v0.19.0** — 新增 in-process 子 agent 委派（`invoke_subagent`），獨立暫時 session、可覆寫 model／system prompt／排除工具，並強制排除自身；新增三段式並發 tool-call 分派器（registry `Concurrent` 旗標，`fetch_page` / `invoke_subagent` / `calculate` fan-out，同批 stub activation guard）；新增 provider 與 tool 的相同 payload 重試斷路器；Codex Responses API 加入 `prompt_cache_key`；`search_web` 由 `html.duckduckgo.com` 改為 `lite.duckduckgo.com/lite/` 並改寫 anchor／snippet parser，移除 DDG 不支援的日內時間區間；`fetch_page` 新增 `err=404/403/410` query param 的 soft 404 偵測；強化 agent 分級路由與 error memory 驅動的 tool 復原。
+- **v0.19.0–v0.19.5** — 新增三段式並發 tool-call 分派器（registry `Concurrent` 旗標、`fetch_page` / `invoke_subagent` / `calculate` fan-out、同批 stub activation guard），以及 provider 與 tool 的相同 payload 重試斷路器；新增 `invoke_subagent` in-process 子 agent，獨立暫時 session、可覆寫 model／system prompt／排除工具，並強制排除自身。新增斜線前綴路由（`/claude` / `/claude-allow` / `/codex` / `/codex-allow` / `/gh` / `/copilot`），於 REST／Discord／CLI 三入口於 skill 偵測前攔截；`invoke_external_agent` 新增 `readonly` 參數；外部 CLI agent 的安裝／登入／執行邏輯收斂至獨立 `internal/agents/external` 套件。新增 lazy-load `select_skill` 工具與 `/skill-name` 前綴偵測，session 歷史持久化改為向量化紀錄，`search_conversation_history` 合併關鍵字與語意檢索視窗。`search_web` 由 `html.duckduckgo.com` 改為 `lite.duckduckgo.com/lite/` 並改寫 anchor／snippet parser；Codex Responses API 加入 `prompt_cache_key`；`fetch_page` 新增 `err=404/403/410` query param 的 soft 404 偵測。將 `download_page` 拆為 `fetch_page`（回傳 markdown）與 `save_page_to_file`（寫檔）兩支獨立工具；`read_file` 以副檔名分派擴充 CSV / TSV（輸出 JSON 2D 陣列），並關閉 `alreadyCall` 快取避免 post-edit 驗證讀到舊內容。壓縮 8 個內建工具的 description 與 parameter schema 以降低 prompt cache token 消耗；sandbox／UUID／keychain／HTTP／fetchPage 內部實作改走 `go-utils`；file reading／writing／error-memory 抽出至 `internal/filesystem/` 專屬套件；`store` 更名為 `torii` 反映 ToriiDB wrapper 定位。
 - **v0.18.0–v0.18.3** — 新增 vim 風格 TUI 導覽鍵與 `:` 命令輸入模式；將 session 歷史、錯誤記憶、`fetch_page` / `search_web` / `google_rss` 快取遷移至 ToriiDB 儲存；摘要生成改為每小時 cron 分塊多階段處理；整併 `cmd/cli` 與 `cmd/server` 至單一 `cmd/app` 入口，binary 更名為 `agen`；內部 keychain / HTTP client / `fetchPage` 內部實作改走 `go-utils` 套件；新增 stub tool 處理與由 schema 推導的 required 參數驗證。
 - **v0.17.0–v0.17.4** — 完整 REST API 層（`/v1/send` 支援 SSE 與非 SSE、`/v1/key`、`/v1/tools`、`/v1/tool/:name`）；Discord bot 與 REST API 統一至 `cmd/app`，Copilot token 遷移至系統 Keychain；新增 `invoke_external_agent`、`cross_review_with_external_agents`、`review_result` 三項外部委派 / 內部覆核工具，`/v1/send` 支援 `model` 欄位繞過自動 agent 選擇；新增 `search_tools` 延遲載入（fuzzy 搜尋 + `select:<name>` 直接啟用）、`exclude_tools` 過濾與 Claude / Gemini / Copilot prompt caching；新增 OpenAI Codex 為獨立 OAuth provider（Device Code Flow）、`read_image` 本地圖片輸入，並將 Yahoo Finance 恢復為原生 Go 工具（`fetch_yahoo_finance`）採並行 query1/query2 雙端點；session message 組裝重構為 4 段固定區塊並支援反應式裁剪；scheduler 拆為 `crons/` / `tasks/` / `script/` 子套件；`browser` 套件更名為 `fetchPage`。
 - **v0.16.0–v0.16.1** — 推出 script 工具 runtime（`scriptAdapter`）：`~/.config/agenvoy/script_tools/` 下的 `tool.json` + `script.js`/`script.py` 自動註冊為 `script_` 前綴工具，stdin/stdout JSON 協議對齊 API 工具契約；內建 Threads 與 yt-dlp script 擴充，含跨平台 `install_threads.sh` / `install_youtube.sh`；Copilot token 401 自動重新登入；`toolAdapter` 拆為 `api/` 與 `script/` 子套件，session 管理遷至 `internal/session`，filesystem 拆為單一職責檔案，修復 Darwin sandbox keychain 目錄存取。

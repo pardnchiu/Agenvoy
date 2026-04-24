@@ -5,13 +5,13 @@
 ***
 
 <p align="center">
-<picture>
-<img src="./doc/logo.svg" alt="Agenvoy">
+<picture style="margin-down: 1rem">
+<img src="./doc/logo.svg" alt="Agenvoy" width="320">
 </picture>
 </p>
 
 <p align="center">
-  <strong>BUILD YOUR OWN OPENCLAW WITH AGENVOY!</strong>
+<strong>BUILD YOUR OWN OPENCLAW WITH AGENVOY!</strong>
 </p>
 
 <p align="center">
@@ -19,8 +19,11 @@
 <a href="https://app.codecov.io/github/pardnchiu/agenvoy/tree/master"><img src="https://img.shields.io/codecov/c/github/pardnchiu/agenvoy/master?include_prereleases&style=for-the-badge" alt="Coverage"></a>
 <a href="LICENSE"><img src="https://img.shields.io/github/v/tag/pardnchiu/agenvoy?include_prereleases&style=for-the-badge" alt="Version"></a>
 <a href="https://github.com/pardnchiu/agenvoy/releases"><img src="https://img.shields.io/github/license/pardnchiu/agenvoy?include_prereleases&style=for-the-badge" alt="License"></a>
-<a href="https://discord.gg/CHTtXmh7Ca"><img src="https://img.shields.io/badge/DISCORD-Agenvoy-5865F2?style=for-the-badge" alt="Discord"></a>
 </p>
+
+<img src="./doc/en.jpg" alt="Agenvoy" >
+
+  <p align="center">Logo and cover illustrations were generated with ChatGPT Image 2.0.</p>
 
 ***
 
@@ -29,10 +32,6 @@
 > A Go AI agent framework with self-improving error memory, intelligent multi-provider routing, Python/JS/REST API tool extensions, and OS-native sandbox execution
 
 The agent learns from past failures across sessions, routes each task to the right LLM provider automatically, and lets you extend its toolset by dropping a script or JSON file — all running inside an OS-native sandbox.
-
-![TUI Dashboard](./doc/tui.png)
-
-> Terminal UI consolidating CLI, Discord bot, and REST API into a single local interface — filesystem browser, session content viewer, and live log stream.
 
 ## Table of Contents
 
@@ -140,7 +139,7 @@ Two prior projects from the same author directly informed Agenvoy's architecture
 
 ## Version History
 
-- **v0.19.0** — Add in-process sub-agent delegation (`invoke_subagent`) with isolated temp sessions, per-call model / system-prompt / tool overrides, and mandatory self-exclusion. Add three-pass concurrent tool-call dispatcher with a `Concurrent` registry flag, fan-out for `fetch_page` / `invoke_subagent` / `calculate`, and a batch-scoped stub-activation guard. Add same-payload retry circuit breaker for provider and tool calls; add `prompt_cache_key` to the Codex Responses API; switch `search_web` from `html.duckduckgo.com` to `lite.duckduckgo.com/lite/` with new anchor/snippet parsing; drop DDG-unsupported sub-day time ranges; harden `fetch_page` soft-404 detection via `err=404/403/410` query-param redirects; strengthen agent tier routing and memory-driven tool recovery.
+- **v0.19.0–v0.19.5** — Add three-pass concurrent tool-call dispatcher with a `Concurrent` registry flag, fan-out for `fetch_page` / `invoke_subagent` / `calculate`, batch-scoped stub-activation guard, and same-payload retry circuit breaker across provider and tool calls. Add `invoke_subagent` in-process sub-agent with isolated temp sessions, per-call model / system-prompt / tool overrides, and mandatory self-exclusion. Add slash-command routing (`/claude` / `/claude-allow` / `/codex` / `/codex-allow` / `/gh` / `/copilot`) across REST / Discord / CLI entries ahead of skill matching, a `readonly` flag on `invoke_external_agent`, and a dedicated `internal/agents/external` package for CLI agent install / login / exec. Add lazy-loaded `select_skill` tool with `/skill-name` prefix detection, vector-aware session-history persistence, and `search_conversation_history` with merged keyword + semantic retrieval windows. Switch `search_web` from `html.duckduckgo.com` to `lite.duckduckgo.com/lite/`, add `prompt_cache_key` to the Codex Responses API, and harden `fetch_page` soft-404 detection via `err=404/403/410` query-param redirects. Split `download_page` into `fetch_page` (returns markdown) and `save_page_to_file` (writes disk) as distinct tools, extend `read_file` with CSV / TSV dispatch (JSON 2D array output), and disable `alreadyCall` cache on `read_file` so post-edit verification never reads stale content. Trim tool descriptions and parameter schemas across eight built-in tools for prompt-cache token efficiency, move sandbox / UUID / keychain / HTTP / fetchPage internals to `go-utils`, extract file reading / writing / error-memory into dedicated `internal/filesystem/` packages, and rename `store` → `torii` to reflect the ToriiDB wrapper role.
 - **v0.18.0–v0.18.3** — Add vim-style TUI navigation keys and `:` command input mode. Migrate session history, error memory, and `fetch_page` / `search_web` / `google_rss` caches to the ToriiDB store. Replace per-request summary with an hourly cron running chunked multi-pass generation. Consolidate `cmd/cli` and `cmd/server` into a single `cmd/app` entry and rename the binary to `agen`. Replace internal keychain / HTTP client / `fetchPage` internals with `go-utils` packages. Add stub-tool handling and schema-derived required-arg validation.
 - **v0.17.0–v0.17.4** — Ship the full REST API layer (`/v1/send` with SSE + non-SSE, `/v1/key`, `/v1/tools`, `/v1/tool/:name`), unify Discord bot and REST API under `cmd/app`, and move the Copilot token into the system keychain. Add `invoke_external_agent` / `cross_review_with_external_agents` / `review_result` for external delegation and internal priority-model review, plus a `model` field on `/v1/send` to bypass agent selection. Add `search_tools` deferred tool loading (keyword fuzzy search + `select:<name>` direct activation), `exclude_tools` per-request filtering, and prompt caching across Claude / Gemini / Copilot providers. Add OpenAI Codex as a standalone OAuth provider (Device Code Flow), `read_image` for local image input, and restore Yahoo Finance as a native Go tool (`fetch_yahoo_finance`) with concurrent query1/query2 fetch. Refactor session message assembly into 4 fixed segments with reactive context trimming, scheduler into `crons/` / `tasks/` / `script/` sub-packages, and rename `browser` → `fetchPage`.
 - **v0.16.0–v0.16.1** — Ship the script tool runtime (`scriptAdapter`): drop a `tool.json` + `script.js`/`script.py` into `~/.config/agenvoy/script_tools/` and it is auto-discovered as a `script_`-prefixed tool via stdin/stdout JSON that mirrors the API tool contract. Bundle Threads and yt-dlp script extensions with cross-platform `install_threads.sh` / `install_youtube.sh`. Add Copilot token 401 auto-relogin. Refactor `toolAdapter` into `api/` and `script/` sub-packages, move session management into `internal/session`, split filesystem into single-responsibility files, and fix Darwin sandbox keychain directory access.

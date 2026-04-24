@@ -1,6 +1,7 @@
 package apiAdapter
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -8,10 +9,21 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
-func (t *Translator) Execute(name string, params map[string]any) (string, error) {
+const (
+	apiMinGap = 1 * time.Second
+)
+
+var (
+	apiSlotMu   sync.Mutex
+	apiKeyMutex = make(map[string]*sync.Mutex)
+	apiLastCall = make(map[string]time.Time)
+)
+
+func (t *Translator) Execute(ctx context.Context, name string, params map[string]any) (string, error) {
 	key := strings.TrimPrefix(name, "api_")
 	doc, ok := t.apis[key]
 	if !ok {
@@ -24,12 +36,39 @@ func (t *Translator) Execute(name string, params map[string]any) (string, error)
 		return "", fmt.Errorf("t.checkRequireds: %w", err)
 	}
 
+	if err := reserveAPISlot(ctx, key); err != nil {
+		return "", err
+	}
+
 	result, err := t.send(doc, params)
 	if err != nil {
 		return "", fmt.Errorf("t.send: %w", err)
 	}
 
 	return result, nil
+}
+
+func reserveAPISlot(ctx context.Context, key string) error {
+	apiSlotMu.Lock()
+	mu, ok := apiKeyMutex[key]
+	if !ok {
+		mu = &sync.Mutex{}
+		apiKeyMutex[key] = mu
+	}
+	apiSlotMu.Unlock()
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if wait := apiMinGap - time.Since(apiLastCall[key]); wait > 0 {
+		select {
+		case <-time.After(wait):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	apiLastCall[key] = time.Now()
+	return nil
 }
 
 func normalizeAliasParams(doc *APIDocumentData, params map[string]any) {
