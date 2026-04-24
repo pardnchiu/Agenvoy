@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
@@ -18,8 +19,14 @@ import (
 )
 
 const (
-	path = "https://lite.duckduckgo.com/lite/"
-	ttl  = 300
+	path      = "https://lite.duckduckgo.com/lite/"
+	ttl       = 300
+	ddgMinGap = 1 * time.Second
+)
+
+var (
+	ddgMu       sync.Mutex
+	ddgLastCall time.Time
 )
 
 var (
@@ -45,6 +52,10 @@ func handler(ctx context.Context, query, timeRange string) (string, error) {
 		return entry.Value(), nil
 	}
 
+	if err := reserveSlot(ctx); err != nil {
+		return "", err
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -59,6 +70,21 @@ func handler(ctx context.Context, query, timeRange string) (string, error) {
 	}
 
 	return items, nil
+}
+
+func reserveSlot(ctx context.Context) error {
+	ddgMu.Lock()
+	defer ddgMu.Unlock()
+
+	if wait := ddgMinGap - time.Since(ddgLastCall); wait > 0 {
+		select {
+		case <-time.After(wait):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	ddgLastCall = time.Now()
+	return nil
 }
 
 func fetch(ctx context.Context, query, timeRange string) (string, error) {

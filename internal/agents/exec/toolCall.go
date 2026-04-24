@@ -154,7 +154,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			}(s)
 			continue
 		}
-		if seqCount > 0 && (strings.HasPrefix(s.name, "api_") || s.name == "search_web") {
+		if seqCount > 0 && strings.HasPrefix(s.name, "api_") {
 			select {
 			case <-time.After(300 * time.Millisecond):
 			case <-ctx.Done():
