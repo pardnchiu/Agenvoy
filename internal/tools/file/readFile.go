@@ -61,7 +61,7 @@ Inspect source, config, notes, tabular data, or screenshots.`,
 				baseDir = filesystem.DownloadDir
 			}
 
-			absPath, err := filesystem.AbsPath(baseDir, params.Path, true)
+			absPath, err := filesystem.AbsPath(baseDir, params.Path, false)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.AbsPath: %w", err)
 			}
