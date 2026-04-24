@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -19,76 +18,66 @@ func registRunCommand() {
 	toolRegister.Regist(toolRegister.Def{
 		Name: "run_command",
 		Description: `
-Run a shell command; returns combined stdout/stderr.
-Executes in the work directory — do NOT prefix with 'cd'; it will be rejected.
-Resolve the exact command before calling; no placeholders.`,
+Run a binary with argv; returns combined stdout/stderr.
+Executes in the work directory — do NOT prepend 'cd'; use absolute paths.
+For pipes/redirects/shell expansion, pass argv=['sh','-c','<full shell command>'].`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"command": map[string]any{
-					"type":        "string",
-					"description": "Shell command (e.g. 'git status', 'ls -la /tmp'). No 'cd' prefix; no placeholders.",
+				"argv": map[string]any{
+					"type":        "array",
+					"description": "Command as argv array. e.g. ['git','status'] or ['python3','script.py','--name','value with spaces']. For shell features use ['sh','-c','cmd | pipe'].",
+					"items":       map[string]any{"type": "string"},
+					"minItems":    1,
 				},
 			},
-			"required": []string{"command"},
+			"required": []string{"argv"},
 		},
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
-				Command string `json:"command"`
+				Argv []string `json:"argv"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			return runCommand(ctx, e, params.Command)
+			return runCommand(ctx, e, params.Argv)
 		},
 	})
 }
 
-func runCommand(ctx context.Context, e *toolTypes.Executor, command string) (string, error) {
-	command = strings.TrimSpace(command)
-	if command == "" {
-		return "", fmt.Errorf("run_command requires a non-empty 'command' argument. Call this tool again with the exact shell command to execute, e.g. {\"command\": \"git diff --cached\"}")
+func runCommand(ctx context.Context, e *toolTypes.Executor, argv []string) (string, error) {
+	if len(argv) == 0 {
+		return "", fmt.Errorf("run_command requires a non-empty 'argv' array, e.g. [\"git\", \"status\"]")
 	}
 
+	joined := strings.Join(argv, " ")
 	for _, dir := range DeniedConfig.Dirs {
-		if strings.Contains(command, "/"+dir+"/") || strings.Contains(command, "/"+dir) || strings.Contains(command, dir+"/") {
+		if strings.Contains(joined, "/"+dir+"/") || strings.Contains(joined, "/"+dir) || strings.Contains(joined, dir+"/") {
 			return "", fmt.Errorf("access denied: %s", dir)
 		}
 	}
 	for _, f := range DeniedConfig.Files {
-		if strings.Contains(command, f) {
+		if strings.Contains(joined, f) {
 			return "", fmt.Errorf("access denied: %s", f)
 		}
 	}
 
-	// * template allow all for testing
-	// if disallowed.MatchString(command) {
-	// 	return "", fmt.Errorf("failed to run command: disallowed characters")
-	// }
+	binary := filepath.Base(argv[0])
 
-	hasShellOps := strings.ContainsAny(command, "|><&")
-
-	var binary string
-	var args []string
-
-	if hasShellOps {
-		binary = "sh"
-		args = []string{"-c", command}
-
-		firstCmd := strings.Fields(command)[0]
-		if !e.AllowedCommand[filepath.Base(firstCmd)] {
-			return "", fmt.Errorf("failed to run command: %s is not allowed", firstCmd)
+	if binary == "sh" && len(argv) >= 3 && argv[1] == "-c" {
+		inner := strings.Fields(argv[2])
+		if len(inner) == 0 {
+			return "", fmt.Errorf("sh -c requires a non-empty command string")
+		}
+		if !e.AllowedCommand[filepath.Base(inner[0])] {
+			return "", fmt.Errorf("failed to run command: %s is not allowed", inner[0])
 		}
 	} else {
-		args = strings.Fields(command)
-		binary = filepath.Base(args[0])
-
 		if !e.AllowedCommand[binary] {
 			return "", fmt.Errorf("failed to run command: %s is not allowed", binary)
 		}
-
 		if binary == "rm" {
-			return moveToTrash(ctx, e, args[1:])
+			return moveToTrash(ctx, e, argv[1:])
 		}
 	}
 
@@ -96,15 +85,7 @@ func runCommand(ctx context.Context, e *toolTypes.Executor, command string) (str
 	ctx, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
 
-	var (
-		cmd *exec.Cmd
-		err error
-	)
-	if hasShellOps {
-		cmd, err = go_utils_sandbox.Wrap(ctx, binary, args, e.WorkDir, nil)
-	} else {
-		cmd, err = go_utils_sandbox.Wrap(ctx, args[0], args[1:], e.WorkDir, nil)
-	}
+	cmd, err := go_utils_sandbox.Wrap(ctx, argv[0], argv[1:], e.WorkDir, nil)
 	if err != nil {
 		return "", fmt.Errorf("sandbox.Wrap: %w", err)
 	}

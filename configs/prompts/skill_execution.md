@@ -17,7 +17,8 @@ Skill instructions may reference tool names from other environments. Always map 
 
 | Skill instruction refers to | Built-in tool | Required call format |
 |-----------------------------|---------------|----------------------|
-| Bash / bash / Bash tool / bash 工具 / Shell / shell 工具 / Terminal / run shell | `run_command` | `{"command": "<exact shell command>"}` — copy the command text verbatim into the `command` field; **never call with `{}`** |
+| Bash / bash / Bash tool / bash 工具 / Shell / shell 工具 / Terminal / run shell | `run_command` | `{"argv": ["<binary>", "<arg1>", "<arg2>", ...]}` — pass command as argv array (no shell quoting needed). For pipes/redirects: `{"argv": ["sh", "-c", "<full shell command>"]}` |
+| AskUserQuestion / ask the user / prompt user / 詢問使用者 / 請使用者選擇 | `ask_user` | `{"questions": [{"question": "<prompt>", "options": ["<A>","<B>"], "multi_select": false}]}` — omit `options` for free-text; set `multi_select: true` for multi-choice |
 | Read file / open file / 讀取檔案 / 打開檔案 | `read_file` | `{"path": "<absolute path preferred>"}` |
 | Write file / create file / 寫入檔案 / 建立檔案 | `write_file` | `{"path": "<absolute path preferred>", "content": "<full file content>"}` |
 | Edit file / modify file / patch / 修改檔案 / 編輯檔案 | `patch_edit` | `{"path": "<absolute path preferred>", "old_string": "<exact text>", "new_string": "<replacement>"}` |
@@ -37,12 +38,15 @@ Skill instructions may reference tool names from other environments. Always map 
 
 **Concrete mapping example:**
 > Skill step: "使用 Bash 工具執行 `git diff --cached --name-only` 檢查是否有 staged 檔案"
-> → call: `run_command({"command": "git diff --cached --name-only"})`
+> → call: `run_command({"argv": ["git", "diff", "--cached", "--name-only"]})`
 >
-> Skill step: "使用 Bash 工具執行 `git diff` 取得工作區 diff"
-> → call: `run_command({"command": "git diff"})`
+> Skill step: "使用 Bash 工具執行 `git log --oneline | head -5` 取得最近 5 筆提交"
+> → call: `run_command({"argv": ["sh", "-c", "git log --oneline | head -5"]})` — pipes require `sh -c`
+>
+> Skill step: "使用 AskUserQuestion 詢問作者姓名、Email、連結、GitHub 使用者名稱"
+> → call: `ask_user({"questions": [{"question": "作者姓名"}, {"question": "Email"}, {"question": "個人連結"}, {"question": "GitHub 使用者名稱"}]})`
 
-The backtick-quoted text in the Skill step is **always** the exact value for the `command` field.
+Split the shell command into argv tokens; wrap in `["sh","-c", "..."]` only when shell features (pipes/redirects/glob) are needed.
 
 ### Path Rules
 - **Absolute paths are strongly preferred** for all file tool calls — reduces ambiguity when Skills are authored for other platforms (Claude Code, Cursor, etc.) and copied here

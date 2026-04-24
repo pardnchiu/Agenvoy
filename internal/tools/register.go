@@ -49,6 +49,7 @@ func init() {
 	})
 
 	registRunCommand()
+	registAskUser()
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "list_tools",
