@@ -1,12 +1,12 @@
 # 步驟 5：輸出格式
 
-確保 `.doc/` 目錄存在：
+確保 `.doc/version-generate/` 目錄存在：
 
 ```bash
-mkdir -p .doc
+mkdir -p .doc/version-generate
 ```
 
-生成 `.doc/NEW_VERSION.md`（例：`.doc/v1.3.0.md`），依以下模板填入。
+生成 `.doc/version-generate/NEW_VERSION.md`（例：`.doc/version-generate/v1.3.0.md`），依以下模板填入。
 
 ## 結構區塊
 

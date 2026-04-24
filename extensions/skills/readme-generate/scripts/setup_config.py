@@ -9,7 +9,6 @@ Usage:
     setup_config.py write NAME EMAIL URL OWNER
                                     Non-interactive write (for agent use)
 """
-from __future__ import annotations
 
 import json
 import sys

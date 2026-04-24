@@ -28,4 +28,4 @@
 | 自標籤後無提交 | 跳過生成，輸出「無變更」訊息 |
 | `BREAKING` 無 Migration 內容 | **中止**並要求補充，不產出殘缺文件 |
 | Co-author trailer 含 AI | 寫入 `co_authors`，不計入 `contributors` |
-| 僅 `NO_BUMP` 標籤（STYLE／DOC／TEST／CHORE） | 不更新 `.doc/CHANGELOG.md` 索引 |
+| 僅 `NO_BUMP` 標籤（STYLE／DOC／TEST／CHORE） | 不更新 `.doc/version-generate/CHANGELOG.md` 索引 |

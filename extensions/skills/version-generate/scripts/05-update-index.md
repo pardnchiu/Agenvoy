@@ -1,9 +1,10 @@
-# 步驟 6：更新主索引 `.doc/CHANGELOG.md`
+# 步驟 6：更新主索引 `.doc/version-generate/CHANGELOG.md`
 
 ## 初始化（若不存在）
 
 ```bash
-INDEX=".doc/CHANGELOG.md"
+mkdir -p .doc/version-generate
+INDEX=".doc/version-generate/CHANGELOG.md"
 
 if [ ! -f "$INDEX" ]; then
     cat > "$INDEX" <<'EOF'
