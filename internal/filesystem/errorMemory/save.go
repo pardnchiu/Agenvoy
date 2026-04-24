@@ -1,6 +1,7 @@
 package errorMemory
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 )
+
+const ttlSeconds int64 = 90 * 24 * 3600
 
 type Record struct {
 	ID        string   `json:"id"`
@@ -41,8 +44,14 @@ func Save(sessionID string, record Record) (string, error) {
 	}
 
 	key := fmt.Sprintf("%s:%d", record.ToolName, now.UnixNano())
-	if err := torii.DB(torii.DBErrorMemory).Set(key, string(raw), torii.SetDefault, nil); err != nil {
-		return "", fmt.Errorf("store.Set: %w", err)
+	db := torii.DB(torii.DBErrorMemory)
+	value := string(raw)
+	expireAt := torii.TTL(ttlSeconds)
+
+	if err := db.SetVector(context.Background(), key, value, torii.SetDefault, expireAt); err != nil {
+		if err = db.Set(key, value, torii.SetDefault, expireAt); err != nil {
+			return "", fmt.Errorf("store.Set: %w", err)
+		}
 	}
 
 	return fmt.Sprintf("Remember the Error: %s", record.ID), nil

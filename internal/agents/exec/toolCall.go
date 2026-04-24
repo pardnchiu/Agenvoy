@@ -195,7 +195,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			if toolFailCount[s.hash] >= MaxRetry {
 				result = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次失敗: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", s.name, toolFailCount[s.hash], s.execErr, s.name)
 			} else {
-				if hint := errorMemory.Search(s.name, s.execErr, 3); hint != "" {
+				if hint := errorMemory.Search(ctx, s.name, s.execErr, 3); hint != "" {
 					result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nrelated_errors: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", s.name, s.execErr, hint, s.name)
 				} else {
 					result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", s.name, s.execErr, s.name)
@@ -203,7 +203,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 				delete(alreadyCall, s.hash)
 			}
 		} else if result == "" || result == "no data" {
-			if hint := errorMemory.Search(s.name, "no data", 3); hint != "" {
+			if hint := errorMemory.Search(ctx, s.name, "no data", 3); hint != "" {
 				result = hint
 			} else {
 				result = "no data"

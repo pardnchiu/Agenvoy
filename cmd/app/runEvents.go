@@ -2,14 +2,34 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/manifoldco/promptui"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
+
+func formatRunCommandArgv(raw string) string {
+	var p struct {
+		Argv []string `json:"argv"`
+	}
+	if err := json.Unmarshal([]byte(raw), &p); err != nil || len(p.Argv) == 0 {
+		return raw
+	}
+	parts := make([]string, len(p.Argv))
+	for i, a := range p.Argv {
+		if a == "" || strings.ContainsAny(a, " \t\n\"'\\") {
+			parts[i] = strconv.Quote(a)
+		} else {
+			parts[i] = a
+		}
+	}
+	return strings.Join(parts, " ")
+}
 
 func writeStdout(text string) {
 	text = strings.ReplaceAll(text, "\r\n", "\n")
@@ -65,6 +85,9 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 			}
 
 		case agentTypes.EventToolConfirm:
+			if ev.ToolName == "run_command" {
+				writeStdoutLine(fmt.Sprintf("[$] %s", formatRunCommandArgv(ev.ToolArgs)))
+			}
 			prompt := promptui.Select{
 				Label:        fmt.Sprintf("Run %s?", ev.ToolName),
 				Items:        []string{"Yes", "Skip", "Stop"},

@@ -17,7 +17,8 @@ func registSearchErrorMemory() {
 		ReadOnly:   true,
 		Concurrent: true,
 		Description: `
-Search past tool-error records for root cause and prior resolution.
+Semantically search past tool-error records for root cause and prior resolution.
+Matching hits have their retention refreshed to 3 months.
 Call first when a tool behaves unexpectedly.`,
 		Parameters: map[string]any{
 			"type": "object",
@@ -36,7 +37,7 @@ Call first when a tool behaves unexpectedly.`,
 				"keyword",
 			},
 		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Keyword string `json:"keyword"`
 				Limit   int    `json:"limit"`
@@ -51,7 +52,7 @@ Call first when a tool behaves unexpectedly.`,
 			}
 
 			limit := max(1, min(params.Limit, 16))
-			return errorMemory.Search("", keyword, limit), nil
+			return errorMemory.Search(ctx, "", keyword, limit), nil
 		},
 	})
 }
