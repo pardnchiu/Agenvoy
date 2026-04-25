@@ -82,6 +82,18 @@ type ExecData struct {
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
 	if session != nil && session.ID != "" {
+		if err := sessionManager.AddConcurrent(ctx, session.ID); err != nil {
+			return fmt.Errorf("EnterConcurrent: %w", err)
+		}
+		defer sessionManager.RemoveConcurrent(session.ID)
+
+		var inputText string
+		if s, ok := session.UserInput.Content.(string); ok {
+			inputText = s
+		}
+		taskID := sessionManager.Online(session.ID, inputText)
+		defer sessionManager.Idle(session.ID, taskID)
+
 		original := events
 		teed := make(chan agentTypes.Event, 64)
 		done := make(chan struct{})

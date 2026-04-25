@@ -19,6 +19,7 @@ func New(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill
 	r.GET("/v1/key", handler.GetKey())
 	r.GET("/v1/tools", handler.ListTools())
 	r.POST("/v1/tool/:tool_name", handler.CallTool())
+	r.GET("/v1/session/:session_id/status", handler.GetSessionStatus())
 
 	return r
 }
