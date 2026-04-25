@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	externalAgent "github.com/pardnchiu/agenvoy/internal/tools/agent/external"
 	"github.com/pardnchiu/agenvoy/internal/tools/calculator"
 	"github.com/pardnchiu/agenvoy/internal/tools/errorMemory"
 	"github.com/pardnchiu/agenvoy/internal/tools/external"
-	"github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
 	"github.com/pardnchiu/agenvoy/internal/tools/file"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	cronTools "github.com/pardnchiu/agenvoy/internal/tools/scheduler/cron"

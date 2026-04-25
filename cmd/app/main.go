@@ -24,7 +24,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/summary"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/discord"
-	"github.com/pardnchiu/agenvoy/internal/tools/subagent"
+	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"

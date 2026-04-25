@@ -39,6 +39,7 @@ Call after resolving or abandoning the error.`,
 				"cause": map[string]any{
 					"type":        "string",
 					"description": "Root cause once confirmed.",
+					"default":     "",
 				},
 				"action": map[string]any{
 					"type":        "string",

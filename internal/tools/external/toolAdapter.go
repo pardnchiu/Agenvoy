@@ -42,10 +42,12 @@ REST APIs, webhooks, arbitrary HTTP services.`,
 				"headers": map[string]any{
 					"type":        "object",
 					"description": "Headers (e.g. {\"Authorization\": \"Bearer ...\"}).",
+					"default":     map[string]any{},
 				},
 				"body": map[string]any{
 					"type":        "object",
 					"description": "Request body (POST/PUT/PATCH).",
+					"default":     map[string]any{},
 				},
 				"content_type": map[string]any{
 					"type":        "string",

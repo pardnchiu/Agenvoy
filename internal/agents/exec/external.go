@@ -27,7 +27,7 @@ func CallExternal(ctx context.Context, sessionID, agent, prompt string, readOnly
 		return nil
 	}
 
-	out, err := external.Run(ctx, agent, prompt, readOnly)
+	out, err := external.Call(ctx, agent, prompt, readOnly)
 	if err != nil {
 		msg := fmt.Sprintf("外部呼叫失敗（%s）：%s", agent, err.Error())
 		events <- agentTypes.Event{Type: agentTypes.EventText, Text: msg}

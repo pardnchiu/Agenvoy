@@ -26,10 +26,12 @@ Inspect immediate children; recursive=true walks subtree files.`,
 				"dir": map[string]any{
 					"type":        "string",
 					"description": "Directory to list (e.g. '.', '~/Desktop', '/abs/path'). Defaults to current working directory.",
+					"default":     "",
 				},
 				"recursive": map[string]any{
 					"type":        "boolean",
 					"description": "Walk subtree files. Default false.",
+					"default":     false,
 				},
 			},
 		},

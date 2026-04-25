@@ -85,7 +85,7 @@ func CheckAgents() ([]string, map[string]error) {
 	return agents, errors
 }
 
-func Run(ctx context.Context, agent, prompt string, readOnly bool) (string, error) {
+func Call(ctx context.Context, agent, prompt string, readOnly bool) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
@@ -140,7 +140,7 @@ func RunParallel(ctx context.Context, agents []string, prompt string, readOnly b
 	ch := make(chan Result, len(agents))
 	for _, a := range agents {
 		go func(agent string) {
-			out, err := Run(ctx, agent, prompt, readOnly)
+			out, err := Call(ctx, agent, prompt, readOnly)
 			ch <- Result{Agent: agent, Output: out, Err: err}
 		}(a)
 	}

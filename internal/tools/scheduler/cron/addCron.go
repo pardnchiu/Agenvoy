@@ -33,7 +33,8 @@ Requires a script filename returned by write_script; multiple cron entries may s
 				},
 				"channel_id": map[string]any{
 					"type":        "string",
-					"description": "Discord channel ID to post each run's output to. Optional.",
+					"description": "Discord channel ID to post each run's output to.",
+					"default":     "",
 				},
 			},
 			"required": []string{

@@ -15,27 +15,24 @@ func registCrossReviewWithExternalAgents() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:     "cross_review_with_external_agents",
 		ReadOnly: true,
-		Description: `將**已產出的真實結果**送交所有可用外部 agent（codex／copilot／claude／gemini）並行交叉驗證，取得隔離環境下的獨立審查意見與改進建議，供主 agent 據此修正。
-
-呼叫條件（三者皆須滿足）：
-1. 已有具體完成的產出（程式碼／文件／決策／分析等），非佔位或假設內容
-2. 使用者明確要求驗證／交叉確認／second opinion，或任務風險高需外部把關
-3. 目的是檢查本 agent 輸出是否正確／完備，不是做其他事
-
-無可用 agent 時回傳降級訊息，不阻斷主流程。`,
+		Description: `
+Run a concrete completed result through all available external agents (codex / copilot / claude / gemini) in parallel for cross-review.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"input": map[string]any{
 					"type":        "string",
-					"description": "原始問題或任務描述",
+					"description": "Original task or question.",
 				},
 				"result": map[string]any{
 					"type":        "string",
-					"description": "待驗證的結果內容",
+					"description": "Result to be reviewed.",
 				},
 			},
-			"required": []string{"input", "result"},
+			"required": []string{
+				"input",
+				"result",
+			},
 		},
 		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {

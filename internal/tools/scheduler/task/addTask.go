@@ -33,7 +33,8 @@ Requires a script filename returned by write_script.`,
 				},
 				"channel_id": map[string]any{
 					"type":        "string",
-					"description": "Discord channel ID to post the script's output to. Optional.",
+					"description": "Discord channel ID to post the script's output to.",
+					"default":     "",
 				},
 			},
 			"required": []string{
