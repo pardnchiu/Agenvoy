@@ -17,7 +17,7 @@ func registInvokeExternalAgent() {
 		Name:     "invoke_external_agent",
 		ReadOnly: true,
 		Description: `
-呼叫外部 CLI agent（codex／copilot／claude）在隔離環境執行，取得不同 harness 的獨立第二意見；**非能力補位，非 fallback**。
+呼叫外部 CLI agent（codex／copilot／claude／gemini）在隔離環境執行，取得不同 harness 的獨立第二意見；**非能力補位，非 fallback**。
 
 vs invoke_subagent：後者走本專案 exec 引擎、共用 tool／session／registry；此 tool 完全隔離，外部 agent 無法存取本專案任何 tool。
 
@@ -28,7 +28,7 @@ vs invoke_subagent：後者走本專案 exec 引擎、共用 tool／session／re
 				"provider": map[string]any{
 					"type":        "string",
 					"description": "要呼叫的外部 agent，必須從已宣告的可用清單中選擇",
-					"enum":        []string{"codex", "copilot", "claude"},
+					"enum":        []string{"codex", "copilot", "claude", "gemini"},
 				},
 				"task": map[string]any{
 					"type":        "string",

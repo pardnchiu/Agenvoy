@@ -15,7 +15,7 @@ func registCrossReviewWithExternalAgents() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:     "cross_review_with_external_agents",
 		ReadOnly: true,
-		Description: `將**已產出的真實結果**送交所有可用外部 agent（codex／copilot／claude）並行交叉驗證，取得隔離環境下的獨立審查意見與改進建議，供主 agent 據此修正。
+		Description: `將**已產出的真實結果**送交所有可用外部 agent（codex／copilot／claude／gemini）並行交叉驗證，取得隔離環境下的獨立審查意見與改進建議，供主 agent 據此修正。
 
 呼叫條件（三者皆須滿足）：
 1. 已有具體完成的產出（程式碼／文件／決策／分析等），非佔位或假設內容
@@ -47,7 +47,7 @@ func registCrossReviewWithExternalAgents() {
 			}
 
 			if len(external.Agents()) == 0 {
-				return `外部驗證已忽略：未宣告任何外部 agent。若需外部驗證，請在環境變數設定 EXTERNAL_CODEX=true / EXTERNAL_COPILOT=true / EXTERNAL_CLAUDE=true，並安裝對應 CLI。`, nil
+				return `外部驗證已忽略：未宣告任何外部 agent。若需外部驗證，請在環境變數設定 EXTERNAL_CODEX=true / EXTERNAL_COPILOT=true / EXTERNAL_CLAUDE=true / EXTERNAL_GEMINI=true，並安裝對應 CLI。`, nil
 			}
 
 			agents, errors := external.CheckAgents()

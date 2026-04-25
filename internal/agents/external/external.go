@@ -49,7 +49,7 @@ type Result struct {
 
 func Agents() []string {
 	var agents []string
-	for _, name := range []string{"codex", "copilot", "claude"} {
+	for _, name := range []string{"codex", "copilot", "claude", "gemini"} {
 		if os.Getenv("EXTERNAL_"+strings.ToUpper(name)) == "true" {
 			agents = append(agents, name)
 		}
@@ -65,6 +65,8 @@ func Check(agent string) error {
 		return checkCopilot()
 	case "claude":
 		return checkClaude()
+	case "gemini":
+		return checkGemini()
 	default:
 		return fmt.Errorf("%s not supported", agent)
 	}
@@ -108,6 +110,14 @@ func Run(ctx context.Context, agent, prompt string, readOnly bool) (string, erro
 		}
 		args = append(args, prompt)
 		cmd = exec.CommandContext(ctx, "claude", args...)
+	case "gemini":
+		args := []string{"-p", prompt, "--skip-trust"}
+		if readOnly {
+			args = append(args, "--approval-mode", "plan")
+		} else {
+			args = append(args, "--yolo")
+		}
+		cmd = exec.CommandContext(ctx, "gemini", args...)
 	default:
 		return "", fmt.Errorf("%s not supported", agent)
 	}
@@ -168,6 +178,16 @@ func checkClaude() error {
 	}
 	if _, err := exec.Command("claude", "--version").CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run claude, please check your installation and login first")
+	}
+	return nil
+}
+
+func checkGemini() error {
+	if _, err := exec.LookPath("gemini"); err != nil {
+		return fmt.Errorf("please install first: npm install -g @google/gemini-cli")
+	}
+	if _, err := exec.Command("gemini", "--version").CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to run gemini, please check your installation and login first")
 	}
 	return nil
 }

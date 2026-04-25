@@ -12,6 +12,8 @@ var prefixToAgent = map[string]struct {
 	"codex-allow":  {"codex", false},
 	"gh":           {"copilot", true},
 	"copilot":      {"copilot", true},
+	"gemini":       {"gemini", true},
+	"gemini-allow": {"gemini", false},
 }
 
 func MatchExternal(input string) (agent, effective string, readOnly bool) {
