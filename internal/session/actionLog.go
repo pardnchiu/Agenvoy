@@ -37,6 +37,60 @@ func AppendActionUserInput(sessionID, text string) {
 	appendActionLine(sessionID, formatActionLine("user", truncateActionField(text)))
 }
 
+func GeadRecord(sessionID string, n int) []string {
+	if sessionID == "" || n <= 0 {
+		return nil
+	}
+	actionLogMu.Lock()
+	defer actionLogMu.Unlock()
+
+	path := filepath.Join(filesystem.SessionsDir, sessionID, "action.log")
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil || info.Size() == 0 {
+		return nil
+	}
+
+	const chunkSize = 8 << 10
+	var (
+		buf      []byte
+		pos      = info.Size()
+		newlines = 0
+	)
+	for pos > 0 && newlines <= n {
+		readSize := int64(chunkSize)
+		if pos < readSize {
+			readSize = pos
+		}
+		pos -= readSize
+		chunk := make([]byte, readSize)
+		if _, err := f.ReadAt(chunk, pos); err != nil {
+			return nil
+		}
+		for _, b := range chunk {
+			if b == '\n' {
+				newlines++
+			}
+		}
+		buf = append(chunk, buf...)
+	}
+
+	text := strings.TrimRight(string(buf), "\n")
+	if text == "" {
+		return nil
+	}
+	lines := strings.Split(text, "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return lines
+}
+
 func formatActionEvent(ev agentTypes.Event) string {
 	switch ev.Type {
 	case agentTypes.EventText:
