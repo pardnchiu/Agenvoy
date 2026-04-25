@@ -8,7 +8,18 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	go_utils_utils "github.com/pardnchiu/go-utils/utils"
 )
+
+const (
+	defaultExternalAgentTimeoutMin = 10
+	hardCapExternalAgentTimeoutMin = 60
+)
+
+var ExternalAgentTimeoutMin = max(defaultExternalAgentTimeoutMin,
+	min(hardCapExternalAgentTimeoutMin,
+		go_utils_utils.GetWithDefaultInt("MAX_EXTERNAL_AGENT_TIMEOUT_MIN", defaultExternalAgentTimeoutMin)))
 
 func runCodex(ctx context.Context, prompt string, readOnly bool) (string, error) {
 	outFile := filepath.Join(os.TempDir(), fmt.Sprintf("agenvoy-codex-%d.txt", time.Now().UnixNano()))
@@ -86,7 +97,7 @@ func CheckAgents() ([]string, map[string]error) {
 }
 
 func Call(ctx context.Context, agent, prompt string, readOnly bool) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(ExternalAgentTimeoutMin)*time.Minute)
 	defer cancel()
 
 	if agent == "codex" {
