@@ -81,6 +81,25 @@ type ExecData struct {
 }
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
+	if session != nil && session.ID != "" {
+		original := events
+		teed := make(chan agentTypes.Event, 64)
+		done := make(chan struct{})
+		sid := session.ID
+		go func() {
+			defer close(done)
+			for ev := range teed {
+				sessionManager.Record(sid, ev)
+				original <- ev
+			}
+		}()
+		defer func() {
+			close(teed)
+			<-done
+		}()
+		events = teed
+	}
+
 	// * if skill is empty, then treat as no skill
 	if data.Skill != nil && data.Skill.Content == "" {
 		data.Skill = nil
@@ -370,6 +389,7 @@ func SaveUserInputHistory(sessionID, userText string) {
 		Role:    "user",
 		Content: userText,
 	})
+	sessionManager.AppendActionUserInput(sessionID, userText)
 }
 
 func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
