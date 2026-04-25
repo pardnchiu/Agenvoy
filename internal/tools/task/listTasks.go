@@ -13,9 +13,11 @@ import (
 
 func registListTools() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "list_tasks",
-		ReadOnly:    true,
-		Description: "列出所有待執行的一次性定時任務，每行一筆，格式為 `{id} {time} {script}`。id 為移除時所需的識別碼。",
+		Name:     "list_tasks",
+		ReadOnly: true,
+		Description: `
+List all pending one-shot tasks.
+Use to discover task IDs needed by get_task, update_task, or remove_task.`,
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},
@@ -25,11 +27,11 @@ func registListTools() {
 			if err != nil {
 				return "", err
 			}
+
 			if len(results) == 0 {
-				return "no onetime tasks", nil
+				return "please add tash first", nil
 			}
-			return strings.Join(results, "\n"), nil
+			return strings.Join(results, ","), nil
 		},
 	})
-
 }

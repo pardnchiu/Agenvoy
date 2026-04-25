@@ -31,7 +31,7 @@ Use to discover task IDs needed by get_cron, update_cron, or remove_cron.`,
 			if len(results) == 0 {
 				return "please add cron first", nil
 			}
-			return strings.Join(results, "\n"), nil
+			return strings.Join(results, ","), nil
 		},
 	})
 }

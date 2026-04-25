@@ -30,7 +30,10 @@ Use to change when a schedule fires without touching its script or other setting
 					"description": "Standard 5-field cron expression '{min} {hour} {day} {month} {weekday}' (e.g. '* * * * *', '0 9 * * 1', '*/5 * * * *').",
 				},
 			},
-			"required": []string{"id", "cron_expression"},
+			"required": []string{
+				"id",
+				"cron_expression",
+			},
 		},
 		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {

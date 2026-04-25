@@ -27,7 +27,9 @@ If no ID is given, call list_crons first; auto-remove only when exactly one task
 					"description": "Cron task ID returned by list_crons.",
 				},
 			},
-			"required": []string{"id"},
+			"required": []string{
+				"id",
+			},
 		},
 		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {

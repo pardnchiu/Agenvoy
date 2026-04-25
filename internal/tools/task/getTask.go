@@ -14,18 +14,22 @@ import (
 
 func registGetTask() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "get_task",
-		ReadOnly:    true,
-		Description: "查詢指定 ID 的一次性任務狀態（pending/running/completed/failed）、執行時間、輸出結果與錯誤訊息。",
+		Name:     "get_task",
+		ReadOnly: true,
+		Description: `
+Inspect a one-shot task's status and run details.
+Use to verify scheduling after add_task or to diagnose a failed run.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"id": map[string]any{
 					"type":        "string",
-					"description": "任務 ID（由 add_task 或 list_tasks 回傳）",
+					"description": "Task ID returned by add_task or list_tasks.",
 				},
 			},
-			"required": []string{"id"},
+			"required": []string{
+				"id",
+			},
 		},
 		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -34,27 +38,34 @@ func registGetTask() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			t, ok := tasks.GetTask(scheduler.Get(), params.ID)
+
+			id := strings.TrimSpace(params.ID)
+			if id == "" {
+				return "", fmt.Errorf("id is required")
+			}
+
+			item, ok := tasks.GetTask(scheduler.Get(), id)
 			if !ok {
-				return "", fmt.Errorf("not found: %s", params.ID)
+				return "", fmt.Errorf("not found: %s", id)
 			}
+
 			lines := []string{
-				fmt.Sprintf("id: %s", t.ID),
-				fmt.Sprintf("status: %s", t.Status),
-				fmt.Sprintf("scheduled_at: %s", t.At.Local().Format("2006-01-02 15:04:05")),
-				fmt.Sprintf("script: %s", t.Script),
+				fmt.Sprintf("id: %s", item.ID),
+				fmt.Sprintf("status: %s", item.Status),
+				fmt.Sprintf("scheduled_at: %s", item.At.Local().Format("2006-01-02 15:04:05")),
+				fmt.Sprintf("script: %s", item.Script),
 			}
-			if t.StartedAt != nil {
-				lines = append(lines, fmt.Sprintf("started_at: %s", t.StartedAt.Local().Format("2006-01-02 15:04:05")))
+			if item.StartedAt != nil {
+				lines = append(lines, fmt.Sprintf("started_at: %s", item.StartedAt.Local().Format("2006-01-02 15:04:05")))
 			}
-			if t.FinishedAt != nil {
-				lines = append(lines, fmt.Sprintf("finished_at: %s", t.FinishedAt.Local().Format("2006-01-02 15:04:05")))
+			if item.FinishedAt != nil {
+				lines = append(lines, fmt.Sprintf("finished_at: %s", item.FinishedAt.Local().Format("2006-01-02 15:04:05")))
 			}
-			if t.Output != "" {
-				lines = append(lines, fmt.Sprintf("output: %s", t.Output))
+			if item.Output != "" {
+				lines = append(lines, fmt.Sprintf("output: %s", item.Output))
 			}
-			if t.Err != "" {
-				lines = append(lines, fmt.Sprintf("error: %s", t.Err))
+			if item.Err != "" {
+				lines = append(lines, fmt.Sprintf("error: %s", item.Err))
 			}
 			return strings.Join(lines, "\n"), nil
 		},

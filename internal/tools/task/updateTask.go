@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
 	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
@@ -13,21 +14,26 @@ import (
 
 func registUpdateTask() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "update_task",
-		Description: "修改已存在的一次性任務的執行時間，不刪除腳本、不影響其他設定。若要修改腳本內容請用 update_script。",
+		Name: "update_task",
+		Description: `
+Reschedule an existing one-shot task by replacing its run time.
+Use to change when a task fires without touching its script or other settings; modify script body via update_script.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"id": map[string]any{
 					"type":        "string",
-					"description": "要修改的任務 ID（由 list_tasks 回傳）",
+					"description": "Task ID returned by list_tasks.",
 				},
 				"at": map[string]any{
 					"type":        "string",
-					"description": "新的執行時間，支援：+5m、+1h30m、15:04、2006-01-02 15:04、RFC3339",
+					"description": "Run time as duration ('+5m', '+1h30m'), today's clock time ('15:04'), date+time ('2006-01-02 15:04'), or RFC3339.",
 				},
 			},
-			"required": []string{"id", "at"},
+			"required": []string{
+				"id",
+				"at",
+			},
 		},
 		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -37,11 +43,21 @@ func registUpdateTask() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			if err := tasks.Update(scheduler.Get(), params.ID, params.At); err != nil {
+
+			id := strings.TrimSpace(params.ID)
+			if id == "" {
+				return "", fmt.Errorf("id is required")
+			}
+
+			at := strings.TrimSpace(params.At)
+			if at == "" {
+				return "", fmt.Errorf("at is required")
+			}
+
+			if err := tasks.Update(scheduler.Get(), id, at); err != nil {
 				return "", err
 			}
-			return fmt.Sprintf("task %s updated: scheduled at %s", params.ID, params.At), nil
+			return fmt.Sprintf("updated task: %s with cronExpression: %s", id, at), nil
 		},
 	})
-
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
 	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
@@ -13,17 +14,22 @@ import (
 
 func registRemoveTask() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "remove_task",
-		Description: "取消並移除指定 ID 的一次性定時任務，同時刪除對應的腳本檔案。**僅限使用者明確要求刪除排程時才可呼叫，禁止在建立排程流程中主動呼叫。** 若使用者未指定 ID：先呼叫 list_tasks 取得列表，若只有一筆直接移除，若有多筆必須將列表回覆使用者並等待確認。",
+		Name: "remove_task",
+		Description: `
+Cancel a pending one-shot task by ID and delete its script file.
+Call only when the user explicitly asks to delete a schedule; never invoke during a creation flow.
+If no ID is given, call list_tasks first; auto-remove only when exactly one task exists, otherwise return the list and wait for confirmation.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"id": map[string]any{
 					"type":        "string",
-					"description": "任務 ID（由 list_tasks 回傳的第一欄）",
+					"description": "Task ID returned by list_tasks.",
 				},
 			},
-			"required": []string{"id"},
+			"required": []string{
+				"id",
+			},
 		},
 		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -32,10 +38,16 @@ func registRemoveTask() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			if err := tasks.Delete(scheduler.Get(), params.ID); err != nil {
+
+			id := strings.TrimSpace(params.ID)
+			if id == "" {
+				return "", fmt.Errorf("id is required")
+			}
+
+			if err := tasks.Delete(scheduler.Get(), id); err != nil {
 				return "", err
 			}
-			return fmt.Sprintf("onetime task %s removed", params.ID), nil
+			return fmt.Sprintf("removed task: %s", id), nil
 		},
 	})
 
