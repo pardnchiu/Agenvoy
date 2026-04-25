@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func ExecWithSubagent(ctx context.Context, task, model, systemPrompt string, excludedTools []string) (string, error) {
+func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPrompt string, excludedTools []string) (string, error) {
 	registry := host.Registry()
 	planner := host.Planner()
 	if planner == nil || len(registry.Registry) == 0 {
@@ -29,9 +32,9 @@ func ExecWithSubagent(ctx context.Context, task, model, systemPrompt string, exc
 		return "", fmt.Errorf("no agent available")
 	}
 
-	sessionID, err := sessionManager.CreateSession("temp-sub-")
+	sessionID, err := ensureSubagentSession(sessionIDInput)
 	if err != nil {
-		return "", fmt.Errorf("sessionManager.CreateSession: %w", err)
+		return "", fmt.Errorf("ensureSubagentSession: %w", err)
 	}
 
 	excluded := append([]string{"invoke_subagent", "invoke_external_agent", "cross_review_with_external_agents", "review_result"}, excludedTools...)
@@ -43,17 +46,34 @@ func ExecWithSubagent(ctx context.Context, task, model, systemPrompt string, exc
 		ExtraSystemPrompt: systemPrompt,
 	}
 
+	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
+	if oldHistory == nil {
+		oldHistory = []agentTypes.Message{}
+	}
+	if maxHistory == nil {
+		maxHistory = []agentTypes.Message{}
+	}
+
 	userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s",
 		time.Now().Format("2006-01-02 15:04:05"), task)
+
+	histories := append([]agentTypes.Message{}, oldHistory...)
+	histories = append(histories, agentTypes.Message{Role: "user", Content: userText})
+
 	session := &agentTypes.AgentSession{
 		ID:            sessionID,
 		SystemPrompts: []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, host.Scanner())}},
-		OldHistories:  []agentTypes.Message{},
+		OldHistories:  maxHistory,
 		ToolHistories: []agentTypes.Message{},
 		Tools:         []agentTypes.Message{},
-		Histories:     []agentTypes.Message{{Role: "user", Content: userText}},
+		Histories:     histories,
 		UserInput:     agentTypes.Message{Role: "user", Content: userText},
 	}
+	if summary := sessionManager.GetSummaryPrompt(sessionID, OldestMessageTime(maxHistory)); summary != "" {
+		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
+	}
+
+	SaveUserInputHistory(sessionID, userText)
 
 	subCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
@@ -94,13 +114,37 @@ func ExecWithSubagent(ctx context.Context, task, model, systemPrompt string, exc
 		if text == "" {
 			return "", fmt.Errorf("subagent execute: %w", err)
 		}
-		return fmt.Sprintf("[subagent partial result · %s]\n%s\n\n[error] %s",
-			agent.Name(), text, err.Error()), nil
+		return fmt.Sprintf("[subagent partial result · %s · session=%s]\n%s\n\n[error] %s",
+			agent.Name(), sessionID, text, err.Error()), nil
 	}
 
 	result := strings.TrimSpace(sb.String())
 	if result == "" {
-		return fmt.Sprintf("[subagent · %s] 未產出文字結果", agent.Name()), nil
+		return fmt.Sprintf("[subagent · %s · session=%s] 未產出文字結果", agent.Name(), sessionID), nil
 	}
-	return fmt.Sprintf("[subagent · %s]\n%s", agent.Name(), result), nil
+	return fmt.Sprintf("[subagent · %s · session=%s]\n%s", agent.Name(), sessionID, result), nil
+}
+
+func ensureSubagentSession(input string) (string, error) {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" {
+		id, err := sessionManager.CreateSession("temp-sub-")
+		if err != nil {
+			return "", fmt.Errorf("sessionManager.CreateSession: %w", err)
+		}
+		return id, nil
+	}
+
+	sessionDir := filepath.Join(filesystem.SessionsDir, trimmed)
+	info, err := os.Stat(sessionDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("session %q does not exist", trimmed)
+		}
+		return "", fmt.Errorf("os.Stat: %w", err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("session %q is not a directory", trimmed)
+	}
+	return trimmed, nil
 }

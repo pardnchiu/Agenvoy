@@ -22,16 +22,21 @@ func registInvokeSubagent() {
 	}
 
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "invoke_subagent",
-		ReadOnly:   true,
-		Concurrent: true,
-		Description: "Run a subtask in an isolated internal subagent session and return its final text.",
+		Name:        "invoke_subagent",
+		ReadOnly:    true,
+		Concurrent:  true,
+		Description: "Run a subtask in an internal subagent session and return its final text.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"task": map[string]any{
 					"type":        "string",
 					"description": "Self-contained task description for the subagent.",
+				},
+				"session_id": map[string]any{
+					"type":        "string",
+					"description": "Persistent session id to thread multi-turn subagent calls (e.g. 'researcher', 'planner-2'). Blank uses an ephemeral temp-sub session.",
+					"default":     "",
 				},
 				"model": map[string]any{
 					"type":        "string",
@@ -58,6 +63,7 @@ func registInvokeSubagent() {
 		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Task         string   `json:"task"`
+				SessionID    string   `json:"session_id,omitempty"`
 				Model        string   `json:"model,omitempty"`
 				SystemPrompt string   `json:"system_prompt,omitempty"`
 				ExcludeTools []string `json:"exclude_tools,omitempty"`
@@ -70,6 +76,8 @@ func registInvokeSubagent() {
 			if task == "" {
 				return "", fmt.Errorf("task is required")
 			}
+
+			sessionID := strings.TrimSpace(params.SessionID)
 
 			model := strings.TrimSpace(params.Model)
 			if model != "" && !slices.Contains(models, model) {
@@ -84,7 +92,7 @@ func registInvokeSubagent() {
 				excludeTools = []string{}
 			}
 
-			return exec.ExecWithSubagent(ctx, task, model, systemPrompt, excludeTools)
+			return exec.ExecWithSubagent(ctx, task, sessionID, model, systemPrompt, excludeTools)
 		},
 	})
 }
