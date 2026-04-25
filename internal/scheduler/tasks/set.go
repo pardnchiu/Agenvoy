@@ -80,4 +80,3 @@ func Set(s *scheduler.Scheduler, item filesystem.TaskItem) error {
 	s.Tasks = append(s.Tasks, item)
 	return nil
 }
-

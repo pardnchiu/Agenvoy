@@ -20,7 +20,7 @@
 | Issue | Detection | Severity |
 |-------|-----------|----------|
 | 硬編碼密鑰（關鍵字） | `password=/secret=/api_key=` 等 | Critical |
-| 可疑高熵字串 | Shannon entropy ≥ 4.0，長度 ≥ 32，排除 UUID / MD5 / SHA1 / SHA256 | High |
+| 可疑高熵字串 | Shannon entropy ≥ 4.0，長度 ≥ 32，排除 UUID / MD5 / SHA1 / SHA256 / MIME type | High |
 | SQL Injection | 字串拼接 / f-string / % 格式化 SQL | High |
 | Command Injection | 拼接系統指令 | High |
 

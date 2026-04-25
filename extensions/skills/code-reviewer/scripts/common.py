@@ -73,6 +73,12 @@ HASH_PATTERNS = (
     re.compile(r'^[0-9a-f]{64}$', re.IGNORECASE),   # SHA256
 )
 
+MIME_TYPE_PATTERN = re.compile(
+    r'^(?:application|text|multipart|image|audio|video|font|message|model)/'
+    r'[a-z0-9!#$&\-^_+.]+(?:;.*)?$',
+    re.IGNORECASE,
+)
+
 ENTROPY_THRESHOLD = 4.0
 
 
@@ -90,6 +96,8 @@ def _looks_like_credential(value: str) -> bool:
     for p in HASH_PATTERNS:
         if p.match(value):
             return False
+    if MIME_TYPE_PATTERN.match(value):
+        return False
     return shannon_entropy(value) >= ENTROPY_THRESHOLD
 
 

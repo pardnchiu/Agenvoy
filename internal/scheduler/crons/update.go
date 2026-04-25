@@ -41,10 +41,10 @@ func Update(s *scheduler.Scheduler, id, expression string) error {
 	}
 
 	newTarget := filesystem.CronItem{
-		ID:        target.ID,
+		ID:         target.ID,
 		Expression: expression,
-		Script:    target.Script,
-		ChannelID: target.ChannelID,
+		Script:     target.Script,
+		ChannelID:  target.ChannelID,
 	}
 
 	newID, err := s.Cron.Add(newTarget.Expression, set(s, newTarget))

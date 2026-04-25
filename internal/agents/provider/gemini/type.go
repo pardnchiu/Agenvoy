@@ -10,10 +10,10 @@ type Output struct {
 		} `json:"safetyRatings,omitempty"`
 	} `json:"candidates"`
 	UsageMetadata *struct {
-		PromptTokenCount         int `json:"promptTokenCount"`
-		CandidatesTokenCount     int `json:"candidatesTokenCount"`
-		TotalTokenCount          int `json:"totalTokenCount"`
-		CachedContentTokenCount  int `json:"cachedContentTokenCount"`
+		PromptTokenCount        int `json:"promptTokenCount"`
+		CandidatesTokenCount    int `json:"candidatesTokenCount"`
+		TotalTokenCount         int `json:"totalTokenCount"`
+		CachedContentTokenCount int `json:"cachedContentTokenCount"`
 	} `json:"usageMetadata,omitempty"`
 }
 

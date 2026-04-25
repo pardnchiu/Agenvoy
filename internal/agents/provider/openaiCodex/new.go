@@ -80,7 +80,6 @@ func (a *Agent) Name() string {
 	return prefix + a.model
 }
 
-
 func (a *Agent) authHeader(ctx context.Context) (string, error) {
 	if err := a.ensureFreshToken(ctx); err != nil {
 		return "", fmt.Errorf("a.ensureFreshToken: %w", err)

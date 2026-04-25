@@ -3,12 +3,11 @@ package discord
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"github.com/bwmarrin/discordgo"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
+	"os"
+	"path/filepath"
 )
-
 
 const (
 	// * if content over 2000, split into multiple messages
