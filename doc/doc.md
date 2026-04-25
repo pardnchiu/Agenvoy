@@ -96,9 +96,14 @@ Supported providers:
 | `MAX_TOOL_ITERATIONS` | No | Max tool call iterations per request (default: 16) |
 | `MAX_SKILL_ITERATIONS` | No | Max tool call iterations within a skill execution (default: 128) |
 | `MAX_EMPTY_RESPONSES` | No | Max consecutive empty responses before giving up (default: 8) |
-| `EXTERNAL_COPILOT` | No | External agent endpoint for GitHub Copilot |
-| `EXTERNAL_CLAUDE` | No | External agent endpoint for Claude |
-| `EXTERNAL_CODEX` | No | External agent endpoint for Codex |
+| `MAX_SESSION_TASKS` | No | Max concurrent tasks per session; over the cap, callers queue (default: 3, hard cap: 10) |
+| `MAX_SUBAGENT_TIMEOUT_MIN` | No | `invoke_subagent` execution timeout in minutes — covers slot wait + run (default: 10, hard cap: 60) |
+| `MAX_EXTERNAL_AGENT_TIMEOUT_MIN` | No | External CLI agent (codex/claude/copilot/gemini) subprocess timeout in minutes (default: 10, hard cap: 60) |
+| `EXTERNAL_COPILOT` | No | Set to `true` to enable the GitHub Copilot CLI external agent |
+| `EXTERNAL_CLAUDE` | No | Set to `true` to enable the Claude Code CLI external agent |
+| `EXTERNAL_CODEX` | No | Set to `true` to enable the OpenAI Codex CLI external agent |
+| `EXTERNAL_GEMINI` | No | Set to `true` to enable the Gemini CLI external agent |
+| `OPENAI_API_KEY` | No | Enables semantic indexing for session history and error memory via `text-embedding-3-small` (falls back to keyword scan when unset) |
 
 Create a `.env` file and fill in the values:
 
@@ -238,6 +243,22 @@ description: One-line summary shown to the agent for skill selection
 Instructions the agent follows when this skill is selected...
 ```
 
+#### Bundled Skills
+
+The repository ships the following skills under `extensions/skills/`; they are synced to `~/.config/agenvoy/skills/` on first launch:
+
+| Skill | Purpose |
+|---|---|
+| `code-reviewer` | Review changed source for security / performance / architecture issues; produces a categorized report |
+| `commit-generate` | Generate bilingual (English + Traditional Chinese) commit messages from staged changes |
+| `readme-generate` | Generate or refresh bilingual `README.md` / `doc/` / `architecture` documentation from project source |
+| `schedule-task` | Convert natural-language requests into `add_task` / `add_cron` calls with the right cron expressions |
+| `script-tool-creator` | Scaffold a new script-tool extension (`tool.json` + `script.py`/`script.js`) under `~/.config/agenvoy/script_tools/` |
+| `skill-creator` | Scaffold a new skill (frontmatter + body) and place it under `~/.config/agenvoy/skills/` |
+| `swagger-to-api` | Convert an OpenAPI / Swagger spec into one `extensions/apis/*.json` per endpoint |
+| `tool-reviewer` | Audit every registered tool (built-in, API, script) against the naming / description / schema ruleset and produce a violation report |
+| `version-generate` | Walk commits since the last tag and emit `.doc/version-generate/vX.Y.Z.md` plus an updated `CHANGELOG.md` index |
+
 ## Usage
 
 ### Using Make
@@ -337,7 +358,8 @@ agen planner
 | `write_file` | `path`, `content` | Write or create a file (atomic write) |
 | `list_files` | `path`, `recursive` | List directory contents |
 | `glob_files` | `pattern` | Glob pattern matching (e.g., `**/*.go`) |
-| `search_content` | `pattern`, `file_pattern` | Regex search across file contents |
+| `search_files` | `pattern`, `file_pattern` | Regex search across file contents |
+| `ask_user` | `questions` | CLI-only interactive prompt (free-text / single-select / multi-select via `promptui`); returns answers as a heterogeneous JSON array |
 | `patch_file` | `path`, `old_string`, `new_string` | First-match string replace (safer than full rewrite) |
 | `search_conversation_history` | `keyword`, `time_range` | Query the current session's history records from ToriiDB |
 | `read_error_memory` | `hash` | Retrieve full error details for a failed tool call by hash |
@@ -350,7 +372,7 @@ agen planner
 | `search_web` | `query`, `time_range` | DuckDuckGo lite-endpoint web search; `time_range` accepts `1d` / `7d` / `1m` / `1y` |
 | `fetch_page` | `url` | JS-rendered page content as Markdown (headless Chrome) |
 | `save_page_to_file` | `href`, `save_to` | JS-rendered page saved to a local file |
-| `run_command` | `command` | Execute whitelisted shell commands in sandbox (300s timeout) |
+| `run_command` | `argv` | Execute whitelisted commands inside the OS sandbox; `argv: string[]` only — no shell-string parsing, multi-word args carried verbatim. Shell features (pipe / redirect / glob / `$VAR`) require explicit `["sh","-c","..."]` |
 | `add_task` | `at`, `script`, `channel_id` | Schedule a one-time task; result posted to Discord channel on completion |
 | `list_tasks` | — | List all pending one-time tasks |
 | `remove_task` | `index` | Cancel and remove a one-time task |
@@ -362,10 +384,26 @@ agen planner
 | `skill_git_rollback` | `commit` | Roll back the skill repository to the specified commit hash |
 | `list_tools` | — | List all currently available tools including dynamic API extensions |
 | `calculate` | `expression` | Evaluate math expressions (sqrt, abs, pow, ceil, floor, sin, cos, tan, log) |
-| `invoke_external_agent` | `provider`, `task`, `readonly?` | Delegate the entire task to a named external agent (`copilot` / `claude` / `codex`) |
+| `invoke_external_agent` | `provider`, `task`, `readonly?` | Delegate the entire task to a named external CLI agent (`copilot` / `claude` / `codex` / `gemini`); `readonly` defaults to `true` |
 | `cross_review_with_external_agents` | `input`, `result` | Parallel cross-validation: dispatch to all declared external agents and merge feedback; falls back to `review_result` when none are declared |
 | `review_result` | `input`, `result` | Internal completeness review using the highest-priority available model (claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet) |
 | `invoke_subagent` | `task`, `model?`, `system_prompt?`, `exclude_tools?` | In-process sub-agent delegation with an isolated temp session; `invoke_subagent` is force-excluded inside the child to prevent recursion |
+
+## Slash Command Routing
+
+When user input begins with one of the prefixes below, the engine bypasses planner agent selection (and skill matching) and forwards the rest of the message directly to the named external CLI agent. Each agent is a one-shot `subprocess` invocation — no ACP, no JSON-RPC. Both the CLI / TUI / Discord and REST `/v1/send` entries respect these prefixes.
+
+| Prefix | Agent | Mode |
+|---|---|---|
+| `/claude <task>` | Claude Code CLI | read-only (`--disallowedTools=Edit,Write,NotebookEdit`) |
+| `/claude-allow <task>` | Claude Code CLI | write (`--permission-mode acceptEdits`) |
+| `/codex <task>` | OpenAI Codex CLI | sandboxed read-only |
+| `/codex-allow <task>` | OpenAI Codex CLI | bypass approvals + sandbox |
+| `/gh <task>` · `/copilot <task>` | GitHub Copilot CLI | reasoning-only (no tool execution; no `-allow` variant) |
+| `/gemini <task>` | Gemini CLI | `--approval-mode plan` (no mutating tools) |
+| `/gemini-allow <task>` | Gemini CLI | `--yolo` (auto-approve all tools) |
+
+The corresponding agent must be enabled via the `EXTERNAL_*` environment variable and have its CLI installed and authenticated locally.
 
 ## REST API
 
@@ -385,6 +423,8 @@ agen
 | `POST` | `/v1/tool/:name` | Invoke a single tool directly |
 | `GET` | `/v1/key` | Retrieve a stored credential from the OS Keychain |
 | `POST` | `/v1/key` | Save a credential to the OS Keychain |
+| `GET` | `/v1/session/:session_id/status` | Read per-session online/idle state from `status.json` (404 if session directory missing) |
+| `GET` | `/v1/session/:session_id/log` | SSE-stream `action.log` — initial backlog of the trailing 100 lines, then 1 s polling with last-line dedup; `: ping` heartbeat after 15 quiet ticks; closes when the client disconnects |
 
 ### POST /v1/send
 
@@ -430,6 +470,32 @@ Invoke a single tool by name. The request body is passed directly as the tool ar
 ### GET /v1/key · POST /v1/key
 
 Read or write a credential entry in the OS Keychain. Script tools should use these endpoints rather than accessing the keychain directly.
+
+### GET /v1/session/:session_id/status
+
+Returns per-session liveness from `<sessions_dir>/<session_id>/status.json`:
+
+```json
+{
+  "state": "online",
+  "active": [{"id": "...", "input": "...", "started_at": "2026-04-26 ..."}],
+  "ended_at": "",
+  "limit": 3,
+  "usage": 33.33
+}
+```
+
+`state` is derived from `len(active) > 0` (`online` | `idle`); `ended_at` records the last time `active` drained; `limit` is `MAX_SESSION_TASKS`; `usage` is `len(active)/limit` as a percentage. Returns `404` when the session directory does not exist.
+
+### GET /v1/session/:session_id/log
+
+Server-Sent Events stream of the per-session `action.log`. On connect, the handler emits the trailing 100 lines as backlog (oldest first); thereafter it polls once per second, deduplicates by the last emitted line content, and pushes only newly appended lines. After 15 consecutive quiet ticks (no new lines) it sends a `: ping\n\n` SSE comment to keep intermediaries from idling out. The stream closes when the client disconnects.
+
+```bash
+curl -N "http://localhost:${PORT:-17989}/v1/session/<sid>/log"
+```
+
+Each event is a single `data: <line>\n\n` frame; lines preserve the action.log format `[YYYY-MM-DD HH:MM:SS.mmm][kind] body`.
 
 ### Calling the API from script tools
 

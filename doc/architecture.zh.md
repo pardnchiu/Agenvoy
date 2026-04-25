@@ -432,6 +432,8 @@ flowchart TD
         R3["POST /v1/send"]
         R4["GET  /v1/key"]
         R5["POST /v1/key"]
+        R6["GET  /v1/session/:session_id/status"]
+        R7["GET  /v1/session/:session_id/log"]
     end
 
     subgraph Handlers ["Handlers · internal/routes/handler"]
@@ -441,6 +443,8 @@ flowchart TD
         H3JSON["Send()\n收集完整回應\n回傳 JSON {text}\n(model 欄位 → 繞過 SelectAgent)\n(exclude_tools → 逐請求過濾)"]
         H4["GetKey()\n由 OS Keychain 讀取"]
         H5["SaveKey()\n寫入 OS Keychain"]
+        H6["GetSessionStatus()\n讀 status.json → JSON {state, active, ended_at, limit, usage}\nsession 目錄不存在回 404"]
+        H7["StreamSessionLog()\nSSE：尾端 100 行 backlog + 每秒輪詢\nlast-line 去重；連續 15 tick 無事件送 : ping"]
     end
 
     subgraph Core ["核心層"]
@@ -452,7 +456,7 @@ flowchart TD
 
     SSECheck{"sse: true？"}
 
-    Client --> R1 & R2 & R3 & R4 & R5
+    Client --> R1 & R2 & R3 & R4 & R5 & R6 & R7
     R1 --> H1
     R2 --> H2
     R3 --> SSECheck
@@ -460,6 +464,8 @@ flowchart TD
     SSECheck -->|"否"| H3JSON
     R4 --> H4
     R5 --> H5
+    R6 --> H6
+    R7 --> H7
 
     H1 --> Executor
     H2 --> Executor --> Execute
@@ -467,6 +473,8 @@ flowchart TD
     H3JSON --> Run
     H4 --> KC
     H5 --> KC
+    H6 -.->|"poll"| StatusFile["sessions/&lt;sid&gt;/status.json"]
+    H7 -.->|"tail"| ActionFile["sessions/&lt;sid&gt;/action.log"]
 ```
 
 ***

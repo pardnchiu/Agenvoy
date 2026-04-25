@@ -96,9 +96,14 @@ agen add
 | `MAX_TOOL_ITERATIONS` | 否 | 單次請求的最大工具呼叫迭代次數（預設：16） |
 | `MAX_SKILL_ITERATIONS` | 否 | 單次 skill 執行的最大工具呼叫迭代次數（預設：128） |
 | `MAX_EMPTY_RESPONSES` | 否 | 連續空回應放棄的上限（預設：8） |
-| `EXTERNAL_COPILOT` | 否 | GitHub Copilot 的外部 agent endpoint |
-| `EXTERNAL_CLAUDE` | 否 | Claude 的外部 agent endpoint |
-| `EXTERNAL_CODEX` | 否 | Codex 的外部 agent endpoint |
+| `MAX_SESSION_TASKS` | 否 | 每 session 同時執行任務上限，超過則排隊等待（預設：3，硬上限：10） |
+| `MAX_SUBAGENT_TIMEOUT_MIN` | 否 | `invoke_subagent` 執行超時（分鐘），含排隊與執行時間（預設：10，硬上限：60） |
+| `MAX_EXTERNAL_AGENT_TIMEOUT_MIN` | 否 | 外部 CLI agent（codex／claude／copilot／gemini）subprocess 超時（分鐘）（預設：10，硬上限：60） |
+| `EXTERNAL_COPILOT` | 否 | 設為 `true` 啟用 GitHub Copilot CLI 外部 agent |
+| `EXTERNAL_CLAUDE` | 否 | 設為 `true` 啟用 Claude Code CLI 外部 agent |
+| `EXTERNAL_CODEX` | 否 | 設為 `true` 啟用 OpenAI Codex CLI 外部 agent |
+| `EXTERNAL_GEMINI` | 否 | 設為 `true` 啟用 Gemini CLI 外部 agent |
+| `OPENAI_API_KEY` | 否 | 啟用 session 歷史與 error memory 的 `text-embedding-3-small` 語意索引（未設則 fallback 至 keyword scan） |
 
 複製 `.env.example` 並填入對應值：
 
@@ -240,6 +245,22 @@ description: One-line summary shown to the agent for skill selection
 Instructions the agent follows when this skill is selected...
 ```
 
+#### 內建 Skill
+
+repo 內 `extensions/skills/` 下隨附下列 skill，首次啟動時自動同步至 `~/.config/agenvoy/skills/`：
+
+| Skill | 用途 |
+|---|---|
+| `code-reviewer` | 對變更原始碼做安全／效能／架構審查，產出分類報告 |
+| `commit-generate` | 從 staged 變更生成中英雙語 commit message |
+| `readme-generate` | 從原始碼生成或更新雙語 `README.md`／`doc/`／`architecture` 文件 |
+| `schedule-task` | 將自然語言排程請求轉為 `add_task`／`add_cron` 呼叫並自動填正確 cron 表達式 |
+| `script-tool-creator` | 在 `~/.config/agenvoy/script_tools/` 下 scaffold 新的 script tool 擴充（`tool.json` + `script.py`／`script.js`） |
+| `skill-creator` | Scaffold 新的 skill 檔（含 frontmatter 與本文）並放入 `~/.config/agenvoy/skills/` |
+| `swagger-to-api` | 將 OpenAPI／Swagger 規格逐一轉換為 `extensions/apis/*.json` |
+| `tool-reviewer` | 稽核所有已註冊工具（內建／API／script）是否符合命名／description／schema 規範並產出違規報告 |
+| `version-generate` | 由最近一個 tag 起走過 commits，產出 `.doc/version-generate/vX.Y.Z.md` 與更新 `CHANGELOG.md` 索引 |
+
 ## 使用方式
 
 ### Make 指令
@@ -339,7 +360,8 @@ agen planner
 | `write_file` | `path`, `content` | 以 atomic write 寫入或建立檔案 |
 | `list_files` | `path`, `recursive` | 列出目錄內容 |
 | `glob_files` | `pattern` | Glob 比對（例如 `**/*.go`） |
-| `search_content` | `pattern`, `file_pattern` | 以 regex 搜尋檔案內容 |
+| `search_files` | `pattern`, `file_pattern` | 以 regex 搜尋檔案內容 |
+| `ask_user` | `questions` | CLI 互動 prompt（自由輸入／單選／多選，由 `promptui` 驅動）；回傳異質 JSON 陣列 |
 | `patch_file` | `path`, `old_string`, `new_string` | 首次命中字串替換（比完整重寫安全） |
 | `search_conversation_history` | `keyword`, `time_range` | 在 ToriiDB 中查詢當前 session 的歷史紀錄 |
 | `read_error_memory` | `hash` | 以 hash 取回失敗工具呼叫的完整錯誤細節 |
@@ -352,7 +374,7 @@ agen planner
 | `search_web` | `query`, `time_range` | DuckDuckGo lite endpoint 網頁搜尋；`time_range` 僅接受 `1d` / `7d` / `1m` / `1y` |
 | `fetch_page` | `url` | 以 headless Chrome 取得 JS 渲染後的頁面並轉為 Markdown |
 | `save_page_to_file` | `href`, `save_to` | 以 headless Chrome 將 JS 渲染頁面存為本地檔案 |
-| `run_command` | `command` | 在 sandbox 中執行白名單 shell 指令（300 秒 timeout） |
+| `run_command` | `argv` | 在 OS sandbox 中執行白名單指令；schema 僅收 `argv: string[]`，不做 shell 字串解析，多字含空格參數原樣傳入。Shell 功能（pipe／redirect／glob／`$VAR`）須顯式寫 `["sh","-c","..."]` |
 | `add_task` | `at`, `script`, `channel_id` | 排程一次性任務；完成時結果張貼至 Discord channel |
 | `list_tasks` | — | 列出所有待執行的一次性任務 |
 | `remove_task` | `index` | 取消並移除一次性任務 |
@@ -364,10 +386,26 @@ agen planner
 | `skill_git_rollback` | `commit` | 將 skill repo 回復到指定 commit hash |
 | `list_tools` | — | 列出所有當前可用工具，包含動態 API 擴充 |
 | `calculate` | `expression` | 評估數學運算式（sqrt、abs、pow、ceil、floor、sin、cos、tan、log） |
-| `invoke_external_agent` | `provider`, `task`, `readonly?` | 將整個任務委派至具名外部 agent（`copilot` / `claude` / `codex`） |
+| `invoke_external_agent` | `provider`, `task`, `readonly?` | 將整個任務委派至具名外部 CLI agent（`copilot` / `claude` / `codex` / `gemini`）；`readonly` 預設 `true` |
 | `cross_review_with_external_agents` | `input`, `result` | 將結果平行送至所有宣告的外部 agent 並合併回饋；無外部 agent 時 fallback 到 `review_result` |
 | `review_result` | `input`, `result` | 以優先序最高的可用模型做內部完整性覆核（claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet） |
 | `invoke_subagent` | `task`, `model?`, `system_prompt?`, `exclude_tools?` | In-process 子 agent 委派，獨立暫時 session；子 agent 強制排除 `invoke_subagent` 以避免無限巢狀 |
+
+## Slash Command 路由
+
+當使用者輸入以下列前綴開頭時，引擎會跳過 planner agent 選擇（與 skill 偵測），把後續訊息直接轉發給對應的外部 CLI agent。每個 agent 都是 one-shot `subprocess` 呼叫——不走 ACP、不走 JSON-RPC。CLI／TUI／Discord 與 REST `/v1/send` 三入口都支援這些前綴。
+
+| 前綴 | Agent | 模式 |
+|---|---|---|
+| `/claude <task>` | Claude Code CLI | 唯讀（`--disallowedTools=Edit,Write,NotebookEdit`） |
+| `/claude-allow <task>` | Claude Code CLI | 寫入（`--permission-mode acceptEdits`） |
+| `/codex <task>` | OpenAI Codex CLI | sandbox 唯讀 |
+| `/codex-allow <task>` | OpenAI Codex CLI | bypass approvals + sandbox |
+| `/gh <task>` · `/copilot <task>` | GitHub Copilot CLI | 純推理（無 tool 執行；無 `-allow` 變體） |
+| `/gemini <task>` | Gemini CLI | `--approval-mode plan`（禁所有 mutating tool） |
+| `/gemini-allow <task>` | Gemini CLI | `--yolo`（auto-approve 全 tool） |
+
+對應的 agent 必須透過 `EXTERNAL_*` 環境變數啟用，且 CLI 已在本機安裝並登入。
 
 ## REST API
 
@@ -387,6 +425,8 @@ agen
 | `POST` | `/v1/tool/:name` | 直接呼叫單一工具 |
 | `GET` | `/v1/key` | 從 OS Keychain 讀取憑證 |
 | `POST` | `/v1/key` | 將憑證寫入 OS Keychain |
+| `GET` | `/v1/session/:session_id/status` | 從 `status.json` 讀取 session 的 online／idle 狀態（session 目錄不存在回 404） |
+| `GET` | `/v1/session/:session_id/log` | SSE 串流 `action.log`：初始送出尾端 100 行 backlog，之後每秒輪詢、以 last-line 比對推播新增行；連續 15 tick 無事件送 `: ping` heartbeat；client 斷線即關閉 |
 
 ### POST /v1/send
 
@@ -432,6 +472,32 @@ agen
 ### GET /v1/key · POST /v1/key
 
 讀取或寫入 OS Keychain 中的憑證項目。Script 工具應透過此 endpoint 存取 keychain，而非直接呼叫。
+
+### GET /v1/session/:session_id/status
+
+從 `<sessions_dir>/<session_id>/status.json` 取得每 session 即時狀態：
+
+```json
+{
+  "state": "online",
+  "active": [{"id": "...", "input": "...", "started_at": "2026-04-26 ..."}],
+  "ended_at": "",
+  "limit": 3,
+  "usage": 33.33
+}
+```
+
+`state` 由 `len(active) > 0` 推導（`online` | `idle`）；`ended_at` 紀錄最近一次 `active` 清空的時間；`limit` 為 `MAX_SESSION_TASKS`；`usage` 為 `len(active)/limit` 百分比。session 目錄不存在時回 `404`。
+
+### GET /v1/session/:session_id/log
+
+以 SSE 串流每 session 的 `action.log`。連線時 handler 先送出尾端 100 行 backlog（最舊在前），其後每秒輪詢、以最後一行內容比對去重、僅推播新增行。連續 15 tick 無新事件送 `: ping\n\n` SSE comment 防中介層 idle timeout。client 斷線即關閉。
+
+```bash
+curl -N "http://localhost:${PORT:-17989}/v1/session/<sid>/log"
+```
+
+每筆事件為單一 `data: <line>\n\n` frame；行內保留 action.log 格式 `[YYYY-MM-DD HH:MM:SS.mmm][kind] body`。
 
 ### 從 script 工具呼叫 API
 

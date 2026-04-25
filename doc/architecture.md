@@ -166,7 +166,7 @@ flowchart TD
         Reject2["Reject · sensitive path"]
     end
 
-    subgraph SandboxExec ["Process Isolation · go-utils/sandbox v0.6.0"]
+    subgraph SandboxExec ["Process Isolation · go-utils/sandbox v0.7.1"]
         OSCheck{"OS?"}
         Bwrap["bubblewrap · Linux\nauto-probed --unshare-* namespaces\n--new-session · --die-with-parent\nCheckDependence() auto-installs bwrap"]
         SandboxExecMac["sandbox-exec · macOS\nApple Seatbelt profile\nkeychain re-allow for Security.framework"]
@@ -432,6 +432,8 @@ flowchart TD
         R3["POST /v1/send"]
         R4["GET  /v1/key"]
         R5["POST /v1/key"]
+        R6["GET  /v1/session/:session_id/status"]
+        R7["GET  /v1/session/:session_id/log"]
     end
 
     subgraph Handlers ["Handlers · internal/routes/handler"]
@@ -441,6 +443,8 @@ flowchart TD
         H3JSON["Send()\ncollect full response\nreturn JSON {text}\n(model field → bypass SelectAgent)\n(exclude_tools → filter per request)"]
         H4["GetKey()\nread from OS Keychain"]
         H5["SaveKey()\nwrite to OS Keychain"]
+        H6["GetSessionStatus()\nread status.json → JSON {state, active, ended_at, limit, usage}\n404 if session dir missing"]
+        H7["StreamSessionLog()\nSSE: backlog tail-100 + 1 s polling\nlast-line dedup · : ping after 15 quiet ticks"]
     end
 
     subgraph Core ["Core Layer"]
@@ -452,7 +456,7 @@ flowchart TD
 
     SSECheck{"sse: true?"}
 
-    Client --> R1 & R2 & R3 & R4 & R5
+    Client --> R1 & R2 & R3 & R4 & R5 & R6 & R7
     R1 --> H1
     R2 --> H2
     R3 --> SSECheck
@@ -460,6 +464,8 @@ flowchart TD
     SSECheck -->|"no"| H3JSON
     R4 --> H4
     R5 --> H5
+    R6 --> H6
+    R7 --> H7
 
     H1 --> Executor
     H2 --> Executor --> Execute
@@ -467,6 +473,8 @@ flowchart TD
     H3JSON --> Run
     H4 --> KC
     H5 --> KC
+    H6 -.->|"poll"| StatusFile["sessions/&lt;sid&gt;/status.json"]
+    H7 -.->|"tail"| ActionFile["sessions/&lt;sid&gt;/action.log"]
 ```
 
 ***
