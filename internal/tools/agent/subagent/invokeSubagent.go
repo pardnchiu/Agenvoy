@@ -25,10 +25,7 @@ func registInvokeSubagent() {
 		Name:       "invoke_subagent",
 		ReadOnly:   true,
 		Concurrent: true,
-		Description: `
-Dispatch an internal subagent to run a subtask in an isolated session and return its final text.
-Use for workflow decomposition, parallel delegation, or specialist model division of labor.
-Subagent shares this project's tools and model registry but cannot see the main agent's history; agent-orchestration tools are excluded by default to prevent recursive dispatch.`,
+		Description: "Run a subtask in an isolated internal subagent session and return its final text.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

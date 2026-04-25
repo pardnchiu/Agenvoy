@@ -34,12 +34,7 @@ func registFetchPage() {
 		Name:       "fetch_page",
 		ReadOnly:   true,
 		Concurrent: true,
-		Description: `
-Fetch web page content and return it as Markdown to the agent, without writing to a file. Used for querying, summarizing, analyzing, and crawling.
-
-If you need to save locally, use save_page_to_file instead;
-
-Do not use this tool together with write_file to bypass file writing restrictions.`,
+		Description: "Fetch a web page and return its content as Markdown without saving it locally.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -1,6 +1,6 @@
 {
   "name": "world_bank_indicator",
-  "description": "透過 World Bank API 查詢各國經濟與發展指標，如 GDP、人口成長率、通膨率、失業率等。無需 API Key。",
+  "description": "Query a World Bank indicator for one country or all countries.",
   "endpoint": {
     "url": "https://api.worldbank.org/v2/country/{country}/indicator/{indicator}",
     "method": "GET",
@@ -10,35 +10,36 @@
   "parameters": {
     "country": {
       "type": "string",
-      "description": "國家 ISO 3166-1 alpha-2/alpha-3 代碼，或 all 查詢全部國家，例如 TW、USA、CN、JP",
+      "description": "ISO 3166-1 alpha-2 or alpha-3 country code, or 'all' for every country (for example, 'TW', 'USA', 'CN', 'JP').",
       "required": true
     },
     "indicator": {
       "type": "string",
-      "description": "指標代碼，常用值：NY.GDP.MKTP.CD（GDP 美元）、SP.POP.TOTL（人口）、FP.CPI.TOTL.ZG（通膨率）、SL.UEM.TOTL.ZS（失業率）、NY.GDP.PCAP.CD（人均 GDP）",
+      "description": "Indicator code such as 'NY.GDP.MKTP.CD' for GDP in USD, 'SP.POP.TOTL' for total population, 'FP.CPI.TOTL.ZG' for inflation, 'SL.UEM.TOTL.ZS' for unemployment, or 'NY.GDP.PCAP.CD' for GDP per capita.",
       "required": true
     },
     "format": {
       "type": "string",
-      "description": "回應格式",
+      "description": "Response format.",
       "required": false,
       "default": "json",
       "enum": ["json", "xml"]
     },
     "date": {
       "type": "string",
-      "description": "年份或範圍，例如 2023、2010:2023",
-      "required": false
+      "description": "Year or year range (for example, '2023' or '2010:2023').",
+      "required": false,
+      "default": ""
     },
     "mrv": {
       "type": "integer",
-      "description": "最近幾筆資料（Most Recent Values），例如 5 表示最近 5 年",
+      "description": "Number of most-recent values to return (for example, 5 returns the latest 5 years).",
       "required": false,
       "default": 5
     },
     "per_page": {
       "type": "integer",
-      "description": "每頁資料筆數",
+      "description": "Records per page.",
       "required": false,
       "default": 50
     }

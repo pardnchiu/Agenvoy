@@ -16,12 +16,7 @@ import (
 func registSavePageToFile() {
 	toolRegister.Regist(toolRegister.Def{
 		Name: "save_page_to_file",
-		Description: `
-Fetch webpage content and save it to a local file.
-
-If save_to is left empty, the file will be automatically saved to ~/Downloads or ~/.config/agenvoy/download/<page_name>.md.
-
-For viewing, summarizing, or analyzing only, use fetch_page instead.`,
+		Description: "Fetch a web page and save its content to a local file.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

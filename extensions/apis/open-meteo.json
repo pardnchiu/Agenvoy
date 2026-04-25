@@ -1,6 +1,6 @@
 {
   "name": "open_meteo",
-  "description": "透過 Open-Meteo 取得指定座標的天氣預報與即時氣象資料，無需 API Key。支援當前天氣、逐小時與每日預報。",
+  "description": "Get current weather and forecast data for the specified coordinates from Open-Meteo.",
   "endpoint": {
     "url": "https://api.open-meteo.com/v1/forecast",
     "method": "GET",
@@ -10,64 +10,67 @@
   "parameters": {
     "latitude": {
       "type": "number",
-      "description": "緯度（WGS84，-90 ~ 90）",
+      "description": "Latitude in WGS84 (-90 to 90).",
       "required": true
     },
     "longitude": {
       "type": "number",
-      "description": "經度（WGS84，-180 ~ 180）",
+      "description": "Longitude in WGS84 (-180 to 180).",
       "required": true
     },
     "current": {
       "type": "string",
-      "description": "即時天氣變數（逗號分隔），常用值：temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,uv_index",
-      "required": false
+      "description": "Comma-separated current-weather variables (for example, 'temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m').",
+      "required": false,
+      "default": ""
     },
     "hourly": {
       "type": "string",
-      "description": "逐小時預報變數（逗號分隔），常用值：temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m",
-      "required": false
+      "description": "Comma-separated hourly forecast variables (for example, 'temperature_2m,precipitation_probability,weather_code').",
+      "required": false,
+      "default": ""
     },
     "daily": {
       "type": "string",
-      "description": "每日統計變數（逗號分隔，需同時指定 timezone），常用值：temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,uv_index_max",
-      "required": false
+      "description": "Comma-separated daily statistics variables (for example, 'temperature_2m_max,temperature_2m_min,precipitation_sum'). Requires timezone.",
+      "required": false,
+      "default": ""
     },
     "timezone": {
       "type": "string",
-      "description": "IANA 時區（例如 Asia/Taipei、America/New_York），或 auto 自動偵測。使用 daily 時必填",
+      "description": "IANA timezone such as 'Asia/Taipei' or 'America/New_York'. Use 'auto' to detect. Required when daily is set.",
       "required": false,
       "default": "auto"
     },
     "forecast_days": {
       "type": "integer",
-      "description": "預報天數（0-16，預設 7）",
+      "description": "Number of forecast days (0-16).",
       "required": false,
       "default": 7
     },
     "past_days": {
       "type": "integer",
-      "description": "包含過去幾天的歷史資料（0-92）",
+      "description": "Number of past days to include (0-92).",
       "required": false,
       "default": 0
     },
     "temperature_unit": {
       "type": "string",
-      "description": "溫度單位",
+      "description": "Temperature unit.",
       "required": false,
       "default": "celsius",
       "enum": ["celsius", "fahrenheit"]
     },
     "wind_speed_unit": {
       "type": "string",
-      "description": "風速單位",
+      "description": "Wind speed unit.",
       "required": false,
       "default": "kmh",
       "enum": ["kmh", "ms", "mph", "kn"]
     },
     "precipitation_unit": {
       "type": "string",
-      "description": "降水量單位",
+      "description": "Precipitation unit.",
       "required": false,
       "default": "mm",
       "enum": ["mm", "inch"]

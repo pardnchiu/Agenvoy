@@ -23,9 +23,7 @@ func Register() {
 		Name:       "send_http_request",
 		ReadOnly:   true,
 		Concurrent: true,
-		Description: `
-Send an HTTP request.
-REST APIs, webhooks, arbitrary HTTP services.`,
+		Description: "Send an HTTP request to the specified URL.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -16,13 +16,13 @@ func registReadScript() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "read_script",
 		ReadOnly:    true,
-		Description: "讀取排程腳本的內容。用於查看或修改腳本前先確認內容。",
+		Description: "Read the contents of a scheduler script by filename.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"name": map[string]any{
 					"type":        "string",
-					"description": "腳本檔名（含副檔名，不含路徑），例如 'notify_1741569300.sh'",
+					"description": "Scheduler script filename including extension, for example 'notify_1741569300.sh'.",
 				},
 			},
 			"required": []string{"name"},

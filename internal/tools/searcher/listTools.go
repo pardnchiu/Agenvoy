@@ -14,9 +14,7 @@ func registListTools() {
 		Name:       "list_tools",
 		ReadOnly:   true,
 		Concurrent: true,
-		Description: `
- List all currently available tools, including built-in tools and dynamically loaded API tools (prefixed with api_*).
- Returns each tool's name and description.`,
+		Description: "List all currently available built-in and dynamically loaded tools.",
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},

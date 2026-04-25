@@ -1,6 +1,6 @@
 {
   "name": "nominatim_geocode",
-  "description": "透過 OpenStreetMap Nominatim 進行地理編碼（地址轉座標）與反向地理編碼（座標轉地址），無需 API Key。",
+  "description": "Geocode an address or place name, or reverse-geocode coordinates, using OpenStreetMap Nominatim.",
   "endpoint": {
     "url": "https://nominatim.openstreetmap.org/search",
     "method": "GET",
@@ -13,47 +13,52 @@
   "parameters": {
     "q": {
       "type": "string",
-      "description": "自由格式地址或地名查詢（例如：台北101、Eiffel Tower、1600 Pennsylvania Ave）",
-      "required": false
+      "description": "Free-form address or place query (for example, 'Taipei 101', 'Eiffel Tower', '1600 Pennsylvania Ave').",
+      "required": false,
+      "default": ""
     },
     "street": {
       "type": "string",
-      "description": "街道地址（結構化查詢，可與 city/country 搭配使用）",
-      "required": false
+      "description": "Street address for structured query, used together with city and country.",
+      "required": false,
+      "default": ""
     },
     "city": {
       "type": "string",
-      "description": "城市名稱（結構化查詢）",
-      "required": false
+      "description": "City name for structured query.",
+      "required": false,
+      "default": ""
     },
     "country": {
       "type": "string",
-      "description": "國家名稱或 ISO 3166-1 alpha-2 代碼（結構化查詢）",
-      "required": false
+      "description": "Country name or ISO 3166-1 alpha-2 code for structured query.",
+      "required": false,
+      "default": ""
     },
     "format": {
       "type": "string",
-      "description": "回應格式",
+      "description": "Response format.",
       "required": false,
       "default": "json",
       "enum": ["json", "jsonv2", "geojson"]
     },
     "limit": {
       "type": "integer",
-      "description": "最多回傳結果數量（1-50）",
+      "description": "Maximum number of results to return (1-50).",
       "required": false,
       "default": 5
     },
     "addressdetails": {
       "type": "integer",
-      "description": "是否包含詳細地址分解（0 或 1）",
+      "description": "Include detailed address components when set to 1.",
       "required": false,
       "default": 1
     },
     "countrycodes": {
       "type": "string",
-      "description": "限制搜尋範圍的國家代碼（逗號分隔 ISO 3166-1 alpha-2，例如 tw,jp,us）",
-      "required": false
+      "description": "Comma-separated ISO 3166-1 alpha-2 codes restricting the search (for example, 'tw,jp,us').",
+      "required": false,
+      "default": ""
     }
   },
   "response": {

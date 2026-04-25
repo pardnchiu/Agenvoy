@@ -1,6 +1,6 @@
 {
   "name": "usgs_earthquake",
-  "description": "透過 USGS Earthquake Hazards API 查詢全球即時或歷史地震資料，包含震級、深度、位置與時間。無需 API Key。",
+  "description": "Query real-time or historical earthquake data from the USGS Earthquake Hazards API.",
   "endpoint": {
     "url": "https://earthquake.usgs.gov/fdsnws/event/1/query",
     "method": "GET",
@@ -10,55 +10,62 @@
   "parameters": {
     "format": {
       "type": "string",
-      "description": "回應格式",
+      "description": "Response format.",
       "required": false,
       "default": "geojson",
       "enum": ["geojson", "csv", "text"]
     },
     "starttime": {
       "type": "string",
-      "description": "查詢起始時間（ISO 8601 格式），例如 2024-01-01 或 2024-01-01T00:00:00",
-      "required": false
+      "description": "Start time in ISO 8601 format (for example, '2024-01-01' or '2024-01-01T00:00:00').",
+      "required": false,
+      "default": ""
     },
     "endtime": {
       "type": "string",
-      "description": "查詢結束時間（ISO 8601 格式）。未指定則至今",
-      "required": false
+      "description": "End time in ISO 8601 format. Defaults to now when omitted.",
+      "required": false,
+      "default": ""
     },
     "minmagnitude": {
       "type": "number",
-      "description": "最小震級（黎克特制），例如 5.0",
-      "required": false
+      "description": "Minimum magnitude on the Richter scale (for example, 5.0).",
+      "required": false,
+      "default": 0
     },
     "maxmagnitude": {
       "type": "number",
-      "description": "最大震級",
-      "required": false
+      "description": "Maximum magnitude on the Richter scale.",
+      "required": false,
+      "default": 0
     },
     "latitude": {
       "type": "number",
-      "description": "中心點緯度（搭配 longitude、maxradiuskm 使用）",
-      "required": false
+      "description": "Center latitude, used together with longitude and maxradiuskm.",
+      "required": false,
+      "default": 0
     },
     "longitude": {
       "type": "number",
-      "description": "中心點經度",
-      "required": false
+      "description": "Center longitude.",
+      "required": false,
+      "default": 0
     },
     "maxradiuskm": {
       "type": "number",
-      "description": "搜尋半徑（公里），最大 20001.6",
-      "required": false
+      "description": "Search radius in kilometers (maximum 20001.6).",
+      "required": false,
+      "default": 0
     },
     "limit": {
       "type": "integer",
-      "description": "最多回傳筆數（最大 20000）",
+      "description": "Maximum number of results to return (maximum 20000).",
       "required": false,
       "default": 20
     },
     "orderby": {
       "type": "string",
-      "description": "排序方式",
+      "description": "Sort order.",
       "required": false,
       "default": "time",
       "enum": ["time", "time-asc", "magnitude", "magnitude-asc"]

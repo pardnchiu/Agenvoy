@@ -1,6 +1,6 @@
 {
   "name": "exchange_rate",
-  "description": "查詢指定貨幣對所有貨幣的即時匯率",
+  "description": "Get real-time exchange rates for the specified base currency.",
   "endpoint": {
     "url": "https://open.er-api.com/v6/latest/{currency}",
     "method": "GET",
@@ -9,7 +9,7 @@
   "parameters": {
     "currency": {
       "type": "string",
-      "description": "基準貨幣代碼（ISO 4217），例如 USD、TWD、JPY、EUR",
+      "description": "Base currency code in ISO 4217 format, for example USD, TWD, JPY, or EUR.",
       "required": true,
       "enum": ["USD", "TWD", "JPY", "EUR", "GBP", "CNY", "KRW", "HKD", "SGD", "AUD"]
     }

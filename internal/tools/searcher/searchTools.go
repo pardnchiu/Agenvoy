@@ -22,11 +22,7 @@ func registSearchTools() {
 		Name:       "search_tools",
 		ReadOnly:   true,
 		AlwaysLoad: true,
-		Description: `
-Search all available tools by keyword and inject matching tools into the current request.
-
-Always call this before using any tool to activate its full schema. Supports "select:<name>" for direct selection (comma-separated),
-space-separated keywords for fuzzy search, and "+" prefix for required terms (e.g. "+file read").`,
+		Description: "Search available tools by keyword and inject matching tools into the current request.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

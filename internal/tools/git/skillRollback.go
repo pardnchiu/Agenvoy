@@ -13,13 +13,13 @@ import (
 func skillRollback() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "skill_git_rollback",
-		Description: "將 ~/.config/agenvoy/skills 回朔至指定的 git commit。使用 skill_git_log 取得 commit hash 後呼叫。此操作不可逆，會丟失該 commit 之後的所有變更。",
+		Description: "Roll back ~/.config/agenvoy/skills to the specified git commit.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"commit": map[string]any{
 					"type":        "string",
-					"description": "目標 commit hash（至少 7 字元）或 ref（例如 HEAD~1）",
+					"description": "Target commit hash (at least 7 characters) or ref such as HEAD~1.",
 				},
 			},
 			"required": []string{"commit"},

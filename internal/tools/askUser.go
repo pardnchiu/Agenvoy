@@ -26,10 +26,7 @@ func registAskUser() {
 		Name:       "ask_user",
 		ReadOnly:   true,
 		AlwaysLoad: true,
-		Description: `
-Ask the user one or more questions and wait for typed/selected answers.
-Use when a skill or flow needs runtime input from the user (e.g. config fields, confirmations, choices).
-Only works in single-shot CLI mode (make cli/run); errors out in TUI/Discord/REST.`,
+		Description: "Ask the user one or more questions and return their answers.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

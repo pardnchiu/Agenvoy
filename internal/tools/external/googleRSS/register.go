@@ -21,10 +21,7 @@ func Register() {
 		Name:       "fetch_google_rss",
 		ReadOnly:   true,
 		Concurrent: true,
-		Description: `
-Search Google News RSS; returns title, summary, link.
-RSS gives snippets only.
-For research tasks (compilation, analysis, reports, investigations), must follow up with fetch_page on each link — do not rely on RSS summaries alone.`,
+		Description: "Search Google News RSS and return article titles, summaries, and links.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

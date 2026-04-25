@@ -14,13 +14,13 @@ func skillLog() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "skill_git_log",
 		ReadOnly:    true,
-		Description: "列出 ~/.config/agenvoy/skills 的 git commit 歷史記錄（oneline 格式），用於追蹤 skill 的新增與修改歷程，或在回朔前確認目標 commit hash。",
+		Description: "List the git commit history for ~/.config/agenvoy/skills in oneline format.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"limit": map[string]any{
 					"type":        "integer",
-					"description": "最多顯示幾筆，預設 20，最大 100",
+					"description": "Maximum number of commits to show. Default 20, maximum 100.",
 					"default":     20,
 				},
 			},

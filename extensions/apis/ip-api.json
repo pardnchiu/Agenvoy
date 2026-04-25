@@ -1,6 +1,6 @@
 {
   "name": "ip_location",
-  "description": "查詢指定 IP 的地理位置資訊，包含國家、城市、ISP、時區、經緯度等。留空則查詢本機 IP",
+  "description": "Get geolocation details for an IP address, or the local IP when omitted.",
   "endpoint": {
     "url": "http://ip-api.com/json/{ip}",
     "method": "GET",
@@ -9,7 +9,7 @@
   "parameters": {
     "ip": {
       "type": "string",
-      "description": "要查詢的 IP 位址（IPv4 或 IPv6）。留空則查詢本機 IP",
+      "description": "IPv4 or IPv6 address to look up. Leave empty to use the local IP.",
       "required": false,
       "default": ""
     }

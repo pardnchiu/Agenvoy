@@ -25,10 +25,12 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 				"path": map[string]any{
 					"type":        "string",
 					"description": "File to write (e.g. '/abs/path/foo.go', '~/notes.md'). When executable is true, provide only the filename (e.g. 'notify.sh').",
+					"default":     "",
 				},
 				"name": map[string]any{
 					"type":        "string",
 					"description": "Alias for path when executable is true (e.g. 'notify.sh').",
+					"default":     "",
 				},
 				"content": map[string]any{
 					"type":        "string",

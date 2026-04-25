@@ -15,9 +15,7 @@ func registListCrons() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:     "list_crons",
 		ReadOnly: true,
-		Description: `
-List all active recurring cron tasks.
-Use to discover task IDs needed by get_cron, update_cron, or remove_cron.`,
+		Description: "List all active recurring cron tasks.",
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},

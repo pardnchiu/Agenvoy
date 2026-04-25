@@ -23,7 +23,7 @@ Requires a script filename returned by write_script; multiple cron entries may s
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"cron_expr": map[string]any{
+				"cron_expression": map[string]any{
 					"type":        "string",
 					"description": "Standard 5-field cron expression '{min} {hour} {day} {month} {weekday}' (e.g. '* * * * *', '0 9 * * 1', '*/5 * * * *').",
 				},

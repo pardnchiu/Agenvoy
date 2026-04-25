@@ -1,6 +1,6 @@
 {
   "name": "hackernews_item",
-  "description": "透過 Hacker News Firebase API 查詢文章、留言、工作或投票項目的詳細資訊，或取得熱門/最新/最佳文章清單。無需 API Key。",
+  "description": "Get a Hacker News item by ID from the Firebase API.",
   "endpoint": {
     "url": "https://hacker-news.firebaseio.com/v0/item/{id}.json",
     "method": "GET",
@@ -10,7 +10,7 @@
   "parameters": {
     "id": {
       "type": "integer",
-      "description": "Hacker News 項目 ID（文章、留言、工作等）",
+      "description": "Hacker News item ID.",
       "required": true
     }
   },

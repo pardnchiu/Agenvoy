@@ -15,9 +15,7 @@ func registListTools() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:     "list_tasks",
 		ReadOnly: true,
-		Description: `
-List all pending one-shot tasks.
-Use to discover task IDs needed by get_task, update_task, or remove_task.`,
+		Description: "List all pending one-shot tasks.",
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},

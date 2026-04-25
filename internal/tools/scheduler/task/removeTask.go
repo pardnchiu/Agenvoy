@@ -15,10 +15,7 @@ import (
 func registRemoveTask() {
 	toolRegister.Regist(toolRegister.Def{
 		Name: "remove_task",
-		Description: `
-Cancel a pending one-shot task by ID and delete its script file.
-Call only when the user explicitly asks to delete a schedule; never invoke during a creation flow.
-If no ID is given, call list_tasks first; auto-remove only when exactly one task exists, otherwise return the list and wait for confirmation.`,
+		Description: "Cancel a pending one-shot task by ID and delete its script file.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

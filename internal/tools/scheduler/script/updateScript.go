@@ -14,17 +14,17 @@ import (
 func registUpdateScript() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "update_script",
-		Description: "覆寫已存在的排程腳本內容。用於修改現有腳本，不改變檔名，不影響已設定的排程。先用 read_script 確認內容後再呼叫。",
+		Description: "Overwrite an existing scheduler script without changing its filename.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"name": map[string]any{
 					"type":        "string",
-					"description": "要覆寫的腳本檔名（含副檔名，不含路徑），例如 'notify_1741569300.sh'",
+					"description": "Scheduler script filename to overwrite, including extension.",
 				},
 				"content": map[string]any{
 					"type":        "string",
-					"description": "新的腳本內容",
+					"description": "New script content.",
 				},
 			},
 			"required": []string{"name", "content"},

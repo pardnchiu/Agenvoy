@@ -1,6 +1,6 @@
 {
   "name": "wikipedia_summary",
-  "description": "透過 Wikipedia REST API 查詢指定條目的摘要，包含標題、描述、摘要文字與縮圖。無需 API Key。",
+  "description": "Get the summary for a Wikipedia page title.",
   "endpoint": {
     "url": "https://en.wikipedia.org/api/rest_v1/page/summary/{title}",
     "method": "GET",
@@ -10,7 +10,7 @@
   "parameters": {
     "title": {
       "type": "string",
-      "description": "Wikipedia 條目標題（英文，空格以底線替代），例如 Taiwan、Eiffel_Tower、Artificial_intelligence",
+      "description": "Wikipedia page title in English, with spaces replaced by underscores (for example, 'Taiwan', 'Eiffel_Tower', 'Artificial_intelligence').",
       "required": true
     }
   },

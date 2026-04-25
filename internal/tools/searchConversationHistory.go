@@ -41,10 +41,7 @@ func registSearchConversationHistory() {
 		Name:       "search_conversation_history",
 		ReadOnly:   true,
 		Concurrent: true,
-		Description: `
-Search this session's past messages by literal keyword and semantic similarity.
-Recall earlier context outside the current window — prior decisions, files discussed, errors seen.
-Each hit returns surrounding messages for scene context.`,
+		Description: "Search this session's past messages by keyword and semantic similarity.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

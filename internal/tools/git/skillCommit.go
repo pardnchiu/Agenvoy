@@ -13,18 +13,18 @@ import (
 func skillCommit() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "skill_git_commit",
-		Description: "將 ~/.config/agenvoy/skills 目錄下的所有變更提交至 git。commit message 格式為 {act}_{skill_name}_{YYYYMMDD}。act 只能是 'add' 或 'update'。每次新增或修改 skill 後必須呼叫。",
+		Description: "Commit all changes under ~/.config/agenvoy/skills to git using the required commit message format.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"act": map[string]any{
 					"type":        "string",
 					"enum":        []string{"add", "update"},
-					"description": "操作類型：'add' 代表新增 skill，'update' 代表修改既有 skill",
+					"description": "Action type: 'add' for a new skill, 'update' for an existing skill.",
 				},
 				"skill_name": map[string]any{
 					"type":        "string",
-					"description": "Skill 名稱，使用 hyphen-case（例如 'my-skill'）",
+					"description": "Skill name in hyphen-case (for example, 'my-skill').",
 				},
 			},
 			"required": []string{"act", "skill_name"},

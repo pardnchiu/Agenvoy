@@ -28,6 +28,7 @@ Scope with file_pattern glob (e.g. '**/*.go', 'configs/**').`,
 				"dir": map[string]any{
 					"type":        "string",
 					"description": "Directory to search in (e.g. '.', '~/downloads', '/abs/path'). Defaults to current working directory.",
+					"default":     ".",
 				},
 				"pattern": map[string]any{
 					"type":        "string",
@@ -36,6 +37,7 @@ Scope with file_pattern glob (e.g. '**/*.go', 'configs/**').`,
 				"file_pattern": map[string]any{
 					"type":        "string",
 					"description": "Glob relative to dir to narrow files (e.g. '**/*.go', 'configs/**/*.json').",
+					"default":     "**/*",
 				},
 			},
 			"required": []string{

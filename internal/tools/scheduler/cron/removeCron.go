@@ -15,10 +15,7 @@ import (
 func registRemoveCron() {
 	toolRegister.Regist(toolRegister.Def{
 		Name: "remove_cron",
-		Description: `
-Remove a recurring cron task by ID.
-Call only when the user explicitly asks to delete a schedule; never invoke during a creation flow.
-If no ID is given, call list_crons first; auto-remove only when exactly one task exists, otherwise return the list and wait for confirmation.`,
+		Description: "Remove a recurring cron task by ID.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

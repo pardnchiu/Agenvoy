@@ -1,6 +1,6 @@
 {
   "name": "coingecko_price",
-  "description": "透過 CoinGecko 查詢加密貨幣即時價格、市值、24h 交易量與漲跌幅，無需 API Key。",
+  "description": "Get real-time cryptocurrency prices, market caps, 24-hour volume, and price change from CoinGecko.",
   "endpoint": {
     "url": "https://api.coingecko.com/api/v3/simple/price",
     "method": "GET",
@@ -10,36 +10,36 @@
   "parameters": {
     "ids": {
       "type": "string",
-      "description": "CoinGecko 幣種 ID（逗號分隔），例如 bitcoin,ethereum,solana,dogecoin,binancecoin",
+      "description": "Comma-separated CoinGecko coin IDs (for example, 'bitcoin,ethereum,solana,dogecoin,binancecoin').",
       "required": true
     },
     "vs_currencies": {
       "type": "string",
-      "description": "計價貨幣（逗號分隔），例如 usd,twd,jpy,eur",
-      "required": true,
+      "description": "Comma-separated quote currencies (for example, 'usd,twd,jpy,eur'). Defaults to 'usd' when omitted.",
+      "required": false,
       "default": "usd"
     },
     "include_market_cap": {
       "type": "boolean",
-      "description": "是否包含市值",
+      "description": "Include market cap data when true.",
       "required": false,
       "default": false
     },
     "include_24hr_vol": {
       "type": "boolean",
-      "description": "是否包含 24 小時交易量",
+      "description": "Include 24-hour trading volume when true.",
       "required": false,
       "default": false
     },
     "include_24hr_change": {
       "type": "boolean",
-      "description": "是否包含 24 小時漲跌幅（百分比）",
+      "description": "Include 24-hour price change percentage when true.",
       "required": false,
       "default": false
     },
     "include_last_updated_at": {
       "type": "boolean",
-      "description": "是否包含最後更新時間（Unix timestamp）",
+      "description": "Include last updated Unix timestamp when true.",
       "required": false,
       "default": false
     }

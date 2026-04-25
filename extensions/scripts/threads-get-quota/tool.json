@@ -1,6 +1,6 @@
 {
   "name": "threads-get-quota",
-  "description": "查詢 Threads 今日發文配額使用狀況，包含已用量與上限（每日 250 則）。",
+  "description": "Get today's Threads publishing quota usage and limit.",
   "parameters": {
     "type": "object",
     "properties": {}

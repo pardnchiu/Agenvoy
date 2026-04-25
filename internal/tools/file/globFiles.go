@@ -26,6 +26,7 @@ Locate specific file types (e.g. '**/*.go' for Go files).`,
 				"dir": map[string]any{
 					"type":        "string",
 					"description": "Directory to search in (e.g. '.', '~/downloads', '/abs/path'). Defaults to current working directory.",
+					"default":     ".",
 				},
 				"pattern": map[string]any{
 					"type":        "string",
