@@ -14,18 +14,22 @@ import (
 
 func registGetCron() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "get_cron",
-		ReadOnly:    true,
-		Description: "查詢指定 ID 的 cron 任務設定與最後一次執行狀態（completed/failed）、執行時間、輸出結果與錯誤訊息。",
+		Name:     "get_cron",
+		ReadOnly: true,
+		Description: `
+Inspect a cron task's configuration and its last run state.
+Use to verify schedule wiring after add_cron or to diagnose a failed run.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"id": map[string]any{
 					"type":        "string",
-					"description": "cron 任務 ID（由 add_cron 或 list_crons 回傳）",
+					"description": "Cron task ID returned by add_cron or list_crons.",
 				},
 			},
-			"required": []string{"id"},
+			"required": []string{
+				"id",
+			},
 		},
 		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -34,25 +38,32 @@ func registGetCron() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			c, r, ok := crons.GetCron(scheduler.Get(), params.ID)
+
+			id := strings.TrimSpace(params.ID)
+			if id == "" {
+				return "", fmt.Errorf("id is required")
+			}
+
+			item, result, ok := crons.GetCron(scheduler.Get(), id)
 			if !ok {
-				return "", fmt.Errorf("not found: %s", params.ID)
+				return "", fmt.Errorf("not found: %s", id)
 			}
+
 			lines := []string{
-				fmt.Sprintf("id: %s", c.ID),
-				fmt.Sprintf("expression: %s", c.Expression),
-				fmt.Sprintf("script: %s", c.Script),
+				fmt.Sprintf("id: %s", item.ID),
+				fmt.Sprintf("expression: %s", item.Expression),
+				fmt.Sprintf("script: %s", item.Script),
 			}
-			if r != nil {
-				if r.RunAt != nil {
-					lines = append(lines, fmt.Sprintf("last_run_at: %s", r.RunAt.Local().Format("2006-01-02 15:04:05")))
+			if result != nil {
+				if result.RunAt != nil {
+					lines = append(lines, fmt.Sprintf("last_run_at: %s", result.RunAt.Local().Format("2006-01-02 15:04:05")))
 				}
-				lines = append(lines, fmt.Sprintf("last_run_status: %s", r.Status))
-				if r.Output != "" {
-					lines = append(lines, fmt.Sprintf("last_run_output: %s", r.Output))
+				lines = append(lines, fmt.Sprintf("last_run_status: %s", result.Status))
+				if result.Output != "" {
+					lines = append(lines, fmt.Sprintf("last_run_output: %s", result.Output))
 				}
-				if r.Err != "" {
-					lines = append(lines, fmt.Sprintf("last_run_err: %s", r.Err))
+				if result.Err != "" {
+					lines = append(lines, fmt.Sprintf("last_run_err: %s", result.Err))
 				}
 			}
 			return strings.Join(lines, "\n"), nil

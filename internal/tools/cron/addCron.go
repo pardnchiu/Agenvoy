@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
 	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
@@ -14,49 +15,68 @@ import (
 
 func registAddCron() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "add_cron",
-		Description: "新增重複性定時任務（recurring cron job）。使用標準 cron 表達式（`* * * * *`，依序為 分 時 日 月 週），每次到達排程時間即執行腳本。任務持久保存，重啟後仍會繼續執行。【必須先呼叫 write_script，將回傳的實際檔名填入 script；多個不同時間的 cron 可共用同一個 script 檔名，無需重複呼叫 write_script】若設定 discord_channel_id，每次執行完畢後會將輸出傳送到指定 Discord 頻道。回傳結果包含 task ID。",
+		Name: "add_cron",
+		Description: `
+Schedule a recurring task driven by a standard cron expression.
+Run a script on a repeating timetable (every minute, hourly, daily, weekly).
+Requires a script filename returned by write_script; multiple cron entries may share one script.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"cron_expr": map[string]any{
 					"type":        "string",
-					"description": "標準 cron 表達式，5 個欄位空格分隔：`{分} {時} {日} {月} {週}`。支援 `*`（任意）、`*/n`（每 n 單位）、`n`（精確值）、`n,m`（列舉）、`n-m`（範圍）。範例：`* * * * *`（每分鐘）、`0 9 * * 1`（每週一早上 9 點）、`*/5 * * * *`（每 5 分鐘）",
+					"description": "Standard 5-field cron expression '{min} {hour} {day} {month} {weekday}' (e.g. '* * * * *', '0 9 * * 1', '*/5 * * * *').",
 				},
 				"script": map[string]any{
 					"type":        "string",
-					"description": "write_script 回傳的實際檔名（含 timestamp 後綴），例如 'backup_1741569300.sh'",
+					"description": "Filename returned by write_script (e.g. 'backup_1741569300.sh').",
 				},
 				"channel_id": map[string]any{
 					"type":        "string",
-					"description": "（可選）每次執行完畢後要回傳結果的 Discord 頻道 ID",
+					"description": "Discord channel ID to post each run's output to. Optional.",
 				},
 			},
-			"required": []string{"cron_expr", "script"},
+			"required": []string{
+				"cron_expression",
+				"script",
+			},
 		},
 		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
-				CronExpr  string `json:"cron_expr"`
-				Script    string `json:"script"`
-				ChannelID string `json:"channel_id"`
+				CronExpression string `json:"cron_expression"`
+				Script         string `json:"script"`
+				ChannelID      string `json:"channel_id"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			if params.ChannelID == "" {
+
+			cronExpression := strings.TrimSpace(params.CronExpression)
+			if cronExpression == "" {
+				return "", fmt.Errorf("cron_expression is required")
+			}
+
+			script := strings.TrimSpace(params.Script)
+			if script == "" {
+				return "", fmt.Errorf("script is required")
+			}
+
+			channelId := strings.TrimSpace(params.ChannelID)
+			if channelId == "" {
 				if id, err := session.GetChannelID(e.SessionID); err == nil {
-					params.ChannelID = id
+					channelId = id
 				}
 			}
-			mgr := scheduler.Get()
-			if mgr == nil {
-				msg, err := crons.AddToFile(params.CronExpr, params.Script, params.ChannelID)
+
+			sched := scheduler.Get()
+			if sched == nil {
+				msg, err := crons.AddToFile(cronExpression, script, channelId)
 				if err != nil {
 					return "", err
 				}
-				return msg + "\n排程已寫入檔案，但需啟動 app 才能實際執行。", nil
+				return fmt.Sprintf("added cron to file: %s", msg), nil
 			}
-			return crons.Add(mgr, params.CronExpr, params.Script, params.ChannelID)
+			return crons.Add(sched, cronExpression, script, channelId)
 		},
 	})
 

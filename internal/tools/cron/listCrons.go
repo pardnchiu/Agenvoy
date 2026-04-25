@@ -13,9 +13,11 @@ import (
 
 func registListCrons() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "list_crons",
-		ReadOnly:    true,
-		Description: "列出所有目前啟用中的重複性 cron 任務，每行一筆，格式為 `{index}. {cron_expr} {script} [{channel_id}]`。index 為移除時所需的編號。",
+		Name:     "list_crons",
+		ReadOnly: true,
+		Description: `
+List all active recurring cron tasks.
+Use to discover task IDs needed by get_cron, update_cron, or remove_cron.`,
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},
@@ -25,8 +27,9 @@ func registListCrons() {
 			if err != nil {
 				return "", err
 			}
+
 			if len(results) == 0 {
-				return "no cron tasks", nil
+				return "please add cron first", nil
 			}
 			return strings.Join(results, "\n"), nil
 		},

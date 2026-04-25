@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
 	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
@@ -13,14 +14,17 @@ import (
 
 func registRemoveCron() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "remove_cron",
-		Description: "移除指定 ID 的重複性 cron 任務。**僅限使用者明確要求刪除排程時才可呼叫，禁止在建立排程流程中主動呼叫。** 若使用者未指定 ID：先呼叫 list_crons 取得列表，若只有一筆直接移除，若有多筆必須將列表回覆使用者並等待確認。",
+		Name: "remove_cron",
+		Description: `
+Remove a recurring cron task by ID.
+Call only when the user explicitly asks to delete a schedule; never invoke during a creation flow.
+If no ID is given, call list_crons first; auto-remove only when exactly one task exists, otherwise return the list and wait for confirmation.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"id": map[string]any{
 					"type":        "string",
-					"description": "任務 ID（由 list_crons 回傳的第一欄）",
+					"description": "Cron task ID returned by list_crons.",
 				},
 			},
 			"required": []string{"id"},
@@ -32,10 +36,16 @@ func registRemoveCron() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			if err := crons.Delete(scheduler.Get(), params.ID); err != nil {
+
+			id := strings.TrimSpace(params.ID)
+			if id == "" {
+				return "", fmt.Errorf("id is required")
+			}
+
+			if err := crons.Delete(scheduler.Get(), id); err != nil {
 				return "", err
 			}
-			return fmt.Sprintf("cron task %s removed", params.ID), nil
+			return fmt.Sprintf("removed cron: %s", id), nil
 		},
 	})
 }
