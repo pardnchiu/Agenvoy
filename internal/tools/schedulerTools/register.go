@@ -10,7 +10,6 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
-	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
 	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -18,146 +17,6 @@ import (
 )
 
 func init() {
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "add_cron",
-		Description: "新增重複性定時任務（recurring cron job）。使用標準 cron 表達式（`* * * * *`，依序為 分 時 日 月 週），每次到達排程時間即執行腳本。任務持久保存，重啟後仍會繼續執行。【必須先呼叫 write_script，將回傳的實際檔名填入 script；多個不同時間的 cron 可共用同一個 script 檔名，無需重複呼叫 write_script】若設定 discord_channel_id，每次執行完畢後會將輸出傳送到指定 Discord 頻道。回傳結果包含 task ID。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"cron_expr": map[string]any{
-					"type":        "string",
-					"description": "標準 cron 表達式，5 個欄位空格分隔：`{分} {時} {日} {月} {週}`。支援 `*`（任意）、`*/n`（每 n 單位）、`n`（精確值）、`n,m`（列舉）、`n-m`（範圍）。範例：`* * * * *`（每分鐘）、`0 9 * * 1`（每週一早上 9 點）、`*/5 * * * *`（每 5 分鐘）",
-				},
-				"script": map[string]any{
-					"type":        "string",
-					"description": "write_script 回傳的實際檔名（含 timestamp 後綴），例如 'backup_1741569300.sh'",
-				},
-				"channel_id": map[string]any{
-					"type":        "string",
-					"description": "（可選）每次執行完畢後要回傳結果的 Discord 頻道 ID",
-				},
-			},
-			"required": []string{"cron_expr", "script"},
-		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				CronExpr  string `json:"cron_expr"`
-				Script    string `json:"script"`
-				ChannelID string `json:"channel_id"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			if params.ChannelID == "" {
-				if id, err := session.GetChannelID(e.SessionID); err == nil {
-					params.ChannelID = id
-				}
-			}
-			mgr := scheduler.Get()
-			if mgr == nil {
-				msg, err := crons.AddToFile(params.CronExpr, params.Script, params.ChannelID)
-				if err != nil {
-					return "", err
-				}
-				return msg + "\n排程已寫入檔案，但需啟動 app 才能實際執行。", nil
-			}
-			return crons.Add(mgr, params.CronExpr, params.Script, params.ChannelID)
-		},
-	})
-
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "list_crons",
-		ReadOnly:    true,
-		Description: "列出所有目前啟用中的重複性 cron 任務，每行一筆，格式為 `{index}. {cron_expr} {script} [{channel_id}]`。index 為移除時所需的編號。",
-		Parameters: map[string]any{
-			"type":       "object",
-			"properties": map[string]any{},
-		},
-		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
-			results, err := crons.List(scheduler.Get())
-			if err != nil {
-				return "", err
-			}
-			if len(results) == 0 {
-				return "no cron tasks", nil
-			}
-			return strings.Join(results, "\n"), nil
-		},
-	})
-
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "get_cron",
-		ReadOnly:    true,
-		Description: "查詢指定 ID 的 cron 任務設定與最後一次執行狀態（completed/failed）、執行時間、輸出結果與錯誤訊息。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id": map[string]any{
-					"type":        "string",
-					"description": "cron 任務 ID（由 add_cron 或 list_crons 回傳）",
-				},
-			},
-			"required": []string{"id"},
-		},
-		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				ID string `json:"id"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			c, r, ok := crons.GetCron(scheduler.Get(), params.ID)
-			if !ok {
-				return "", fmt.Errorf("not found: %s", params.ID)
-			}
-			lines := []string{
-				fmt.Sprintf("id: %s", c.ID),
-				fmt.Sprintf("expression: %s", c.Expression),
-				fmt.Sprintf("script: %s", c.Script),
-			}
-			if r != nil {
-				if r.RunAt != nil {
-					lines = append(lines, fmt.Sprintf("last_run_at: %s", r.RunAt.Local().Format("2006-01-02 15:04:05")))
-				}
-				lines = append(lines, fmt.Sprintf("last_run_status: %s", r.Status))
-				if r.Output != "" {
-					lines = append(lines, fmt.Sprintf("last_run_output: %s", r.Output))
-				}
-				if r.Err != "" {
-					lines = append(lines, fmt.Sprintf("last_run_err: %s", r.Err))
-				}
-			}
-			return strings.Join(lines, "\n"), nil
-		},
-	})
-
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "remove_cron",
-		Description: "移除指定 ID 的重複性 cron 任務。**僅限使用者明確要求刪除排程時才可呼叫，禁止在建立排程流程中主動呼叫。** 若使用者未指定 ID：先呼叫 list_crons 取得列表，若只有一筆直接移除，若有多筆必須將列表回覆使用者並等待確認。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id": map[string]any{
-					"type":        "string",
-					"description": "任務 ID（由 list_crons 回傳的第一欄）",
-				},
-			},
-			"required": []string{"id"},
-		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				ID string `json:"id"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			if err := crons.Delete(scheduler.Get(), params.ID); err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("cron task %s removed", params.ID), nil
-		},
-	})
-
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "add_task",
 		Description: "設定一次性定時任務，到達指定時間時執行腳本，執行後自動從排程中移除並刪除對應腳本檔案。【必須先呼叫 write_script，並將其回傳的實際檔名填入 script】若設定 discord_channel_id，腳本執行完畢後會將輸出結果自動傳送到該 Discord 頻道。回傳結果包含 task ID。",
@@ -296,38 +155,6 @@ func init() {
 				return "", err
 			}
 			return fmt.Sprintf("onetime task %s removed", params.ID), nil
-		},
-	})
-
-	toolRegister.Regist(toolRegister.Def{
-		Name:        "update_cron",
-		Description: "修改已存在的 cron 任務的執行時間表達式，不刪除腳本、不影響其他設定。若要修改腳本內容請用 update_script。",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id": map[string]any{
-					"type":        "string",
-					"description": "要修改的 cron 任務 ID（由 list_crons 回傳）",
-				},
-				"cron_expr": map[string]any{
-					"type":        "string",
-					"description": "新的 cron 表達式，5 個欄位：`{分} {時} {日} {月} {週}`",
-				},
-			},
-			"required": []string{"id", "cron_expr"},
-		},
-		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				ID       string `json:"id"`
-				CronExpr string `json:"cron_expr"`
-			}
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			if err := crons.Update(scheduler.Get(), params.ID, params.CronExpr); err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("cron %s updated: %s", params.ID, params.CronExpr), nil
 		},
 	})
 

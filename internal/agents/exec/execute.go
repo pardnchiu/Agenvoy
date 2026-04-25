@@ -24,7 +24,7 @@ import (
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools"
-	"github.com/pardnchiu/agenvoy/internal/tools/toolSearcher"
+	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 

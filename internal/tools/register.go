@@ -6,12 +6,13 @@ import (
 	"fmt"
 
 	"github.com/pardnchiu/agenvoy/internal/tools/calculator"
+	cronTools "github.com/pardnchiu/agenvoy/internal/tools/cron"
 	"github.com/pardnchiu/agenvoy/internal/tools/errorMemory"
 	"github.com/pardnchiu/agenvoy/internal/tools/external"
 	"github.com/pardnchiu/agenvoy/internal/tools/externalAgent"
 	"github.com/pardnchiu/agenvoy/internal/tools/file"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
-	"github.com/pardnchiu/agenvoy/internal/tools/toolSearcher"
+	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 
 	"github.com/pardnchiu/agenvoy/internal/tools/fetchPage"
@@ -27,6 +28,7 @@ func init() {
 	fetchPage.Register()
 	file.Register()
 	errorMemory.Register()
+	cronTools.Register()
 	toolSearcher.Register()
 
 	registRunCommand()
