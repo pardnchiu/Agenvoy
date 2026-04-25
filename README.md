@@ -56,7 +56,7 @@ graph TB
 
     subgraph Engine ["Execution Engine"]
         Run["exec.Run()\nprefix detect → SelectAgent → Execute"]
-        Execute["exec.Execute()\n≤128 iterations\nskill activates via select_skill tool"]
+        Execute["exec.Execute()\n≤128 iterations\nskill activates via activate_skill tool"]
     end
 
     subgraph Providers ["LLM Providers"]
@@ -68,7 +68,7 @@ graph TB
     end
 
     subgraph Tools ["Tool Subsystem"]
-        T["File · Web · API · Script · Skill (select_skill)\nScheduler · Error Memory · Sub-Agent"]
+        T["File · Web · API · Script · Skill (activate_skill)\nScheduler · Error Memory · Sub-Agent"]
     end
 
     subgraph Memory ["Memory Layer"]
@@ -115,7 +115,7 @@ First-party packages Agenvoy pulls in directly from its author's ecosystem.
 
 ### Embedded Store as Memory Backbone — [pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)
 
-A lightweight embedded key-value store that serves as Agenvoy's single persistence backbone. Session history, error memory, and web tool caches (`fetch_page` / `search_web` / `fetch_google_rss`) all live behind a thin `internal/filesystem/store` wrapper instead of scattered JSON files. This collapses per-subsystem file formats into one indexed, atomic store, lets `search_conversation_history` and `search_errors` scan sessions without walking the filesystem, and reduces cache invalidation to a single key delete.
+A lightweight embedded key-value store that serves as Agenvoy's single persistence backbone. Session history, error memory, and web tool caches (`fetch_page` / `search_web` / `fetch_google_rss`) all live behind a thin `internal/filesystem/store` wrapper instead of scattered JSON files. This collapses per-subsystem file formats into one indexed, atomic store, lets `search_conversation_history` and `search_error_memory` scan sessions without walking the filesystem, and reduces cache invalidation to a single key delete.
 
 ### Shared Utility Library — [pardnchiu/go-utils](https://github.com/pardnchiu/go-utils)
 

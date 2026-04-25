@@ -340,13 +340,13 @@ agen planner
 | `list_files` | `path`, `recursive` | 列出目錄內容 |
 | `glob_files` | `pattern` | Glob 比對（例如 `**/*.go`） |
 | `search_content` | `pattern`, `file_pattern` | 以 regex 搜尋檔案內容 |
-| `patch_edit` | `path`, `old_string`, `new_string` | 首次命中字串替換（比完整重寫安全） |
+| `patch_file` | `path`, `old_string`, `new_string` | 首次命中字串替換（比完整重寫安全） |
 | `search_conversation_history` | `keyword`, `time_range` | 在 ToriiDB 中查詢當前 session 的歷史紀錄 |
-| `get_tool_error` | `hash` | 以 hash 取回失敗工具呼叫的完整錯誤細節 |
+| `read_error_memory` | `hash` | 以 hash 取回失敗工具呼叫的完整錯誤細節 |
 | `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | 將錯誤解決方案寫入錯誤知識庫 |
-| `search_errors` | `keyword` | 查詢錯誤知識庫 |
+| `search_error_memory` | `keyword` | 查詢錯誤知識庫 |
 | `fetch_yahoo_finance` | `symbol`, `interval`, `range` | 取得 Yahoo Finance 報價與 OHLCV；query1/query2 並行，回傳最快者 |
-| `analyze_youtube` | `url` | YouTube 影片 metadata（標題、說明、頻道、時長、觀看數） |
+| `fetch_youtube_transcript` | `url` | YouTube 影片逐字稿（含時間戳） |
 | `fetch_google_rss` | `keyword`, `time`, `lang` | Google News RSS，含去重 |
 | `send_http_request` | `method`, `url`, `headers`, `body` | 通用 HTTP 請求 |
 | `search_web` | `query`, `time_range` | DuckDuckGo lite endpoint 網頁搜尋；`time_range` 僅接受 `1d` / `7d` / `1m` / `1y` |

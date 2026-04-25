@@ -59,7 +59,7 @@ flowchart TD
     Enter["exec.Execute() 進入點"]
 
     subgraph Preseed ["Pre-loop · 僅當 matchedSkill != nil"]
-        AssignSynth["assignSkill()\n合成 select_skill 的\ntool_call + tool_result\n寫入 ToolHistories\n（skill body + 執行指引）"]
+        AssignSynth["assignSkill()\n合成 activate_skill 的\ntool_call + tool_result\n寫入 ToolHistories\n（skill body + 執行指引）"]
     end
 
     subgraph Loop ["迭代迴圈 · exec.Execute()"]
@@ -69,7 +69,7 @@ flowchart TD
         Send["Agent.Send()\n統一 provider 介面"]
         Parse["解析回應\n抽取 tool_calls"]
         Dispatch["派送 tool calls\n並行執行"]
-        SkillToolCall["select_skill handler\nRenderActivation(skill)\n作為 tool_result 回傳\n（LLM 主動名稱比對路徑）"]
+        SkillToolCall["activate_skill handler\nRenderActivation(skill)\n作為 tool_result 回傳\n（LLM 主動名稱比對路徑）"]
         Dedup["Hash 去重\n避免相同呼叫重跑"]
         Accum["累積結果\n附加至訊息歷史"]
         Check{"停止條件？\n無 tool_calls\n或 iteration ≥ 128"}
@@ -88,7 +88,7 @@ flowchart TD
     ReactTrim -->|"否"| Send
     Send --> Parse
     Parse --> Dispatch
-    Dispatch -->|"name == select_skill"| SkillToolCall
+    Dispatch -->|"name == activate_skill"| SkillToolCall
     SkillToolCall --> Accum
     Dispatch --> Dedup
     Dedup --> Accum
@@ -203,11 +203,11 @@ flowchart TD
     Registry["自註冊 Tool Registry\n(取代 switch 路由)"]
 
     subgraph FileTools ["檔案操作"]
-        FT["read_file · write_file · read_image\npatch_edit · glob_files\nlist_files · search_content\nmove_to_trash · run_command"]
+        FT["read_file · write_file · read_image\npatch_file · glob_files\nlist_files · search_content\nmove_to_trash · run_command"]
     end
 
     subgraph WebTools ["Web 存取（ToriiDB 快取）"]
-        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Google + DDG 並行 · SHA-256 cache\nfetch_google_rss · RSS 抓取\nsave_page_to_file · 原始頁面下載\nanalyze_youtube · metadata 抓取"]
+        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Google + DDG 並行 · SHA-256 cache\nfetch_google_rss · RSS 抓取\nsave_page_to_file · 原始頁面下載\nfetch_youtube_transcript · metadata 抓取"]
     end
 
     subgraph APITools ["API 擴充 · apiAdapter"]
@@ -222,7 +222,7 @@ flowchart TD
     end
 
     subgraph SkillTools ["Skill 啟用與 Git 工具"]
-        SST["select_skill · AlwaysLoad=true · ReadOnly=true\n以精確名稱啟用 '## Skills' 清單中的 skill\n回傳 RenderActivation(skill)：body + 執行指引\n'/skill-name' 前綴由 assignSkill() 自動合成呼叫\n（合成 tool_call/tool_result 寫入 ToolHistories）"]
+        SST["activate_skill · AlwaysLoad=true · ReadOnly=true\n以精確名稱啟用 '## Skills' 清單中的 skill\n回傳 RenderActivation(skill)：body + 執行指引\n'/skill-name' 前綴由 assignSkill() 自動合成呼叫\n（合成 tool_call/tool_result 寫入 ToolHistories）"]
         SGT["skill_git_commit\nskill_git_log\nskill_git_rollback\n(對 skill repo 路徑操作)"]
     end
 
@@ -232,7 +232,7 @@ flowchart TD
     end
 
     subgraph ErrorMemTools ["錯誤記憶（ToriiDB）"]
-        EMT["工具呼叫失敗 →\n持久化至 ToriiDB store\nsearch_errors · 回憶過往失敗\nremember_error · 持久化解法\n跨 session 學習"]
+        EMT["工具呼叫失敗 →\n持久化至 ToriiDB store\nsearch_error_memory · 回憶過往失敗\nremember_error · 持久化解法\n跨 session 學習"]
     end
 
     subgraph ExternalAgentTools ["外部 Agent 工具"]
@@ -269,14 +269,14 @@ flowchart TD
 
 ## 6. 延遲載入機制
 
-兩條並行的 lazy-load 路徑共同壓低 system prompt 體積。**工具 schema**：executor 初始化時，非 `AlwaysLoad` 的工具以空 stub schema（`{"type":"object","properties":{}}`）曝露；首次呼叫觸發 `search_tools select:<name>` 啟用並回覆 `Re-invoke...` 而非執行。**Skill body**：system prompt 的 `## Skills` 清單僅攜帶 name + description（≤200 runes）；完整 body + 執行指引僅在 `select_skill` 被呼叫時以 tool result 回傳。兩者同一 `索引 → 啟用 → 完整內容` 模式。
+兩條並行的 lazy-load 路徑共同壓低 system prompt 體積。**工具 schema**：executor 初始化時，非 `AlwaysLoad` 的工具以空 stub schema（`{"type":"object","properties":{}}`）曝露；首次呼叫觸發 `search_tools select:<name>` 啟用並回覆 `Re-invoke...` 而非執行。**Skill body**：system prompt 的 `## Skills` 清單僅攜帶 name + description（≤200 runes）；完整 body + 執行指引僅在 `activate_skill` 被呼叫時以 tool result 回傳。兩者同一 `索引 → 啟用 → 完整內容` 模式。
 
 ```mermaid
 flowchart TD
     subgraph ToolLazy ["工具 Schema 延遲載入 · internal/tools/executor.go"]
         ExecInit["NewExecutor()"]
         Classify{"AlwaysLoad\n標記？"}
-        AlwaysReal["曝露真實 schema\n(select_skill · search_tools\n+ api_*、ReadOnly 類)"]
+        AlwaysReal["曝露真實 schema\n(activate_skill · search_tools\n+ api_*、ReadOnly 類)"]
         Stub["曝露 stub schema\n{type:object, properties:{}}\n標記 StubTools[name]=true"]
         LLM1["LLM 首次呼叫\n常以空參數或\nbest-effort 參數"]
         StubHit["toolCall.go Pass 1 偵測\nStubTools[name] == true"]
@@ -291,9 +291,9 @@ flowchart TD
         SysPrompt["system prompt ##Skills 清單\nskillTool.ListBlock(scanner)\nname + description ≤200 runes\n(maxDescLen 截斷)"]
         LLMPick["LLM 依使用者請求\n配對清單中的 skill 名稱\n或 '/skill-name' 前綴\n(scanner.MatchSkillCall)"]
         CallPath{"啟用\n路徑？"}
-        LLMCall["LLM 主動呼叫\nselect_skill(skill=name)"]
+        LLMCall["LLM 主動呼叫\nactivate_skill(skill=name)"]
         AssignCall["assignSkill() 合成\ntool_call + tool_result\n寫入 ToolHistories"]
-        Handler["select_skill handler\nRenderActivation(skill)：\n啟用名稱 + 路徑\n+ SkillExecution 指引\n+ 完整 skill body"]
+        Handler["activate_skill handler\nRenderActivation(skill)：\n啟用名稱 + 路徑\n+ SkillExecution 指引\n+ 完整 skill body"]
         ToolResult["以 tool_result 回傳\n作為後續迭代的\n繫結指令"]
     end
 
@@ -398,7 +398,7 @@ flowchart TD
     subgraph ErrorMemory ["錯誤記憶 · errorMemory"]
         ErrHash["SHA-256(tool_name + args)\n逐 session key"]
         ErrStore["ToriiDB store\n取代早期 tool_errors/*.json"]
-        ErrRecall["search_errors\nfuzzy 關鍵字比對\n跨所有 session"]
+        ErrRecall["search_error_memory\nfuzzy 關鍵字比對\n跨所有 session"]
         ErrResolve["remember_error\n持久化解法決策\n跨 session 重用"]
     end
 

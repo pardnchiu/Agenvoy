@@ -33,6 +33,7 @@ import json
 import os
 import re
 import sys
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +61,92 @@ def has_cjk(text: str) -> bool:
             if lo <= cp <= hi:
                 return True
     return False
+
+
+# ---------- Name heuristics (R1) ----------
+
+# First-token verbs that carry no semantic discrimination on their own. The
+# LLM's first selection pass sees ONLY the name; a generic verb forces it to
+# fall back to description (which is hidden behind the stub short-circuit).
+GENERIC_VERBS = {
+    "do", "process", "handle", "manage", "execute", "perform", "dispatch",
+    "run",
+}
+
+# Names where the generic verb is the genuine semantic carrier (not a hedge).
+# Add sparingly — every entry here is a local exception to R1.
+GENERIC_VERB_WHITELIST = {
+    # `run_command` is a literal shell-exec wrapper; the verb IS the meaning.
+    "run_command",
+}
+
+
+def name_violations(name: str) -> list[tuple[str, str]]:
+    out: list[tuple[str, str]] = []
+    if not name or name == "(missing)":
+        return out
+
+    if name.startswith("<ident:"):
+        out.append((
+            "R1_DYNAMIC_NAME",
+            f"Name '{name}' is a dynamic identifier the parser could not resolve. "
+            "Either inline a literal Name string, or define `const <Ident> = \"...\"` "
+            "in the same file so the scanner (and PR reviewers) can audit it.",
+        ))
+        return out
+
+    # `_` AND `-` mixed in the same identifier breaks LLM tokenization
+    # consistency across siblings. The loader-injected `api_` / `script_`
+    # prefixes are part of what the LLM sees, so check the full name.
+    if "_" in name and "-" in name:
+        out.append((
+            "R1_MIXED_SEPARATOR",
+            f"Name '{name}' mixes '_' and '-' separators. Pick one (snake_case is "
+            "the project convention); for extension loaders, normalize hyphens to "
+            "underscores when constructing the prefixed name.",
+        ))
+
+    if name not in GENERIC_VERB_WHITELIST:
+        # Strip loader prefix before classifying the verb — `api_` / `script_`
+        # is metadata, not the verb.
+        bare = name
+        for prefix in ("api_", "script_"):
+            if bare.startswith(prefix):
+                bare = bare[len(prefix):]
+                break
+        first = re.split(r"[_-]", bare)[0].lower() if bare else ""
+        if first in GENERIC_VERBS:
+            out.append((
+                "R1_GENERIC_VERB",
+                f"Name '{name}' starts with generic verb '{first}'. The first-pass "
+                "selector sees only the name; pick a more specific verb that "
+                "discriminates against sibling tools.",
+            ))
+
+    return out
+
+
+def name_clusters(tools: list[dict[str, Any]]) -> dict[str, list[str]]:
+    """
+    Group tools by first meaningful token (after stripping api_/script_ prefix).
+    Clusters with >= 2 members are returned so the LLM-side R1 review has a
+    concrete anchor for sibling-collision checks (e.g. all read_*, all fetch_*).
+    """
+    buckets: dict[str, list[str]] = defaultdict(list)
+    for t in tools:
+        name = t.get("name", "")
+        if not name or name.startswith("<ident:") or name == "(missing)":
+            continue
+        bare = name
+        for prefix in ("api_", "script_"):
+            if bare.startswith(prefix):
+                bare = bare[len(prefix):]
+                break
+        parts = re.split(r"[_-]", bare)
+        if not parts or not parts[0]:
+            continue
+        buckets[parts[0].lower()].append(name)
+    return {k: sorted(set(v)) for k, v in buckets.items() if len(set(v)) >= 2}
 
 
 # ---------- Description heuristics ----------
@@ -199,6 +286,11 @@ RE_NAME = re.compile(r'Name\s*:\s*"([^"]+)"')
 RE_NAME_IDENT = re.compile(r'Name\s*:\s*([A-Za-z_][A-Za-z0-9_.]*)\b')
 RE_DESC_BACKTICK = re.compile(r"Description\s*:\s*`([^`]*)`", re.DOTALL)
 RE_DESC_DQUOTE = re.compile(r'Description\s*:\s*"((?:\\.|[^"\\])*)"', re.DOTALL)
+# `const Foo = "literal"` at any indent. Cross-package consts are out of scope —
+# resolve only within the same file.
+RE_CONST_STRING = re.compile(
+    r'(?:^|\n)\s*const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"([^"]*)"',
+)
 
 
 def find_balanced(text: str, open_idx: int, open_ch: str = "{", close_ch: str = "}") -> int:
@@ -386,6 +478,9 @@ def load_builtin_tools(repo: Path) -> list[dict[str, Any]]:
             text = path.read_text(encoding="utf-8")
         except Exception:
             continue
+        # Same-file constant table — resolves the `Name: ToolName` pattern that
+        # would otherwise surface as `<ident:ToolName>` and silently bypass R1.
+        consts = {m.group(1): m.group(2) for m in RE_CONST_STRING.finditer(text)}
         for m in RE_REGIST_OPEN.finditer(text):
             open_brace = text.find("{", m.start())
             close_brace = find_balanced(text, open_brace)
@@ -399,7 +494,8 @@ def load_builtin_tools(repo: Path) -> list[dict[str, Any]]:
             else:
                 ident = RE_NAME_IDENT.search(body)
                 if ident:
-                    name = f"<ident:{ident.group(1)}>"
+                    ref = ident.group(1)
+                    name = consts.get(ref, f"<ident:{ref}>")
             description = extract_go_string(body, "Description")
             params_block = extract_params_block(body)
             required = parse_required(params_block) if params_block else []
@@ -444,6 +540,15 @@ def main() -> int:
         desc = t.get("description", "") or ""
         name = t.get("name", "") or "(missing)"
 
+        for rule, detail in name_violations(name):
+            violations.append({
+                "tool": name,
+                "source": t["source"],
+                "rule": rule,
+                "detail": detail,
+                "file": t["file"],
+                "line": t["line"],
+            })
         if has_cjk(desc):
             violations.append({
                 "tool": name,
@@ -482,10 +587,13 @@ def main() -> int:
             "line": t["line"],
         })
 
+    clusters = name_clusters(output_tools)
+
     json.dump(
         {
             "tools": output_tools,
             "deterministic_violations": violations,
+            "name_clusters": clusters,
             "summary": {
                 "tool_count": len(output_tools),
                 "violation_count": len(violations),

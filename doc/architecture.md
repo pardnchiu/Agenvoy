@@ -59,7 +59,7 @@ flowchart TD
     Enter["exec.Execute() entry"]
 
     subgraph Preseed ["Pre-loop · only if matchedSkill != nil"]
-        AssignSynth["assignSkill()\nsynthesize select_skill\ntool_call + tool_result\ninto ToolHistories\n(skill body + execution guidance)"]
+        AssignSynth["assignSkill()\nsynthesize activate_skill\ntool_call + tool_result\ninto ToolHistories\n(skill body + execution guidance)"]
     end
 
     subgraph Loop ["Iteration Loop · exec.Execute()"]
@@ -69,7 +69,7 @@ flowchart TD
         Send["Agent.Send()\nunified provider interface"]
         Parse["Parse response\nextract tool_calls"]
         Dispatch["Dispatch tool calls\nparallel execution"]
-        SkillToolCall["select_skill handler\nRenderActivation(skill)\nreturned as tool_result\n(LLM-initiated name-match path)"]
+        SkillToolCall["activate_skill handler\nRenderActivation(skill)\nreturned as tool_result\n(LLM-initiated name-match path)"]
         Dedup["Hash-based deduplication\nprevent identical repeat calls"]
         Accum["Accumulate results\nappend to message history"]
         Check{"Stop condition?\nno tool_calls OR\niteration ≥ 128"}
@@ -88,7 +88,7 @@ flowchart TD
     ReactTrim -->|"no"| Send
     Send --> Parse
     Parse --> Dispatch
-    Dispatch -->|"name == select_skill"| SkillToolCall
+    Dispatch -->|"name == activate_skill"| SkillToolCall
     SkillToolCall --> Accum
     Dispatch --> Dedup
     Dedup --> Accum
@@ -203,11 +203,11 @@ flowchart TD
     Registry["Self-registering Tool Registry\n(replaces switch routing)"]
 
     subgraph FileTools ["File Operations"]
-        FT["read_file · write_file · read_image\npatch_edit · glob_files\nlist_files · search_content\nmove_to_trash · run_command"]
+        FT["read_file · write_file · read_image\npatch_file · glob_files\nlist_files · search_content\nmove_to_trash · run_command"]
     end
 
     subgraph WebTools ["Web Access (ToriiDB cached)"]
-        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Google + DDG concurrent · SHA-256 cache\nfetch_google_rss · RSS feed fetch\nsave_page_to_file · raw page download\nanalyze_youtube · metadata fetch"]
+        WT["fetch_page · headless Chrome + stealth JS\nsearch_web · Google + DDG concurrent · SHA-256 cache\nfetch_google_rss · RSS feed fetch\nsave_page_to_file · raw page download\nfetch_youtube_transcript · metadata fetch"]
     end
 
     subgraph APITools ["API Extensions · apiAdapter"]
@@ -222,7 +222,7 @@ flowchart TD
     end
 
     subgraph SkillTools ["Skill Activation & Git Tools"]
-        SST["select_skill · AlwaysLoad=true · ReadOnly=true\nactivates skill by exact name from '## Skills' list\nreturns RenderActivation(skill): body + execution guidance\nauto-invoked for '/skill-name' prefix via assignSkill()\n(synthetic tool_call/tool_result into ToolHistories)"]
+        SST["activate_skill · AlwaysLoad=true · ReadOnly=true\nactivates skill by exact name from '## Skills' list\nreturns RenderActivation(skill): body + execution guidance\nauto-invoked for '/skill-name' prefix via assignSkill()\n(synthetic tool_call/tool_result into ToolHistories)"]
         SGT["skill_git_commit\nskill_git_log\nskill_git_rollback\n(operates on skill repo path)"]
     end
 
@@ -232,7 +232,7 @@ flowchart TD
     end
 
     subgraph ErrorMemTools ["Error Memory (ToriiDB)"]
-        EMT["Tool call fails →\npersist to ToriiDB store\nsearch_errors · recall past failures\nremember_error · persist resolution\ncross-session learning"]
+        EMT["Tool call fails →\npersist to ToriiDB store\nsearch_error_memory · recall past failures\nremember_error · persist resolution\ncross-session learning"]
     end
 
     subgraph ExternalAgentTools ["External Agent Tools"]
@@ -269,14 +269,14 @@ flowchart TD
 
 ## 6. Lazy-Load Mechanism
 
-Two parallel lazy-load patterns keep the system prompt minimal. **Tool schemas**: non-`AlwaysLoad` tools expose an empty stub schema (`{"type":"object","properties":{}}`) on executor init; first call triggers activation via `search_tools select:<name>` and replies `Re-invoke...` instead of running. **Skill bodies**: `## Skills` list in the system prompt only carries name + description (≤200 runes); the full body + execution guidance loads only as the `select_skill` tool result. Same `index → activate → full content` pattern.
+Two parallel lazy-load patterns keep the system prompt minimal. **Tool schemas**: non-`AlwaysLoad` tools expose an empty stub schema (`{"type":"object","properties":{}}`) on executor init; first call triggers activation via `search_tools select:<name>` and replies `Re-invoke...` instead of running. **Skill bodies**: `## Skills` list in the system prompt only carries name + description (≤200 runes); the full body + execution guidance loads only as the `activate_skill` tool result. Same `index → activate → full content` pattern.
 
 ```mermaid
 flowchart TD
     subgraph ToolLazy ["Tool Schema Lazy-Load · internal/tools/executor.go"]
         ExecInit["NewExecutor()"]
         Classify{"AlwaysLoad\nflag?"}
-        AlwaysReal["expose real schema\n(select_skill · search_tools\n+ api_*, ReadOnly flagged ones)"]
+        AlwaysReal["expose real schema\n(activate_skill · search_tools\n+ api_*, ReadOnly flagged ones)"]
         Stub["expose stub schema\n{type:object, properties:{}}\nmark StubTools[name]=true"]
         LLM1["LLM first call\noften with empty or\nbest-effort args"]
         StubHit["toolCall.go Pass 1 detects\nStubTools[name] == true"]
@@ -291,9 +291,9 @@ flowchart TD
         SysPrompt["system prompt ##Skills list\nskillTool.ListBlock(scanner)\nname + description ≤200 runes\n(maxDescLen truncation)"]
         LLMPick["LLM matches user request\nto listed skill name\nOR '/skill-name' prefix match\n(scanner.MatchSkillCall)"]
         CallPath{"activation\npath?"}
-        LLMCall["LLM calls\nselect_skill(skill=name)"]
+        LLMCall["LLM calls\nactivate_skill(skill=name)"]
         AssignCall["assignSkill() synthesizes\ntool_call + tool_result\ninto ToolHistories"]
-        Handler["select_skill handler\nRenderActivation(skill):\nactive name + path\n+ SkillExecution guidance\n+ full skill body"]
+        Handler["activate_skill handler\nRenderActivation(skill):\nactive name + path\n+ SkillExecution guidance\n+ full skill body"]
         ToolResult["return as tool_result\nbinding for subsequent\niterations"]
     end
 
@@ -398,7 +398,7 @@ flowchart TD
     subgraph ErrorMemory ["Error Memory · errorMemory"]
         ErrHash["SHA-256(tool_name + args)\nper-session key"]
         ErrStore["ToriiDB store\nreplaces earlier tool_errors/*.json"]
-        ErrRecall["search_errors\nfuzzy keyword match\nacross all sessions"]
+        ErrRecall["search_error_memory\nfuzzy keyword match\nacross all sessions"]
         ErrResolve["remember_error\npersist resolution decision\ncross-session reuse"]
     end
 

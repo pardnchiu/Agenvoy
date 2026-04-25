@@ -14,7 +14,7 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-const ToolName = "select_skill"
+const ToolName = "activate_skill"
 
 const maxDescLen = 200
 

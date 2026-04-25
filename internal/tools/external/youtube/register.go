@@ -12,7 +12,7 @@ import (
 
 func Register() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "analyze_youtube",
+		Name:       "fetch_youtube_transcript",
 		ReadOnly:   true,
 		Concurrent: true,
 		Description: `

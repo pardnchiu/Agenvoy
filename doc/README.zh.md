@@ -56,7 +56,7 @@ graph TB
 
     subgraph Engine ["執行引擎"]
         Run["exec.Run()\n前綴偵測 → SelectAgent → Execute"]
-        Execute["exec.Execute()\n≤128 iterations\nskill 透過 select_skill 工具啟用"]
+        Execute["exec.Execute()\n≤128 iterations\nskill 透過 activate_skill 工具啟用"]
     end
 
     subgraph Providers ["LLM 供應商"]
@@ -68,7 +68,7 @@ graph TB
     end
 
     subgraph Tools ["工具子系統"]
-        T["File · Web · API · Script · Skill (select_skill)\nScheduler · Error Memory · Sub-Agent"]
+        T["File · Web · API · Script · Skill (activate_skill)\nScheduler · Error Memory · Sub-Agent"]
     end
 
     subgraph Memory ["記憶層"]
@@ -119,7 +119,7 @@ graph TB
 
 ### 嵌入式儲存作為記憶骨幹 — [pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)
 
-輕量的嵌入式 KV store，作為 Agenvoy 所有持久化層的單一骨幹。session 歷史、錯誤記憶、以及 `fetch_page` / `search_web` / `fetch_google_rss` 的 web 工具快取皆透過薄的 `internal/filesystem/store` wrapper 收斂至此，取代先前散落於各子系統的 JSON 檔案格式。這讓 `search_conversation_history` 與 `search_errors` 不再需要走檔案系統掃描即可跨 session 查詢，快取失效也從「協調檔案鎖」收斂為「刪除一把 key」。
+輕量的嵌入式 KV store，作為 Agenvoy 所有持久化層的單一骨幹。session 歷史、錯誤記憶、以及 `fetch_page` / `search_web` / `fetch_google_rss` 的 web 工具快取皆透過薄的 `internal/filesystem/store` wrapper 收斂至此，取代先前散落於各子系統的 JSON 檔案格式。這讓 `search_conversation_history` 與 `search_error_memory` 不再需要走檔案系統掃描即可跨 session 查詢，快取失效也從「協調檔案鎖」收斂為「刪除一把 key」。
 
 ### 共用工具函式庫 — [pardnchiu/go-utils](https://github.com/pardnchiu/go-utils)
 

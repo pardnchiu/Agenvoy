@@ -1,5 +1,5 @@
 {
-  "name": "threads-get-quota",
+  "name": "threads_get_quota",
   "description": "Get today's Threads publishing quota usage and limit.",
   "parameters": {
     "type": "object",

@@ -1,5 +1,5 @@
 {
-  "name": "yt-dlp-downloader",
+  "name": "yt_dlp_download",
   "description": "Download video or audio from a supported URL with yt-dlp.",
   "parameters": {
     "type": "object",

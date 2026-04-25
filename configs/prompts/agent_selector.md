@@ -64,7 +64,7 @@ Each task type specifies a required tier (see Tier Definition above). Apply the 
 | Complex reasoning, deep analysis, long-form generation | **Recommended** | claude > gemini > openai / codex > copilot > nvidia |
 | Code generation, refactor, debug, code review, code completion | **Recommended** | claude(opus) > codex > claude(sonnet≥4.5) > gemini > openai > copilot > nvidia |
 | Multi-source search integration, cross-referencing | **Recommended** | claude > gemini > openai / codex > copilot > nvidia |
-| File operations involving §9 pivot / error heal (patch_edit retries, multi-file verification, tool error recovery) | **Recommended** | claude > openai / codex > gemini > copilot > nvidia |
+| File operations involving §9 pivot / error heal (patch_file retries, multi-file verification, tool error recovery) | **Recommended** | claude > openai / codex > gemini > copilot > nvidia |
 | Multi-step tool chain (3+ tool calls, forced routing scenarios) | **Recommended** | claude > openai / codex > gemini > copilot > nvidia |
 | Pure data retrieval: weather, exchange rate, news headline | **Acceptable** | claude > gemini > openai / codex > copilot > nvidia |
 | General Q&A, single-turn factual lookup, no distinctive task feature | **Acceptable** | claude > gemini > openai / codex > copilot > nvidia |

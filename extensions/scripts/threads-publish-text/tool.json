@@ -1,5 +1,5 @@
 {
-  "name": "threads-publish-text",
+  "name": "threads_publish_text",
   "description": "Publish a text-only post to Threads.",
   "parameters": {
     "type": "object",

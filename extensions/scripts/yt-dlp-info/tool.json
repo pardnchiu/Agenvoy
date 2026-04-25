@@ -1,5 +1,5 @@
 {
-  "name": "yt-dlp-info",
+  "name": "yt_dlp_info",
   "description": "Get video metadata and available download formats with yt-dlp without downloading the media.",
   "parameters": {
     "type": "object",

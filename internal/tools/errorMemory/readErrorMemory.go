@@ -11,9 +11,9 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func registReadToolError() {
+func registReadErrorMemory() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "read_tool_error",
+		Name:       "read_error_memory",
 		ReadOnly:   true,
 		Concurrent: true,
 		Description: `

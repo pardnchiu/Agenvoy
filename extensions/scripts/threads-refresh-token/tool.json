@@ -1,5 +1,5 @@
 {
-  "name": "threads-refresh-token",
+  "name": "threads_refresh_token",
   "description": "Refresh the Threads long-lived access token and update the local keychain entry.",
   "parameters": {
     "type": "object",

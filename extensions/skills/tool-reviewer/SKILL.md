@@ -50,17 +50,38 @@ Audits all Agenvoy tool definitions against the four design rules in project `CL
 
 ```
 1. Scan       →  python3 scripts/scan_tools.py {PROJECT_PATH}
-                 outputs JSON: { tools: [{source, name, description, parameters, required, file, line}, ...],
-                                 deterministic_violations: [{tool, rule, detail}, ...] }
-2. Evaluate   →  for each tool, apply heuristic checks the script cannot do:
-                   • Rule 1 (name clarity): is the name self-explanatory? does it collide with
-                     sibling names in the same source? does the description carry semantic load
-                     that should have been in the name?
-                   • Rule 2 (description scope): does the description go beyond "how to fill
-                     parameters"? flag trigger checklists, tool comparisons, manual-style prose,
-                     output examples, implementation notes.
+                 outputs JSON:
+                   { tools: [{source, name, description, parameters, required, file, line}, ...],
+                     deterministic_violations: [{tool, rule, detail}, ...],
+                     name_clusters: { <first_token>: [<tool>, ...] }   ← anchor for R1 sibling review
+                   }
+
+2.A R1 sweep  →  Walk EVERY tool returned by the scan and write a one-line R1 verdict
+                 (`pass` or `fail` + suggested rename). This step is mandatory — there is
+                 no "skip if name looks fine" branch. Use `name_clusters` to compare
+                 each tool against its siblings (same first token). Failing patterns:
+                   • Generic verb (`process`, `handle`, `dispatch`, `verify`, ...)
+                   • Verb inconsistency with siblings in the same cluster
+                     (e.g. `analyze_X` when every other cluster member is `fetch_*`)
+                   • Verb redundancy (`patch_edit` — `patch` already implies edit)
+                   • Description carries semantic load that should be in the name
+                     (e.g. `verify` whose description says "cross-review with external agents"
+                     → rename to `cross_review_with_external_agents`)
+                   • Inconsistent suffix vocabulary across a cluster
+                     (e.g. `read_tool_error` / `remember_error` / `search_error_memory`
+                     — same domain, three different shapes)
+                 Verdicts are emitted in the report's `## Name Audit` section (see output_format.md).
+
+2.B R2 sweep  →  Same enumeration discipline for description scope. Re-read each description
+                 and ask "is this content needed *to fill the parameters correctly*?" If
+                 the answer is "no, it's there to *decide whether to call the tool*", flag
+                 it as a Rule 2 violation and suggest the trimmed version.
+
 3. Gate       →  if zero deterministic + zero heuristic violations across all tools, skip Save
                  and print a one-line "no issues" message. Honor explicit OUTPUT_FILE override.
+                 The Name Audit section must still be produced inside the report when one is
+                 written, even if all verdicts are `pass` — coverage > brevity.
+
 4. Save       →  mkdir -p {PROJECT_PATH}/.doc/tool-reviewer/ then write the report.
 ```
 
@@ -70,6 +91,9 @@ The script flags these without LLM judgment — the LLM only needs to confirm an
 
 | Check | Trigger |
 |---|---|
+| `R1_DYNAMIC_NAME` | `Name:` field is a Go identifier the parser could not resolve to a same-file `const` literal |
+| `R1_MIXED_SEPARATOR` | Tool name contains both `_` and `-` (Agenvoy convention is snake_case) |
+| `R1_GENERIC_VERB` | Name's first token is a generic verb (`do`, `process`, `handle`, `manage`, `execute`, `perform`, `dispatch`, `run`); see `GENERIC_VERB_WHITELIST` for justified exceptions |
 | `R3_NON_ENGLISH_DESCRIPTION` | Tool description contains any CJK / Hangul / Hiragana / Katakana codepoint |
 | `R3_NON_ENGLISH_PARAM` | Parameter description contains any CJK codepoint |
 | `R4_OPTIONAL_NO_DEFAULT` | Parameter is not in `required[]` AND has no `default` key |
@@ -79,12 +103,19 @@ The script flags these without LLM judgment — the LLM only needs to confirm an
 | `R2_MULTI_PARAGRAPH` | Description has > 2 blank-line-separated paragraphs |
 | `R2_TOOL_COMPARISON` | Description contains `vs `, ` vs.`, `prefer over `, `instead of <other_tool>` |
 
+The scanner also emits `name_clusters` (tools grouped by first token after stripping `api_` / `script_` prefix) so the LLM-side R1 sweep has a concrete sibling list per cluster.
+
 ## Heuristic Checks (LLM judgment)
 
-For every tool the script returns, also evaluate:
+For **every** tool the script returns — no skipping — apply these checks. Coverage is enforced by the Validation Checklist below: every tool must appear with a verdict in the report's `## Name Audit` section.
 
-- **Name quality**: would another LLM, seeing only the name, correctly choose this tool over its siblings? Suggest a better name if not. Compare against neighboring tools in the same source.
-- **Description scope drift**: re-read each description and ask "is this content needed *to fill the parameters correctly*?" If the answer is "no, it's there to *decide whether to call the tool*", flag it as a Rule 2 violation and suggest the trimmed version.
+- **Name quality (R1)**: would another LLM, seeing only the name, correctly choose this tool over its siblings? Use `name_clusters` from the scan output as the comparison anchor — same first token = sibling group. Suggest a better name on fail. Failure modes:
+  - Generic verb the deterministic checker missed (e.g. `verify`, `query`, `inspect` when not specific enough)
+  - Verb inconsistency within a cluster (one tool uses `analyze_*` while every sibling uses `fetch_*`)
+  - Verb redundancy (`patch_edit`, `delete_remove_*`)
+  - Name buries the discriminator in description (`verify` whose description reveals it actually means `cross_review_with_external_agents`)
+  - Inconsistent suffix vocabulary across same-domain tools (`read_tool_error` / `remember_error` / `search_error_memory` — pick one shape)
+- **Description scope drift (R2)**: re-read each description and ask "is this content needed *to fill the parameters correctly*?" If the answer is "no, it's there to *decide whether to call the tool*", flag it as a Rule 2 violation and suggest the trimmed version.
 - **Parameter description bloat**: parameter descriptions repeating the tool description, explaining philosophy (e.g. path resolution rules), or listing edge cases — flag as Rule 2 violation.
 
 ## Reference Files
@@ -98,7 +129,9 @@ For every tool the script returns, also evaluate:
 
 - [ ] All three sources scanned (built-in / api_ / script_)
 - [ ] Every deterministic violation in the JSON appears in the report
-- [ ] Every tool received a heuristic name + description scope review
+- [ ] **Name Audit section present and lists EVERY tool** (count must equal `summary.tool_count`); each row has an explicit `pass` / `fail+suggestion` verdict — no tool may be silently omitted
+- [ ] Every tool also received a description scope review (R2) — failures land in the per-source detail sections, passes are implied by absence
+- [ ] `name_clusters` from the scan output were consulted (cite at least one cluster comparison in any R1 fail entry)
 - [ ] Suggestions are concrete (proposed new name, proposed trimmed description), not abstract advice
-- [ ] No-Op gate respected — if zero violations and no explicit `OUTPUT_FILE`, skip the file
+- [ ] No-Op gate respected — if zero violations and no explicit `OUTPUT_FILE`, skip the file (the gate covers detail sections; if a report IS written, the Name Audit section is mandatory)
 - [ ] Report grouped by source → severity → tool, not flat

@@ -1,5 +1,5 @@
 {
-  "name": "threads-publish-image",
+  "name": "threads_publish_image",
   "description": "Publish a Threads post with a single image.",
   "parameters": {
     "type": "object",

@@ -1,7 +1,7 @@
 package errorMemory
 
 func Register() {
-	registReadToolError()
+	registReadErrorMemory()
 	registRememberError()
 	registSearchErrorMemory()
 }

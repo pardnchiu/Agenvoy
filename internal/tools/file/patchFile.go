@@ -11,9 +11,9 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func registPatchEdit() {
+func registPatchFile() {
 	toolRegister.Regist(toolRegister.Def{
-		Name: "patch_edit",
+		Name: "patch_file",
 		Description: `
 Replace an exact string match inside a file.
 Apply targeted edits to an existing file.

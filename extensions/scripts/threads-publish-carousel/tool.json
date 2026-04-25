@@ -1,5 +1,5 @@
 {
-  "name": "threads-publish-carousel",
+  "name": "threads_publish_carousel",
   "description": "Publish a carousel post to Threads with 2 to 20 images or videos.",
   "parameters": {
     "type": "object",

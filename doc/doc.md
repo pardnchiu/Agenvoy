@@ -338,13 +338,13 @@ agen planner
 | `list_files` | `path`, `recursive` | List directory contents |
 | `glob_files` | `pattern` | Glob pattern matching (e.g., `**/*.go`) |
 | `search_content` | `pattern`, `file_pattern` | Regex search across file contents |
-| `patch_edit` | `path`, `old_string`, `new_string` | First-match string replace (safer than full rewrite) |
+| `patch_file` | `path`, `old_string`, `new_string` | First-match string replace (safer than full rewrite) |
 | `search_conversation_history` | `keyword`, `time_range` | Query the current session's history records from ToriiDB |
-| `get_tool_error` | `hash` | Retrieve full error details for a failed tool call by hash |
+| `read_error_memory` | `hash` | Retrieve full error details for a failed tool call by hash |
 | `remember_error` | `tool_name`, `keywords`, `symptom`, `action` | Persist tool error decisions to the error knowledge base |
-| `search_errors` | `keyword` | Retrieve error knowledge base entries |
+| `search_error_memory` | `keyword` | Retrieve error knowledge base entries |
 | `fetch_yahoo_finance` | `symbol`, `interval`, `range` | Fetch Yahoo Finance stock quotes and OHLCV candlesticks; concurrent query1/query2 fetch, returns fastest |
-| `analyze_youtube` | `url` | YouTube video metadata (title, description, channel, duration, view count) |
+| `fetch_youtube_transcript` | `url` | YouTube video transcript with timestamps |
 | `fetch_google_rss` | `keyword`, `time`, `lang` | Google News RSS feed with deduplication |
 | `send_http_request` | `method`, `url`, `headers`, `body` | Generic HTTP request |
 | `search_web` | `query`, `time_range` | DuckDuckGo lite-endpoint web search; `time_range` accepts `1d` / `7d` / `1m` / `1y` |

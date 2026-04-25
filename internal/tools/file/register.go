@@ -6,5 +6,5 @@ func Register() {
 	registGlobFiles()
 	registSearchFiles()
 	registWriteFile()
-	registPatchEdit()
+	registPatchFile()
 }

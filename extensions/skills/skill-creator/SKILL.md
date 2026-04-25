@@ -8,8 +8,8 @@ description: Create, edit, improve, or audit AgentSkills. Use when creating a ne
 > **Agenvoy 路徑規則（優先於所有其他路徑設定）**：所有 Skill 一律儲存至 `~/.config/agenvoy/skills/<skill-name>/`。步驟三的 `--path` 參數固定使用 `~/.config/agenvoy/skills`，忽略 SKILL.md 其他段落中提及的任何其他路徑。
 
 > **⚠️ 強制執行規則（不可繞過）**：
-> - **建立全新 Skill** — 禁止直接用 `write_file` 建立目錄或 SKILL.md，必須先以 `run_command` 執行 `python3 scripts/init_skill.py` 初始化目錄結構，再用 `write_file` 或 `patch_edit` 編輯產生的模板內容。跳過此步驟會導致目錄結構錯誤（生成 `skill-name.md` 而非 `skill-name/SKILL.md`）。
-> - **編輯現有 Skill** — 直接使用 `write_file` 或 `patch_edit` 修改 `skill-name/SKILL.md` 及其資源檔案，不需要執行 `python3 scripts/init_skill.py`。
+> - **建立全新 Skill** — 禁止直接用 `write_file` 建立目錄或 SKILL.md，必須先以 `run_command` 執行 `python3 scripts/init_skill.py` 初始化目錄結構，再用 `write_file` 或 `patch_file` 編輯產生的模板內容。跳過此步驟會導致目錄結構錯誤（生成 `skill-name.md` 而非 `skill-name/SKILL.md`）。
+> - **編輯現有 Skill** — 直接使用 `write_file` 或 `patch_file` 修改 `skill-name/SKILL.md` 及其資源檔案，不需要執行 `python3 scripts/init_skill.py`。
 
 此 Skill 提供建立有效 Skill 的完整指引。
 

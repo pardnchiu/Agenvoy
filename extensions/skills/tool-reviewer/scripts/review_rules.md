@@ -8,19 +8,26 @@ Mirrors the "Tool 設計檢查清單" in project `CLAUDE.md`. Use as the sole ru
 
 **Why**: stub tool short-circuit hides description / parameters until the LLM's second turn. The first selection pass sees only the tool name.
 
-**Pass**: name is unambiguous, distinguishable from siblings, conveys both *what* and *which* (e.g. which kind of search, which kind of edit).
+**Pass**: name is unambiguous, distinguishable from siblings, conveys both *what* and *which* (e.g. which kind of search, which kind of edit), and uses the same verb / suffix shape as its same-domain siblings.
 
-**Fail patterns**:
-- Generic verbs (`process`, `handle`, `do`)
-- Names that collide on prefix with sibling tools, forcing the LLM to read description to disambiguate
+**Fail patterns** (deterministic checks marked with → rule code):
+- Generic verbs (`process`, `handle`, `do`, `manage`, `execute`, `perform`, `dispatch`, `run`) → `R1_GENERIC_VERB`
+- Mixed `_` / `-` separators in the same name (Agenvoy convention is snake_case) → `R1_MIXED_SEPARATOR`
+- Dynamic Go identifier the parser can't resolve (use a literal or a same-file `const`) → `R1_DYNAMIC_NAME`
+- Names that collide on prefix with sibling tools, forcing the LLM to read description to disambiguate (LLM judgment — use scanner's `name_clusters` as the comparison anchor)
 - Names that bury the discriminator in the description (`verify` when `cross_review_with_external_agents` is meant)
+- Verb redundancy where the second token is implied by the first (`patch_edit` — `patch` already means edit)
+- Verb inconsistency within a sibling cluster (one tool uses `analyze_*` while every other cluster member uses `fetch_*`)
+- Inconsistent suffix vocabulary across same-domain tools (`read_tool_error` vs `remember_error` vs `search_error_memory` — pick one shape)
 
 **Examples**:
 - ✅ `invoke_subagent` / ❌ `dispatch_internal`
 - ✅ `cross_review_with_external_agents` / ❌ `verify`
 - ✅ `search_conversation_history` / ❌ `search_history` (collides with git / shell history)
+- ✅ `fetch_youtube_transcript` / ❌ `analyze_youtube` (verb mismatches sibling `fetch_*` cluster)
+- ✅ `apply_patch` / ❌ `patch_edit` (verb redundancy)
 
-When flagging, propose the better name.
+When flagging, propose the better name. Cite the relevant sibling cluster from the scan's `name_clusters` output so the suggestion is anchored, not abstract.
 
 ---
 
