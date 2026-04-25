@@ -1,0 +1,48 @@
+package scriptTools
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
+	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+)
+
+func registReadScript() {
+	toolRegister.Regist(toolRegister.Def{
+		Name:        "read_script",
+		ReadOnly:    true,
+		Description: "讀取排程腳本的內容。用於查看或修改腳本前先確認內容。",
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"name": map[string]any{
+					"type":        "string",
+					"description": "腳本檔名（含副檔名，不含路徑），例如 'notify_1741569300.sh'",
+				},
+			},
+			"required": []string{"name"},
+		},
+		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
+			var params struct {
+				Name string `json:"name"`
+			}
+			if err := json.Unmarshal(args, &params); err != nil {
+				return "", fmt.Errorf("json.Unmarshal: %w", err)
+			}
+			if filepath.Base(params.Name) != params.Name {
+				return "", fmt.Errorf("must not contain path separator")
+			}
+			data, err := os.ReadFile(filepath.Join(filesystem.ScriptsDir, params.Name))
+			if err != nil {
+				return "", fmt.Errorf("os.ReadFile: %w", err)
+			}
+			return string(data), nil
+		},
+	})
+
+}
