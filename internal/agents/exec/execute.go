@@ -24,7 +24,7 @@ import (
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools"
-	"github.com/pardnchiu/agenvoy/internal/tools/skillTool"
+	"github.com/pardnchiu/agenvoy/internal/tools/toolSearcher"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -307,7 +307,7 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.Sk
 	}
 
 	skillsSection := ""
-	if list := skillTool.ListBlock(scanner); list != "" {
+	if list := toolSearcher.ListBlock(scanner); list != "" {
 		skillsSection = "## Skills\n\nCall `select_skill` with one of these exact names to activate. The tool result returns the skill body + execution guidance — treat it as binding instructions for subsequent iterations. Never answer from prior knowledge when the user requests a listed skill by name.\n\n" + list
 	}
 
@@ -396,7 +396,7 @@ func assignSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 		ID:   id,
 		Type: "function",
 	}
-	call.Function.Name = skillTool.ToolName
+	call.Function.Name = toolSearcher.ToolName
 	call.Function.Arguments = string(argsJSON)
 
 	session.ToolHistories = append(session.ToolHistories,
@@ -406,7 +406,7 @@ func assignSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 		},
 		agentTypes.Message{
 			Role:       "tool",
-			Content:    skillTool.RenderActivation(s),
+			Content:    toolSearcher.RenderActivation(s),
 			ToolCallID: id,
 		},
 	)

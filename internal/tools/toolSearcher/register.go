@@ -1,6 +1,7 @@
-package tool
+package toolSearcher
 
 func Register() {
 	registListTools()
 	registSearchTools()
+	registSelectSkill()
 }

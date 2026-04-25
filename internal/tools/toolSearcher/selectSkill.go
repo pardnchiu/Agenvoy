@@ -1,4 +1,4 @@
-package skillTool
+package toolSearcher
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type params struct {
 	SkillName string `json:"skill"`
 }
 
-func init() {
+func registSelectSkill() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        ToolName,
 		Description: staticDescription,
