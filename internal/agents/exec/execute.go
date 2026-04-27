@@ -166,9 +166,6 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if i > 0 {
-			time.Sleep(300 * time.Millisecond)
-		}
 		assembled := assembleMessages(session.SystemPrompts, session.OldHistories, session.SummaryMessage, session.UserInput, session.ToolHistories)
 		resp, err := data.Agent.Send(ctx, assembled, exec.Tools)
 		if err != nil {

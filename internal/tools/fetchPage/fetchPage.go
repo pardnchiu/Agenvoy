@@ -25,7 +25,7 @@ import (
 const (
 	cacheExpired      = 1 * time.Hour
 	skippedExpired    = 12 * time.Hour
-	fetchTimeout      = 30 * time.Second
+	fetchTimeout      = 5 * time.Second
 	maxMarkdownLength = 100 << 10
 )
 
@@ -105,8 +105,7 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
 		defer cancel()
 
-		result, err := go_utils_rod.Fetch(ctx, link, &go_utils_rod.FetchOption{
-			Timeout:   fetchTimeout,
+		result, err := go_utils_rod.Fetch(ctx, link, fetchTimeout, &go_utils_rod.FetchOption{
 			MaxLength: maxMarkdownLength,
 			KeepLinks: keepLinks,
 		})

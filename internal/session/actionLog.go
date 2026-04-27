@@ -100,9 +100,9 @@ func formatActionEvent(ev agentTypes.Event) string {
 		}
 		return formatActionLine("assistant", truncateActionField(text))
 	case agentTypes.EventToolCall:
-		body := ev.ToolName
+		body := withToolID(ev.ToolID, ev.ToolName)
 		if ev.ToolArgs != "" {
-			body = fmt.Sprintf("%s %s", ev.ToolName, truncateActionField(ev.ToolArgs))
+			body = fmt.Sprintf("%s %s", body, truncateActionField(ev.ToolArgs))
 		}
 		return formatActionLine("tool_call", body)
 	case agentTypes.EventToolResult:
@@ -110,19 +110,24 @@ func formatActionEvent(ev agentTypes.Event) string {
 		if ev.Err != nil {
 			status = "err"
 		}
-		return formatActionLine("tool_result", fmt.Sprintf("%s %s", ev.ToolName, status))
+		return formatActionLine("tool_result", fmt.Sprintf("%s %s", withToolID(ev.ToolID, ev.ToolName), status))
 	case agentTypes.EventToolSkipped:
-		return formatActionLine("tool_skipped", ev.ToolName)
+		return formatActionLine("tool_skipped", withToolID(ev.ToolID, ev.ToolName))
 	case agentTypes.EventToolConfirm:
-		return formatActionLine("tool_confirm", ev.ToolName)
+		return formatActionLine("tool_confirm", withToolID(ev.ToolID, ev.ToolName))
 	case agentTypes.EventExecError, agentTypes.EventError:
+		body := ""
 		if ev.Err != nil {
-			return formatActionLine("error", truncateActionField(ev.Err.Error()))
+			body = truncateActionField(ev.Err.Error())
+		} else if ev.Text != "" {
+			body = truncateActionField(ev.Text)
+		} else {
+			return ""
 		}
-		if ev.Text != "" {
-			return formatActionLine("error", truncateActionField(ev.Text))
+		if ev.ToolID != "" {
+			body = fmt.Sprintf("%s %s", withToolID(ev.ToolID, ev.ToolName), body)
 		}
-		return ""
+		return formatActionLine("error", body)
 	case agentTypes.EventDone:
 		return formatActionLine("done", ev.Model)
 	}
@@ -132,6 +137,16 @@ func formatActionEvent(ev agentTypes.Event) string {
 func formatActionLine(kind, body string) string {
 	ts := time.Now().Format("2006-01-02 15:04:05.000")
 	return fmt.Sprintf("[%s][%s] %s", ts, kind, body)
+}
+
+func withToolID(id, name string) string {
+	if id == "" {
+		return name
+	}
+	if name == "" {
+		return fmt.Sprintf("[%s]", id)
+	}
+	return fmt.Sprintf("[%s] %s", id, name)
 }
 
 func truncateActionField(s string) string {

@@ -102,6 +102,8 @@ github.com/pardnchiu/go-utils v0.9.3 h1:G5Rkcn/9lrpQXvsTNDgPVoUG0K6BycWGnivomzFX
 github.com/pardnchiu/go-utils v0.9.3/go.mod h1:/XkiaIWQJbGm89ibOJ1JHzUuzG6ZBmQcrgA7tJsCLQs=
 github.com/pardnchiu/go-utils v0.9.4 h1:uSpA7mk38Ai6hf5eay8KLT3Nk67IW696KNn+nnvUAs4=
 github.com/pardnchiu/go-utils v0.9.4/go.mod h1:/XkiaIWQJbGm89ibOJ1JHzUuzG6ZBmQcrgA7tJsCLQs=
+github.com/pardnchiu/go-utils v0.10.0 h1:uiLLgQzi8QBwK/SUiTXFZyhXVmbb4Os9IBwnKuMC9dA=
+github.com/pardnchiu/go-utils v0.10.0/go.mod h1:/XkiaIWQJbGm89ibOJ1JHzUuzG6ZBmQcrgA7tJsCLQs=
 github.com/pelletier/go-toml/v2 v2.2.4 h1:mye9XuhQ6gvn5h28+VilKrrPoQVanw5PMw/TB0t5Ec4=
 github.com/pelletier/go-toml/v2 v2.2.4/go.mod h1:2gIqNv+qfxSVS7cM2xJQKtLSTLUE9V8t9Stt+h56mCY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
