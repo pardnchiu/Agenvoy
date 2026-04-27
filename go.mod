@@ -13,7 +13,7 @@ require (
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pardnchiu/ToriiDB v0.5.1
 	github.com/pardnchiu/go-scheduler v1.2.0
-	github.com/pardnchiu/go-utils v0.9.0
+	github.com/pardnchiu/go-utils v0.9.4
 	github.com/rivo/tview v0.42.0
 )
 

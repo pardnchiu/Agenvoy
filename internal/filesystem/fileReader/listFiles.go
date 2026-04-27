@@ -6,16 +6,20 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 )
 
 func ListFiles(absPath string, recursive bool) (string, error) {
 	results := []file{}
 
 	if recursive {
-		walked, err := filesystem.WalkFiles(absPath)
+		walked, err := go_utils_filesystem.WalkFiles(absPath, go_utils_filesystem.ListOption{
+			SkipExcluded:      true,
+			IgnoreWalkError:   true,
+			IncludeNonRegular: true,
+		})
 		if err != nil {
-			return "", fmt.Errorf("filesystem.WalkFiles: %w", err)
+			return "", fmt.Errorf("go_utils_filesystem.WalkFiles: %w", err)
 		}
 		for _, rel := range walked {
 			full := filepath.Join(absPath, rel)
@@ -32,9 +36,9 @@ func ListFiles(absPath string, recursive bool) (string, error) {
 			})
 		}
 	} else {
-		entries, err := filesystem.ListDir(absPath)
+		entries, err := go_utils_filesystem.ListAll(absPath, go_utils_filesystem.ListOption{SkipExcluded: true})
 		if err != nil {
-			return "", fmt.Errorf("filesystem.ListDir: %w", err)
+			return "", fmt.Errorf("go_utils_filesystem.ListAll: %w", err)
 		}
 		for _, entry := range entries {
 			full := filepath.Join(absPath, entry.Name())

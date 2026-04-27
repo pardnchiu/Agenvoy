@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
@@ -26,9 +28,13 @@ func GlobFiles(absPath, pattern string) (string, error) {
 
 	var matches []string
 	if slices.Contains(globParts, "**") {
-		walked, err := filesystem.WalkFiles(absPath)
+		walked, err := go_utils_filesystem.WalkFiles(absPath, go_utils_filesystem.ListOption{
+			SkipExcluded:      true,
+			IgnoreWalkError:   true,
+			IncludeNonRegular: true,
+		})
 		if err != nil {
-			return "", fmt.Errorf("filesystem.WalkFiles: %w", err)
+			return "", fmt.Errorf("go_utils_filesystem.WalkFiles: %w", err)
 		}
 
 		for _, rel := range walked {
