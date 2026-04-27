@@ -160,14 +160,18 @@ func GetHistory(sessionID string) (old, max []agentTypes.Message) {
 	return oldHistory, maxHistory
 }
 
-func CleanupSessions() {
+func Clean() {
 	entries, err := os.ReadDir(filesystem.SessionsDir)
 	if err != nil {
 		return
 	}
 	now := time.Now()
 	for _, entry := range entries {
-		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "temp-") {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasPrefix(name, "temp-") && !strings.HasPrefix(name, "http-") {
 			continue
 		}
 		sessionDir := filepath.Join(filesystem.SessionsDir, entry.Name())

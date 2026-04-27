@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -30,6 +31,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	"github.com/pardnchiu/agenvoy/internal/routes"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
 	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
 	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
@@ -169,6 +171,10 @@ func runList() {
 func runAgent(allowAll bool) {
 	defer torii.Close()
 
+	if !runtime.IsCurrent() {
+		clearSession()
+	}
+
 	userInput := strings.TrimSpace(strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n"))
 
 	registry := buildAgentRegistry()
@@ -208,6 +214,13 @@ func runApp() {
 		return
 	}
 	defer torii.Close()
+
+	if _, err := runtime.Init(); err != nil {
+		slog.Warn("runtime.Init",
+			slog.String("error", err.Error()))
+	}
+	session.Clean()
+	session.CleanAllTask()
 
 	tui.New()
 	tui.SetSlog()
@@ -340,6 +353,24 @@ func setSummaryCron(bot agentTypes.Agent, registry agentTypes.AgentRegistry) {
 				slog.String("session", sid))
 		}
 	}
+}
+
+func clearSession() {
+	data, err := os.ReadFile(filesystem.ConfigPath)
+	if err != nil {
+		return
+	}
+	var idx struct {
+		SessionID string `json:"session_id"`
+	}
+	if err := json.Unmarshal(data, &idx); err != nil {
+		return
+	}
+	sid := strings.TrimSpace(idx.SessionID)
+	if sid == "" {
+		return
+	}
+	session.ClearTask(sid)
 }
 
 func printUsage() {

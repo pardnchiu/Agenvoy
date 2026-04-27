@@ -40,7 +40,7 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 			return
 		}
 
-		go sessionManager.CleanupSessions()
+		go sessionManager.Clean()
 
 		sessionID := req.SessionID
 		if sessionID == "" {

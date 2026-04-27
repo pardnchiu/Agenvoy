@@ -87,6 +87,40 @@ func ReadStatus(sessionID string) Status {
 	return readStatus(sessionID)
 }
 
+func ClearTask(sessionID string) {
+	if sessionID == "" {
+		return
+	}
+	statusMu.Lock()
+	defer statusMu.Unlock()
+
+	dir := filepath.Join(filesystem.SessionsDir, sessionID)
+	if _, err := os.Stat(dir); err != nil {
+		return
+	}
+	s := readStatus(sessionID)
+	if len(s.Active) == 0 && s.State != StatusOnline {
+		return
+	}
+	s.Active = nil
+	s.State = StatusIdle
+	s.EndedAt = nowStatusTime()
+	writeStatus(sessionID, s)
+}
+
+func CleanAllTask() {
+	entries, err := os.ReadDir(filesystem.SessionsDir)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		ClearTask(entry.Name())
+	}
+}
+
 func nowStatusTime() string {
 	return time.Now().Format("2006-01-02 15:04:05.000")
 }
