@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 )
 
 type Usage struct {
@@ -49,8 +51,8 @@ func UpdateUsage(model string, input, output, cacheCreate, cacheRead int) error 
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
 
-	if err := WriteFile(UsagePath, string(bytes), 0644); err != nil {
-		return fmt.Errorf("WriteFile: %w", err)
+	if err := go_utils_filesystem.WriteFile(UsagePath, string(bytes), 0644); err != nil {
+		return fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
 	}
 
 	return nil

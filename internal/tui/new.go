@@ -10,9 +10,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-const (
-	projectVersion = "v0.17.4"
-)
+var projectVersion = "dev"
 
 type tuiWriter struct {
 	app  *tview.Application

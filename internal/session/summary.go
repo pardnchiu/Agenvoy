@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -116,7 +118,7 @@ func IsNeedSummary() []string {
 
 func SaveSummary(sessionID string, data any) {
 	if bytes, err := json.Marshal(data); err == nil {
-		if err := filesystem.WriteFile(SummaryPath(sessionID), string(bytes), 0644); err != nil {
+		if err := go_utils_filesystem.WriteFile(SummaryPath(sessionID), string(bytes), 0644); err != nil {
 			slog.Warn("WriteFile",
 				slog.String("error", err.Error()))
 		}

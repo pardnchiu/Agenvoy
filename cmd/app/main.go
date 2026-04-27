@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 	go_utils_sandbox "github.com/pardnchiu/go-utils/sandbox"
 	go_utils_utils "github.com/pardnchiu/go-utils/utils"
 
@@ -43,6 +44,14 @@ func init() {
 			slog.String("error", err.Error()))
 	}
 	go_utils_sandbox.New(configs.DeniedMap)
+	if err := go_utils_filesystem.New(go_utils_filesystem.Policy{
+		DeniedMap:   configs.DeniedMap,
+		ExcludeList: configs.ExcludeList,
+	}); err != nil {
+		slog.Error("go_utils_filesystem.New",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 }
 
 func main() {

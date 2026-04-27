@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 )
 
 func WalkFiles(dirs ...string) ([]string, error) {
@@ -18,9 +20,9 @@ func WalkFiles(dirs ...string) ([]string, error) {
 		subDir = dirs[1]
 	}
 
-	absPath, err := AbsPath(workDir, subDir, false)
+	absPath, err := go_utils_filesystem.AbsPath(workDir, subDir, go_utils_filesystem.AbsPathOption{HomeOnly: true})
 	if err != nil {
-		return nil, fmt.Errorf("AbsPath: %w", err)
+		return nil, fmt.Errorf("go_utils_filesystem.AbsPath: %w", err)
 	}
 
 	var files []string
@@ -31,7 +33,7 @@ func WalkFiles(dirs ...string) ([]string, error) {
 			return nil
 		}
 
-		if isExclude(workDir, path) {
+		if go_utils_filesystem.IsExcluded(workDir, path) {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}

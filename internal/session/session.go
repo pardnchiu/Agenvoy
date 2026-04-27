@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 	go_utils_utils "github.com/pardnchiu/go-utils/utils"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -27,7 +28,7 @@ func SaveToToolCall(sessionID, content string) {
 	if err := os.MkdirAll(toolCallsDir, 0755); err == nil {
 		filename := fmt.Sprintf("%s.json", now.Format("2006-01-02-15-04-05"))
 		toolActionsPath := filepath.Join(toolCallsDir, filename)
-		if err := filesystem.WriteFile(toolActionsPath, content, 0644); err != nil {
+		if err := go_utils_filesystem.WriteFile(toolActionsPath, content, 0644); err != nil {
 			slog.Warn("WriteFile",
 				slog.String("error", err.Error()))
 		}
@@ -107,7 +108,7 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("json.Marshal: %w", err)
 		}
-		if err := filesystem.WriteFile(configPath, string(configData), 0644); err != nil {
+		if err := go_utils_filesystem.WriteFile(configPath, string(configData), 0644); err != nil {
 			return "", fmt.Errorf("WriteFile: %w", err)
 		}
 	}
@@ -205,7 +206,7 @@ func SaveHistory(sessionID, content string) error {
 	}
 
 	historyPath := filepath.Join(sessionDir, "history.json")
-	if err := filesystem.WriteFile(historyPath, content, 0644); err != nil {
+	if err := go_utils_filesystem.WriteFile(historyPath, content, 0644); err != nil {
 		return fmt.Errorf("WriteFile: %w", err)
 	}
 	return nil

@@ -18,6 +18,8 @@ import (
 
 	_ "golang.org/x/image/webp"
 
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -109,8 +111,8 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			if err != nil {
 				return nil, fmt.Errorf("json.Marshal: %w", err)
 			}
-			if err := filesystem.WriteFile(filesystem.ConfigPath, string(merged), 0644); err != nil {
-				return nil, fmt.Errorf("utils.WriteFile: %w", err)
+			if err := go_utils_filesystem.WriteFile(filesystem.ConfigPath, string(merged), 0644); err != nil {
+				return nil, fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
 			}
 			indexData.SessionID = newID
 		}

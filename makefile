@@ -28,7 +28,8 @@ help:
 	@echo "  make run <input...>     Run agent (allow all tools, no confirmation)"
 
 build:
-	go build -o agen ./cmd/app/ && sudo mv agen /usr/local/bin/agen
+	@git fetch --tags --force 2>/dev/null || true
+	go build -ldflags "-X github.com/pardnchiu/agenvoy/internal/tui.projectVersion=$$(git describe --tags --abbrev=0 2>/dev/null || echo dev)" -o agen ./cmd/app/ && sudo mv agen /usr/local/bin/agen
 
 app:
 	go run ./cmd/app/

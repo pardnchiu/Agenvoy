@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 )
 
 func ListDir(dirs ...string) ([]os.DirEntry, error) {
@@ -16,9 +18,9 @@ func ListDir(dirs ...string) ([]os.DirEntry, error) {
 		subDir = dirs[1]
 	}
 
-	absPath, err := AbsPath(workDir, subDir, false)
+	absPath, err := go_utils_filesystem.AbsPath(workDir, subDir, go_utils_filesystem.AbsPathOption{HomeOnly: true})
 	if err != nil {
-		return nil, fmt.Errorf("AbsPath: %w", err)
+		return nil, fmt.Errorf("go_utils_filesystem.AbsPath: %w", err)
 	}
 
 	entries, err := os.ReadDir(absPath)
@@ -29,7 +31,7 @@ func ListDir(dirs ...string) ([]os.DirEntry, error) {
 	var files []os.DirEntry
 	for _, entry := range entries {
 		newPath := filepath.Join(absPath, entry.Name())
-		if isExclude(workDir, newPath) {
+		if go_utils_filesystem.IsExcluded(workDir, newPath) {
 			continue
 		}
 		files = append(files, entry)

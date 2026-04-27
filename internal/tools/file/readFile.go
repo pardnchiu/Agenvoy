@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/fileReader"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -61,9 +63,9 @@ Inspect source, config, notes, tabular data, or screenshots.`,
 				baseDir = filesystem.DownloadDir
 			}
 
-			absPath, err := filesystem.AbsPath(baseDir, params.Path, false)
+			absPath, err := go_utils_filesystem.AbsPath(baseDir, params.Path, go_utils_filesystem.AbsPathOption{HomeOnly: true})
 			if err != nil {
-				return "", fmt.Errorf("filesystem.AbsPath: %w", err)
+				return "", fmt.Errorf("go_utils_filesystem.AbsPath: %w", err)
 			}
 			if absPath == "" {
 				return "", fmt.Errorf("path is required")

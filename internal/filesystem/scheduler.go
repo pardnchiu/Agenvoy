@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 )
 
 func TaskResultPath(id string, at time.Time) string {
@@ -75,7 +77,7 @@ func WriteTasks(items []TaskItem) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return WriteFile(TasksPath, string(data), 0644)
+	return go_utils_filesystem.WriteFile(TasksPath, string(data), 0644)
 }
 
 func GetCrons() ([]CronItem, error) {
@@ -98,7 +100,7 @@ func WriteCrons(crons []CronItem) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	if err := WriteFile(CronsPath, string(bytes), 0644); err != nil {
+	if err := go_utils_filesystem.WriteFile(CronsPath, string(bytes), 0644); err != nil {
 		return fmt.Errorf("WriteFile: %w", err)
 	}
 	return nil
@@ -109,7 +111,7 @@ func WriteTaskResult(r TaskResult) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return WriteFile(TaskResultPath(r.ID, r.At), string(bytes), 0644)
+	return go_utils_filesystem.WriteFile(TaskResultPath(r.ID, r.At), string(bytes), 0644)
 }
 
 func DeleteTaskResult(id string, at time.Time) error {
@@ -145,7 +147,7 @@ func WriteCronResult(r CronResult) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return WriteFile(CronResultPath(r.ID), string(bytes), 0644)
+	return go_utils_filesystem.WriteFile(CronResultPath(r.ID), string(bytes), 0644)
 }
 
 func WriteCronRecord(result CronResult) error {
@@ -156,7 +158,7 @@ func WriteCronRecord(result CronResult) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return WriteFile(CronRecordPath(result.ID, *result.RunAt), string(bytes), 0644)
+	return go_utils_filesystem.WriteFile(CronRecordPath(result.ID, *result.RunAt), string(bytes), 0644)
 }
 
 func DeleteCronResult(id string) error {

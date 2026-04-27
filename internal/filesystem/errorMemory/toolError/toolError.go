@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
@@ -39,7 +41,7 @@ func Save(sessionID, toolName, args, errMsg string) string {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return hash
 	}
-	if err := filesystem.WriteFile(filepath.Join(dir, hash+".json"), string(recordBytes), 0644); err != nil {
+	if err := go_utils_filesystem.WriteFile(filepath.Join(dir, hash+".json"), string(recordBytes), 0644); err != nil {
 		slog.Warn("failed to save tool error",
 			slog.String("error", err.Error()))
 	}

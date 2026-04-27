@@ -14,11 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_utils_rod "github.com/pardnchiu/go-utils/rod"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
-	go_utils_rod "github.com/pardnchiu/go-utils/rod"
 )
 
 const (
@@ -140,8 +141,8 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 		if err := os.MkdirAll(filepath.Dir(*saveTo), 0755); err != nil {
 			return "", fmt.Errorf("os.MkdirAll: %w", err)
 		}
-		if err := filesystem.WriteFile(*saveTo, full, 0644); err != nil {
-			return "", fmt.Errorf("filesystem.WriteFile: %w", err)
+		if err := go_utils_filesystem.WriteFile(*saveTo, full, 0644); err != nil {
+			return "", fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
 		}
 		return fmt.Sprintf("Downloaded %d chars to %s", len(full), *saveTo), nil
 	}

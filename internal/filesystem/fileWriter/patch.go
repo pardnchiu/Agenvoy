@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
@@ -43,8 +45,8 @@ func Patch(ctx context.Context, path, old, new string, replaceAll bool) (string,
 		newContent = strings.Replace(fileContent, newContent, new, 1)
 	}
 
-	if err := filesystem.WriteFile(path, newContent, 0644); err != nil {
-		return "", fmt.Errorf("filesystem.WriteFile: %w", err)
+	if err := go_utils_filesystem.WriteFile(path, newContent, 0644); err != nil {
+		return "", fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
 	}
 
 	if filesystem.IsSkillsDir(path) {

@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
@@ -57,7 +59,7 @@ func Save(cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return filesystem.WriteFile(configPath, string(data), 0644)
+	return go_utils_filesystem.WriteFile(configPath, string(data), 0644)
 }
 
 func UpsertModel(entry ModelEntry) error {
