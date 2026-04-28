@@ -1,4 +1,4 @@
-ifneq ($(filter cli run,$(MAKECMDGOALS)),)
+ifneq ($(filter cli run switch new,$(MAKECMDGOALS)),)
 
 cli:
 	@go run ./cmd/app/ cli $(filter-out $@,$(MAKECMDGOALS))
@@ -6,12 +6,18 @@ cli:
 run:
 	@go run ./cmd/app/ run $(filter-out $@,$(MAKECMDGOALS))
 
+switch:
+	@go run ./cmd/app/ switch $(filter-out $@,$(MAKECMDGOALS))
+
+new:
+	@go run ./cmd/app/ new $(filter-out $@,$(MAKECMDGOALS))
+
 %:
 	@:
 
 else
 
-.PHONY: help build app discord add remove planner reasoning models skills test
+.PHONY: help build app discord add remove config planner reasoning models skills test
 
 help:
 	@echo "How to use:"
@@ -20,6 +26,9 @@ help:
 	@echo "  make discord            Start Discord bot server (legacy)"
 	@echo "  make add                Add a provider/model"
 	@echo "  make remove             Remove a provider/model"
+	@echo "  make config             Edit current CLI session bot.md in \$$EDITOR"
+	@echo "  make new [name]         Start a new CLI session (optional bot.md name) and switch primary pointer"
+	@echo "  make switch <name>      Switch primary pointer to the cli- session whose bot.md name matches"
 	@echo "  make planner            Set planner model"
 	@echo "  make reasoning          Set reasoning level"
 	@echo "  make models             Get model list"
@@ -42,6 +51,9 @@ add:
 
 remove:
 	go run ./cmd/app/ remove
+
+config:
+	go run ./cmd/app/ config
 
 planner:
 	go run ./cmd/app/ planner

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -78,6 +77,26 @@ func main() {
 		case "list":
 			initCLI()
 			runList()
+			return
+		case "config":
+			initCLI()
+			runConfig()
+			return
+		case "new":
+			initCLI()
+			name := ""
+			if len(os.Args) >= 3 {
+				name = os.Args[2]
+			}
+			runNew(name)
+			return
+		case "switch":
+			if len(os.Args) < 3 {
+				fmt.Fprintf(os.Stderr, "Usage: agen switch <name>\n")
+				os.Exit(1)
+			}
+			initCLI()
+			runSwitch(os.Args[2])
 			return
 		case "cli", "run":
 			if len(os.Args) < 3 {
@@ -356,14 +375,10 @@ func setSummaryCron(bot agentTypes.Agent, registry agentTypes.AgentRegistry) {
 }
 
 func clearSession() {
-	data, err := os.ReadFile(filesystem.ConfigPath)
-	if err != nil {
-		return
-	}
-	var idx struct {
+	idx, err := go_utils_filesystem.ReadJSON[struct {
 		SessionID string `json:"session_id"`
-	}
-	if err := json.Unmarshal(data, &idx); err != nil {
+	}](filesystem.ConfigPath)
+	if err != nil {
 		return
 	}
 	sid := strings.TrimSpace(idx.SessionID)
@@ -380,6 +395,9 @@ func printUsage() {
 	fmt.Println("  agen remove             Remove a provider/model")
 	fmt.Println("  agen list               List configured models")
 	fmt.Println("  agen list skill         List available skills")
+	fmt.Println("  agen config             Edit current CLI session bot.md in $EDITOR")
+	fmt.Println("  agen new [name]         Start a new CLI session (optional bot.md name) and switch primary pointer")
+	fmt.Println("  agen switch <name>      Switch primary pointer to the cli- session whose bot.md name matches")
 	fmt.Println("  agen planner            Set planner model")
 	fmt.Println("  agen reasoning          Set reasoning level")
 	fmt.Println("  agen cli <input...>     Run agent (requires tool confirmation)")
