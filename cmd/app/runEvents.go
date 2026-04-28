@@ -71,10 +71,10 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 			writeStdoutLine(fmt.Sprintf("[*] Agent: %s", ev.Text))
 
 		case agentTypes.EventToolCall:
-			writeStdoutLine(fmt.Sprintf("[*] [%s] Tool[%s]: %s - %s", time.Now().Format("15:04:05"), ev.ToolID, ev.ToolName, ev.ToolArgs))
+			writeStdoutLine(fmt.Sprintf("[*] [%s] Tool: %s - %s", time.Now().Format("15:04:05"), ev.ToolName, ev.ToolArgs))
 
 		case agentTypes.EventToolSkipped:
-			writeStdoutLine(fmt.Sprintf("[~] [%s] Tool[%s] skipped: %s", time.Now().Format("15:04:05"), ev.ToolID, ev.ToolName))
+			writeStdoutLine(fmt.Sprintf("[~] [%s] Tool skipped: %s", time.Now().Format("15:04:05"), ev.ToolName))
 
 		case agentTypes.EventText:
 			text := ev.Text
@@ -110,7 +110,7 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 			}
 
 		case agentTypes.EventExecError:
-			writeStderrLine(fmt.Sprintf("[!] [%s] Tool[%s] (%s) error: %s", time.Now().Format("15:04:05"), ev.ToolID, ev.ToolName, ev.Text))
+			writeStderrLine(fmt.Sprintf("[!] [%s] Tool (%s) error: %s", time.Now().Format("15:04:05"), ev.ToolName, ev.Text))
 
 		case agentTypes.EventError:
 			if ev.Err != nil {

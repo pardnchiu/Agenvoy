@@ -55,6 +55,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 		Content:           task,
 		ExcludeTools:      excluded,
 		ExtraSystemPrompt: systemPrompt,
+		AllowAll:          true,
 	}
 
 	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
@@ -73,7 +74,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 
 	session := &agentTypes.AgentSession{
 		ID:            sessionID,
-		SystemPrompts: []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, host.Scanner(), sessionID)}},
+		SystemPrompts: []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, host.Scanner(), sessionID, execData.AllowAll)}},
 		OldHistories:  maxHistory,
 		ToolHistories: []agentTypes.Message{},
 		Tools:         []agentTypes.Message{},

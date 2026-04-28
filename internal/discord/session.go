@@ -44,7 +44,7 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 
 	session.SystemPrompts = []agentTypes.Message{
 		{Role: "system", Content: configs.DiscordSystemPrompt},
-		{Role: "system", Content: exec.GetSystemPrompt(data.WorkDir, data.ExtraSystemPrompt, host.Scanner(), sessionID)},
+		{Role: "system", Content: exec.GetSystemPrompt(data.WorkDir, data.ExtraSystemPrompt, host.Scanner(), sessionID, data.AllowAll)},
 	}
 	if summary := sessionManager.GetSummaryPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
 		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}

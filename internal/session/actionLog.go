@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -100,7 +102,7 @@ func formatActionEvent(ev agentTypes.Event) string {
 		}
 		return formatActionLine("assistant", truncateActionField(text))
 	case agentTypes.EventToolCall:
-		body := withToolID(ev.ToolID, ev.ToolName)
+		body := ev.ToolName
 		if ev.ToolArgs != "" {
 			body = fmt.Sprintf("%s %s", body, truncateActionField(ev.ToolArgs))
 		}
@@ -110,11 +112,11 @@ func formatActionEvent(ev agentTypes.Event) string {
 		if ev.Err != nil {
 			status = "err"
 		}
-		return formatActionLine("tool_result", fmt.Sprintf("%s %s", withToolID(ev.ToolID, ev.ToolName), status))
+		return formatActionLine("tool_result", fmt.Sprintf("%s %s", ev.ToolName, status))
 	case agentTypes.EventToolSkipped:
-		return formatActionLine("tool_skipped", withToolID(ev.ToolID, ev.ToolName))
+		return formatActionLine("tool_skipped", ev.ToolName)
 	case agentTypes.EventToolConfirm:
-		return formatActionLine("tool_confirm", withToolID(ev.ToolID, ev.ToolName))
+		return formatActionLine("tool_confirm", ev.ToolName)
 	case agentTypes.EventExecError, agentTypes.EventError:
 		body := ""
 		if ev.Err != nil {
@@ -124,8 +126,8 @@ func formatActionEvent(ev agentTypes.Event) string {
 		} else {
 			return ""
 		}
-		if ev.ToolID != "" {
-			body = fmt.Sprintf("%s %s", withToolID(ev.ToolID, ev.ToolName), body)
+		if ev.ToolName != "" {
+			body = fmt.Sprintf("%s %s", ev.ToolName, body)
 		}
 		return formatActionLine("error", body)
 	case agentTypes.EventDone:
@@ -137,16 +139,6 @@ func formatActionEvent(ev agentTypes.Event) string {
 func formatActionLine(kind, body string) string {
 	ts := time.Now().Format("2006-01-02 15:04:05.000")
 	return fmt.Sprintf("[%s][%s] %s", ts, kind, body)
-}
-
-func withToolID(id, name string) string {
-	if id == "" {
-		return name
-	}
-	if name == "" {
-		return fmt.Sprintf("[%s]", id)
-	}
-	return fmt.Sprintf("[%s] %s", id, name)
 }
 
 func truncateActionField(s string) string {
@@ -166,39 +158,32 @@ func appendActionLine(sessionID, line string) {
 	defer actionLogMu.Unlock()
 
 	dir := filepath.Join(filesystem.SessionsDir, sessionID)
-	if _, err := os.Stat(dir); err != nil {
+	if !go_utils_filesystem.Exists(dir) {
 		return
 	}
 	path := filepath.Join(dir, "action.log")
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		slog.Warn("appendActionLine open",
+	if err := go_utils_filesystem.AppendText(path, line+"\n"); err != nil {
+		slog.Warn("appendActionLine append",
 			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 		return
 	}
-	if _, err := f.WriteString(line + "\n"); err != nil {
-		f.Close()
-		slog.Warn("appendActionLine write",
-			slog.String("session", sessionID),
-			slog.String("error", err.Error()))
-		return
-	}
-	info, statErr := f.Stat()
-	f.Close()
-	if statErr != nil || info.Size() <= maxActionLogSize {
+	// * os.Stat retained: FileInfo.Size() needed for the rotation guard
+	info, err := os.Stat(path)
+	if err != nil || info.Size() <= maxActionLogSize {
 		return
 	}
 	trimActionLog(path)
 }
 
 func trimActionLog(path string) {
-	data, err := os.ReadFile(path)
+	text, err := go_utils_filesystem.ReadText(path)
 	if err != nil {
 		slog.Warn("trimActionLog read",
 			slog.String("error", err.Error()))
 		return
 	}
+	data := []byte(text)
 	if int64(len(data)) <= maxActionLogSize {
 		return
 	}
@@ -213,13 +198,13 @@ func trimActionLog(path string) {
 		cut++
 	}
 	if cut >= len(data) {
-		if err := os.WriteFile(path, []byte{}, 0644); err != nil {
+		if err := go_utils_filesystem.WriteFile(path, "", 0644); err != nil {
 			slog.Warn("trimActionLog wipe",
 				slog.String("error", err.Error()))
 		}
 		return
 	}
-	if err := os.WriteFile(path, data[cut:], 0644); err != nil {
+	if err := go_utils_filesystem.WriteFile(path, string(data[cut:]), 0644); err != nil {
 		slog.Warn("trimActionLog write",
 			slog.String("error", err.Error()))
 	}

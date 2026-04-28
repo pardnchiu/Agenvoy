@@ -70,6 +70,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		SessionID:   sessionOverride,
 		ImageInputs: imageInputs,
 		FileInputs:  fileInputs,
+		AllowAll:    allowAll,
 	}
 	session, err := GetSession(execData)
 	if err != nil {

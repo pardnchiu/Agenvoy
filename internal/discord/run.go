@@ -46,10 +46,11 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	}
 
 	execData := exec.ExecData{
-		Agent:   agent,
-		WorkDir: workDir,
-		Skill:   matchedSkill,
-		Content: content,
+		Agent:    agent,
+		WorkDir:  workDir,
+		Skill:    matchedSkill,
+		Content:  content,
+		AllowAll: true,
 	}
 
 	session, err := getSession(ctx, dcSession, receiveMessage.GuildID, receiveMessage.ChannelID, receiveMessage.AuthorID, dcMessageCreate.ID, receiveMessage.AuthorName, content, receiveMessage.ImageInputs, receiveMessage.FileInputs, execData)

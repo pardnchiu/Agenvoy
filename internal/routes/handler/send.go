@@ -97,6 +97,7 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 				Content:           trimContent,
 				ExcludeTools:      req.ExcludeTools,
 				ExtraSystemPrompt: req.SystemPrompt,
+				AllowAll:          true,
 			}
 
 			sessionManager.SaveBot(sessionID, sessionID, false)
@@ -139,7 +140,7 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 	if scanner == nil {
 		scanner = host.Scanner()
 	}
-	session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: exec.GetSystemPrompt(data.WorkDir, data.ExtraSystemPrompt, scanner, sessionID)}}
+	session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: exec.GetSystemPrompt(data.WorkDir, data.ExtraSystemPrompt, scanner, sessionID, data.AllowAll)}}
 
 	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 	session.Histories = oldHistory
