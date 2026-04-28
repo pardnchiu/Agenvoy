@@ -10,33 +10,55 @@ High-level data flow across all major subsystems.
 
 ```mermaid
 graph TB
-    subgraph Entry ["Entry Points"]
-        App["cmd/app · Unified TUI App\n(CLI · TUI · Discord · REST API)"]
+    subgraph Entry ["Entry · cmd/app"]
+        App["make app · TUI + Discord + REST\nmake cli / run · single-shot CLI\nagen new / switch / config · named cli- sessions"]
+    end
+
+    subgraph Runtime ["Runtime · internal/runtime"]
+        UID["runtime.uid singleton\n{uid, pid, started_at}"]
+        Init["runApp init\nSIGTERM 5s → SIGKILL prior server\n→ CleanupSessions (temp-* >1h)\n→ ClearAllActive (status.json)"]
+    end
+
+    subgraph Session ["Session Lifecycle · internal/session"]
+        Prefix["Prefix → Lifetime\ncli-* permanent\nhttp-* permanent (persist=true)\ndc-* permanent\ntemp-* 1h idle reap\ntemp-sub-* 1h idle reap"]
+        BotMD["bot.md · idempotent\nfrontmatter: name\nbody: agent persona\nGetSessionIDByName lookup"]
+        Status["status.json\nstate · active []Task · ended_at"]
+        Action["action.log\nappend-only · 1MB → 768KB rotate"]
     end
 
     subgraph Engine ["Execution Engine"]
         Run["exec.Run()"]
-        Execute["exec.Execute()\n≤128 iterations"]
+        Execute["exec.Execute()\n≤128 iterations\n3-pass parallel tool calls"]
+        Sub["ExecWithSubagent\nname → sid · always-excluded:\ninvoke_subagent · ask_user\n+ external/review tools"]
     end
 
-    subgraph Providers ["LLM Providers"]
+    subgraph Providers ["LLM Providers · 7"]
         P["Copilot · OpenAI · Codex · Claude\nGemini · Nvidia · Compat"]
     end
 
-    subgraph Security ["Security Layer"]
-        S["Sandbox · Denied Paths · Keychain"]
+    subgraph Security ["Security Layer · go-utils"]
+        S["sandbox.Wrap (bwrap / sandbox-exec)\nfilesystem.Policy · DeniedMap · ExcludeList\nKeychain"]
     end
 
     subgraph Tools ["Tool Subsystem"]
-        T["File · Web · API · Script\nScheduler · Error Memory · Sub-Agent"]
+        T["File · Web · API · Script\nactivate_skill · invoke_subagent (name)\nask_user (cli- gated)\nScheduler · Error Memory"]
     end
 
     subgraph Memory ["Memory Layer"]
         PS["ToriiDB Store\nSession Summary"]
     end
 
+    App --> Init
+    Init --> UID
     App --> Run
+    Run --> Prefix
     Run --> Execute
+    Execute -->|"invoke_subagent"| Sub
+    Sub --> BotMD
+    Sub --> Execute
+    Execute --> BotMD
+    Execute --> Status
+    Execute --> Action
     Execute -->|"Agent.Send()"| Providers
     Execute -->|"tool calls"| Security
     Security --> Tools
@@ -54,7 +76,7 @@ Flow ordering: `exec.Run()` first detects any `/skill-name` prefix (flag only, n
 ```mermaid
 flowchart TD
     Run["exec.Run()"]
-    PrefixDetect["scanner.MatchSkillCall()\n'/skill-name' prefix detect only\nflags matchedSkill, strips prefix"]
+    PrefixDetect["scanner.MatchSkillCall()\n'/skill-name' prefix detect only\nflags matchedSkill, returns args tail\n(or full input if no args)"]
     AgentScan["SelectAgent()\nPlanner LLM picks best provider\n(takes matchedSkill as hint)"]
     Enter["exec.Execute() entry"]
 
@@ -240,7 +262,11 @@ flowchart TD
     end
 
     subgraph SubAgentTools ["In-Process Sub-Agent · agents/subagent"]
-        SAT["invoke_subagent · Concurrent=true · ReadOnly=true\nin-process dispatch via exec.Execute() · no HTTP\nisolated temp-sub-* session · 1h idle TTL\noverrides: model · system_prompt · exclude_tools\nforce-excludes invoke_subagent to prevent recursion\nhost singleton (agents/host) for Planner · Registry · Scanner\nblank-imported in cmd/app/main.go to avoid tools → subagent cycle"]
+        SAT["invoke_subagent · Concurrent=true · ReadOnly=true\nin-process dispatch via exec.Execute() · no HTTP\nname='<X>' (since v0.20.0): GetSessionIDByName\nresolves cli-*/http-* bot.md frontmatter to sid\nelse session_id (resume) or temp-sub-{uuid} (ephemeral, 1h idle TTL)\noverrides: model · system_prompt · exclude_tools\nalways-excluded: invoke_subagent · invoke_external_agent\ncross_review_with_external_agents · review_result · ask_user\nhost singleton (agents/host) for Planner · Registry · Scanner\nblank-imported in cmd/app/main.go to avoid tools → subagent cycle"]
+    end
+
+    subgraph AskUserTool ["ask_user · cli- gated"]
+        AUT["ask_user · AlwaysLoad=true · ReadOnly=true\nentry gate: SessionID HasPrefix 'cli-'\nelse → formatNonInteractiveAsk text guidance\n(LLM relays question via reply text)\nstdin path: free-text / promptui single-select / multi-select"]
     end
 
     subgraph SearchTools ["Deferred Tool Registry · searchTools"]
@@ -256,6 +282,7 @@ flowchart TD
     Registry --> ErrorMemTools
     Registry --> ExternalAgentTools
     Registry --> SubAgentTools
+    Registry --> AskUserTool
     Registry --> SearchTools
     SAT -.->|"re-enter"| Registry
 
@@ -334,11 +361,15 @@ flowchart TD
     end
 
     subgraph Handler ["invoke_subagent Handler · internal/agents/subagent"]
-        Args["Parse args\n· task (required)\n· model? · system_prompt?\n· exclude_tools?"]
+        Args["Parse args\n· task (required)\n· name? (v0.20.0)\n· session_id? · model?\n· system_prompt? · exclude_tools?"]
+        NameResolve{"name set?"}
+        Lookup["session.GetSessionIDByName\nscan cli-* / http-* dirs\nbot.md frontmatter exact match\nelse error: not found"]
         Host["host singleton lookup\nPlanner · Registry · Scanner\n(set by cmd/app/main.go)"]
-        Session["Create temp-sub-{uuid} session\nisolated history & context\n1h idle TTL"]
-        ForceEx["Force-add invoke_subagent\nto exclude_tools\n→ prevent infinite nesting"]
-        Overrides["Apply overrides\n· swap model (if provided)\n· override system_prompt\n· filter Registry by exclude_tools"]
+        SessionPick{"sid path?"}
+        SessionResume["Resume existing session\nfrom resolved/given sid\nload history + summary"]
+        SessionTemp["Create temp-sub-{uuid} session\nisolated · 1h idle TTL"]
+        ForceEx["Force-prepend always-excluded set:\ninvoke_subagent\ninvoke_external_agent\ncross_review_with_external_agents\nreview_result\nask_user (architectural — single text return)\n+ caller-supplied exclude_tools"]
+        Overrides["Apply overrides\n· swap model (if provided)\n· override system_prompt\n· filter Registry by excluded set"]
     end
 
     subgraph Child ["Child Agent · exec.Execute() re-entry"]
@@ -354,9 +385,15 @@ flowchart TD
 
     PLoop --> PCheck
     PCheck -->|"yes"| Args
-    Args --> Host
-    Host --> Session
-    Session --> ForceEx
+    Args --> NameResolve
+    NameResolve -->|"yes"| Lookup
+    NameResolve -->|"no"| Host
+    Lookup --> Host
+    Host --> SessionPick
+    SessionPick -->|"name resolved\nor session_id given"| SessionResume
+    SessionPick -->|"both empty"| SessionTemp
+    SessionResume --> ForceEx
+    SessionTemp --> ForceEx
     ForceEx --> Overrides
     Overrides --> CRun
     CRun --> CTools
@@ -364,7 +401,7 @@ flowchart TD
     CFinal --> PWait
     PWait --> PResult
     PResult --> PLoop
-    Session -.->|"TTL expiry"| IdleGC
+    SessionTemp -.->|"TTL expiry"| IdleGC
     Handler -.-> NoHTTP
 ```
 
@@ -376,6 +413,19 @@ Chunked multi-pass summary generation, conversation history trimming, and ToriiD
 
 ```mermaid
 flowchart TD
+    subgraph SessionFiles ["Per-Session Files · &lt;sessions_dir&gt;/&lt;sid&gt;/ (v0.20.0)"]
+        BotMd["bot.md — agent identity\nfrontmatter: name (default = sid)\nbody: persona (default from configs/prompts/default_session_prompt.md)\nidempotent SaveBot · loaded into system prompt {{.BotPersona}}"]
+        StatusJ["status.json — liveness\n{state, active []Task, ended_at}\nOnline()/Idle() push/pop · GET /v1/session/:id/status"]
+        ActionL["action.log — append-only audit trail\nformat: [YYYY-MM-DD HH:MM:SS.mmm][kind] body\n1MB → 768KB rotate (\\n-aligned)\nGET /v1/session/:id/log SSE tail"]
+        HistoryJ["history.json — message log\nuser/assistant only · token-budget trimmed"]
+    end
+
+    subgraph Cleanup ["Lifecycle · runApp Init"]
+        CleanTemp["CleanupSessions\ntemp-* > 1h idle (mod time)\ncli-/http-/dc- never reaped"]
+        ClearActive["ClearAllActive\nzero status.json active arrays\nCLI/run path: only ClearActive(self)"]
+        RuntimeUID["runtime.uid singleton\nSIGTERM(5s) → SIGKILL prior server\n(server-only writer; CLI reads only)"]
+    end
+
     subgraph SessionSummary ["Session Summary · sessionManager"]
         SumCron["Hourly cron trigger\n(not per-request)"]
         SumChunk["Chunked multi-pass generation\navoids context overflow on long sessions"]
@@ -414,6 +464,9 @@ flowchart TD
     ErrStore --> TS
     ErrStore --> ErrRecall
     ErrRecall --> ErrResolve
+    BotMd -.->|"GetSessionIDByName"| BotMd
+    RuntimeUID --> CleanTemp
+    RuntimeUID --> ClearActive
 ```
 
 ---
@@ -439,8 +492,8 @@ flowchart TD
     subgraph Handlers ["Handlers · internal/routes/handler"]
         H1["ListTools()\nenumerate registered tools\nname · description · parameters"]
         H2["CallTool()\nvalidate tool exists\ndispatch via tools.Execute()"]
-        H3SSE["SendSSE()\nstream token chunks\nContent-Type: text/event-stream\n(exclude_tools → filter per request)"]
-        H3JSON["Send()\ncollect full response\nreturn JSON {text}\n(model field → bypass SelectAgent)\n(exclude_tools → filter per request)"]
+        H3SSE["SendSSE()\nstream token chunks\nContent-Type: text/event-stream\n(exclude_tools → filter per request)\n(persist=true → http-* permanent; v0.20.0)"]
+        H3JSON["Send()\ncollect full response\nreturn JSON {text, session_id}\n(model field → bypass SelectAgent)\n(exclude_tools → filter per request)\n(persist=true → http-* permanent; v0.20.0)"]
         H4["GetKey()\nread from OS Keychain"]
         H5["SaveKey()\nwrite to OS Keychain"]
         H6["GetSessionStatus()\nread status.json → JSON {state, active, ended_at, limit, usage}\n404 if session dir missing"]

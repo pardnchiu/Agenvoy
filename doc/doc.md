@@ -277,6 +277,9 @@ From the project root:
 | `make skills` | `go run ./cmd/app/ list skill` | List available skills |
 | `make cli <input...>` | `go run ./cmd/app/ cli <input>` | Run agent with tool confirmation |
 | `make run <input...>` | `go run ./cmd/app/ run <input>` | Run agent with all tools auto-approved |
+| `make new [name]` | `go run ./cmd/app/ new [name]` | Create a new `cli-` session and switch to it; `[name]` writes `bot.md` frontmatter `name` (v0.20.0) |
+| `make switch <name>` | `go run ./cmd/app/ switch <name>` | Switch the active CLI session by `bot.md` frontmatter `name` (v0.20.0) |
+| `make config` | `go run ./cmd/app/ config` | Edit the current CLI session's `bot.md` in `$EDITOR` (v0.20.0) |
 
 ### Basic
 
@@ -338,6 +341,9 @@ agen planner
 | `list` | `agen list [skill]` | List configured models or available skills |
 | `cli` | `agen cli <input...>` | Execute agentic workflow with interactive confirmation |
 | `run` | `agen run <input...>` | Execute with all tool calls auto-approved |
+| `new` | `agen new [name]` | Create a new `cli-` session and switch to it; `[name]` is written to `bot.md` frontmatter (v0.20.0) |
+| `switch` | `agen switch <name>` | Resolve `<name>` against `cli-*`/`http-*` `bot.md` frontmatter and switch the active CLI session (v0.20.0) |
+| `config` | `agen config` | Open the current CLI session's `bot.md` in `$EDITOR` (default: `vi`) (v0.20.0) |
 
 ### TUI Keyboard Shortcuts
 
@@ -359,7 +365,7 @@ agen planner
 | `list_files` | `path`, `recursive` | List directory contents |
 | `glob_files` | `pattern` | Glob pattern matching (e.g., `**/*.go`) |
 | `search_files` | `pattern`, `file_pattern` | Regex search across file contents |
-| `ask_user` | `questions` | CLI-only interactive prompt (free-text / single-select / multi-select via `promptui`); returns answers as a heterogeneous JSON array |
+| `ask_user` | `questions` | Interactive prompt — free-text / single-select / multi-select via `promptui`; gated by `cli-*` session prefix only (v0.20.0). Other prefixes (`http-` / `dc-` / `temp-` / `temp-sub-`) return guidance text instructing the LLM to relay the question via reply text instead of blocking on stdin |
 | `patch_file` | `path`, `old_string`, `new_string` | First-match string replace (safer than full rewrite) |
 | `search_conversation_history` | `keyword`, `time_range` | Query the current session's history records from ToriiDB |
 | `read_error_memory` | `hash` | Retrieve full error details for a failed tool call by hash |
@@ -387,7 +393,7 @@ agen planner
 | `invoke_external_agent` | `provider`, `task`, `readonly?` | Delegate the entire task to a named external CLI agent (`copilot` / `claude` / `codex` / `gemini`); `readonly` defaults to `true` |
 | `cross_review_with_external_agents` | `input`, `result` | Parallel cross-validation: dispatch to all declared external agents and merge feedback; falls back to `review_result` when none are declared |
 | `review_result` | `input`, `result` | Internal completeness review using the highest-priority available model (claude-opus → gpt-5.4 → gemini-3.1-pro → claude-sonnet) |
-| `invoke_subagent` | `task`, `model?`, `system_prompt?`, `exclude_tools?` | In-process sub-agent delegation with an isolated temp session; `invoke_subagent` is force-excluded inside the child to prevent recursion |
+| `invoke_subagent` | `task`, `name?`, `session_id?`, `model?`, `system_prompt?`, `exclude_tools?` | In-process sub-agent delegation. `name` (v0.20.0) resolves a `cli-*`/`http-*` session by `bot.md` frontmatter `name` (takes precedence over `session_id`; emits error on miss). Always-excluded set: `invoke_subagent`, `invoke_external_agent`, `cross_review_with_external_agents`, `review_result`, `ask_user` (subagents return a single final text and cannot pause for interactive input) |
 
 ## Slash Command Routing
 
@@ -445,6 +451,18 @@ Use `exclude_tools` to suppress specific tools for this request only:
 
 ```json
 { "content": "summarize today's news", "sse": false, "exclude_tools": ["run_command", "write_file"] }
+```
+
+**Session persistence (v0.20.0):**
+
+| `session_id` | `persist` | Resulting prefix | Lifetime |
+|---|---|---|---|
+| set | (ignored) | uses caller-supplied id | caller-managed |
+| empty | `false` (default) | `temp-<uuid>` | reaped after 1 h idle |
+| empty | `true` | `http-<uuid>` | **permanent**; caller must persist `session_id` from the response to resume |
+
+```json
+{ "content": "start an ongoing research thread", "sse": false, "persist": true }
 ```
 
 **Response (non-SSE):**

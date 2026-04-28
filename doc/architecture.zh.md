@@ -10,39 +10,61 @@
 
 ```mermaid
 graph TB
-    subgraph Entry ["進入點"]
-        App["cmd/app · 統一 TUI 應用\n(CLI · TUI · Discord · REST API)"]
+    subgraph Entry ["入口 · cmd/app"]
+        App["make app · TUI + Discord + REST\nmake cli / run · 單次 CLI\nagen new / switch / config · 具名 cli- session"]
+    end
+
+    subgraph Runtime ["Runtime · internal/runtime"]
+        UID["runtime.uid singleton\n{uid, pid, started_at}"]
+        Init["runApp 啟動\nSIGTERM 5s → SIGKILL 取代既有 server\n→ CleanupSessions（temp-* > 1h）\n→ ClearAllActive（status.json）"]
+    end
+
+    subgraph Session ["Session 生命週期 · internal/session"]
+        Prefix["前綴 → 生命週期\ncli-* 永久\nhttp-* 永久（persist=true）\ndc-* 永久\ntemp-* 1 小時 idle 清理\ntemp-sub-* 1 小時 idle 清理"]
+        BotMD["bot.md · 冪等\nfrontmatter: name\nbody: agent 人格\nGetSessionIDByName 解析"]
+        Status["status.json\nstate · active []Task · ended_at"]
+        Action["action.log\nappend-only · 1MB → 768KB rotate"]
     end
 
     subgraph Engine ["執行引擎"]
         Run["exec.Run()"]
-        Execute["exec.Execute()\n≤128 iterations"]
+        Execute["exec.Execute()\n≤128 iterations\n三段式並行 tool calls"]
+        Sub["ExecWithSubagent\nname → sid · 強制排除：\ninvoke_subagent · ask_user\n+ 外部 agent / review 工具"]
     end
 
-    subgraph Providers ["LLM Providers"]
+    subgraph Providers ["LLM 供應商 · 7"]
         P["Copilot · OpenAI · Codex · Claude\nGemini · Nvidia · Compat"]
     end
 
-    subgraph Security ["安全層"]
-        S["Sandbox · Denied Paths · Keychain"]
+    subgraph Security ["安全層 · go-utils"]
+        S["sandbox.Wrap（bwrap / sandbox-exec）\nfilesystem.Policy · DeniedMap · ExcludeList\nKeychain"]
     end
 
     subgraph Tools ["工具子系統"]
-        T["File · Web · API · Script\nScheduler · Error Memory · Sub-Agent"]
+        T["File · Web · API · Script\nactivate_skill · invoke_subagent (name)\nask_user（cli- gated）\nScheduler · Error Memory"]
     end
 
     subgraph Memory ["記憶層"]
         PS["ToriiDB Store\nSession Summary"]
     end
 
+    App --> Init
+    Init --> UID
     App --> Run
+    Run --> Prefix
     Run --> Execute
+    Execute -->|"invoke_subagent"| Sub
+    Sub --> BotMD
+    Sub --> Execute
+    Execute --> BotMD
+    Execute --> Status
+    Execute --> Action
     Execute -->|"Agent.Send()"| Providers
     Execute -->|"tool calls"| Security
     Security --> Tools
     Tools -->|"results"| Execute
     Execute --> Memory
-    Memory -.->|"inject"| Execute
+    Memory -.->|"注入"| Execute
 ```
 
 ---
@@ -54,7 +76,7 @@ graph TB
 ```mermaid
 flowchart TD
     Run["exec.Run()"]
-    PrefixDetect["scanner.MatchSkillCall()\n僅偵測 '/skill-name' 前綴\n標記 matchedSkill 並剝除前綴"]
+    PrefixDetect["scanner.MatchSkillCall()\n僅偵測 '/skill-name' 前綴\n標記 matchedSkill 回傳 args tail\n（無 args 則回完整輸入）"]
     AgentScan["SelectAgent()\nPlanner LLM 挑選最佳 provider\n（以 matchedSkill 作為 hint）"]
     Enter["exec.Execute() 進入點"]
 
@@ -240,7 +262,11 @@ flowchart TD
     end
 
     subgraph SubAgentTools ["In-Process 子 Agent · agents/subagent"]
-        SAT["invoke_subagent · Concurrent=true · ReadOnly=true\n以 exec.Execute() in-process 派送 · 不走 HTTP\n獨立 temp-sub-* session · 1 小時 idle TTL\n可覆寫：model · system_prompt · exclude_tools\n強制排除 invoke_subagent 自身避免無限巢狀\nhost singleton (agents/host) 提供 Planner · Registry · Scanner\ncmd/app/main.go blank-import 註冊 · 避免 tools → subagent import cycle"]
+        SAT["invoke_subagent · Concurrent=true · ReadOnly=true\n以 exec.Execute() in-process 派送 · 不走 HTTP\nname='<X>'（v0.20.0）：GetSessionIDByName\n以 cli-*/http-* 的 bot.md frontmatter 解析為 sid\n或 session_id（resume）／temp-sub-{uuid}（1 小時 idle TTL）\n可覆寫：model · system_prompt · exclude_tools\n強制排除：invoke_subagent · invoke_external_agent\ncross_review_with_external_agents · review_result · ask_user\nhost singleton (agents/host) 提供 Planner · Registry · Scanner\ncmd/app/main.go blank-import 註冊 · 避免 tools → subagent import cycle"]
+    end
+
+    subgraph AskUserTool ["ask_user · cli- 前綴 gated"]
+        AUT["ask_user · AlwaysLoad=true · ReadOnly=true\n入口 gate：SessionID HasPrefix 'cli-'\n否則 → formatNonInteractiveAsk 引導文字\n（要求 LLM 改以回覆文字向使用者問問題）\nstdin 路徑：自由輸入／promptui 單選／多選"]
     end
 
     subgraph SearchTools ["延遲工具註冊 · searchTools"]
@@ -256,6 +282,7 @@ flowchart TD
     Registry --> ErrorMemTools
     Registry --> ExternalAgentTools
     Registry --> SubAgentTools
+    Registry --> AskUserTool
     Registry --> SearchTools
     SAT -.->|"重新進入"| Registry
 
@@ -334,11 +361,15 @@ flowchart TD
     end
 
     subgraph Handler ["invoke_subagent Handler · internal/agents/subagent"]
-        Args["解析 args\n· task（必填）\n· model? · system_prompt?\n· exclude_tools?"]
+        Args["解析 args\n· task（必填）\n· name?（v0.20.0）\n· session_id? · model?\n· system_prompt? · exclude_tools?"]
+        NameResolve{"name 有值？"}
+        Lookup["session.GetSessionIDByName\n掃 cli-* / http-* 目錄\nbot.md frontmatter 字面相等\n未命中即 error"]
         Host["host singleton 查詢\nPlanner · Registry · Scanner\n(由 cmd/app/main.go 設定)"]
-        Session["建立 temp-sub-{uuid} session\n獨立 history 與 context\n1 小時 idle TTL"]
-        ForceEx["強制加入 invoke_subagent\n至 exclude_tools\n→ 防止無限巢狀"]
-        Overrides["套用 overrides\n· 切換 model（若有指定）\n· 覆寫 system_prompt\n· 依 exclude_tools 過濾 Registry"]
+        SessionPick{"sid 路徑？"}
+        SessionResume["以 resolved／指定 sid resume\n載入歷史 + summary"]
+        SessionTemp["建立 temp-sub-{uuid} session\n獨立 · 1 小時 idle TTL"]
+        ForceEx["前置強制排除集：\ninvoke_subagent\ninvoke_external_agent\ncross_review_with_external_agents\nreview_result\nask_user（架構合約 — 單一文字回傳）\n+ caller 提供的 exclude_tools"]
+        Overrides["套用 overrides\n· 切換 model（若有指定）\n· 覆寫 system_prompt\n· 依強制排除集過濾 Registry"]
     end
 
     subgraph Child ["子 Agent · exec.Execute() 重新進入"]
@@ -354,9 +385,15 @@ flowchart TD
 
     PLoop --> PCheck
     PCheck -->|"是"| Args
-    Args --> Host
-    Host --> Session
-    Session --> ForceEx
+    Args --> NameResolve
+    NameResolve -->|"是"| Lookup
+    NameResolve -->|"否"| Host
+    Lookup --> Host
+    Host --> SessionPick
+    SessionPick -->|"name 解析\n或指定 session_id"| SessionResume
+    SessionPick -->|"皆空"| SessionTemp
+    SessionResume --> ForceEx
+    SessionTemp --> ForceEx
     ForceEx --> Overrides
     Overrides --> CRun
     CRun --> CTools
@@ -364,7 +401,7 @@ flowchart TD
     CFinal --> PWait
     PWait --> PResult
     PResult --> PLoop
-    Session -.->|"TTL 到期"| IdleGC
+    SessionTemp -.->|"TTL 到期"| IdleGC
     Handler -.-> NoHTTP
 ```
 
@@ -376,6 +413,19 @@ Session 摘要的分塊多階段生成、對話歷史裁剪與 ToriiDB-backed �
 
 ```mermaid
 flowchart TD
+    subgraph SessionFiles ["Per-Session 檔案 · &lt;sessions_dir&gt;/&lt;sid&gt;/（v0.20.0）"]
+        BotMd["bot.md — agent 身分\nfrontmatter: name（預設 = sid）\nbody: 人格（預設來自 configs/prompts/default_session_prompt.md）\nSaveBot 冪等 · 載入 system prompt {{.BotPersona}} 佔位"]
+        StatusJ["status.json — 線上狀態\n{state, active []Task, ended_at}\nOnline()/Idle() push/pop · GET /v1/session/:id/status"]
+        ActionL["action.log — append-only 稽核軌跡\n格式：[YYYY-MM-DD HH:MM:SS.mmm][kind] body\n1MB → 768KB rotate（按 \\n 對齊）\nGET /v1/session/:id/log SSE 串流尾端"]
+        HistoryJ["history.json — 訊息軸\n僅 user/assistant · token-budget 裁剪"]
+    end
+
+    subgraph Cleanup ["生命週期 · runApp 啟動"]
+        CleanTemp["CleanupSessions\ntemp-* > 1h idle（mod time）\ncli-/http-/dc- 永不清理"]
+        ClearActive["ClearAllActive\n清空所有 status.json active 陣列\nCLI/run 路徑：只 ClearActive(self)"]
+        RuntimeUID["runtime.uid singleton\nSIGTERM(5s) → SIGKILL 取代既有 server\n（僅 server 寫入；CLI 只讀）"]
+    end
+
     subgraph SessionSummary ["Session 摘要 · sessionManager"]
         SumCron["每小時 cron 觸發\n(非 per-request)"]
         SumChunk["分塊多階段生成\n長 session 避免 context 溢位"]
@@ -414,6 +464,9 @@ flowchart TD
     ErrStore --> TS
     ErrStore --> ErrRecall
     ErrRecall --> ErrResolve
+    BotMd -.->|"GetSessionIDByName"| BotMd
+    RuntimeUID --> CleanTemp
+    RuntimeUID --> ClearActive
 ```
 
 ---
@@ -439,8 +492,8 @@ flowchart TD
     subgraph Handlers ["Handlers · internal/routes/handler"]
         H1["ListTools()\n列出註冊工具\nname · description · parameters"]
         H2["CallTool()\n驗證工具存在\n經由 tools.Execute() 派送"]
-        H3SSE["SendSSE()\n串流 token chunks\nContent-Type: text/event-stream\n(exclude_tools → 逐請求過濾)"]
-        H3JSON["Send()\n收集完整回應\n回傳 JSON {text}\n(model 欄位 → 繞過 SelectAgent)\n(exclude_tools → 逐請求過濾)"]
+        H3SSE["SendSSE()\n串流 token chunks\nContent-Type: text/event-stream\n(exclude_tools → 逐請求過濾)\n(persist=true → http-* 永久；v0.20.0)"]
+        H3JSON["Send()\n收集完整回應\n回傳 JSON {text, session_id}\n(model 欄位 → 繞過 SelectAgent)\n(exclude_tools → 逐請求過濾)\n(persist=true → http-* 永久；v0.20.0)"]
         H4["GetKey()\n由 OS Keychain 讀取"]
         H5["SaveKey()\n寫入 OS Keychain"]
         H6["GetSessionStatus()\n讀 status.json → JSON {state, active, ended_at, limit, usage}\nsession 目錄不存在回 404"]

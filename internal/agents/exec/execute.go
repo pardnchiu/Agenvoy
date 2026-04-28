@@ -74,6 +74,7 @@ type ExecData struct {
 	Skill             *skill.Skill
 	SkillScanner      *skill.SkillScanner
 	Content           string
+	SessionID         string
 	ImageInputs       []string
 	FileInputs        []string
 	ExcludeTools      []string

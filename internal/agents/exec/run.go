@@ -8,6 +8,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
@@ -18,6 +19,16 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	}
 
 	trimInput := strings.TrimSpace(userInput)
+
+	var sessionOverride string
+	if name, effective := sessionManager.Match(trimInput); name != "" {
+		resolved := sessionManager.GetSessionIDByName(name)
+		if resolved == "" {
+			return fmt.Errorf("session %q not found", name)
+		}
+		sessionOverride = resolved
+		trimInput = strings.TrimSpace(effective)
+	}
 
 	externalAgent, externalEffective, externalReadOnly := external.MatchExternal(trimInput)
 	if externalAgent != "" {
@@ -56,6 +67,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		WorkDir:     workDir,
 		Skill:       matchedSkill,
 		Content:     trimInput,
+		SessionID:   sessionOverride,
 		ImageInputs: imageInputs,
 		FileInputs:  fileInputs,
 	}

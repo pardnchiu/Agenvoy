@@ -78,6 +78,38 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		Histories: []agentTypes.Message{},
 	}
 
+	if overrideID := strings.TrimSpace(execData.SessionID); overrideID != "" {
+		sessionDir := filepath.Join(filesystem.SessionsDir, overrideID)
+		if !go_utils_filesystem.IsDir(sessionDir) {
+			return nil, fmt.Errorf("session %q does not exist", overrideID)
+		}
+
+		oldHistory, maxHistory := sessionManager.GetHistory(overrideID)
+		session.Histories = oldHistory
+
+		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner, overrideID)}}
+		if summary := sessionManager.GetSummaryPrompt(overrideID, OldestMessageTime(maxHistory)); summary != "" {
+			session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
+		}
+
+		session.OldHistories = maxHistory
+		session.ToolHistories = []agentTypes.Message{}
+
+		userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), trimInput)
+		session.Histories = append(session.Histories, agentTypes.Message{
+			Role:    "user",
+			Content: userText,
+		})
+		session.UserInput = agentTypes.Message{
+			Role:    "user",
+			Content: buildContent(userText, execData.ImageInputs, execData.FileInputs),
+		}
+		SaveUserInputHistory(overrideID, userText)
+
+		session.ID = overrideID
+		return &session, nil
+	}
+
 	unlock, err := sessionManager.LockConfig()
 	if err != nil {
 		return nil, fmt.Errorf("lockConfig: %w", err)

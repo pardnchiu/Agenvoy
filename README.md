@@ -50,39 +50,53 @@ The agent learns from past failures across sessions, routes each task to the rig
 
 ```mermaid
 graph TB
-    subgraph Entry ["Entry"]
-        App["cmd/app · Unified TUI App"]
+    subgraph Entry ["Entry · cmd/app"]
+        App["make app · TUI + Discord + REST\nmake cli / run · single-shot CLI\nagen new / switch / config · named cli- sessions"]
+    end
+
+    subgraph Runtime ["Runtime · internal/runtime"]
+        R["runtime.uid singleton\nSIGTERM prior server on startup"]
+    end
+
+    subgraph Session ["Session Lifecycle · internal/session"]
+        SL["bot.md (name + persona, idempotent)\nstatus.json (active task array)\naction.log (1MB rotate)\nGetSessionIDByName · cli-*/http-* lookup"]
     end
 
     subgraph Engine ["Execution Engine"]
-        Run["exec.Run()\nprefix detect → SelectAgent → Execute"]
-        Execute["exec.Execute()\n≤128 iterations\nskill activates via activate_skill tool"]
+        Run["exec.Run\nMatchExternal · MatchSkillCall · GetSession"]
+        Execute["exec.Execute · ≤128 iterations\n3-pass parallel tool calls"]
+        Sub["ExecWithSubagent\nname → sid · ask_user always excluded"]
     end
 
-    subgraph Providers ["LLM Providers"]
+    subgraph Providers ["LLM Providers · 7"]
         P["Copilot · OpenAI · Codex · Claude\nGemini · Nvidia · Compat"]
     end
 
-    subgraph Security ["Security Layer"]
-        S["Sandbox · Denied Paths · Keychain"]
+    subgraph Security ["Security Layer · go-utils"]
+        S["sandbox.Wrap (bwrap / sandbox-exec)\nfilesystem.Policy (denied / exclude)\nKeychain"]
     end
 
     subgraph Tools ["Tool Subsystem"]
-        T["File · Web · API · Script · Skill (activate_skill)\nScheduler · Error Memory · Sub-Agent"]
+        T["File · Web · API · Script\nactivate_skill · invoke_subagent (name)\nask_user (cli- gated)\nScheduler · Error Memory"]
     end
 
-    subgraph Memory ["Memory Layer"]
-        M["ToriiDB Store · Session Summary"]
+    subgraph Memory ["Memory Layer · ToriiDB"]
+        M["Session History · Error Memory\nWeb cache · Summary"]
     end
 
+    App --> R
     App --> Run
+    Run --> SL
     Run --> Execute
-    Execute -->|"Agent.Send()"| Providers
+    Execute -->|"invoke_subagent"| Sub
+    Sub --> SL
+    Sub --> Execute
+    Execute -->|"Agent.Send"| Providers
     Execute -->|"tool calls"| Security
     Security --> Tools
     Tools -->|"results"| Execute
     Execute --> Memory
-    Memory -.->|"inject"| Execute
+    Memory -.->|"summary inject"| Execute
 ```
 
 ## Features
@@ -112,6 +126,7 @@ Two prior projects from the same author directly informed Agenvoy's architecture
 
 ## Version History
 
+- **v0.20.0** — Sessions get a friendly-name layer: every session writes a per-folder `bot.md` (YAML frontmatter `name` + agent persona body, idempotent `SaveBot`, default body embedded from `configs/prompts/default_session_prompt.md`). Three new CLI commands key off that name — `agen new [name]` creates a `cli-` session and switches the main pointer, `agen switch <name>` resolves a name to a session id and switches, `agen config` opens the current session's `bot.md` in `$EDITOR`. `invoke_subagent` accepts `name="<X>"` to dispatch into a named `cli-`/`http-` session (resolution via `session.GetSessionIDByName`); a forced-routing entry in the system prompt picks this path up from natural-language phrases like "呼叫專業小幫手分析 tsmc" / "ask X to ...". `persist=true` HTTP sessions (`http-<uuid>`) are now genuinely persistent — removed from the cleanup whitelist; only `temp-*` is reaped after 1 h idle. New `internal/runtime` writes a UID/PID singleton at `~/.config/agenvoy/runtime.uid` so `runApp` startup SIGTERMs (5 s grace) → SIGKILLs any prior server, then runs `CleanupSessions` + `ClearAllActive` to wipe stale state. `ask_user` gates on `cli-*` prefix: non-`cli-` sessions (subagent / Discord / HTTP) return guidance text instructing the LLM to relay the question via reply text instead of blocking on a never-arriving stdin read. `invoke_subagent` adds `ask_user` to the always-excluded set — by architectural contract subagents only emit one final text and cannot pause for interactive input. go-utils upgraded to v0.9.4 with refined tool event logging.
 - **v0.19.8** — Add per-session concurrency cap (`MAX_SESSION_TASKS`, default 3, hard cap 10) plus two new endpoints: `GET /v1/session/:session_id/status` (reads `status.json` for online/idle state and active task list) and `GET /v1/session/:session_id/log` (SSE-streams `action.log` by polling the trailing 100 lines once per second with last-line dedup). Add per-session `action.log` recording user input and key tool/error events for human audit (1 MB rotation, never enters ToriiDB/embedder). Make `invoke_subagent` (`MAX_SUBAGENT_TIMEOUT_MIN`) and external CLI agents (`MAX_EXTERNAL_AGENT_TIMEOUT_MIN`) timeouts env-tunable, default 10 min, hard cap 60. Fix `invoke_subagent` to resume an existing persistent session by id (existence-checked, no auto-create).
 - **v0.19.7** — Tool registry hardening: tool descriptions and JSON schemas now follow the reviewer ruleset (single-sentence English, defaults on every optional field), tool identifiers are renamed to canonical snake_case (`patch_edit`→`patch_file`, `analyze_youtube`→`fetch_youtube_transcript`, `select_skill`→`activate_skill`, `read_tool_error`→`read_error_memory`, plus `script_*` separator normalization), scheduler and agent tool packages are reorganized into per-domain subpackages, Gemini joins the external agent roster, and the new `tool-reviewer` and `code-reviewer` skills land alongside a code-reviewer entropy bugfix.
 - **v0.19.6** — Add `ask_user` tool (free-text / single-select / multi-select via `promptui`) for CLI-only interactive prompts; switch `run_command` to argv-only schema (`argv: string[]`, no shell-string parsing) — multi-word args no longer suffer quote-mixing bugs, shell features available via explicit `["sh","-c","..."]`. Add semantic TTL-backed error memory: `Save` writes via `SetVector` with 90-day TTL, `Search` falls back to keyword scan when embedder unavailable, every hit refreshes TTL via `db.Expire`. Move `search_web` rate limiting from per-batch toolCall throttle to package-level `sync.Mutex` + `ddgMinGap=2s` global gap (covers retry / cross-iteration / cross-session); switch `api_*` throttling to per-name global mutex (`apiMinGap=1s`) so different api names never block each other. Bundle `commit-generate`, `readme-generate`, and `version-generate` skills.

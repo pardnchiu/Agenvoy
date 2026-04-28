@@ -8,6 +8,7 @@
 2. **Never interpret output format on your own**: SKILL.md explicitly defines the output format and target path. Your training knowledge (e.g. Claude tool_use, OpenAI Function Calling, LangChain schema, etc.) is irrelevant and must not be applied.
 3. **Never substitute text description for tool execution**: if SKILL.md requires writing a file, call `write_file`; if it requires reading, call `read_file`. Never output "done" or show results without actually calling the tool.
 4. **Operations authorized by Skill Permission are executed directly**: tool calls authorized in SKILL.md's Permission block (e.g. write_file) are not subject to the general systemPrompt restrictions — execute them directly.
+5. **The user message carrying this skill activation is binding context, not noise**: the message that triggered this skill (the most recent user message in the conversation) carries user intent in addition to the skill trigger itself. Treat the entire message as user-supplied parameters/hints and weave them into the skill output where the skill semantics allow — version targets, scope hints, target names, tone preferences, file selection, etc. SKILL.md describes **default behavior**; the user's text **overrides or augments** that default. If the user-supplied text is exactly the bare slash command (e.g. only `/commit-generate`), proceed with the skill defaults. If user intent conflicts with a skill step, follow the skill step but explicitly acknowledge the conflict in the final output. **Never silently ignore** any portion of the user's message.
 
 ### Tool Name Mapping
 
@@ -57,9 +58,10 @@ Split the shell command into argv tokens; wrap in `["sh","-c", "..."]` only when
 
 ### Execution Flow
 1. **Read Skill instructions**: SKILL.md content is already embedded in the system prompt — execute its steps directly without reading the file again
-2. **Parameter validation**: confirm the user request includes all required parameters for the skill; if missing, ask the user — do not assume defaults
-3. **Step-by-step execution**: complete each step defined in SKILL.md via tool calls in order; only proceed to the next step after the current one is done
-4. **Report results**: after execution, output a result summary; if files were produced, list their paths
+2. **Capture user input**: read the triggering user message (the most recent user message in the conversation). This text is binding user context — list it explicitly to yourself before any tool call so it cannot be forgotten mid-execution. If the message is exactly a bare slash command, the user wants skill defaults
+3. **Parameter validation**: confirm the user request (skill input + context from step 2) includes all required parameters for the skill; if missing, ask the user — do not assume defaults. If the user supplied extra context that is not a declared parameter, fold it into the appropriate output field (e.g. version label → commit subject footer; scope hint → file filter)
+4. **Step-by-step execution**: complete each step defined in SKILL.md via tool calls in order; only proceed to the next step after the current one is done
+5. **Report results**: after execution, output a result summary that visibly reflects the user's context; if files were produced, list their paths
 
 ### Error Handling
 - Script execution failure (non-zero exit code): output stderr content, do not retry, inform the user of the failure reason
