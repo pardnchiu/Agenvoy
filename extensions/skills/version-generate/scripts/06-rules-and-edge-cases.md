@@ -12,6 +12,9 @@
 8. **描述格式**：動詞開頭（Add、Fix、Update、Remove、Refactor）
 9. **聚焦意圖**：描述變更內容及原因，而非個別檔案
 10. **追溯格式**：每條變更尾綴 `(#PR, @author) [short_hash]`，缺失欄位省略對應括號
+11. **Summary 收斂**：`## Summary` 段限制 1–3 句（英文 ≤ 80 words／中文 ≤ 120 漢字），描述本次發布的主軸，**不**逐 commit 列模組／API／檔名。生成後若超字數立刻重寫；中英對照各自獨立計算字數但維持同主軸
+12. **Scope 英文唯一**：`## Scope` 段內容**一律英文**，**不附** `<details><summary>翻譯</summary>...</details>` 區塊。格式 `- \`<path>\` — <TAG1>, <TAG2>, ...`，TAG 用大寫 commit tag
+13. **不輸出 Version Mapping 表**：模板尾端**不再**附 `### Version Mapping (SemVer)` 表格與 `***` 分隔線。SemVer 規則由 frontmatter `type` 與 commit tag 自身表達，無需再列入 release note
 
 ## 邊界案例
 

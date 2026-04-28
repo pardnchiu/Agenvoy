@@ -10,13 +10,51 @@ mkdir -p .doc/version-generate
 
 ## 結構區塊
 
-輸出檔必須包含三個結構化區塊，順序與內容不得調換：
+輸出檔必須包含兩個結構化區塊，順序與內容不得調換：
 
 | 區塊 | 內容 | 對應段落 |
 |---|---|---|
 | **上段** | 發布者資訊與時間 | Frontmatter（`released_by` / `date` / `contributors` / `co_authors`） |
 | **中段** | 變更紀錄與對應 commit hash | `## Summary` / `## ⚠️ Breaking Changes` / `## Changes` / `## Scope` |
-| **底部** | 版本映射（SemVer 規則） | `### Version Mapping (SemVer)` 表格 |
+
+## Summary 撰寫規範（強制）
+
+**長度上限**：1–3 句，英文 ≤ 80 words、中文 ≤ 120 漢字。**超過即重寫**。
+
+**寫主軸，不寫清單**：以「概念層」描述本次發布解決什麼問題／推進什麼方向，**不要**逐 commit 列檔名／模組名／API 名稱。讀者要的是「這版在做什麼」，細節在 `## Changes` 與 `## Scope`。
+
+**禁止**：
+- 列舉超過 2 個具體模組／API／檔案路徑
+- 用半形冒號／破折號分多段塞 commit 內容
+- 中英對照各自獨立寫長段落
+
+**範例**（取自 `v0.20.0` 收斂後）：
+> Session lifecycle gains a friendly-name layer (per-session `bot.md` + `agen new`/`switch`/`config`) and three routing paths: `invoke_subagent name=...`, `:<name>` CLI prefix, and skill-arg pass-through. Runtime adds a UID/PID singleton plus per-session `status.json` and rotating `action.log`. go-utils upgraded to v0.9.4.
+
+**反例**（v0.20.0 第一版被退）：
+> 一次塞入 8 條主線、每條附路徑與行為描述，超過 200 字 — 應收斂為 3 句主軸，細節留給 FEAT entries。
+
+## Scope 撰寫規範（強制）
+
+`## Scope` 段內容**一律英文**，**不附中文翻譯區塊**。每行格式：
+
+```
+- `<path>` — <TAG1>, <TAG2>, ...
+```
+
+`<path>` 為原始檔／目錄路徑（保留斜線與副檔名），`<TAG>` 用大寫 commit tag（FEAT／FIX／UPDATE／SECURITY 等）。**禁止**：
+- 中文補充說明
+- 中文標點（全形括號／頓號／全形斜線「／」）—— 多檔列舉一律 ASCII `, ` 分隔
+- 完整檔名清單（同目錄多檔合併為單行）
+- 與 `## Changes` 重複的句子
+
+範例（取自 `v0.20.0`）：
+```
+- `internal/session/` — FEAT, ADD (`bot.go`, `match.go`, `status.go`)
+- `internal/agents/exec/` — FEAT (`run.go`, `getSession.go`)
+```
+
+附帶檔名清單可用，但限同模組內 ≤ 5 檔；超過則省略改寫成「`internal/foo/` — FEAT (multiple files)」。
 
 ## 範本
 
@@ -42,10 +80,10 @@ compare: https://github.com/pardnchiu/skill-version-generate/compare/v1.2.3...v1
 
 ## Summary
 
-Brief 1-2 sentence overview of changes.
+One short paragraph (1–3 sentences, ≤ 80 words / ≤ 120 漢字) capturing the **theme** of the release. State what changed at the conceptual level, not commit-by-commit.
 <details>
 <summary>翻譯</summary>
-變更的簡要說明（1-2 句話）
+版本主軸的簡述（1–3 句、≤ 120 漢字）。陳述本次概念層的變動，**不要**逐 commit 列出。
 </details>
 
 ## ⚠️ Breaking Changes
@@ -156,17 +194,6 @@ client.Login(ctx, Credentials{User: "alice", Pass: "secret"})
 - `pkg/auth/` — FEAT, REFACTOR, SECURITY
 - `pkg/cache/` — PERF
 - `docs/` — DOC
-
-***
-
-### Version Mapping (SemVer)
-
-| Detected Tag | Version Impact |
-|---|---|
-| `BREAKING` | MAJOR (+1.0.0) |
-| `FEAT` | MINOR (+0.1.0) |
-| `FIX` / `UPDATE` / `SECURITY` / `REFACTOR` / `PERF` / `ADD` / `REMOVE` | PATCH (+0.0.1) |
-| `STYLE` / `DOC` / `TEST` / `CHORE` | No bump (`type: none`, skip index) |
 
 ***
 
