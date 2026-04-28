@@ -27,6 +27,9 @@ var SystemPrompt string
 //go:embed prompts/discord_system_prompt.md
 var DiscordSystemPrompt string
 
+//go:embed prompts/default_session_prompt.md
+var DefaultSessionPrompt string
+
 // * Configs
 
 //go:embed jsons/denied_map.json

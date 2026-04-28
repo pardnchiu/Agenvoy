@@ -43,13 +43,13 @@ func buildContent(content string, imageInputs []string, fileInputs []string) any
 	}
 
 	for _, path := range fileInputs {
-		data, err := os.ReadFile(path)
+		text, err := go_utils_filesystem.ReadText(path)
 		if err != nil {
 			continue
 		}
 		parts = append(parts, agentTypes.ContentPart{
 			Type: "text",
-			Text: fmt.Sprintf("---\npath: %s\n---\n%s", filepath.Base(path), string(data)),
+			Text: fmt.Sprintf("---\npath: %s\n---\n%s", filepath.Base(path), text),
 		})
 	}
 
@@ -72,7 +72,6 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	if scanner == nil {
 		scanner = host.Scanner()
 	}
-	prompt := GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner)
 	trimInput := strings.TrimSpace(execData.Content)
 	session := agentTypes.AgentSession{
 		Tools:     []agentTypes.Message{},
@@ -86,9 +85,14 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	defer unlock()
 
 	var sessionID string
-	data, configErr := os.ReadFile(filesystem.ConfigPath)
+	configExists := go_utils_filesystem.Exists(filesystem.ConfigPath)
 	switch {
-	case configErr == nil:
+	case configExists:
+		configText, err := go_utils_filesystem.ReadText(filesystem.ConfigPath)
+		if err != nil {
+			return nil, fmt.Errorf("go_utils_filesystem.ReadText: %w", err)
+		}
+		data := []byte(configText)
 		// * config is exist
 		var indexData IndexData
 		if err := json.Unmarshal(data, &indexData); err != nil {
@@ -121,7 +125,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 		session.Histories = oldHistory
 
-		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: prompt}}
+		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner, sessionID)}}
 		if summary := sessionManager.GetSummaryPrompt(sessionID, OldestMessageTime(maxHistory)); summary != "" {
 			session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 		}
@@ -140,14 +144,14 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		}
 		SaveUserInputHistory(sessionID, userText)
 
-	case os.IsNotExist(configErr):
+	default:
 		// * config is not exist
 		sessionID, err := sessionManager.CreateSession("cli-")
 		if err != nil {
 			return nil, fmt.Errorf("newSessionID: %w", err)
 		}
 
-		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: prompt}}
+		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner, sessionID)}}
 		session.OldHistories = []agentTypes.Message{}
 		session.ToolHistories = []agentTypes.Message{}
 
@@ -181,9 +185,6 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		if err != nil {
 			return nil, fmt.Errorf("file.Close: %w", err)
 		}
-
-	default:
-		return nil, fmt.Errorf("os.ReadFile: %w", configErr)
 	}
 
 	session.ID = sessionID

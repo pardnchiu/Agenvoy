@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 	go_utils_utils "github.com/pardnchiu/go-utils/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
@@ -73,7 +73,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 
 	session := &agentTypes.AgentSession{
 		ID:            sessionID,
-		SystemPrompts: []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, host.Scanner())}},
+		SystemPrompts: []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, host.Scanner(), sessionID)}},
 		OldHistories:  maxHistory,
 		ToolHistories: []agentTypes.Message{},
 		Tools:         []agentTypes.Message{},
@@ -147,14 +147,10 @@ func ensureSubagentSession(input string) (string, error) {
 	}
 
 	sessionDir := filepath.Join(filesystem.SessionsDir, trimmed)
-	info, err := os.Stat(sessionDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "", fmt.Errorf("session %q does not exist", trimmed)
-		}
-		return "", fmt.Errorf("os.Stat: %w", err)
+	if !go_utils_filesystem.Exists(sessionDir) {
+		return "", fmt.Errorf("session %q does not exist", trimmed)
 	}
-	if !info.IsDir() {
+	if !go_utils_filesystem.IsDir(sessionDir) {
 		return "", fmt.Errorf("session %q is not a directory", trimmed)
 	}
 	return trimmed, nil

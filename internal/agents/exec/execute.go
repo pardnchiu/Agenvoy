@@ -308,7 +308,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	return nil
 }
 
-func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.SkillScanner) string {
+func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.SkillScanner, sessionID string) string {
 	systemOS := runtime.GOOS
 	// var skillPath string
 	// var skillExt string
@@ -339,12 +339,30 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.Sk
 		skillsSection = "## Skills\n\nCall `activate_skill` with one of these exact names to activate. The tool result returns the skill body + execution guidance — treat it as binding instructions for subsequent iterations. Never answer from prior knowledge when the user requests a listed skill by name.\n\n" + list
 	}
 
+	personaSection := ""
+	if sessionID != "" {
+		sessionManager.SaveBot(sessionID, sessionID, false)
+	}
+	if name, body := sessionManager.GetBot(sessionID); body != "" {
+		var sb strings.Builder
+		sb.WriteString("## Bot Persona\n\n")
+		if name != "" {
+			fmt.Fprintf(&sb, "Your operating identity for this session is `%s`. Internalise the role description below and apply it to every reply unless an explicit user instruction overrides it.\n\n", name)
+		} else {
+			sb.WriteString("Internalise the role description below and apply it to every reply unless an explicit user instruction overrides it.\n\n")
+		}
+		sb.WriteString(body)
+		sb.WriteString("\n\n---\n\n")
+		personaSection = sb.String()
+	}
+
 	return strings.NewReplacer(
 		"{{.SystemOS}}", systemOS,
 		"{{.WorkPath}}", workDir,
 		// "{{.SkillPath}}", skillPath,
 		// "{{.SkillExt}}", skillExt,
 		// "{{.Content}}", content,
+		"{{.BotPersona}}", personaSection,
 		"{{.AvailableSkills}}", skillsSection,
 		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
 		"{{.ExtraSystemPrompt}}", extraSection,

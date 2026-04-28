@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -25,7 +24,7 @@ func SaveToToolCall(sessionID, content string) {
 	now := time.Now()
 	date := now.Format("2006-01-02")
 	toolCallsDir := filepath.Join(filesystem.SessionsDir, sessionID, "tool_calls", date)
-	if err := os.MkdirAll(toolCallsDir, 0755); err == nil {
+	if err := go_utils_filesystem.CheckDir(toolCallsDir, true); err == nil {
 		filename := fmt.Sprintf("%s.json", now.Format("2006-01-02-15-04-05"))
 		toolActionsPath := filepath.Join(toolCallsDir, filename)
 		if err := go_utils_filesystem.WriteFile(toolActionsPath, content, 0644); err != nil {
@@ -46,14 +45,15 @@ func CreateSession(prefix string) (string, error) {
 
 	uuid := h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:]
 	sessionID := prefix + uuid
-	err := os.MkdirAll(filepath.Join(filesystem.SessionsDir, sessionID), 0755)
-	if err != nil {
-		return "", fmt.Errorf("os.MkdirAll: %w", err)
+	if err := go_utils_filesystem.CheckDir(filepath.Join(filesystem.SessionsDir, sessionID), true); err != nil {
+		return "", fmt.Errorf("go_utils_filesystem.CheckDir: %w", err)
 	}
+	SaveBot(sessionID, sessionID, false)
 	return sessionID, nil
 }
 
 func LockConfig() (func(), error) {
+	// * lock file: kept on os.OpenFile because syscall.Flock needs the raw fd
 	lockPath := filepath.Join(filesystem.AgenvoyDir, "config.json.lock")
 	file, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
@@ -99,20 +99,16 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
 	configPath := filepath.Join(sessionDir, "config.json")
 
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(sessionDir, 0755); err != nil {
-			return "", fmt.Errorf("os.MkdirAll: %w", err)
+	if !go_utils_filesystem.Exists(configPath) {
+		if err := go_utils_filesystem.CheckDir(sessionDir, true); err != nil {
+			return "", fmt.Errorf("go_utils_filesystem.CheckDir: %w", err)
 		}
-
-		configData, err := json.Marshal(config)
-		if err != nil {
-			return "", fmt.Errorf("json.Marshal: %w", err)
-		}
-		if err := go_utils_filesystem.WriteFile(configPath, string(configData), 0644); err != nil {
-			return "", fmt.Errorf("WriteFile: %w", err)
+		if err := go_utils_filesystem.WriteJSON(configPath, config, false); err != nil {
+			return "", fmt.Errorf("WriteJSON: %w", err)
 		}
 	}
 
+	SaveBot(sessionID, sessionID, false)
 	return sessionID, nil
 }
 
@@ -122,14 +118,9 @@ func GetChannelID(sessionID string) (string, error) {
 	}
 
 	configPath := filepath.Join(filesystem.SessionsDir, sessionID, "config.json")
-	bytes, err := os.ReadFile(configPath)
+	config, err := go_utils_filesystem.ReadJSON[map[string]string](configPath)
 	if err != nil {
-		return "", fmt.Errorf("os.ReadFile: %w", err)
-	}
-
-	var config map[string]string
-	if err := json.Unmarshal(bytes, &config); err != nil {
-		return "", fmt.Errorf("json.Unmarshal: %w", err)
+		return "", fmt.Errorf("go_utils_filesystem.ReadJSON: %w", err)
 	}
 	return config["channel_id"], nil
 }
@@ -143,13 +134,8 @@ var MaxHistoryMessages = func() int {
 
 func GetHistory(sessionID string) (old, max []agentTypes.Message) {
 	historyPath := filepath.Join(filesystem.SessionsDir, sessionID, "history.json")
-	bytes, err := os.ReadFile(historyPath)
+	oldHistory, err := go_utils_filesystem.ReadJSON[[]agentTypes.Message](historyPath)
 	if err != nil {
-		return nil, nil
-	}
-
-	var oldHistory []agentTypes.Message
-	if err := json.Unmarshal(bytes, &oldHistory); err != nil {
 		return nil, nil
 	}
 
@@ -205,8 +191,8 @@ func latestModTime(dir string) time.Time {
 
 func SaveHistory(sessionID, content string) error {
 	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
-	if err := os.MkdirAll(sessionDir, 0755); err != nil {
-		return fmt.Errorf("os.MkdirAll: %w", err)
+	if err := go_utils_filesystem.CheckDir(sessionDir, true); err != nil {
+		return fmt.Errorf("go_utils_filesystem.CheckDir: %w", err)
 	}
 
 	historyPath := filepath.Join(sessionDir, "history.json")
