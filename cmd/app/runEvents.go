@@ -13,7 +13,66 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
-func formatRunCommandArgv(raw string) string {
+func printLog(name, raw string) string {
+	if raw == "" {
+		return ""
+	}
+	var m map[string]any
+	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		return raw
+	}
+	pick := func(keys ...string) string {
+		for _, k := range keys {
+			if v, ok := m[k]; ok {
+				if s, ok := v.(string); ok && strings.TrimSpace(s) != "" {
+					return s
+				}
+			}
+		}
+		return ""
+	}
+	switch name {
+	case "activate_skill":
+		if s := pick("skill", "name"); s != "" {
+			return s
+		}
+	case "read_file", "write_file", "patch_file", "list_files", "glob_files", "read_image", "save_page_to_file":
+		if s := pick("path", "pattern", "save_to"); s != "" {
+			return s
+		}
+	case "search_web", "fetch_google_rss":
+		if q := pick("query", "keyword"); q != "" {
+			if tr := pick("time_range", "time"); tr != "" {
+				return fmt.Sprintf("%s (%s)", q, tr)
+			}
+			return q
+		}
+	case "fetch_yahoo_finance":
+		if sym := pick("symbol"); sym != "" {
+			if tr := pick("time_range"); tr != "" {
+				return fmt.Sprintf("%s (%s)", sym, tr)
+			}
+			return sym
+		}
+	case "fetch_page", "fetch_youtube_transcript":
+		if s := pick("link", "url"); s != "" {
+			return s
+		}
+	case "remember_error":
+		if s := pick("symptom", "cause", "action"); s != "" {
+			return s
+		}
+	case "search_error_memory", "search_conversation_history":
+		if s := pick("keyword", "query"); s != "" {
+			return s
+		}
+	case "run_command":
+		return printLogCommand(raw)
+	}
+	return raw
+}
+
+func printLogCommand(raw string) string {
 	var p struct {
 		Argv []string `json:"argv"`
 	}
@@ -71,7 +130,7 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 			writeStdoutLine(fmt.Sprintf("[*] Agent: %s", ev.Text))
 
 		case agentTypes.EventToolCall:
-			writeStdoutLine(fmt.Sprintf("[*] [%s] Tool: %s - %s", time.Now().Format("15:04:05"), ev.ToolName, ev.ToolArgs))
+			writeStdoutLine(fmt.Sprintf("[*] [%s] Tool: %s - %s", time.Now().Format("15:04:05"), ev.ToolName, printLog(ev.ToolName, ev.ToolArgs)))
 
 		case agentTypes.EventToolSkipped:
 			writeStdoutLine(fmt.Sprintf("[~] [%s] Tool skipped: %s", time.Now().Format("15:04:05"), ev.ToolName))
@@ -89,7 +148,7 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 
 		case agentTypes.EventToolConfirm:
 			if ev.ToolName == "run_command" {
-				writeStdoutLine(fmt.Sprintf("[$] %s", formatRunCommandArgv(ev.ToolArgs)))
+				writeStdoutLine(fmt.Sprintf("[$] %s", printLogCommand(ev.ToolArgs)))
 			}
 			prompt := promptui.Select{
 				Label:        fmt.Sprintf("Run %s?", ev.ToolName),
@@ -110,7 +169,7 @@ func runEvents(_ context.Context, cancel context.CancelFunc, fn func(chan<- agen
 			}
 
 		case agentTypes.EventExecError:
-			writeStderrLine(fmt.Sprintf("[!] [%s] Tool (%s) error: %s", time.Now().Format("15:04:05"), ev.ToolName, ev.Text))
+			writeStderrLine(fmt.Sprintf("[!] [%s] Error: %s - %s", time.Now().Format("15:04:05"), ev.ToolName, ev.Text))
 
 		case agentTypes.EventError:
 			if ev.Err != nil {

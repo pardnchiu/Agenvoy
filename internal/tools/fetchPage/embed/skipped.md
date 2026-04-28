@@ -1,2 +1,6 @@
-This URL has been marked as permanently unavailable and further access attempts are prohibited: {{.Href}}
-Please use `search_web` to search for alternative sources using the title or keywords. **For the 1–3 most relevant links in the search results, call `fetch_page` to obtain the full text.** Producing content based solely on snippets is considered a violation.
+fetch_page could not return usable content for this URL.
+url: {{.Href}}
+{{if .Status}}status: {{.Status}}
+{{end}}{{if .Title}}title: {{.Title}}
+{{end}}
+This URL is now blocked from further fetch_page calls. Decide your own next step based on the title and status above — no specific follow-up tool is mandated. Do not retry the same URL.

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -84,8 +83,8 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 		link = parsed.String()
 	}
 
-	if isSkipped(link) {
-		return skippedMessage(link), nil
+	if hit, status, title := isSkipped(link); hit {
+		return skippedMessage(link, status, title), nil
 	}
 
 	cacheVariant := "|text"
@@ -111,22 +110,26 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 		})
 		if err != nil {
 			status := 503
+			title := ""
 			var fe *go_utils_rod.FetchError
 			if errors.As(err, &fe) {
 				status = fe.Status
 			}
-			addToSkippedMap(link, status)
-			return skippedMessage(link), nil
+			if result != nil {
+				title = result.Title
+			}
+			addToSkippedMap(link, status, title)
+			return skippedMessage(link, status, title), nil
 		}
 
 		if isPage4xx(result.Title, result.FinalURL) {
-			addToSkippedMap(link, 404)
-			return skippedMessage(link), nil
+			addToSkippedMap(link, 404, result.Title)
+			return skippedMessage(link, 404, result.Title), nil
 		}
 
 		if strings.TrimSpace(result.Markdown) == "" {
-			addToSkippedMap(link, 0)
-			return skippedMessage(link), nil
+			addToSkippedMap(link, 0, result.Title)
+			return skippedMessage(link, 0, result.Title), nil
 		}
 
 		full = buildFrontmatter(result)
@@ -137,8 +140,8 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 	}
 
 	if saveTo != nil {
-		if err := os.MkdirAll(filepath.Dir(*saveTo), 0755); err != nil {
-			return "", fmt.Errorf("os.MkdirAll: %w", err)
+		if err := go_utils_filesystem.CheckDir(filepath.Dir(*saveTo), true); err != nil {
+			return "", fmt.Errorf("go_utils_filesystem.CheckDir: %w", err)
 		}
 		if err := go_utils_filesystem.WriteFile(*saveTo, full, 0644); err != nil {
 			return "", fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
