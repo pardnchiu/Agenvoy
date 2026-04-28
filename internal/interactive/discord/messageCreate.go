@@ -11,7 +11,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 

@@ -3,10 +3,11 @@ package discord
 import (
 	"context"
 	"fmt"
-	"github.com/bwmarrin/discordgo"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
 	"os"
 	"path/filepath"
+
+	"github.com/bwmarrin/discordgo"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
 )
 
 const (

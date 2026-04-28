@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/bwmarrin/discordgo"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
 )
 
 func Create(dcBot *discordTypes.DiscordBot, dcSession *discordgo.Session) {

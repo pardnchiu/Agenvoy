@@ -23,7 +23,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 

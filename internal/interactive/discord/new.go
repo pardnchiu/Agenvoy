@@ -10,8 +10,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	discordCommand "github.com/pardnchiu/agenvoy/internal/discord/command"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
+	discordCommand "github.com/pardnchiu/agenvoy/internal/interactive/discord/command"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )

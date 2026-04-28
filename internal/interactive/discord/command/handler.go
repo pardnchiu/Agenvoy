@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	discordTypes "github.com/pardnchiu/agenvoy/internal/discord/types"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
 )
 
 func Handler(receiveMessage *discordTypes.ReceiveMessage) []discordTypes.ReplyMessage {
