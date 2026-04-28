@@ -30,6 +30,12 @@ var DiscordSystemPrompt string
 //go:embed prompts/default_session_prompt.md
 var DefaultSessionPrompt string
 
+//go:embed prompts/always_allow.md
+var PermissionAlwaysAllow string
+
+//go:embed prompts/single_confirm.md
+var PermissionSingleConfirm string
+
 // * Configs
 
 //go:embed jsons/denied_map.json
