@@ -48,7 +48,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 		return "", fmt.Errorf("ensureSubagentSession: %w", err)
 	}
 
-	excluded := append([]string{"invoke_subagent", "invoke_external_agent", "cross_review_with_external_agents", "review_result"}, excludedTools...)
+	excluded := append([]string{"invoke_subagent", "invoke_external_agent", "cross_review_with_external_agents", "review_result", "ask_user"}, excludedTools...)
 	execData := ExecData{
 		Agent:             agent,
 		WorkDir:           ".",

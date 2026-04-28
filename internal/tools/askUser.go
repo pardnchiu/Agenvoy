@@ -23,9 +23,9 @@ type askQuestion struct {
 
 func registAskUser() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "ask_user",
-		ReadOnly:   true,
-		AlwaysLoad: true,
+		Name:        "ask_user",
+		ReadOnly:    true,
+		AlwaysLoad:  true,
 		Description: "Ask the user one or more questions and return their answers.",
 		Parameters: map[string]any{
 			"type": "object",
@@ -66,6 +66,30 @@ func registAskUser() {
 			}
 			if len(params.Questions) == 0 {
 				return "", fmt.Errorf("ask_user requires at least one question in 'questions'")
+			}
+
+			if !strings.HasPrefix(e.SessionID, "cli-") {
+				var sb strings.Builder
+				sb.WriteString("此 session 無互動 stdin（非 cli- session），無法即時收使用者輸入。請在你接下來的回覆中，直接以自然語言把以下問題傳達給使用者，等待使用者下一則訊息提供答案後再繼續：\n")
+				for i, q := range params.Questions {
+					question := strings.TrimSpace(q.Question)
+					if question == "" {
+						continue
+					}
+					fmt.Fprintf(&sb, "%d. %s", i+1, question)
+					if len(q.Options) > 0 {
+						sb.WriteString("（選項：")
+						sb.WriteString(strings.Join(q.Options, " / "))
+						if q.MultiSelect {
+							sb.WriteString("，可複選）")
+						} else {
+							sb.WriteString("）")
+						}
+					}
+					sb.WriteString("\n")
+				}
+				sb.WriteString("禁止自行猜測答案或代為填入預設值；缺資訊就先停下來問。")
+				return sb.String(), nil
 			}
 
 			reader := bufio.NewReader(os.Stdin)

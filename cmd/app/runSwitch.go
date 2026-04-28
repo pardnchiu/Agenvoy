@@ -16,7 +16,7 @@ func runSwitch(name string) {
 		os.Exit(1)
 	}
 
-	match := getSessionIDByName(name)
+	match := session.GetSessionIDByName(name)
 	if match == "" {
 		slog.Error("not found")
 		os.Exit(1)

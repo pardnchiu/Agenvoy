@@ -6,16 +6,13 @@ import (
 	"os"
 	"strings"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
-
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
 func runNew(name string) {
 	name = strings.TrimSpace(name)
 	if name != "" {
-		if sid := getSessionIDByName(name); sid != "" {
+		if sid := session.GetSessionIDByName(name); sid != "" {
 			slog.Error("Name already used")
 			os.Exit(1)
 		}
@@ -55,30 +52,4 @@ func runNew(name string) {
 	if previous != "" && previous != newID {
 		fmt.Printf("Previous: %s\n", previous)
 	}
-}
-
-func getSessionIDByName(name string) string {
-	if name == "" {
-		return ""
-	}
-
-	dirs, err := go_utils_filesystem.ListDirs(filesystem.SessionsDir)
-	if err != nil {
-		return ""
-	}
-
-	for _, sid := range dirs {
-		if !strings.HasPrefix(sid, "cli-") {
-			continue
-		}
-
-		botName, _ := session.GetBot(sid)
-		if botName == "" {
-			continue
-		}
-		if botName == name {
-			return sid
-		}
-	}
-	return ""
 }

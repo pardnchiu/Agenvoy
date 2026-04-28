@@ -157,7 +157,7 @@ func Clean() {
 			continue
 		}
 		name := entry.Name()
-		if !strings.HasPrefix(name, "temp-") && !strings.HasPrefix(name, "http-") {
+		if !strings.HasPrefix(name, "temp-") {
 			continue
 		}
 		sessionDir := filepath.Join(filesystem.SessionsDir, entry.Name())

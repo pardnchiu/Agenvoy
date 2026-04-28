@@ -46,6 +46,32 @@ func SaveBot(sessionID, name string, force bool) {
 	}
 }
 
+func GetSessionIDByName(name string) string {
+	if name == "" {
+		return ""
+	}
+
+	dirs, err := go_utils_filesystem.ListDirs(filesystem.SessionsDir)
+	if err != nil {
+		return ""
+	}
+
+	for _, sid := range dirs {
+		if !strings.HasPrefix(sid, "cli-") && !strings.HasPrefix(sid, "http-") {
+			continue
+		}
+
+		botName, _ := GetBot(sid)
+		if botName == "" {
+			continue
+		}
+		if botName == name {
+			return sid
+		}
+	}
+	return ""
+}
+
 func GetBot(sessionID string) (name, body string) {
 	if sessionID == "" {
 		return "", ""

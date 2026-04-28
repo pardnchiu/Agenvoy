@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -33,9 +34,14 @@ func registInvokeSubagent() {
 					"type":        "string",
 					"description": "Self-contained task description for the subagent.",
 				},
+				"name": map[string]any{
+					"type":        "string",
+					"description": "Friendly identifier matching bot.md frontmatter `name` of an existing cli- session. Resolves to its session_id; takes precedence over session_id when both are set.",
+					"default":     "",
+				},
 				"session_id": map[string]any{
 					"type":        "string",
-					"description": "Persistent session id to thread multi-turn subagent calls (e.g. 'researcher', 'planner-2'). Blank uses an ephemeral temp-sub session.",
+					"description": "Persistent session id to thread multi-turn subagent calls (e.g. 'researcher', 'planner-2'). Blank uses an ephemeral temp-sub session. Ignored when name resolves successfully.",
 					"default":     "",
 				},
 				"model": map[string]any{
@@ -52,7 +58,7 @@ func registInvokeSubagent() {
 				"exclude_tools": map[string]any{
 					"type":        "array",
 					"items":       map[string]any{"type": "string"},
-					"description": "Tool names to exclude. invoke_subagent is always force-excluded.",
+					"description": "Extra tool names to exclude on top of the always-excluded set (invoke_subagent, invoke_external_agent, cross_review_with_external_agents, review_result, ask_user). The default set cannot be overridden.",
 					"default":     []string{},
 				},
 			},
@@ -63,6 +69,7 @@ func registInvokeSubagent() {
 		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Task         string   `json:"task"`
+				Name         string   `json:"name,omitempty"`
 				SessionID    string   `json:"session_id,omitempty"`
 				Model        string   `json:"model,omitempty"`
 				SystemPrompt string   `json:"system_prompt,omitempty"`
@@ -78,6 +85,13 @@ func registInvokeSubagent() {
 			}
 
 			sessionID := strings.TrimSpace(params.SessionID)
+			if name := strings.TrimSpace(params.Name); name != "" {
+				resolved := sessionManager.GetSessionIDByName(name)
+				if resolved == "" {
+					return "", fmt.Errorf("no cli- session has bot.md name = %q", name)
+				}
+				sessionID = resolved
+			}
 
 			model := strings.TrimSpace(params.Model)
 			if model != "" && !slices.Contains(models, model) {
