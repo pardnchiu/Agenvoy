@@ -1,8 +1,13 @@
 {
   "default": "gpt-5-mini",
   "models": {
+    "gpt-5.5": {
+      "description": "OpenAI 最新旗艦模型，可調推理深度（low／medium／high／xhigh），1.05M 上下文",
+      "no_temperature": true,
+      "reasoning_effort": true
+    },
     "gpt-5.4": {
-      "description": "OpenAI 最新旗艦模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
+      "description": "前代旗艦推理模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
     },
     "gpt-5.4-mini": {
       "description": "GPT-5.4 高效版，保留超長上下文與電腦控制能力，速度更快且成本更低"

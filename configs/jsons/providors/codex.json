@@ -1,39 +1,38 @@
 {
   "default": "gpt-5.3-codex",
   "models": {
+    "gpt-5.5": {
+      "description": "OpenAI 最新旗艦模型，強化 agentic coding／電腦控制／知識工作能力，可調推理深度（low／medium／high／xhigh），1.05M 上下文"
+    },
+    "gpt-5.5-pro": {
+      "description": "GPT-5.5 Pro 版，針對複雜長程推理場景強化，輸出品質更高，僅限 Pro／Business／Enterprise"
+    },
     "gpt-5.4": {
-      "description": "OpenAI 最新旗艦模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
+      "description": "前代旗艦推理模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
     },
     "gpt-5.4-mini": {
       "description": "GPT-5.4 高效版，保留超長上下文與電腦控制能力，速度更快且成本更低"
     },
     "gpt-5.3-codex": {
-      "description": "GPT-5.3 Codex，強化程式生成與 Agentic coding 能力",
-      "no_temperature": true
+      "description": "GPT-5.3 Codex，強化程式生成與 Agentic coding 能力"
     },
     "gpt-5.3-codex-spark": {
-      "description": "GPT-5.3 Codex Spark（Research Preview），純文字模型，針對近即時程式碼迭代場景優化，僅限 ChatGPT Pro",
-      "no_temperature": true
+      "description": "GPT-5.3 Codex Spark（Research Preview），純文字模型，針對近即時程式碼迭代場景優化，僅限 ChatGPT Pro"
     },
     "gpt-5.2-codex": {
-      "description": "GPT-5.2 Codex，穩定的程式生成模型",
-      "no_temperature": true
+      "description": "GPT-5.2 Codex，穩定的程式生成模型"
     },
     "gpt-5.1-codex-max": {
-      "description": "GPT-5.1 Codex Max，最大上下文程式生成版本",
-      "no_temperature": true
+      "description": "GPT-5.1 Codex Max，最大上下文程式生成版本"
     },
     "gpt-5.1-codex": {
-      "description": "GPT-5.1 Codex，適合程式補全與 Agentic 任務",
-      "no_temperature": true
+      "description": "GPT-5.1 Codex，適合程式補全與 Agentic 任務"
     },
     "gpt-5-codex": {
-      "description": "GPT-5 Codex，基礎程式生成模型",
-      "no_temperature": true
+      "description": "GPT-5 Codex，基礎程式生成模型"
     },
     "gpt-5-codex-mini": {
-      "description": "GPT-5 Codex Mini，輕量程式生成模型",
-      "no_temperature": true
+      "description": "GPT-5 Codex Mini，輕量程式生成模型"
     }
   }
 }
