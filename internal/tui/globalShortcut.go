@@ -8,10 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 	go_utils_utils "github.com/pardnchiu/go-utils/utils"
 	"github.com/rivo/tview"
 
@@ -30,6 +30,13 @@ func globalShortcut(event *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		resetView()
+		return nil
+
+	case tcell.KeyTab:
+		if isCommandMode() || isPopup() {
+			return event
+		}
+		toggleView()
 		return nil
 
 	case tcell.KeyRight:
@@ -161,7 +168,17 @@ func resetView() {
 			contentView.SetTitle(" Content ")
 			contentView.SetText(setDefault())
 			contentView.ScrollToBeginning()
+			viewPages.SwitchToPage("content")
 		})
+	}
+}
+
+func toggleView() {
+	name, _ := viewPages.GetFrontPage()
+	if name == "logs" {
+		viewPages.SwitchToPage("content")
+	} else {
+		viewPages.SwitchToPage("logs")
 	}
 }
 
@@ -193,7 +210,7 @@ func toggleInputMode() {
 
 func isPopup() bool {
 	focused := app.GetFocus()
-	if slices.Contains(panels, focused) {
+	if focused == filesView || focused == contentView || focused == logsView || focused == cmdInput {
 		return false
 	}
 	return true
@@ -219,10 +236,10 @@ func openEditor() bool {
 	if filrPath != "" {
 		// * because i save with minify formať, so pretty it first
 		if filepath.Ext(filrPath) == ".json" {
-			if raw, err := os.ReadFile(filrPath); err == nil {
+			if rawText, err := go_utils_filesystem.ReadText(filrPath); err == nil {
 				var buf bytes.Buffer
-				if json.Indent(&buf, raw, "", "  ") == nil {
-					_ = os.WriteFile(filrPath, buf.Bytes(), 0644)
+				if json.Indent(&buf, []byte(rawText), "", "  ") == nil {
+					_ = go_utils_filesystem.WriteFile(filrPath, buf.String(), 0644)
 				}
 			}
 		}
@@ -295,6 +312,7 @@ func deleteFile() bool {
 					contentView.SetTitle(" Content ")
 					contentView.SetText(setDefault())
 					contentView.ScrollToBeginning()
+					viewPages.SwitchToPage("content")
 				}
 			})
 		})

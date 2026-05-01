@@ -1,13 +1,13 @@
 package tui
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"github.com/common-nighthawk/go-figure"
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -58,9 +58,10 @@ func setDefault() string {
 	// * config
 	sb.WriteString(" CONFIG\n")
 	sb.WriteString(seperate + "\n")
-	if bytes, err := os.ReadFile(filesystem.ConfigPath); err == nil {
-		var cfg session.Config
-		if json.Unmarshal(bytes, &cfg) == nil {
+	if !go_utils_filesystem.Exists(filesystem.ConfigPath) {
+		sb.WriteString("[gray]  (not found)[-]\n")
+	} else if cfg, err := go_utils_filesystem.ReadJSON[session.Config](filesystem.ConfigPath); err == nil {
+		{
 			if cfg.SessionID != "" {
 				sb.WriteString(fmt.Sprintf("[gray]  %-9s: %s[-]\n", "SESSION", cfg.SessionID))
 			}
@@ -92,17 +93,16 @@ func setDefault() string {
 				}
 			}
 		}
-	} else {
-		sb.WriteString("[gray]  (not found)[-]\n")
 	}
 	sb.WriteString(seperate + "\n\n")
 
 	// * usage
 	sb.WriteString(" USAGE\n")
 	sb.WriteString(seperate + "\n")
-	if data, err := os.ReadFile(filesystem.UsagePath); err == nil {
-		var usages map[string]filesystem.Usage
-		if json.Unmarshal(data, &usages) == nil && len(usages) > 0 {
+	if !go_utils_filesystem.Exists(filesystem.UsagePath) {
+		sb.WriteString("  (not found)\n")
+	} else if usages, err := go_utils_filesystem.ReadJSON[map[string]filesystem.Usage](filesystem.UsagePath); err == nil && len(usages) > 0 {
+		{
 			models := make([]string, 0, len(usages))
 			for usage := range usages {
 				models = append(models, usage)
@@ -154,11 +154,9 @@ func setDefault() string {
 					sb.WriteString(fmt.Sprintf("[gray]  %-32s %12s %12s[-]\n", label, cacheCreate, cacheRead))
 				}
 			}
-		} else {
-			sb.WriteString("[gray]  (format error)[-]\n")
 		}
 	} else {
-		sb.WriteString("  (not found)\n")
+		sb.WriteString("[gray]  (format error)[-]\n")
 	}
 	sb.WriteString(seperate + "\n")
 

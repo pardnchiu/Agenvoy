@@ -2,8 +2,9 @@ package tui
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
+
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 )
 
 func selectFile(index int, _, _ string, _ rune) {
@@ -21,12 +22,11 @@ func selectFile(index int, _, _ string, _ rune) {
 	}
 
 	path := filepath.Join(currentDir, name)
-	info, err := os.Stat(path)
-	if err != nil {
+	if !go_utils_filesystem.Exists(path) {
 		return
 	}
 
-	if info.IsDir() {
+	if go_utils_filesystem.IsDir(path) {
 		currentDir = path
 		go app.QueueUpdateDraw(func() {
 			loadDir(filesView, currentDir)
@@ -42,5 +42,6 @@ func selectFile(index int, _, _ string, _ rune) {
 		contentView.SetTitle(fmt.Sprintf(" %s ", name))
 		contentView.SetText(readFile(path))
 		contentView.ScrollToBeginning()
+		viewPages.SwitchToPage("content")
 	})
 }

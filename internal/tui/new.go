@@ -25,6 +25,7 @@ var (
 	filesView   *tview.List
 	contentView *tview.TextView
 	logsView    *tview.TextView
+	viewPages   *tview.Pages
 	panels      []tview.Primitive
 	focusIndex  int
 	currentDir  string
@@ -66,8 +67,13 @@ func New() {
 			SetTitle(" Logs ").
 			SetTitleAlign(tview.AlignLeft)
 
-		panels = []tview.Primitive{filesView, contentView, logsView}
-		for _, p := range panels {
+		viewPages = tview.NewPages().
+			AddPage("content", contentView, true, true).
+			AddPage("logs", logsView, true, false)
+
+		panels = []tview.Primitive{filesView, viewPages}
+		borderTargets := []tview.Primitive{filesView, contentView, logsView}
+		for _, p := range borderTargets {
 			box := p.(interface {
 				SetBorderColor(tcell.Color) *tview.Box
 				SetFocusFunc(func()) *tview.Box
@@ -79,8 +85,7 @@ func New() {
 
 		mainFlex := tview.NewFlex().
 			AddItem(filesView, 0, 1, true).
-			AddItem(contentView, 0, 2, false).
-			AddItem(logsView, 0, 2, false)
+			AddItem(viewPages, 0, 4, false)
 
 		cmdInput = tview.NewInputField().
 			SetLabel("$ ").

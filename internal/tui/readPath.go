@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
+
+	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tui/format"
@@ -15,10 +16,11 @@ import (
 func readFile(path string) string {
 	_, _, width, _ := contentView.GetInnerRect()
 
-	data, err := os.ReadFile(path)
+	text, err := go_utils_filesystem.ReadText(path)
 	if err != nil {
 		return fmt.Sprintf("(failed to get %s)", filepath.Base(path))
 	}
+	data := []byte(text)
 
 	base := filepath.Base(path)
 	if base != "errors.json" && filepath.Base(filepath.Dir(path)) == "errors" {
