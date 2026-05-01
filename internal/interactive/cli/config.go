@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func runConfig() {
+func Config() {
 	sessionID, err := getSessionID()
 	if err != nil {
 		slog.Error("getSessionID",

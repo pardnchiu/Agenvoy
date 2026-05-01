@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func runRemove() {
+func RunRemove() {
 	cfg, err := session.Load()
 	if err != nil {
 		slog.Error("session.Load", slog.String("error", err.Error()))

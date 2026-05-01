@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"log/slog"
@@ -14,7 +14,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
-func selectAgent(model string) agentTypes.Agent {
+func SelectAgent(model string) agentTypes.Agent {
 	agentMap := map[string]func(string) (agentTypes.Agent, error){
 		"copilot": func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
 		"openai":  func(m string) (agentTypes.Agent, error) { return openai.New(m) },

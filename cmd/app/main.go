@@ -24,11 +24,10 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/summary"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/interactive/discord"
-	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
-
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
+	"github.com/pardnchiu/agenvoy/internal/interactive/cli"
+	"github.com/pardnchiu/agenvoy/internal/interactive/discord"
 	"github.com/pardnchiu/agenvoy/internal/routes"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
@@ -36,6 +35,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
+	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
 	"github.com/pardnchiu/agenvoy/internal/tui"
 )
 
@@ -64,7 +64,7 @@ func main() {
 			return
 		case "remove":
 			initCLI()
-			runRemove()
+			cli.RunRemove()
 			return
 		case "reasoning":
 			initCLI()
@@ -80,7 +80,7 @@ func main() {
 			return
 		case "config":
 			initCLI()
-			runConfig()
+			cli.Config()
 			return
 		case "new":
 			initCLI()
@@ -88,7 +88,7 @@ func main() {
 			if len(os.Args) >= 3 {
 				name = os.Args[2]
 			}
-			runNew(name)
+			cli.NewSession(name)
 			return
 		case "switch":
 			if len(os.Args) < 3 {
@@ -96,7 +96,7 @@ func main() {
 				os.Exit(1)
 			}
 			initCLI()
-			runSwitch(os.Args[2])
+			cli.Switch(os.Args[2])
 			return
 		case "cli", "run":
 			if len(os.Args) < 3 {
@@ -204,7 +204,7 @@ func runAgent(allowAll bool) {
 
 	var selectorBot agentTypes.Agent
 	if cfg, err := session.Load(); err == nil && cfg.PlannerModel != "" {
-		selectorBot = selectAgent(cfg.PlannerModel)
+		selectorBot = cli.SelectAgent(cfg.PlannerModel)
 	}
 	if selectorBot == nil {
 		selectorBot = registry.Fallback
@@ -212,7 +212,7 @@ func runAgent(allowAll bool) {
 
 	host.Set(selectorBot, registry, scanner)
 
-	if err := runEvents(ctx, cancel, func(ch chan<- agentTypes.Event) error {
+	if err := cli.Run(ctx, cancel, func(ch chan<- agentTypes.Event) error {
 		return exec.Run(ctx, selectorBot, registry, scanner, userInput, nil, nil, ch, allowAll)
 	}); err != nil && ctx.Err() == nil {
 		slog.Error("failed to execute",

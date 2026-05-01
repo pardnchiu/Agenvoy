@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func runSwitch(name string) {
+func Switch(name string) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		slog.Error("name is required")

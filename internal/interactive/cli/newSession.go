@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func runNew(name string) {
+func NewSession(name string) {
 	name = strings.TrimSpace(name)
 	if name != "" {
 		if sid := session.GetSessionIDByName(name); sid != "" {
