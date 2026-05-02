@@ -113,8 +113,8 @@ func CleanAllTask() {
 	if err != nil {
 		return
 	}
-	for _, name := range dirs {
-		ClearTask(name)
+	for _, dir := range dirs {
+		ClearTask(dir.Name)
 	}
 }
 

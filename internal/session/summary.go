@@ -98,7 +98,8 @@ func IsNeedSummary() []string {
 	}
 
 	var result []string
-	for _, sid := range dirs {
+	for _, dir := range dirs {
+		sid := dir.Name
 		historyPath := filepath.Join(filesystem.SessionsDir, sid, "history.json")
 		// * os.Stat retained: FileInfo.ModTime() needed to compare history vs summary recency
 		hInfo, err := os.Stat(historyPath)

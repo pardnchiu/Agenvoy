@@ -8,9 +8,9 @@ import (
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/fileReader"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func registListFiles() {
@@ -50,7 +50,29 @@ Inspect immediate children; recursive=true walks subtree files.`,
 			if err != nil {
 				return "", fmt.Errorf("go_pkg_filesystem.AbsPath: %w", err)
 			}
-			return fileReader.ListFiles(absPath, params.Recursive)
+
+			var files []go_pkg_filesystem_reader.File
+			if params.Recursive {
+				files, err = go_pkg_filesystem_reader.WalkFiles(absPath, go_pkg_filesystem_reader.ListOption{
+					SkipExcluded:      true,
+					IgnoreWalkError:   true,
+					IncludeNonRegular: true,
+				})
+				if err != nil {
+					return "", fmt.Errorf("go_pkg_filesystem_reader.WalkFiles: %w", err)
+				}
+			} else {
+				files, err = go_pkg_filesystem_reader.ListAll(absPath, go_pkg_filesystem_reader.ListOption{SkipExcluded: true})
+				if err != nil {
+					return "", fmt.Errorf("go_pkg_filesystem_reader.ListAll: %w", err)
+				}
+			}
+
+			data, err := json.Marshal(files)
+			if err != nil {
+				return "", fmt.Errorf("json.Marshal: %w", err)
+			}
+			return string(data), nil
 		},
 	})
 }

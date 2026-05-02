@@ -11,7 +11,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pardnchiu/ToriiDB v0.5.1
-	github.com/pardnchiu/go-pkg v0.11.1
+	github.com/pardnchiu/go-pkg v0.11.3
 	github.com/pardnchiu/go-scheduler v1.2.0
 	github.com/rivo/tview v0.42.0
 )

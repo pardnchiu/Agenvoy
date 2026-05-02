@@ -8,9 +8,9 @@ import (
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/fileReader"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func registGlobFiles() {
@@ -57,7 +57,16 @@ Locate specific file types (e.g. '**/*.go' for Go files).`,
 			if pattern == "" {
 				return "", fmt.Errorf("pattern is required")
 			}
-			return fileReader.GlobFiles(absPath, pattern)
+
+			matches, err := go_pkg_filesystem_reader.GlobFiles(absPath, pattern)
+			if err != nil {
+				return "", fmt.Errorf("go_pkg_filesystem_reader.GlobFiles: %w", err)
+			}
+			data, err := json.Marshal(matches)
+			if err != nil {
+				return "", fmt.Errorf("json.Marshal: %w", err)
+			}
+			return string(data), nil
 		},
 	})
 }
