@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/session"
@@ -25,7 +25,7 @@ func Config() {
 	session.SaveBot(sessionID, sessionID, false)
 
 	botPath := filepath.Join(filesystem.SessionsDir, sessionID, "bot.md")
-	if !go_utils_filesystem.Exists(botPath) {
+	if !go_pkg_filesystem_reader.Exists(botPath) {
 		session.SaveBot(sessionID, sessionID, true)
 	}
 
@@ -60,7 +60,7 @@ func getSessionID() (string, error) {
 	}
 
 	if sid := strings.TrimSpace(cfg.SessionID); sid != "" {
-		if go_utils_filesystem.Exists(filepath.Join(filesystem.SessionsDir, sid)) {
+		if go_pkg_filesystem_reader.Exists(filepath.Join(filesystem.SessionsDir, sid)) {
 			return sid, nil
 		}
 	}

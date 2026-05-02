@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
-	go_utils_http "github.com/pardnchiu/go-utils/http"
+	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
 const (
@@ -94,7 +94,7 @@ func fetch(ctx context.Context, query, timeRange string) (string, error) {
 		"df": timeRange,
 	}
 
-	html, status, err := go_utils_http.POST[string](ctx, nil, path, map[string]string{
+	html, status, err := go_pkg_http.POST[string](ctx, nil, path, map[string]string{
 		"User-Agent":      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 		"Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
 	}, params, "form")

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/go-utils/filesystem/keychain"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
 type Agent struct {

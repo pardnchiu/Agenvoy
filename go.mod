@@ -9,11 +9,10 @@ require (
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/gin-gonic/gin v1.12.0
 	github.com/joho/godotenv v1.5.1
-	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pardnchiu/ToriiDB v0.5.1
+	github.com/pardnchiu/go-pkg v0.11.0
 	github.com/pardnchiu/go-scheduler v1.2.0
-	github.com/pardnchiu/go-utils v0.10.0
 	github.com/rivo/tview v0.42.0
 )
 
@@ -40,6 +39,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/pardnchiu/go-utils v0.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect

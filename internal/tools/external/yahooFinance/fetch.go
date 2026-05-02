@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
-	go_utils_http "github.com/pardnchiu/go-utils/http"
+	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
 const (
@@ -92,7 +92,7 @@ func fetch(ctx context.Context, host, symbol, interval, rangeStr string) (string
 		q.Encode(),
 	)
 
-	data, status, err := go_utils_http.GET[any](ctx, nil, path, map[string]string{
+	data, status, err := go_pkg_http.GET[any](ctx, nil, path, map[string]string{
 		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 		"Accept":          "application/json",
 		"Accept-Language": "en-US,en;q=0.9",

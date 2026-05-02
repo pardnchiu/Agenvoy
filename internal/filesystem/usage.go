@@ -1,12 +1,12 @@
 package filesystem
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"syscall"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 type Usage struct {
@@ -21,6 +21,7 @@ func UpdateUsage(model string, input, output, cacheCreate, cacheRead int) error 
 		return nil
 	}
 
+	// * lock file: kept on os.OpenFile because syscall.Flock needs the raw fd
 	lockPath := UsagePath + ".lock"
 	lock, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
@@ -34,8 +35,10 @@ func UpdateUsage(model string, input, output, cacheCreate, cacheRead int) error 
 	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 
 	usageMap := make(map[string]Usage)
-	if bytes, err := os.ReadFile(UsagePath); err == nil {
-		_ = json.Unmarshal(bytes, &usageMap)
+	if go_pkg_filesystem_reader.Exists(UsagePath) {
+		if loaded, err := go_pkg_filesystem.ReadJSON[map[string]Usage](UsagePath); err == nil && loaded != nil {
+			usageMap = loaded
+		}
 	}
 
 	prev := usageMap[model]
@@ -46,13 +49,8 @@ func UpdateUsage(model string, input, output, cacheCreate, cacheRead int) error 
 		CacheRead:   prev.CacheRead + cacheRead,
 	}
 
-	bytes, err := json.Marshal(usageMap)
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %w", err)
-	}
-
-	if err := go_utils_filesystem.WriteFile(UsagePath, string(bytes), 0644); err != nil {
-		return fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
+	if err := go_pkg_filesystem.WriteJSON(UsagePath, usageMap, false); err != nil {
+		return fmt.Errorf("go_pkg_filesystem.WriteJSON: %w", err)
 	}
 
 	return nil

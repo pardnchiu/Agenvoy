@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	filewriter "github.com/pardnchiu/agenvoy/internal/filesystem/fileWriter"
@@ -63,9 +63,9 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 				baseDir = filesystem.DownloadDir
 			}
 
-			absPath, err := go_utils_filesystem.AbsPath(baseDir, params.Path, go_utils_filesystem.AbsPathOption{HomeOnly: true})
+			absPath, err := go_pkg_filesystem.AbsPath(baseDir, params.Path, go_pkg_filesystem.AbsPathOption{HomeOnly: true})
 			if err != nil {
-				return "", fmt.Errorf("go_utils_filesystem.AbsPath: %w", err)
+				return "", fmt.Errorf("go_pkg_filesystem.AbsPath: %w", err)
 			}
 			if absPath == "" {
 				return "", fmt.Errorf("path or name is required")

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	go_utils_sandbox "github.com/pardnchiu/go-utils/sandbox"
+	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 )
 
 func Run(caller, scriptPath string) string {
@@ -21,7 +21,7 @@ func Run(caller, scriptPath string) string {
 	}
 
 	workDir := filepath.Dir(scriptPath)
-	cmd, err := go_utils_sandbox.Wrap(context.Background(), binary, []string{scriptPath}, workDir, nil)
+	cmd, err := go_pkg_sandbox.Wrap(context.Background(), binary, []string{scriptPath}, workDir, nil)
 	if err != nil {
 		slog.Error(caller,
 			slog.String("script", filepath.Base(scriptPath)),

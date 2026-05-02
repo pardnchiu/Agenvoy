@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -9,7 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	go_utils_utils "github.com/pardnchiu/go-utils/utils"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -30,24 +30,16 @@ func path() string {
 }
 
 func Read() (*Runtime, error) {
-	data, err := os.ReadFile(path())
+	r, err := go_pkg_filesystem.ReadJSON[Runtime](path())
 	if err != nil {
 		return nil, err
-	}
-	var r Runtime
-	if err := json.Unmarshal(data, &r); err != nil {
-		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 	return &r, nil
 }
 
 func write(r *Runtime) error {
-	data, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %w", err)
-	}
-	if err := os.WriteFile(path(), data, 0644); err != nil {
-		return fmt.Errorf("os.WriteFile: %w", err)
+	if err := go_pkg_filesystem.WriteJSON(path(), r, true); err != nil {
+		return fmt.Errorf("go_pkg_filesystem.WriteJSON: %w", err)
 	}
 	return nil
 }
@@ -76,7 +68,7 @@ func Init() (*Runtime, error) {
 		}
 	}
 	r := &Runtime{
-		UID:       go_utils_utils.UUID(),
+		UID:       go_pkg_utils.UUID(),
 		PID:       os.Getpid(),
 		StartedAt: time.Now().Format(time.RFC3339),
 	}

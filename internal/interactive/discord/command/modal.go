@@ -3,7 +3,7 @@ package discordCommand
 import (
 	"fmt"
 
-	"github.com/pardnchiu/go-utils/filesystem/keychain"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
 func modalEnvKey(customID string) string {

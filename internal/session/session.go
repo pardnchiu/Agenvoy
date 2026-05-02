@@ -13,8 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
-	go_utils_utils "github.com/pardnchiu/go-utils/utils"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -24,10 +25,10 @@ func SaveToToolCall(sessionID, content string) {
 	now := time.Now()
 	date := now.Format("2006-01-02")
 	toolCallsDir := filepath.Join(filesystem.SessionsDir, sessionID, "tool_calls", date)
-	if err := go_utils_filesystem.CheckDir(toolCallsDir, true); err == nil {
+	if err := go_pkg_filesystem.CheckDir(toolCallsDir, true); err == nil {
 		filename := fmt.Sprintf("%s.json", now.Format("2006-01-02-15-04-05"))
 		toolActionsPath := filepath.Join(toolCallsDir, filename)
-		if err := go_utils_filesystem.WriteFile(toolActionsPath, content, 0644); err != nil {
+		if err := go_pkg_filesystem.WriteFile(toolActionsPath, content, 0644); err != nil {
 			slog.Warn("WriteFile",
 				slog.String("error", err.Error()))
 		}
@@ -45,8 +46,8 @@ func CreateSession(prefix string) (string, error) {
 
 	uuid := h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:]
 	sessionID := prefix + uuid
-	if err := go_utils_filesystem.CheckDir(filepath.Join(filesystem.SessionsDir, sessionID), true); err != nil {
-		return "", fmt.Errorf("go_utils_filesystem.CheckDir: %w", err)
+	if err := go_pkg_filesystem.CheckDir(filepath.Join(filesystem.SessionsDir, sessionID), true); err != nil {
+		return "", fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
 	}
 	SaveBot(sessionID, sessionID, false)
 	return sessionID, nil
@@ -99,11 +100,11 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
 	configPath := filepath.Join(sessionDir, "config.json")
 
-	if !go_utils_filesystem.Exists(configPath) {
-		if err := go_utils_filesystem.CheckDir(sessionDir, true); err != nil {
-			return "", fmt.Errorf("go_utils_filesystem.CheckDir: %w", err)
+	if !go_pkg_filesystem_reader.Exists(configPath) {
+		if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
+			return "", fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
 		}
-		if err := go_utils_filesystem.WriteJSON(configPath, config, false); err != nil {
+		if err := go_pkg_filesystem.WriteJSON(configPath, config, false); err != nil {
 			return "", fmt.Errorf("WriteJSON: %w", err)
 		}
 	}
@@ -118,15 +119,15 @@ func GetChannelID(sessionID string) (string, error) {
 	}
 
 	configPath := filepath.Join(filesystem.SessionsDir, sessionID, "config.json")
-	config, err := go_utils_filesystem.ReadJSON[map[string]string](configPath)
+	config, err := go_pkg_filesystem.ReadJSON[map[string]string](configPath)
 	if err != nil {
-		return "", fmt.Errorf("go_utils_filesystem.ReadJSON: %w", err)
+		return "", fmt.Errorf("go_pkg_filesystem.ReadJSON: %w", err)
 	}
 	return config["channel_id"], nil
 }
 
 var MaxHistoryMessages = func() int {
-	if n := go_utils_utils.GetWithDefaultInt("MAX_HISTORY_MESSAGES", 16); n > 0 {
+	if n := go_pkg_utils.GetWithDefaultInt("MAX_HISTORY_MESSAGES", 16); n > 0 {
 		return n
 	}
 	return 16
@@ -134,7 +135,7 @@ var MaxHistoryMessages = func() int {
 
 func GetHistory(sessionID string) (old, max []agentTypes.Message) {
 	historyPath := filepath.Join(filesystem.SessionsDir, sessionID, "history.json")
-	oldHistory, err := go_utils_filesystem.ReadJSON[[]agentTypes.Message](historyPath)
+	oldHistory, err := go_pkg_filesystem.ReadJSON[[]agentTypes.Message](historyPath)
 	if err != nil {
 		return nil, nil
 	}
@@ -191,12 +192,12 @@ func latestModTime(dir string) time.Time {
 
 func SaveHistory(sessionID, content string) error {
 	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
-	if err := go_utils_filesystem.CheckDir(sessionDir, true); err != nil {
-		return fmt.Errorf("go_utils_filesystem.CheckDir: %w", err)
+	if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
+		return fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
 	}
 
 	historyPath := filepath.Join(sessionDir, "history.json")
-	if err := go_utils_filesystem.WriteFile(historyPath, content, 0644); err != nil {
+	if err := go_pkg_filesystem.WriteFile(historyPath, content, 0644); err != nil {
 		return fmt.Errorf("WriteFile: %w", err)
 	}
 	return nil

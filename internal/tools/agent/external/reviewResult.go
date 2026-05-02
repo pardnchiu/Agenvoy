@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pardnchiu/go-utils/filesystem/keychain"
-	go_utils_utils "github.com/pardnchiu/go-utils/utils"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -88,7 +88,7 @@ func registReviewResult() {
 	})
 }
 func callInternalSend(ctx context.Context, modelKey, prompt string) (string, error) {
-	port := go_utils_utils.GetWithDefault("PORT", "17989")
+	port := go_pkg_utils.GetWithDefault("PORT", "17989")
 
 	body, err := json.Marshal(map[string]any{
 		"content": prompt,

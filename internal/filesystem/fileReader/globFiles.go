@@ -4,13 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
-	"slices"
-	"strings"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
-
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 type file struct {
@@ -22,44 +17,16 @@ type file struct {
 }
 
 func GlobFiles(absPath, pattern string) (string, error) {
-	globParts := strings.Split(pattern, "/")
-
-	results := []file{}
-
-	var matches []string
-	if slices.Contains(globParts, "**") {
-		walked, err := go_utils_filesystem.WalkFiles(absPath, go_utils_filesystem.ListOption{
-			SkipExcluded:      true,
-			IgnoreWalkError:   true,
-			IncludeNonRegular: true,
-		})
-		if err != nil {
-			return "", fmt.Errorf("go_utils_filesystem.WalkFiles: %w", err)
-		}
-
-		for _, rel := range walked {
-			parts := strings.Split(rel, "/")
-			if !filesystem.IsMatch(globParts, parts) {
-				continue
-			}
-			matches = append(matches, filepath.Join(absPath, rel))
-		}
-	} else {
-		// * fast path: no `**`, delegate to filepath.Glob
-		absPattern := filepath.Join(append([]string{absPath}, globParts...)...)
-		files, err := filepath.Glob(absPattern)
-		if err != nil {
-			return "", fmt.Errorf("filepath.Glob: %w", err)
-		}
-		matches = files
+	matches, err := go_pkg_filesystem_reader.GlobFiles(absPath, pattern)
+	if err != nil {
+		return "", fmt.Errorf("go_pkg_filesystem_reader.GlobFiles: %w", err)
 	}
-
+	results := []file{}
 	for _, full := range matches {
 		info, err := os.Stat(full)
 		if err != nil {
 			continue
 		}
-
 		results = append(results, file{
 			Name:    info.Name(),
 			Path:    full,
@@ -68,10 +35,6 @@ func GlobFiles(absPath, pattern string) (string, error) {
 			ModTime: info.ModTime().Format("2006-01-02 15:04"),
 		})
 	}
-
-	data, err := json.Marshal(results)
-	if err != nil {
-		return "", fmt.Errorf("json.Marshal: %w", err)
-	}
+	data, _ := json.Marshal(results)
 	return string(data), nil
 }

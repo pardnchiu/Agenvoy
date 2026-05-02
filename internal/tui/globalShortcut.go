@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
-	go_utils_utils "github.com/pardnchiu/go-utils/utils"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 	"github.com/rivo/tview"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -236,16 +236,16 @@ func openEditor() bool {
 	if filrPath != "" {
 		// * because i save with minify formať, so pretty it first
 		if filepath.Ext(filrPath) == ".json" {
-			if rawText, err := go_utils_filesystem.ReadText(filrPath); err == nil {
+			if rawText, err := go_pkg_filesystem.ReadText(filrPath); err == nil {
 				var buf bytes.Buffer
 				if json.Indent(&buf, []byte(rawText), "", "  ") == nil {
-					_ = go_utils_filesystem.WriteFile(filrPath, buf.String(), 0644)
+					_ = go_pkg_filesystem.WriteFile(filrPath, buf.String(), 0644)
 				}
 			}
 		}
 
 		app.Suspend(func() {
-			editor := go_utils_utils.GetWithDefault("EDITOR", "vi")
+			editor := go_pkg_utils.GetWithDefault("EDITOR", "vi")
 			cmd := exec.Command(editor, filrPath)
 			cmd.Stdin = os.Stdin
 			cmd.Stdout = os.Stdout

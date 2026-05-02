@@ -3,11 +3,11 @@ package handler
 import (
 	"math"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
@@ -30,12 +30,8 @@ func GetSessionStatus() gin.HandlerFunc {
 		}
 
 		dir := filepath.Join(filesystem.SessionsDir, sessionID)
-		if _, err := os.Stat(dir); err != nil {
-			if os.IsNotExist(err) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if !go_pkg_filesystem_reader.Exists(dir) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
 			return
 		}
 

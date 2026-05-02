@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 )
 
 const (
@@ -18,6 +20,7 @@ const (
 )
 
 func getCSV(path string, offset, limit int) (string, error) {
+	// * os.Stat retained: FileInfo.Size() needed for the > 1MB guard before reading
 	info, err := os.Stat(path)
 	if err != nil {
 		return "", fmt.Errorf("os.Stat: %w", err)
@@ -26,11 +29,11 @@ func getCSV(path string, offset, limit int) (string, error) {
 		return "", fmt.Errorf("file too large (%d bytes, max 1 MB)", info.Size())
 	}
 
-	raw, err := os.ReadFile(path)
+	rawText, err := go_pkg_filesystem.ReadText(path)
 	if err != nil {
-		return "", fmt.Errorf("os.ReadFile: %w", err)
+		return "", fmt.Errorf("go_pkg_filesystem.ReadText: %w", err)
 	}
-	raw = bytes.TrimPrefix(raw, []byte{0xef, 0xbb, 0xbf})
+	raw := bytes.TrimPrefix([]byte(rawText), []byte{0xef, 0xbb, 0xbf})
 
 	reader := csv.NewReader(bytes.NewReader(raw))
 	if strings.ToLower(filepath.Ext(path)) == ".tsv" {

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/fileReader"
@@ -24,8 +24,8 @@ func registReadFile() {
 		ReadOnly:   true,
 		Concurrent: true,
 		Description: `
-Read a text, PDF, CSV/TSV, or image file.
-Inspect source, config, notes, tabular data, or screenshots.`,
+Read a text, PDF, DOCX, PPTX, CSV/TSV, or image file.
+Inspect source, config, notes, slides, documents, tabular data, or screenshots.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -35,12 +35,12 @@ Inspect source, config, notes, tabular data, or screenshots.`,
 				},
 				"offset": map[string]any{
 					"type":        "integer",
-					"description": "1-based line (or page for PDF, row for CSV). Defaults to 1.",
+					"description": "1-based line (page for PDF, slide for PPTX, row for CSV). Defaults to 1.",
 					"default":     1,
 				},
 				"limit": map[string]any{
 					"type":        "integer",
-					"description": "Lines (or pages for PDF, rows for CSV) to read. Defaults to 2048.",
+					"description": "Lines (pages for PDF, slides for PPTX, rows for CSV) to read. Defaults to 2048.",
 					"default":     defaultReadLimit,
 				},
 			},
@@ -48,7 +48,7 @@ Inspect source, config, notes, tabular data, or screenshots.`,
 				"path",
 			},
 		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Path   string `json:"path"`
 				Offset int    `json:"offset"`
@@ -63,9 +63,9 @@ Inspect source, config, notes, tabular data, or screenshots.`,
 				baseDir = filesystem.DownloadDir
 			}
 
-			absPath, err := go_utils_filesystem.AbsPath(baseDir, params.Path, go_utils_filesystem.AbsPathOption{HomeOnly: true})
+			absPath, err := go_pkg_filesystem.AbsPath(baseDir, params.Path, go_pkg_filesystem.AbsPathOption{HomeOnly: true})
 			if err != nil {
-				return "", fmt.Errorf("go_utils_filesystem.AbsPath: %w", err)
+				return "", fmt.Errorf("go_pkg_filesystem.AbsPath: %w", err)
 			}
 			if absPath == "" {
 				return "", fmt.Errorf("path is required")
@@ -76,7 +76,7 @@ Inspect source, config, notes, tabular data, or screenshots.`,
 			if limit == 0 {
 				limit = defaultReadLimit
 			}
-			return fileReader.ReadFile(absPath, offset, limit)
+			return fileReader.ReadFile(ctx, absPath, offset, limit)
 		},
 	})
 }

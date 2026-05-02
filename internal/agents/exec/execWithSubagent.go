@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
-	go_utils_utils "github.com/pardnchiu/go-utils/utils"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -24,7 +24,7 @@ const (
 
 var SubagentTimeoutMin = max(defaultSubagentTimeoutMin,
 	min(hardCapSubagentTimeoutMin,
-		go_utils_utils.GetWithDefaultInt("MAX_SUBAGENT_TIMEOUT_MIN", defaultSubagentTimeoutMin)))
+		go_pkg_utils.GetWithDefaultInt("MAX_SUBAGENT_TIMEOUT_MIN", defaultSubagentTimeoutMin)))
 
 func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPrompt string, excludedTools []string) (string, error) {
 	registry := host.Registry()
@@ -148,10 +148,10 @@ func ensureSubagentSession(input string) (string, error) {
 	}
 
 	sessionDir := filepath.Join(filesystem.SessionsDir, trimmed)
-	if !go_utils_filesystem.Exists(sessionDir) {
+	if !go_pkg_filesystem_reader.Exists(sessionDir) {
 		return "", fmt.Errorf("session %q does not exist", trimmed)
 	}
-	if !go_utils_filesystem.IsDir(sessionDir) {
+	if !go_pkg_filesystem_reader.IsDir(sessionDir) {
 		return "", fmt.Errorf("session %q is not a directory", trimmed)
 	}
 	return trimmed, nil

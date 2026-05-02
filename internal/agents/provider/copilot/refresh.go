@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	go_utils_http "github.com/pardnchiu/go-utils/http"
+	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
 const (
@@ -26,7 +26,7 @@ func (c *Agent) checkExpires(ctx context.Context) error {
 }
 
 func (c *Agent) refresh(ctx context.Context) error {
-	token, code, err := go_utils_http.GET[RefreshToken](ctx, nil, copilotTokenAPI, map[string]string{
+	token, code, err := go_pkg_http.GET[RefreshToken](ctx, nil, copilotTokenAPI, map[string]string{
 		"Authorization":  "token " + c.Token.AccessToken,
 		"Accept":         "application/json",
 		"Editor-Version": "vscode/1.95.0",

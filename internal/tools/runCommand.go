@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	go_utils_sandbox "github.com/pardnchiu/go-utils/sandbox"
+	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -85,7 +85,7 @@ func runCommand(ctx context.Context, e *toolTypes.Executor, argv []string) (stri
 	ctx, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
 
-	cmd, err := go_utils_sandbox.Wrap(ctx, argv[0], argv[1:], e.WorkDir, nil)
+	cmd, err := go_pkg_sandbox.Wrap(ctx, argv[0], argv[1:], e.WorkDir, nil)
 	if err != nil {
 		return "", fmt.Errorf("sandbox.Wrap: %w", err)
 	}

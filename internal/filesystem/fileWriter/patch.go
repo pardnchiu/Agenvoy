@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -16,6 +16,7 @@ const (
 )
 
 func Patch(ctx context.Context, path, old, new string, replaceAll bool) (string, error) {
+	// * os.Stat retained: FileInfo.Size() must guard before read so huge files don't load into memory before rejection
 	info, err := os.Stat(path)
 	if err != nil {
 		return "", fmt.Errorf("os.Stat: %w", err)
@@ -24,12 +25,11 @@ func Patch(ctx context.Context, path, old, new string, replaceAll bool) (string,
 		return "", fmt.Errorf("file too large (%d bytes, max 1 MB)", info.Size())
 	}
 
-	fileBytes, err := os.ReadFile(path)
+	fileContent, err := go_pkg_filesystem.ReadText(path)
 	if err != nil {
-		return "", fmt.Errorf("os.ReadFile: %w", err)
+		return "", fmt.Errorf("go_pkg_filesystem.ReadText: %w", err)
 	}
 
-	fileContent := string(fileBytes)
 	matchCount := strings.Count(fileContent, old)
 	if matchCount == 0 {
 		return "", fmt.Errorf("%s is not found in %s", old, path)
@@ -45,8 +45,8 @@ func Patch(ctx context.Context, path, old, new string, replaceAll bool) (string,
 		newContent = strings.Replace(fileContent, newContent, new, 1)
 	}
 
-	if err := go_utils_filesystem.WriteFile(path, newContent, 0644); err != nil {
-		return "", fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
+	if err := go_pkg_filesystem.WriteFile(path, newContent, 0644); err != nil {
+		return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 	}
 
 	if filesystem.IsSkillsDir(path) {

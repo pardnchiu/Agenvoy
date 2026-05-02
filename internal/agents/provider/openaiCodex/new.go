@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
-	"github.com/pardnchiu/go-utils/filesystem/keychain"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
 const prefix = "codex@"
@@ -35,7 +35,7 @@ func New(model ...string) (*Agent, error) {
 	}
 
 	a := &Agent{
-		httpClient: &http.Client{Timeout: 2 * time.Minute},
+		httpClient: &http.Client{Timeout: 10 * time.Minute},
 		model:      usedModel,
 		workDir:    workDir,
 	}

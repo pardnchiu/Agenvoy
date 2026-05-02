@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
-	go_utils_rod "github.com/pardnchiu/go-utils/rod"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_rod "github.com/pardnchiu/go-pkg/rod"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -104,14 +104,14 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
 		defer cancel()
 
-		result, err := go_utils_rod.Fetch(ctx, link, fetchTimeout, &go_utils_rod.FetchOption{
+		result, err := go_pkg_rod.Fetch(ctx, link, fetchTimeout, &go_pkg_rod.FetchOption{
 			MaxLength: maxMarkdownLength,
 			KeepLinks: keepLinks,
 		})
 		if err != nil {
 			status := 503
 			title := ""
-			var fe *go_utils_rod.FetchError
+			var fe *go_pkg_rod.FetchError
 			if errors.As(err, &fe) {
 				status = fe.Status
 			}
@@ -140,11 +140,11 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 	}
 
 	if saveTo != nil {
-		if err := go_utils_filesystem.CheckDir(filepath.Dir(*saveTo), true); err != nil {
-			return "", fmt.Errorf("go_utils_filesystem.CheckDir: %w", err)
+		if err := go_pkg_filesystem.CheckDir(filepath.Dir(*saveTo), true); err != nil {
+			return "", fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
 		}
-		if err := go_utils_filesystem.WriteFile(*saveTo, full, 0644); err != nil {
-			return "", fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
+		if err := go_pkg_filesystem.WriteFile(*saveTo, full, 0644); err != nil {
+			return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 		}
 		return fmt.Sprintf("Downloaded %d chars to %s", len(full), *saveTo), nil
 	}
@@ -178,7 +178,7 @@ func truncateResult(result string) string {
 	return fmt.Sprintf("Web page content:\n---\n%s\n---", result)
 }
 
-func buildFrontmatter(r *go_utils_rod.FetchResult) string {
+func buildFrontmatter(r *go_pkg_rod.FetchResult) string {
 	var sb strings.Builder
 	sb.WriteString("---\n")
 	writeField(&sb, "title", r.Title)

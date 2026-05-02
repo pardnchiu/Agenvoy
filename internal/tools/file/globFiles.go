@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem/fileReader"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -48,9 +48,9 @@ Locate specific file types (e.g. '**/*.go' for Go files).`,
 			}
 
 			dir := strings.TrimSpace(params.Dir)
-			absPath, err := go_utils_filesystem.AbsPath(e.WorkDir, dir, go_utils_filesystem.AbsPathOption{HomeOnly: true})
+			absPath, err := go_pkg_filesystem.AbsPath(e.WorkDir, dir, go_pkg_filesystem.AbsPathOption{HomeOnly: true})
 			if err != nil {
-				return "", fmt.Errorf("go_utils_filesystem.AbsPath: %w", err)
+				return "", fmt.Errorf("go_pkg_filesystem.AbsPath: %w", err)
 			}
 
 			pattern := strings.TrimSpace(params.Pattern)

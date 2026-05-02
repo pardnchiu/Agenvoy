@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	go_utils_sandbox "github.com/pardnchiu/go-utils/sandbox"
+	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 )
 
 func (t *Translator) Execute(ctx context.Context, name string, args json.RawMessage, workDir string) (string, error) {
@@ -34,7 +34,7 @@ func (t *Translator) Execute(ctx context.Context, name string, args json.RawMess
 	execCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	cmd, err := go_utils_sandbox.Wrap(execCtx, runtime, []string{data.scriptPath}, workDir, nil)
+	cmd, err := go_pkg_sandbox.Wrap(execCtx, runtime, []string{data.scriptPath}, workDir, nil)
 	if err != nil {
 		return "", fmt.Errorf("sandbox.Wrap: %w", err)
 	}

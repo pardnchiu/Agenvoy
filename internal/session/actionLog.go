@@ -9,7 +9,8 @@ import (
 	"sync"
 	"time"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -158,11 +159,11 @@ func appendActionLine(sessionID, line string) {
 	defer actionLogMu.Unlock()
 
 	dir := filepath.Join(filesystem.SessionsDir, sessionID)
-	if !go_utils_filesystem.Exists(dir) {
+	if !go_pkg_filesystem_reader.Exists(dir) {
 		return
 	}
 	path := filepath.Join(dir, "action.log")
-	if err := go_utils_filesystem.AppendText(path, line+"\n"); err != nil {
+	if err := go_pkg_filesystem.AppendText(path, line+"\n"); err != nil {
 		slog.Warn("appendActionLine append",
 			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
@@ -177,7 +178,7 @@ func appendActionLine(sessionID, line string) {
 }
 
 func trimActionLog(path string) {
-	text, err := go_utils_filesystem.ReadText(path)
+	text, err := go_pkg_filesystem.ReadText(path)
 	if err != nil {
 		slog.Warn("trimActionLog read",
 			slog.String("error", err.Error()))
@@ -198,13 +199,13 @@ func trimActionLog(path string) {
 		cut++
 	}
 	if cut >= len(data) {
-		if err := go_utils_filesystem.WriteFile(path, "", 0644); err != nil {
+		if err := go_pkg_filesystem.WriteFile(path, "", 0644); err != nil {
 			slog.Warn("trimActionLog wipe",
 				slog.String("error", err.Error()))
 		}
 		return
 	}
-	if err := go_utils_filesystem.WriteFile(path, string(data[cut:]), 0644); err != nil {
+	if err := go_pkg_filesystem.WriteFile(path, string(data[cut:]), 0644); err != nil {
 		slog.Warn("trimActionLog write",
 			slog.String("error", err.Error()))
 	}

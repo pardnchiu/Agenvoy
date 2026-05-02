@@ -11,7 +11,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
-	go_utils_http "github.com/pardnchiu/go-utils/http"
+	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
 const (
@@ -52,7 +52,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	apiURL := fmt.Sprintf("%s%s:generateContent?key=%s", baseAPI, a.model, a.apiKey)
 	requestBody := a.generateRequestBody(newMessages, systemPrompt, newTools)
 
-	result, _, err := go_utils_http.POST[Output](ctx, a.httpClient, apiURL, map[string]string{
+	result, _, err := go_pkg_http.POST[Output](ctx, a.httpClient, apiURL, map[string]string{
 		"Content-Type": "application/json",
 	}, requestBody, "json")
 	if err != nil {

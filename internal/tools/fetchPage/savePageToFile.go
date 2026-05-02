@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -60,9 +60,9 @@ func registSavePageToFile() {
 			if saveTo == "" {
 				saveTo = defaultDownloadPath(link)
 			} else {
-				abs, err := go_utils_filesystem.AbsPath(filesystem.DownloadDir, saveTo, go_utils_filesystem.AbsPathOption{HomeOnly: true})
+				abs, err := go_pkg_filesystem.AbsPath(filesystem.DownloadDir, saveTo, go_pkg_filesystem.AbsPathOption{HomeOnly: true})
 				if err != nil {
-					return "", fmt.Errorf("go_utils_filesystem.AbsPath: %w", err)
+					return "", fmt.Errorf("go_pkg_filesystem.AbsPath: %w", err)
 				}
 				saveTo = abs
 			}

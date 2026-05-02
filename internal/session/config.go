@@ -1,14 +1,13 @@
 package session
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -34,32 +33,22 @@ type Config struct {
 
 func Load() (*Config, error) {
 	configPath := filepath.Join(filesystem.AgenvoyDir, "config.json")
-	data, err := os.ReadFile(configPath)
-	if os.IsNotExist(err) {
+	if !go_pkg_filesystem_reader.Exists(configPath) {
 		return &Config{}, nil
 	}
+	cfg, err := go_pkg_filesystem.ReadJSON[Config](configPath)
 	if err != nil {
-		return nil, fmt.Errorf("os.ReadFile: %w", err)
-	}
-
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("json.Unmarshal: %w", err)
+		return nil, fmt.Errorf("go_pkg_filesystem.ReadJSON: %w", err)
 	}
 	return &cfg, nil
 }
 
 func Save(cfg *Config) error {
 	configPath := filepath.Join(filesystem.AgenvoyDir, "config.json")
-	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-		return fmt.Errorf("os.MkdirAll: %w", err)
+	if err := go_pkg_filesystem.CheckDir(filepath.Dir(configPath), true); err != nil {
+		return fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
 	}
-
-	data, err := json.Marshal(cfg)
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %w", err)
-	}
-	return go_utils_filesystem.WriteFile(configPath, string(data), 0644)
+	return go_pkg_filesystem.WriteJSON(configPath, cfg, false)
 }
 
 func UpsertModel(entry ModelEntry) error {

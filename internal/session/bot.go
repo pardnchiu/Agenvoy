@@ -7,7 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -28,20 +29,20 @@ func SaveBot(sessionID, name string, force bool) {
 	}
 
 	dir := filepath.Join(filesystem.SessionsDir, sessionID)
-	if err := go_utils_filesystem.CheckDir(dir, true); err != nil {
-		slog.Warn("go_utils_filesystem.CheckDir",
+	if err := go_pkg_filesystem.CheckDir(dir, true); err != nil {
+		slog.Warn("go_pkg_filesystem.CheckDir",
 			slog.String("error", err.Error()))
 		return
 	}
 
 	path := filepath.Join(dir, "bot.md")
-	if !force && go_utils_filesystem.Exists(path) {
+	if !force && go_pkg_filesystem_reader.Exists(path) {
 		return
 	}
 
 	content := fmt.Sprintf("---\nname: %s\n---\n%s", name, configs.DefaultSessionPrompt)
-	if err := go_utils_filesystem.WriteFile(path, content, 0644); err != nil {
-		slog.Warn("go_utils_filesystem.WriteFile",
+	if err := go_pkg_filesystem.WriteFile(path, content, 0644); err != nil {
+		slog.Warn("go_pkg_filesystem.WriteFile",
 			slog.String("error", err.Error()))
 	}
 }
@@ -51,7 +52,7 @@ func GetSessionIDByName(name string) string {
 		return ""
 	}
 
-	dirs, err := go_utils_filesystem.ListDirs(filesystem.SessionsDir)
+	dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir)
 	if err != nil {
 		return ""
 	}
@@ -77,7 +78,7 @@ func GetBot(sessionID string) (name, body string) {
 		return "", ""
 	}
 	path := filepath.Join(filesystem.SessionsDir, sessionID, "bot.md")
-	data, err := go_utils_filesystem.ReadText(path)
+	data, err := go_pkg_filesystem.ReadText(path)
 	if err != nil {
 		return "", ""
 	}

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
-	"github.com/pardnchiu/go-utils/filesystem/keychain"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
 type Token struct {

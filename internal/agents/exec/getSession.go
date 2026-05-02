@@ -18,7 +18,8 @@ import (
 
 	_ "golang.org/x/image/webp"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -43,7 +44,7 @@ func buildContent(content string, imageInputs []string, fileInputs []string) any
 	}
 
 	for _, path := range fileInputs {
-		text, err := go_utils_filesystem.ReadText(path)
+		text, err := go_pkg_filesystem.ReadText(path)
 		if err != nil {
 			continue
 		}
@@ -80,7 +81,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 
 	if overrideID := strings.TrimSpace(execData.SessionID); overrideID != "" {
 		sessionDir := filepath.Join(filesystem.SessionsDir, overrideID)
-		if !go_utils_filesystem.IsDir(sessionDir) {
+		if !go_pkg_filesystem_reader.IsDir(sessionDir) {
 			return nil, fmt.Errorf("session %q does not exist", overrideID)
 		}
 
@@ -117,12 +118,12 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	defer unlock()
 
 	var sessionID string
-	configExists := go_utils_filesystem.Exists(filesystem.ConfigPath)
+	configExists := go_pkg_filesystem_reader.Exists(filesystem.ConfigPath)
 	switch {
 	case configExists:
-		configText, err := go_utils_filesystem.ReadText(filesystem.ConfigPath)
+		configText, err := go_pkg_filesystem.ReadText(filesystem.ConfigPath)
 		if err != nil {
-			return nil, fmt.Errorf("go_utils_filesystem.ReadText: %w", err)
+			return nil, fmt.Errorf("go_pkg_filesystem.ReadText: %w", err)
 		}
 		data := []byte(configText)
 		// * config is exist
@@ -147,8 +148,8 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			if err != nil {
 				return nil, fmt.Errorf("json.Marshal: %w", err)
 			}
-			if err := go_utils_filesystem.WriteFile(filesystem.ConfigPath, string(merged), 0644); err != nil {
-				return nil, fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
+			if err := go_pkg_filesystem.WriteFile(filesystem.ConfigPath, string(merged), 0644); err != nil {
+				return nil, fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 			}
 			indexData.SessionID = newID
 		}

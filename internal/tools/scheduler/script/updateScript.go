@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -45,8 +45,8 @@ func registUpdateScript() {
 			if params.Content == "" {
 				return "", fmt.Errorf("content is required")
 			}
-			if err := go_utils_filesystem.WriteFile(filepath.Join(filesystem.ScriptsDir, params.Name), params.Content, 0755); err != nil {
-				return "", fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
+			if err := go_pkg_filesystem.WriteFile(filepath.Join(filesystem.ScriptsDir, params.Name), params.Content, 0755); err != nil {
+				return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 			}
 			return fmt.Sprintf("script updated: %s", params.Name), nil
 		},

@@ -1,14 +1,12 @@
 package filesystem
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func TaskResultPath(id string, at time.Time) string {
@@ -58,68 +56,44 @@ type CronResult struct {
 }
 
 func GetTasks() ([]TaskItem, error) {
-	data, err := os.ReadFile(TasksPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, err
+	if !go_pkg_filesystem_reader.Exists(TasksPath) {
+		return nil, nil
 	}
-	var items []TaskItem
-	if err := json.Unmarshal(data, &items); err != nil {
-		return nil, fmt.Errorf("json.Unmarshal: %w", err)
+	items, err := go_pkg_filesystem.ReadJSON[[]TaskItem](TasksPath)
+	if err != nil {
+		return nil, err
 	}
 	return items, nil
 }
 
 func WriteTasks(items []TaskItem) error {
-	data, err := json.Marshal(items)
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %w", err)
-	}
-	return go_utils_filesystem.WriteFile(TasksPath, string(data), 0644)
+	return go_pkg_filesystem.WriteJSON(TasksPath, items, false)
 }
 
 func GetCrons() ([]CronItem, error) {
-	data, err := os.ReadFile(CronsPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, err
+	if !go_pkg_filesystem_reader.Exists(CronsPath) {
+		return nil, nil
 	}
-	var items []CronItem
-	if err := json.Unmarshal(data, &items); err != nil {
-		return nil, fmt.Errorf("json.Unmarshal: %w", err)
+	items, err := go_pkg_filesystem.ReadJSON[[]CronItem](CronsPath)
+	if err != nil {
+		return nil, err
 	}
 	return items, nil
 }
 
 func WriteCrons(crons []CronItem) error {
-	bytes, err := json.Marshal(crons)
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %w", err)
-	}
-	if err := go_utils_filesystem.WriteFile(CronsPath, string(bytes), 0644); err != nil {
-		return fmt.Errorf("WriteFile: %w", err)
+	if err := go_pkg_filesystem.WriteJSON(CronsPath, crons, false); err != nil {
+		return fmt.Errorf("WriteJSON: %w", err)
 	}
 	return nil
 }
 
 func WriteTaskResult(r TaskResult) error {
-	bytes, err := json.Marshal(r)
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %w", err)
-	}
-	return go_utils_filesystem.WriteFile(TaskResultPath(r.ID, r.At), string(bytes), 0644)
+	return go_pkg_filesystem.WriteJSON(TaskResultPath(r.ID, r.At), r, false)
 }
 
 func DeleteTaskResult(id string, at time.Time) error {
-	err := os.Remove(TaskResultPath(id, at))
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	return err
+	return go_pkg_filesystem.Remove(TaskResultPath(id, at))
 }
 
 func GetAllTaskResults() ([]TaskResult, error) {
@@ -129,12 +103,8 @@ func GetAllTaskResults() ([]TaskResult, error) {
 	}
 	results := make([]TaskResult, 0, len(matches))
 	for _, path := range matches {
-		data, err := os.ReadFile(path)
+		result, err := go_pkg_filesystem.ReadJSON[TaskResult](path)
 		if err != nil {
-			continue
-		}
-		var result TaskResult
-		if err := json.Unmarshal(data, &result); err != nil {
 			continue
 		}
 		results = append(results, result)
@@ -143,30 +113,18 @@ func GetAllTaskResults() ([]TaskResult, error) {
 }
 
 func WriteCronResult(r CronResult) error {
-	bytes, err := json.Marshal(r)
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %w", err)
-	}
-	return go_utils_filesystem.WriteFile(CronResultPath(r.ID), string(bytes), 0644)
+	return go_pkg_filesystem.WriteJSON(CronResultPath(r.ID), r, false)
 }
 
 func WriteCronRecord(result CronResult) error {
 	if result.RunAt == nil {
 		return nil
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %w", err)
-	}
-	return go_utils_filesystem.WriteFile(CronRecordPath(result.ID, *result.RunAt), string(bytes), 0644)
+	return go_pkg_filesystem.WriteJSON(CronRecordPath(result.ID, *result.RunAt), result, false)
 }
 
 func DeleteCronResult(id string) error {
-	err := os.Remove(CronResultPath(id))
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	return err
+	return go_pkg_filesystem.Remove(CronResultPath(id))
 }
 
 func GetAllCronResults() ([]CronResult, error) {
@@ -176,12 +134,8 @@ func GetAllCronResults() ([]CronResult, error) {
 	}
 	results := make([]CronResult, 0, len(matches))
 	for _, path := range matches {
-		data, err := os.ReadFile(path)
+		result, err := go_pkg_filesystem.ReadJSON[CronResult](path)
 		if err != nil {
-			continue
-		}
-		var result CronResult
-		if err := json.Unmarshal(data, &result); err != nil {
 			continue
 		}
 		results = append(results, result)

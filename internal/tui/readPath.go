@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tui/format"
@@ -16,7 +16,7 @@ import (
 func readFile(path string) string {
 	_, _, width, _ := contentView.GetInnerRect()
 
-	text, err := go_utils_filesystem.ReadText(path)
+	text, err := go_pkg_filesystem.ReadText(path)
 	if err != nil {
 		return fmt.Sprintf("(failed to get %s)", filepath.Base(path))
 	}

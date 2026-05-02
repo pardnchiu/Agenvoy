@@ -10,8 +10,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/pardnchiu/go-utils/filesystem/keychain"
-	go_utils_http "github.com/pardnchiu/go-utils/http"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
+	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
 const (
@@ -33,7 +33,7 @@ type DeviceCode struct {
 }
 
 func (c *Agent) Login(ctx context.Context) (*Token, error) {
-	code, _, err := go_utils_http.POST[DeviceCode](ctx, nil, deviceCodeAPI,
+	code, _, err := go_pkg_http.POST[DeviceCode](ctx, nil, deviceCodeAPI,
 		map[string]string{},
 		map[string]any{
 			"client_id": clientID,
@@ -101,7 +101,7 @@ type GopilotAccessToken struct {
 }
 
 func (c *Agent) getAccessToken(ctx context.Context, client *http.Client, deviceCode string) (*Token, error) {
-	accessToken, _, err := go_utils_http.POST[GopilotAccessToken](ctx, client, oauthAccessTokenAPI,
+	accessToken, _, err := go_pkg_http.POST[GopilotAccessToken](ctx, client, oauthAccessTokenAPI,
 		map[string]string{},
 		map[string]any{
 			"client_id":   clientID,

@@ -1,15 +1,15 @@
 package session
 
 import (
-	"encoding/json"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
-	go_utils_utils "github.com/pardnchiu/go-utils/utils"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -43,7 +43,7 @@ func Online(sessionID, input string) string {
 
 	s := readStatus(sessionID)
 	task := Task{
-		ID:        go_utils_utils.UUID(),
+		ID:        go_pkg_utils.UUID(),
 		Input:     truncateStatusInput(input),
 		StartedAt: nowStatusTime(),
 	}
@@ -95,7 +95,7 @@ func ClearTask(sessionID string) {
 	defer statusMu.Unlock()
 
 	dir := filepath.Join(filesystem.SessionsDir, sessionID)
-	if _, err := os.Stat(dir); err != nil {
+	if !go_pkg_filesystem_reader.Exists(dir) {
 		return
 	}
 	s := readStatus(sessionID)
@@ -109,15 +109,12 @@ func ClearTask(sessionID string) {
 }
 
 func CleanAllTask() {
-	entries, err := os.ReadDir(filesystem.SessionsDir)
+	dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir)
 	if err != nil {
 		return
 	}
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		ClearTask(entry.Name())
+	for _, name := range dirs {
+		ClearTask(name)
 	}
 }
 
@@ -137,12 +134,8 @@ func truncateStatusInput(s string) string {
 
 func readStatus(sessionID string) Status {
 	path := filepath.Join(filesystem.SessionsDir, sessionID, "status.json")
-	data, err := os.ReadFile(path)
+	s, err := go_pkg_filesystem.ReadJSON[Status](path)
 	if err != nil {
-		return Status{State: StatusIdle}
-	}
-	var s Status
-	if err := json.Unmarshal(data, &s); err != nil {
 		return Status{State: StatusIdle}
 	}
 	if s.State == "" {
@@ -157,28 +150,15 @@ func readStatus(sessionID string) Status {
 
 func writeStatus(sessionID string, s Status) {
 	dir := filepath.Join(filesystem.SessionsDir, sessionID)
-	if _, err := os.Stat(dir); err != nil {
+	if !go_pkg_filesystem_reader.Exists(dir) {
 		return
 	}
 	if s.Active == nil {
 		s.Active = []Task{}
 	}
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		slog.Warn("json.MarshalIndent",
-			slog.String("error", err.Error()))
-		return
-	}
 	path := filepath.Join(dir, "status.json")
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0644); err != nil {
-		slog.Warn("os.WriteFile",
+	if err := go_pkg_filesystem.WriteJSON(path, s, true); err != nil {
+		slog.Warn("go_pkg_filesystem.WriteJSON",
 			slog.String("error", err.Error()))
-		return
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		slog.Warn("os.Rename",
-			slog.String("error", err.Error()))
-		_ = os.Remove(tmp)
 	}
 }

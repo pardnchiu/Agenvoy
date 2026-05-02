@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func selectFile(index int, _, _ string, _ rune) {
@@ -22,11 +22,11 @@ func selectFile(index int, _, _ string, _ rune) {
 	}
 
 	path := filepath.Join(currentDir, name)
-	if !go_utils_filesystem.Exists(path) {
+	if !go_pkg_filesystem_reader.Exists(path) {
 		return
 	}
 
-	if go_utils_filesystem.IsDir(path) {
+	if go_pkg_filesystem_reader.IsDir(path) {
 		currentDir = path
 		go app.QueueUpdateDraw(func() {
 			loadDir(filesView, currentDir)

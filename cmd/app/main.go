@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
-	go_utils_sandbox "github.com/pardnchiu/go-utils/sandbox"
-	go_utils_utils "github.com/pardnchiu/go-utils/utils"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/extensions"
@@ -44,12 +44,12 @@ func init() {
 		slog.Warn("godotenv.Load",
 			slog.String("error", err.Error()))
 	}
-	go_utils_sandbox.New(configs.DeniedMap)
-	if err := go_utils_filesystem.New(go_utils_filesystem.Policy{
+	go_pkg_sandbox.New(configs.DeniedMap)
+	if err := go_pkg_filesystem.New(go_pkg_filesystem.Policy{
 		DeniedMap:   configs.DeniedMap,
 		ExcludeList: configs.ExcludeList,
 	}); err != nil {
-		slog.Error("go_utils_filesystem.New",
+		slog.Error("go_pkg_filesystem.New",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -117,7 +117,7 @@ func main() {
 }
 
 func initCLI() {
-	if err := go_utils_sandbox.CheckDependence(); err != nil {
+	if err := go_pkg_sandbox.CheckDependence(); err != nil {
 		slog.Error("sandbox.CheckDependence",
 			slog.String("error", err.Error()))
 		os.Exit(1)
@@ -244,7 +244,7 @@ func runApp() {
 	tui.New()
 	tui.SetSlog()
 
-	if err := go_utils_sandbox.CheckDependence(); err != nil {
+	if err := go_pkg_sandbox.CheckDependence(); err != nil {
 		slog.Error("sandbox.CheckDependence",
 			slog.String("error", err.Error()))
 	}
@@ -299,7 +299,7 @@ func runApp() {
 
 		route := routes.New(selectorBot, registry, scanner)
 
-		port := go_utils_utils.GetWithDefault("PORT", "17989")
+		port := go_pkg_utils.GetWithDefault("PORT", "17989")
 
 		server := &http.Server{
 			Addr:    ":" + port,
@@ -375,7 +375,7 @@ func setSummaryCron(bot agentTypes.Agent, registry agentTypes.AgentRegistry) {
 }
 
 func clearSession() {
-	idx, err := go_utils_filesystem.ReadJSON[struct {
+	idx, err := go_pkg_filesystem.ReadJSON[struct {
 		SessionID string `json:"session_id"`
 	}](filesystem.ConfigPath)
 	if err != nil {

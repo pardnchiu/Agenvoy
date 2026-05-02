@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/pardnchiu/go-utils/filesystem/keychain"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
 var (
@@ -80,7 +82,7 @@ func Init() error {
 		ToolFetchGoogleRSS = filepath.Join(ToolsDir, "google_rss")
 
 		systemDownloads := filepath.Join(homeDir, "Downloads")
-		if info, statErr := os.Stat(systemDownloads); statErr == nil && info.IsDir() {
+		if go_pkg_filesystem_reader.IsDir(systemDownloads) {
 			DownloadDir = systemDownloads
 		} else {
 			DownloadDir = filepath.Join(AgenvoyDir, "download")
@@ -93,47 +95,14 @@ func Init() error {
 	})
 
 	for _, dir := range []string{AgenvoyDir, DownloadDir} {
-		if err = os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("os.MkdirAll: %w", err)
+		if err = go_pkg_filesystem.CheckDir(dir, true); err != nil {
+			return fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
 		}
 	}
 
 	keychain.Init(projectName, AgenvoyDir)
 
 	return nil
-}
-
-func IsMatch(patterns, parts []string) bool {
-	if len(patterns) == 0 {
-		return len(parts) == 0
-	}
-
-	pattern := patterns[0]
-	if pattern == "**" {
-		rest := patterns[1:]
-		for len(rest) > 0 && rest[0] == "**" {
-			rest = rest[1:]
-		}
-		if len(rest) == 0 {
-			return true
-		}
-		for i := 0; i <= len(parts); i++ {
-			if IsMatch(rest, parts[i:]) {
-				return true
-			}
-		}
-		return false
-	}
-
-	if len(parts) == 0 {
-		return false
-	}
-
-	match, err := filepath.Match(pattern, parts[0])
-	if err != nil || !match {
-		return false
-	}
-	return IsMatch(patterns[1:], parts[1:])
 }
 
 func HistoryPath(sessionID string) string {

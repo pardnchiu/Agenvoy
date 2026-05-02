@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
-	"github.com/pardnchiu/go-utils/filesystem/keychain"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
 type keyStoreRequest struct {

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	go_utils_utils "github.com/pardnchiu/go-utils/utils"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
@@ -52,7 +52,7 @@ var MaxEmptyResponses = positiveEnvInt("MAX_EMPTY_RESPONSES", 8)
 var MaxRetry = positiveEnvInt("MAX_SAME_PAYLOAD_RETRY", 3)
 
 func positiveEnvInt(key string, def int) int {
-	if n := go_utils_utils.GetWithDefaultInt(key, def); n > 0 {
+	if n := go_pkg_utils.GetWithDefaultInt(key, def); n > 0 {
 		return n
 	}
 	return def

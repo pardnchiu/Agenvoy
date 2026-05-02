@@ -11,7 +11,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
-	go_utils_http "github.com/pardnchiu/go-utils/http"
+	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
 const (
@@ -67,7 +67,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 			"store":        false,
 		}
 
-		result, _, err := go_utils_http.POST[copilotResponse.Output](ctx, a.httpClient, responsesAPI, headers, body, "json")
+		result, _, err := go_pkg_http.POST[copilotResponse.Output](ctx, a.httpClient, responsesAPI, headers, body, "json")
 		if err != nil {
 			return nil, fmt.Errorf("http.POST: %w", err)
 		}
@@ -90,7 +90,7 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 		body["reasoning_effort"] = provider.GetReasoningLevel()
 	}
 
-	result, _, err := go_utils_http.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, headers, body, "json")
+	result, _, err := go_pkg_http.POST[agentTypes.Output](ctx, a.httpClient, chatAPI, headers, body, "json")
 	if err != nil {
 		return nil, fmt.Errorf("http.POST: %w", err)
 	}

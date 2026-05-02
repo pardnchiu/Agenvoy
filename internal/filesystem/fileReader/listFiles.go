@@ -6,20 +6,20 @@ import (
 	"os"
 	"path/filepath"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func ListFiles(absPath string, recursive bool) (string, error) {
 	results := []file{}
 
 	if recursive {
-		walked, err := go_utils_filesystem.WalkFiles(absPath, go_utils_filesystem.ListOption{
+		walked, err := go_pkg_filesystem_reader.WalkFiles(absPath, go_pkg_filesystem_reader.ListOption{
 			SkipExcluded:      true,
 			IgnoreWalkError:   true,
 			IncludeNonRegular: true,
 		})
 		if err != nil {
-			return "", fmt.Errorf("go_utils_filesystem.WalkFiles: %w", err)
+			return "", fmt.Errorf("go_pkg_filesystem_reader.WalkFiles: %w", err)
 		}
 		for _, rel := range walked {
 			full := filepath.Join(absPath, rel)
@@ -36,9 +36,9 @@ func ListFiles(absPath string, recursive bool) (string, error) {
 			})
 		}
 	} else {
-		entries, err := go_utils_filesystem.ListAll(absPath, go_utils_filesystem.ListOption{SkipExcluded: true})
+		entries, err := go_pkg_filesystem_reader.ListAll(absPath, go_pkg_filesystem_reader.ListOption{SkipExcluded: true})
 		if err != nil {
-			return "", fmt.Errorf("go_utils_filesystem.ListAll: %w", err)
+			return "", fmt.Errorf("go_pkg_filesystem_reader.ListAll: %w", err)
 		}
 		for _, entry := range entries {
 			full := filepath.Join(absPath, entry.Name())

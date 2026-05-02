@@ -6,7 +6,8 @@ import (
 	"strings"
 
 	"github.com/common-nighthawk/go-figure"
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/session"
@@ -58,9 +59,9 @@ func setDefault() string {
 	// * config
 	sb.WriteString(" CONFIG\n")
 	sb.WriteString(seperate + "\n")
-	if !go_utils_filesystem.Exists(filesystem.ConfigPath) {
+	if !go_pkg_filesystem_reader.Exists(filesystem.ConfigPath) {
 		sb.WriteString("[gray]  (not found)[-]\n")
-	} else if cfg, err := go_utils_filesystem.ReadJSON[session.Config](filesystem.ConfigPath); err == nil {
+	} else if cfg, err := go_pkg_filesystem.ReadJSON[session.Config](filesystem.ConfigPath); err == nil {
 		{
 			if cfg.SessionID != "" {
 				sb.WriteString(fmt.Sprintf("[gray]  %-9s: %s[-]\n", "SESSION", cfg.SessionID))
@@ -99,9 +100,9 @@ func setDefault() string {
 	// * usage
 	sb.WriteString(" USAGE\n")
 	sb.WriteString(seperate + "\n")
-	if !go_utils_filesystem.Exists(filesystem.UsagePath) {
+	if !go_pkg_filesystem_reader.Exists(filesystem.UsagePath) {
 		sb.WriteString("  (not found)\n")
-	} else if usages, err := go_utils_filesystem.ReadJSON[map[string]filesystem.Usage](filesystem.UsagePath); err == nil && len(usages) > 0 {
+	} else if usages, err := go_pkg_filesystem.ReadJSON[map[string]filesystem.Usage](filesystem.UsagePath); err == nil && len(usages) > 0 {
 		{
 			models := make([]string, 0, len(usages))
 			for usage := range usages {

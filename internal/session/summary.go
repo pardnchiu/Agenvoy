@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -19,10 +20,11 @@ func SummaryPath(sessionID string) string {
 }
 
 func GetSummary(sessionID string) ([]byte, map[string]any) {
-	bytes, err := os.ReadFile(SummaryPath(sessionID))
+	text, err := go_pkg_filesystem.ReadText(SummaryPath(sessionID))
 	if err != nil {
 		return nil, nil
 	}
+	bytes := []byte(text)
 
 	var summary map[string]any
 	if err := json.Unmarshal(bytes, &summary); err != nil {
@@ -90,18 +92,15 @@ func GetSummaryPrompt(sessionID string, cutoff time.Time) string {
 }
 
 func IsNeedSummary() []string {
-	entries, err := os.ReadDir(filesystem.SessionsDir)
+	dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir)
 	if err != nil {
 		return nil
 	}
 
 	var result []string
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		sid := entry.Name()
+	for _, sid := range dirs {
 		historyPath := filepath.Join(filesystem.SessionsDir, sid, "history.json")
+		// * os.Stat retained: FileInfo.ModTime() needed to compare history vs summary recency
 		hInfo, err := os.Stat(historyPath)
 		if err != nil {
 			continue
@@ -117,13 +116,8 @@ func IsNeedSummary() []string {
 }
 
 func SaveSummary(sessionID string, data any) {
-	if bytes, err := json.Marshal(data); err == nil {
-		if err := go_utils_filesystem.WriteFile(SummaryPath(sessionID), string(bytes), 0644); err != nil {
-			slog.Warn("WriteFile",
-				slog.String("error", err.Error()))
-		}
-	} else {
-		slog.Warn("json.Marshal",
+	if err := go_pkg_filesystem.WriteJSON(SummaryPath(sessionID), data, false); err != nil {
+		slog.Warn("WriteJSON",
 			slog.String("error", err.Error()))
 	}
 }

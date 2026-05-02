@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	go_utils_filesystem "github.com/pardnchiu/go-utils/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -23,8 +23,8 @@ func Write(ctx context.Context, path, content string, executable bool) (string, 
 		base := strings.TrimSuffix(filepath.Base(path), ext)
 		uniqueName := fmt.Sprintf("%s_%d%s", base, time.Now().UTC().Unix(), ext)
 		absPath := filepath.Join(filesystem.ScriptsDir, uniqueName)
-		if err := go_utils_filesystem.WriteFile(absPath, content, 0755); err != nil {
-			return "", fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
+		if err := go_pkg_filesystem.WriteFile(absPath, content, 0755); err != nil {
+			return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 		}
 		return fmt.Sprintf(`script saved. pass "%s" as the script parameter to add_task or add_cron`, uniqueName), nil
 	}
@@ -37,8 +37,8 @@ func Write(ctx context.Context, path, content string, executable bool) (string, 
 		return "", fmt.Errorf("file too large (%d bytes, max 1 MB)", info.Size())
 	}
 
-	if err := go_utils_filesystem.WriteFile(path, content, 0644); err != nil {
-		return "", fmt.Errorf("go_utils_filesystem.WriteFile: %w", err)
+	if err := go_pkg_filesystem.WriteFile(path, content, 0644); err != nil {
+		return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 	}
 
 	if filesystem.IsSkillsDir(path) {

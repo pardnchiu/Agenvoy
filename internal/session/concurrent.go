@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	go_utils_utils "github.com/pardnchiu/go-utils/utils"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 )
 
 const (
@@ -14,7 +14,7 @@ const (
 
 var MaxConcurrentPerSession = max(defaultMaxConcurrentPerSession,
 	min(hardCapMaxConcurrentPerSession,
-		go_utils_utils.GetWithDefaultInt("MAX_SESSION_TASKS", defaultMaxConcurrentPerSession)))
+		go_pkg_utils.GetWithDefaultInt("MAX_SESSION_TASKS", defaultMaxConcurrentPerSession)))
 
 var (
 	concurrentMu    sync.Mutex
