@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/fileWriter"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -81,7 +83,44 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 			if content == "" {
 				return "", fmt.Errorf("content is required")
 			}
-			return fileWriter.Write(ctx, absPath, content, params.Executable)
+			return write(ctx, absPath, content, params.Executable)
 		},
 	})
+}
+
+func write(ctx context.Context, path, content string, executable bool) (string, error) {
+	if executable {
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext != ".sh" && ext != ".py" {
+			return "", fmt.Errorf("executable scripts only support .sh or .py")
+		}
+
+		base := strings.TrimSuffix(filepath.Base(path), ext)
+		uniqueName := fmt.Sprintf("%s_%d%s", base, time.Now().UTC().Unix(), ext)
+		absPath := filepath.Join(filesystem.ScriptsDir, uniqueName)
+		if err := go_pkg_filesystem.WriteFile(absPath, content, 0755); err != nil {
+			return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
+		}
+		return fmt.Sprintf(`script saved. pass "%s" as the script parameter to add_task or add_cron`, uniqueName), nil
+	}
+
+	info, err := os.Stat(path)
+	isNew := os.IsNotExist(err)
+	if err != nil && !isNew {
+		return "", fmt.Errorf("os.Stat: %w", err)
+	}
+	if !isNew && info.Size() > maxReadSize {
+		return "", fmt.Errorf("file too large (%d bytes, max 1 MB)", info.Size())
+	}
+
+	if err := go_pkg_filesystem.WriteFile(path, content, 0644); err != nil {
+		return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
+	}
+
+	filesystem.SkillCommit(ctx, path, isNew)
+
+	if isNew {
+		return fmt.Sprintf("successfully created: %s", path), nil
+	}
+	return fmt.Sprintf("successfully updated %s", path), nil
 }

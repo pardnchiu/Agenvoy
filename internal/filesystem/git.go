@@ -3,28 +3,30 @@ package filesystem
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"os/exec"
+
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func CheckSkillsGit(ctx context.Context) error {
-	if err := os.MkdirAll(SkillsDir, 0755); err != nil {
-		return fmt.Errorf("os.MkdirAll: %w", err)
+	if err := go_pkg_filesystem.CheckDir(SkillsDir, true); err != nil {
+		return fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
 	}
 
 	gitignorePath := filepath.Join(SkillsDir, ".gitignore")
-	if _, err := os.Stat(gitignorePath); os.IsNotExist(err) {
-		if err := os.WriteFile(gitignorePath, []byte(".system/\n"), 0644); err != nil {
-			return fmt.Errorf("os.WriteFile: %w", err)
+	if !go_pkg_filesystem_reader.Exists(gitignorePath) {
+		if err := go_pkg_filesystem.WriteFile(gitignorePath, ".system/\n", 0644); err != nil {
+			return fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 		}
 	}
 
 	dir := filepath.Join(SkillsDir, ".git")
-	if _, err := os.Stat(dir); err == nil {
+	if go_pkg_filesystem_reader.Exists(dir) {
 		return nil
 	}
 
@@ -103,4 +105,18 @@ func GetSkillName(path string) string {
 		return "skills"
 	}
 	return parts[0]
+}
+
+func SkillCommit(ctx context.Context, path string, isNew bool) {
+	if !IsSkillsDir(path) {
+		return
+	}
+	if err := CheckSkillsGit(ctx); err != nil {
+		return
+	}
+	act := "update"
+	if isNew {
+		act = "add"
+	}
+	_ = CommitSkills(ctx, act, GetSkillName(path))
 }

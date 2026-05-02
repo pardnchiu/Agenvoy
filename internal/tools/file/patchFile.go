@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	filewriter "github.com/pardnchiu/agenvoy/internal/filesystem/fileWriter"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -81,7 +82,45 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 			if old == new {
 				return "", fmt.Errorf("no edit needed")
 			}
-			return filewriter.Patch(ctx, absPath, old, new, params.ReplaceAll)
+			return patch(ctx, absPath, old, new, params.ReplaceAll)
 		},
 	})
+}
+
+func patch(ctx context.Context, path, old, new string, replaceAll bool) (string, error) {
+	// * os.Stat retained: FileInfo.Size() must guard before read so huge files don't load into memory before rejection
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("os.Stat: %w", err)
+	}
+	if info.Size() > maxReadSize {
+		return "", fmt.Errorf("file too large (%d bytes, max 1 MB)", info.Size())
+	}
+
+	fileContent, err := go_pkg_filesystem.ReadText(path)
+	if err != nil {
+		return "", fmt.Errorf("go_pkg_filesystem.ReadText: %w", err)
+	}
+
+	if !strings.Contains(fileContent, old) {
+		return "", fmt.Errorf("%s is not found in %s", old, path)
+	}
+
+	search := old
+	if new == "" && !strings.HasSuffix(old, "\n") && strings.Contains(fileContent, old+"\n") {
+		search = old + "\n"
+	}
+	var updated string
+	if replaceAll {
+		updated = strings.ReplaceAll(fileContent, search, new)
+	} else {
+		updated = strings.Replace(fileContent, search, new, 1)
+	}
+
+	if err := go_pkg_filesystem.WriteFile(path, updated, 0644); err != nil {
+		return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
+	}
+
+	filesystem.SkillCommit(ctx, path, false)
+	return fmt.Sprintf("successfully updated %s", path), nil
 }

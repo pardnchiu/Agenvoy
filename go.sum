@@ -88,6 +88,8 @@ github.com/pardnchiu/ToriiDB v0.5.1 h1:+jEtX4L1Pb1CZMYk485f6ulkR0w6I3jvz69fzmge0
 github.com/pardnchiu/ToriiDB v0.5.1/go.mod h1:0p0IsrySqXyXvKIJswKKG1Zi6wQ2TD/LdKcKx4It/EA=
 github.com/pardnchiu/go-pkg v0.11.0 h1:NjLMxsgzqFLaeAdd6u5R4ZTwO/eMCTHoGoDDWxo7YgY=
 github.com/pardnchiu/go-pkg v0.11.0/go.mod h1:DuZN0xqXOpMV+SS3mXVgl8aCt/VIBQhqp8TDgYM9Ouw=
+github.com/pardnchiu/go-pkg v0.11.1 h1:YLTGcuKcs4tUHjHNiPe9WiDT7Y4FPM3Ow37gzx3oN3o=
+github.com/pardnchiu/go-pkg v0.11.1/go.mod h1:DuZN0xqXOpMV+SS3mXVgl8aCt/VIBQhqp8TDgYM9Ouw=
 github.com/pardnchiu/go-scheduler v1.2.0 h1:DBmFWOPjGUzQEKYHZNeLS9v9PmJrKk/VwxQeVO754Ns=
 github.com/pardnchiu/go-scheduler v1.2.0/go.mod h1:JtHqK0I/ha8E9Eo86rVaw+cvLgREcL5LfT8p9DmY3Lg=
 github.com/pardnchiu/go-utils v0.5.0 h1:cjLXhqST3DCJjo8Y+TotMSlPejOMCHSSicXwYXj2QwU=

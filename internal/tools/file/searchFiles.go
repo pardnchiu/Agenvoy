@@ -9,9 +9,9 @@ import (
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/fileReader"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func registSearchFiles() {
@@ -61,8 +61,8 @@ Scope with file_pattern glob (e.g. '**/*.go', 'configs/**').`,
 				return "", fmt.Errorf("go_pkg_filesystem.AbsPath: %w", err)
 			}
 
-			textPattern := strings.TrimSpace(params.Pattern)
-			if textPattern == "" {
+			pattern := strings.TrimSpace(params.Pattern)
+			if pattern == "" {
 				return "", fmt.Errorf("pattern is required")
 			}
 
@@ -70,7 +70,30 @@ Scope with file_pattern glob (e.g. '**/*.go', 'configs/**').`,
 			if params.FilePattern != "" {
 				filePatterns = strings.Split(filepath.ToSlash(params.FilePattern), "/")
 			}
-			return fileReader.SearchFiles(absPath, textPattern, filePatterns)
+			matches, err := go_pkg_filesystem_reader.SearchFiles(absPath, pattern, filePatterns, 0,
+				go_pkg_filesystem_reader.ListOption{
+					SkipExcluded:    true,
+					IgnoreWalkError: true,
+				})
+			if err != nil {
+				return "", fmt.Errorf("go_pkg_filesystem_reader.SearchFiles: %w", err)
+			}
+
+			if len(matches) == 0 {
+				return fmt.Sprintf("no files found: %s", pattern), nil
+			}
+
+			for i, f := range matches {
+				if rel, err := filepath.Rel(absPath, f.Path); err == nil {
+					matches[i].Path = rel
+				}
+			}
+
+			out, err := json.Marshal(matches)
+			if err != nil {
+				return "", fmt.Errorf("json.Marshal: %w", err)
+			}
+			return string(out), nil
 		},
 	})
 }
