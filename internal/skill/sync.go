@@ -9,10 +9,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 func SyncSkills(_ context.Context, fsys fs.FS) {
+	// * os.RemoveAll retained: go-pkg Remove only handles single entries; recursive wipe needs RemoveAll
 	if err := os.RemoveAll(filesystem.SystemSkillsDir); err != nil {
 		slog.Error("os.RemoveAll",
 			slog.String("path", filesystem.SystemSkillsDir),
@@ -20,8 +23,8 @@ func SyncSkills(_ context.Context, fsys fs.FS) {
 		return
 	}
 
-	if err := os.MkdirAll(filesystem.SystemSkillsDir, 0755); err != nil {
-		slog.Error("os.MkdirAll",
+	if err := go_pkg_filesystem.CheckDir(filesystem.SystemSkillsDir, true); err != nil {
+		slog.Error("go_pkg_filesystem.CheckDir",
 			slog.String("path", filesystem.SystemSkillsDir),
 			slog.String("error", err.Error()))
 		return
@@ -61,7 +64,7 @@ func copyFromFS(fsys fs.FS, srcDir, destDir string) error {
 		destPath := filepath.Join(destDir, filepath.FromSlash(rel))
 
 		if d.IsDir() {
-			return os.MkdirAll(destPath, 0755)
+			return go_pkg_filesystem.CheckDir(destPath, true)
 		}
 
 		data, err := fs.ReadFile(fsys, path)
@@ -69,6 +72,6 @@ func copyFromFS(fsys fs.FS, srcDir, destDir string) error {
 			return fmt.Errorf("fs.ReadFile %s: %w", path, err)
 		}
 
-		return os.WriteFile(destPath, data, 0644)
+		return go_pkg_filesystem.WriteFile(destPath, string(data), 0644)
 	})
 }

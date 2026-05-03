@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 )
 
 // ---
@@ -26,10 +27,11 @@ func parser(path string) (*Skill, error) {
 		return nil, fmt.Errorf("filepath.Abs: %w", err)
 	}
 
-	content, err := os.ReadFile(absPath)
+	contentText, err := go_pkg_filesystem.ReadText(absPath)
 	if err != nil {
-		return nil, fmt.Errorf("os.ReadFile: %w", err)
+		return nil, fmt.Errorf("go_pkg_filesystem.ReadText: %w", err)
 	}
+	content := []byte(contentText)
 
 	hash := fmt.Sprintf("%x", sha256.Sum256(content))
 	folderPath := filepath.Dir(path)
@@ -37,8 +39,8 @@ func parser(path string) (*Skill, error) {
 		Name:    filepath.Base(folderPath),
 		AbsPath: absPath,
 		Path:    folderPath,
-		Content: string(content),
-		Body:    string(content),
+		Content: contentText,
+		Body:    contentText,
 		Hash:    hash,
 	}
 

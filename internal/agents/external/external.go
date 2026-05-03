@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	go_utils_utils "github.com/pardnchiu/go-utils/utils"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 
 var ExternalAgentTimeoutMin = max(defaultExternalAgentTimeoutMin,
 	min(hardCapExternalAgentTimeoutMin,
-		go_utils_utils.GetWithDefaultInt("MAX_EXTERNAL_AGENT_TIMEOUT_MIN", defaultExternalAgentTimeoutMin)))
+		go_pkg_utils.GetWithDefaultInt("MAX_EXTERNAL_AGENT_TIMEOUT_MIN", defaultExternalAgentTimeoutMin)))
 
 func runCodex(ctx context.Context, prompt string, readOnly bool) (string, error) {
 	outFile := filepath.Join(os.TempDir(), fmt.Sprintf("agenvoy-codex-%d.txt", time.Now().UnixNano()))
@@ -41,11 +42,11 @@ func runCodex(ctx context.Context, prompt string, readOnly bool) (string, error)
 		return "", err
 	}
 
-	data, readErr := os.ReadFile(outFile)
+	data, readErr := go_pkg_filesystem.ReadText(outFile)
 	if readErr != nil {
 		return "", fmt.Errorf("read codex output: %w", readErr)
 	}
-	output := strings.TrimSpace(string(data))
+	output := strings.TrimSpace(data)
 	if output == "" {
 		return "", fmt.Errorf("empty response from codex")
 	}

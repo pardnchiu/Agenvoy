@@ -5,8 +5,9 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
+
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -21,12 +22,8 @@ type AgentConfig struct {
 }
 
 func GetAgent() []agentTypes.AgentEntry {
-	data, err := os.ReadFile(filesystem.ConfigPath)
-	if err != nil {
-		return []agentTypes.AgentEntry{}
-	}
-	var cfg AgentConfig
-	if json.Unmarshal(data, &cfg) != nil || len(cfg.Models) == 0 {
+	cfg, err := go_pkg_filesystem.ReadJSON[AgentConfig](filesystem.ConfigPath)
+	if err != nil || len(cfg.Models) == 0 {
 		return []agentTypes.AgentEntry{}
 	}
 	if cfg.DefaultModel == "" {

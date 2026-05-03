@@ -3,9 +3,10 @@ package tasks
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"time"
+
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
@@ -27,7 +28,7 @@ func Setup(s *scheduler.Scheduler) error {
 			continue
 		}
 		scriptPath := filepath.Join(filesystem.ScriptsDir, item.Script)
-		if _, err := os.Stat(scriptPath); err != nil {
+		if !go_pkg_filesystem_reader.Exists(scriptPath) {
 			slog.Warn("SetupTasks: script not found, removing task",
 				slog.String("id", item.ID),
 				slog.String("script", item.Script))

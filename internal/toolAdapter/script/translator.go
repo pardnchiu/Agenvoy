@@ -7,6 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 type Translator struct {
@@ -94,14 +97,9 @@ func (t *Translator) GetTools() []map[string]any {
 }
 
 func loadDir(dir string) (*ScriptDoc, string, string, error) {
-	content, err := os.ReadFile(filepath.Join(dir, "tool.json"))
+	doc, err := go_pkg_filesystem.ReadJSON[ScriptDoc](filepath.Join(dir, "tool.json"))
 	if err != nil {
-		return nil, "", "", fmt.Errorf("os.ReadFile: %w", err)
-	}
-
-	var doc ScriptDoc
-	if err := json.Unmarshal(content, &doc); err != nil {
-		return nil, "", "", fmt.Errorf("json.Unmarshal: %w", err)
+		return nil, "", "", fmt.Errorf("go_pkg_filesystem.ReadJSON: %w", err)
 	}
 	if strings.TrimSpace(doc.Name) == "" {
 		return nil, "", "", fmt.Errorf("script tool name is required")
@@ -124,7 +122,7 @@ func findScript(dir string) (string, string, error) {
 	}
 	for _, c := range candidates {
 		p := filepath.Join(dir, c.name)
-		if _, err := os.Stat(p); err == nil {
+		if go_pkg_filesystem_reader.Exists(p) {
 			return p, c.lang, nil
 		}
 	}

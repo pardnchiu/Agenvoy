@@ -9,6 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 type Translator struct {
@@ -57,17 +60,12 @@ func (t *Translator) Load(path string) error {
 }
 
 func (t *Translator) load(path string) (*APIDocumentData, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("os.ReadFile: %w", err)
+	if !go_pkg_filesystem_reader.Exists(path) {
+		return nil, nil
 	}
-
-	var doc APIDocumentData
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return nil, fmt.Errorf("json.Unmarshal: %w", err)
+	doc, err := go_pkg_filesystem.ReadJSON[APIDocumentData](path)
+	if err != nil {
+		return nil, fmt.Errorf("go_pkg_filesystem.ReadJSON: %w", err)
 	}
 
 	if err := t.check(&doc); err != nil {

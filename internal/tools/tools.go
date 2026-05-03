@@ -10,6 +10,9 @@ import (
 	"strings"
 	"time"
 
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+
 	"github.com/pardnchiu/agenvoy/configs"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -37,8 +40,8 @@ var (
 
 func moveToTrash(ctx context.Context, e *toolTypes.Executor, args []string) (string, error) {
 	trashPath := filepath.Join(e.WorkDir, ".Trash")
-	if err := os.MkdirAll(trashPath, 0755); err != nil {
-		return "", fmt.Errorf("os.MkdirAll .Trash: %w", err)
+	if err := go_pkg_filesystem.CheckDir(trashPath, true); err != nil {
+		return "", fmt.Errorf("go_pkg_filesystem.CheckDir .Trash: %w", err)
 	}
 
 	var moved []string
@@ -53,7 +56,7 @@ func moveToTrash(ctx context.Context, e *toolTypes.Executor, args []string) (str
 		name := filepath.Base(arg)
 		dst := filepath.Join(trashPath, name)
 
-		if _, err := os.Stat(dst); err == nil {
+		if go_pkg_filesystem_reader.Exists(dst) {
 			ext := filepath.Ext(name)
 			dst = filepath.Join(trashPath, fmt.Sprintf("%s_%s%s",
 				strings.TrimSuffix(name, ext),

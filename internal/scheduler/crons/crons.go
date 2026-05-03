@@ -3,8 +3,9 @@ package crons
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"path/filepath"
+
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
@@ -23,8 +24,8 @@ func Setup(s *scheduler.Scheduler) error {
 	var crons []filesystem.CronItem
 	for _, item := range items {
 		scriptPath := filepath.Join(filesystem.ScriptsDir, item.Script)
-		if _, err := os.Stat(scriptPath); err != nil {
-			slog.Warn("os.Stat",
+		if !go_pkg_filesystem_reader.Exists(scriptPath) {
+			slog.Warn("script missing",
 				slog.String("id", item.ID),
 				slog.String("script", item.Script))
 			_ = filesystem.DeleteCronResult(item.ID)

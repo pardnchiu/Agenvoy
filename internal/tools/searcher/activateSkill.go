@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
+
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/skill"
@@ -110,7 +111,7 @@ func renderSkill(s *skill.Skill) string {
 	content := s.Content
 	for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
 		resolved := filepath.Join(s.Path, prefix)
-		if _, err := os.Stat(resolved); err == nil {
+		if go_pkg_filesystem_reader.Exists(resolved) {
 			content = strings.ReplaceAll(content, prefix, resolved+string(filepath.Separator))
 		}
 	}

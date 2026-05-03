@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
+
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -37,11 +38,11 @@ func registReadScript() {
 			if filepath.Base(params.Name) != params.Name {
 				return "", fmt.Errorf("must not contain path separator")
 			}
-			data, err := os.ReadFile(filepath.Join(filesystem.ScriptsDir, params.Name))
+			text, err := go_pkg_filesystem.ReadText(filepath.Join(filesystem.ScriptsDir, params.Name))
 			if err != nil {
-				return "", fmt.Errorf("os.ReadFile: %w", err)
+				return "", fmt.Errorf("go_pkg_filesystem.ReadText: %w", err)
 			}
-			return string(data), nil
+			return text, nil
 		},
 	})
 

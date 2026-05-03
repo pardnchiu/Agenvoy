@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
@@ -114,26 +116,25 @@ func (s *SkillScanner) Scan() {
 }
 
 func (s *SkillScanner) scan(root string, skillChan chan<- *Skill) error {
-	// * path not exists
-	if _, err := os.Stat(root); os.IsNotExist(err) {
+	if !go_pkg_filesystem_reader.Exists(root) {
 		return nil
 	}
 
-	entries, err := os.ReadDir(root)
+	dirs, err := go_pkg_filesystem_reader.ListDirs(root)
 	if err != nil {
 		return err
 	}
 
-	for _, e := range entries {
-		if !e.IsDir() || e.Name()[0] == '.' {
+	for _, dir := range dirs {
+		if dir.Name[0] == '.' {
 			continue
 		}
 
 		// ~/.claude/skills/
 		// └── {skill_name}/
 		//     └── SKILL.md
-		path := filepath.Join(root, e.Name(), "SKILL.md")
-		if _, err := os.Stat(path); os.IsNotExist(err) {
+		path := filepath.Join(root, dir.Name, "SKILL.md")
+		if !go_pkg_filesystem_reader.Exists(path) {
 			continue
 		}
 
