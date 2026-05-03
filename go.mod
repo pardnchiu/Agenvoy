@@ -6,12 +6,12 @@ require (
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/gdamore/tcell/v2 v2.8.1
+	github.com/gdamore/tcell/v2 v2.13.9
 	github.com/gin-gonic/gin v1.12.0
 	github.com/joho/godotenv v1.5.1
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pardnchiu/ToriiDB v0.5.1
-	github.com/pardnchiu/go-pkg v0.11.3
+	github.com/pardnchiu/go-pkg v0.12.1
 	github.com/pardnchiu/go-scheduler v1.2.0
 	github.com/rivo/tview v0.42.0
 )
@@ -34,9 +34,8 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pardnchiu/go-utils v0.5.0 // indirect
