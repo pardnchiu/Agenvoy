@@ -5,6 +5,7 @@
 .doc
 *.out
 .claude
+.wiki
 
 docker-compose.yml
 test/copilot_token.json
