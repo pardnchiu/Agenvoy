@@ -346,18 +346,13 @@ func runApp() {
 		go setSummaryCron(selectorBot, registry)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	go tui.FileMonitor()
 	go tui.SchedulerMonitor()
-	go tui.SessionLogger(ctx)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-quit
-		cancel()
 		tui.Stop()
 	}()
 

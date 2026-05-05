@@ -47,9 +47,6 @@ func newMainView() tview.Primitive {
 		AddPage("content", contentView, true, true).
 		AddPage("logs", logsView, true, false)
 
-	mainPanels = []tview.Primitive{filesView, viewPages}
-	panels = mainPanels
-
 	return tview.NewFlex().
 		AddItem(filesView, 0, 1, true).
 		AddItem(viewPages, 0, 4, false)
