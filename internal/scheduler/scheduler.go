@@ -79,3 +79,23 @@ func Stop() {
 
 	s.Cron.Stop()
 }
+
+func (s *Scheduler) Reset() {
+	if s == nil {
+		return
+	}
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
+
+	for _, timer := range s.Timers {
+		timer.Stop()
+	}
+	for _, c := range s.Crons {
+		s.Cron.Remove(c.CronID)
+	}
+	s.Timers = make(map[string]*time.Timer)
+	s.Tasks = nil
+	s.TaskResults = make(map[string]filesystem.TaskResult)
+	s.Crons = nil
+	s.CronResults = make(map[string]filesystem.CronResult)
+}

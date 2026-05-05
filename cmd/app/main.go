@@ -348,6 +348,7 @@ func runApp() {
 	defer cancel()
 
 	go tui.FileMonitor()
+	go tui.SchedulerMonitor()
 	go tui.SessionLogger(ctx)
 
 	quit := make(chan os.Signal, 1)

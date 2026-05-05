@@ -23,16 +23,18 @@ func Setup(s *scheduler.Scheduler) error {
 
 	now := time.Now()
 	var pending []filesystem.TaskItem
+	var expired []filesystem.TaskItem
 	for _, item := range items {
-		if !item.At.After(now) {
-			continue
-		}
 		scriptPath := filepath.Join(filesystem.ScriptsDir, item.Script)
 		if !go_pkg_filesystem_reader.Exists(scriptPath) {
 			slog.Warn("SetupTasks: script not found, removing task",
 				slog.String("id", item.ID),
 				slog.String("script", item.Script))
 			_ = filesystem.DeleteTaskResult(item.ID, item.At)
+			continue
+		}
+		if !item.At.After(now) {
+			expired = append(expired, item)
 			continue
 		}
 		pending = append(pending, item)
@@ -59,6 +61,9 @@ func Setup(s *scheduler.Scheduler) error {
 		s.TaskResults[r.ID] = r
 	}
 
+	for _, item := range expired {
+		go runOnce(s, item)
+	}
 	return nil
 }
 
