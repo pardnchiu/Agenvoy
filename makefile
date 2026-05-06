@@ -1,4 +1,4 @@
-ifneq ($(filter cli run switch new mcp,$(MAKECMDGOALS)),)
+ifneq ($(filter cli run mcp model skill session,$(MAKECMDGOALS)),)
 
 cli:
 	@go run ./cmd/app/ cli $(filter-out $@,$(MAKECMDGOALS))
@@ -6,39 +6,37 @@ cli:
 run:
 	@go run ./cmd/app/ run $(filter-out $@,$(MAKECMDGOALS))
 
-switch:
-	@go run ./cmd/app/ switch $(filter-out $@,$(MAKECMDGOALS))
-
-new:
-	@go run ./cmd/app/ new $(filter-out $@,$(MAKECMDGOALS))
-
 mcp:
 	@go run ./cmd/app/ mcp $(filter-out $@,$(MAKECMDGOALS))
+
+model:
+	@go run ./cmd/app/ model $(filter-out $@,$(MAKECMDGOALS))
+
+skill:
+	@go run ./cmd/app/ skill $(filter-out $@,$(MAKECMDGOALS))
+
+session:
+	@go run ./cmd/app/ session $(filter-out $@,$(MAKECMDGOALS))
 
 %:
 	@:
 
 else
 
-.PHONY: help build app discord add remove config planner reasoning models skills test
+.PHONY: help build app discord test
 
 help:
 	@echo "How to use:"
 	@echo "  make build              Build binary and install to /usr/local/bin/agen"
 	@echo "  make app                Start unified app (TUI + Discord + REST API)"
 	@echo "  make discord            Start Discord bot server (legacy)"
-	@echo "  make add                Add a provider/model"
-	@echo "  make remove             Remove a provider/model"
-	@echo "  make config             Edit current CLI session bot.md in \$$EDITOR"
-	@echo "  make new [name]         Start a new CLI session (optional bot.md name) and switch primary pointer"
-	@echo "  make switch <name>      Switch primary pointer to the cli- session whose bot.md name matches"
-	@echo "  make mcp [list|add|remove]  Manage MCP servers"
-	@echo "  make planner            Set planner model"
-	@echo "  make reasoning          Set reasoning level"
-	@echo "  make models             Get model list"
-	@echo "  make skills             Get skill list"
+	@echo "  make mcp [list|add|remove]                       Manage MCP servers"
+	@echo "  make model [add|remove|list|planner|reasoning]   Manage providers/models, planner, reasoning"
+	@echo "  make skill [list]                                List available skills"
+	@echo "  make session [new|switch|config] [name]          Manage CLI sessions (interactive picker if no name)"
 	@echo "  make cli <input...>     Run agent (requires tool confirmation)"
 	@echo "  make run <input...>     Run agent (allow all tools, no confirmation)"
+	@echo "  make test               Run integration tests"
 
 build:
 	@git fetch --tags --force 2>/dev/null || true
@@ -49,27 +47,6 @@ app:
 
 discord:
 	go run ./cmd/server/main.go
-
-add:
-	go run ./cmd/app/ add
-
-remove:
-	go run ./cmd/app/ remove
-
-config:
-	go run ./cmd/app/ config
-
-planner:
-	go run ./cmd/app/ planner
-
-reasoning:
-	go run ./cmd/app/ reasoning
-
-models:
-	go run ./cmd/app/ list
-
-skills:
-	go run ./cmd/app/ list skill
 
 test:
 	go test ./test/... -v -timeout 60s

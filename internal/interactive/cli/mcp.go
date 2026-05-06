@@ -22,8 +22,11 @@ func MCP(args []string) {
 	if len(args) > 0 {
 		sub = strings.ToLower(strings.TrimSpace(args[0]))
 	}
+	if sub == "" {
+		sub = Pick("Select MCP action", []string{"list", "add", "remove"})
+	}
 	switch sub {
-	case "list", "":
+	case "list":
 		runMCPList()
 	case "add":
 		runMCPAdd()

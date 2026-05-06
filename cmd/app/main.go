@@ -59,45 +59,17 @@ func init() {
 func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		case "add":
+		case "model":
 			initCLI()
-			runAdd()
+			runModel(os.Args[2:])
 			return
-		case "remove":
+		case "skill":
 			initCLI()
-			cli.RunRemove()
+			runSkill(os.Args[2:])
 			return
-		case "reasoning":
+		case "session":
 			initCLI()
-			runReasoning()
-			return
-		case "planner":
-			initCLI()
-			runPlanner()
-			return
-		case "list":
-			initCLI()
-			runList()
-			return
-		case "config":
-			initCLI()
-			cli.Config()
-			return
-		case "new":
-			initCLI()
-			name := ""
-			if len(os.Args) >= 3 {
-				name = os.Args[2]
-			}
-			cli.NewSession(name)
-			return
-		case "switch":
-			if len(os.Args) < 3 {
-				fmt.Fprintf(os.Stderr, "Usage: agen switch <name>\n")
-				os.Exit(1)
-			}
-			initCLI()
-			cli.Switch(os.Args[2])
+			cli.Session(os.Args[2:])
 			return
 		case "mcp":
 			initCLI()
@@ -143,35 +115,46 @@ func initCLI() {
 	subagent.Register()
 }
 
-func runList() {
-	if len(os.Args) > 2 && os.Args[2] == "skill" {
-		skill.SyncSkills(context.Background(), extensions.Skills)
-		scanner := skill.NewScanner()
-
-		if len(scanner.Skills.ByName) == 0 {
-			fmt.Println("No skills found")
-			fmt.Println("\nScanned paths:")
-			for _, path := range scanner.Skills.Paths {
-				fmt.Printf("  - %s\n", path)
-			}
-			return
-		}
-
-		names := scanner.List()
-		sort.Strings(names)
-
-		fmt.Printf("Found %d skill(s):\n\n", len(names))
-		for _, name := range names {
-			s := scanner.Skills.ByName[name]
-			fmt.Printf("• %s\n", name)
-			if s.Description != "" {
-				fmt.Printf("  %s\n", s.Description)
-			}
-			fmt.Printf("  Path: %s\n\n", s.Path)
-		}
-		return
+func runModel(args []string) {
+	sub := ""
+	if len(args) > 0 {
+		sub = strings.ToLower(strings.TrimSpace(args[0]))
 	}
+	if sub == "" {
+		sub = cli.Pick("Select model action", []string{"add", "remove", "list", "planner", "reasoning"})
+	}
+	switch sub {
+	case "add":
+		runAdd()
+	case "remove", "rm":
+		cli.RunRemove()
+	case "list":
+		runModelList()
+	case "planner":
+		runPlanner()
+	case "reasoning":
+		runReasoning()
+	default:
+		fmt.Fprintf(os.Stderr, "Usage: agen model [add|remove|list|planner|reasoning]\n")
+		os.Exit(1)
+	}
+}
 
+func runSkill(args []string) {
+	sub := ""
+	if len(args) > 0 {
+		sub = strings.ToLower(strings.TrimSpace(args[0]))
+	}
+	switch sub {
+	case "list", "":
+		runSkillList()
+	default:
+		fmt.Fprintf(os.Stderr, "Usage: agen skill [list]\n")
+		os.Exit(1)
+	}
+}
+
+func runModelList() {
 	cfg, err := session.Load()
 	if err != nil {
 		slog.Error("session.Load", slog.String("error", err.Error()))
@@ -189,6 +172,33 @@ func runList() {
 		if m.Description != "" {
 			fmt.Printf("  %s\n", m.Description)
 		}
+	}
+}
+
+func runSkillList() {
+	skill.SyncSkills(context.Background(), extensions.Skills)
+	scanner := skill.NewScanner()
+
+	if len(scanner.Skills.ByName) == 0 {
+		fmt.Println("No skills found")
+		fmt.Println("\nScanned paths:")
+		for _, path := range scanner.Skills.Paths {
+			fmt.Printf("  - %s\n", path)
+		}
+		return
+	}
+
+	names := scanner.List()
+	sort.Strings(names)
+
+	fmt.Printf("Found %d skill(s):\n\n", len(names))
+	for _, name := range names {
+		s := scanner.Skills.ByName[name]
+		fmt.Printf("• %s\n", name)
+		if s.Description != "" {
+			fmt.Printf("  %s\n", s.Description)
+		}
+		fmt.Printf("  Path: %s\n\n", s.Path)
 	}
 }
 
@@ -419,17 +429,11 @@ func clearSession() {
 
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("  agen                    Start TUI + server + Discord bot")
-	fmt.Println("  agen add                Add a provider/model")
-	fmt.Println("  agen remove             Remove a provider/model")
-	fmt.Println("  agen list               List configured models")
-	fmt.Println("  agen list skill         List available skills")
-	fmt.Println("  agen config             Edit current CLI session bot.md in $EDITOR")
-	fmt.Println("  agen new [name]         Start a new CLI session (optional bot.md name) and switch primary pointer")
-	fmt.Println("  agen switch <name>      Switch primary pointer to the cli- session whose bot.md name matches")
-	fmt.Println("  agen mcp [list|add|remove]  Manage MCP servers")
-	fmt.Println("  agen planner            Set planner model")
-	fmt.Println("  agen reasoning          Set reasoning level")
-	fmt.Println("  agen cli <input...>     Run agent (requires tool confirmation)")
-	fmt.Println("  agen run <input...>     Run agent (allow all tools)")
+	fmt.Println("  agen                                            Start TUI + server + Discord bot")
+	fmt.Println("  agen model [add|remove|list|planner|reasoning]  Manage providers/models, planner, reasoning")
+	fmt.Println("  agen skill [list]                               List available skills")
+	fmt.Println("  agen mcp [list|add|remove]                      Manage MCP servers")
+	fmt.Println("  agen session [new|switch|config] [name]         Manage CLI sessions (interactive picker if no name)")
+	fmt.Println("  agen cli <input...>                             Run agent (requires tool confirmation)")
+	fmt.Println("  agen run <input...>                             Run agent (allow all tools)")
 }
