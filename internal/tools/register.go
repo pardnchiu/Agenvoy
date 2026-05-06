@@ -36,6 +36,7 @@ func init() {
 
 	registRunCommand()
 	registAskUser()
+	registStoreSecret()
 
 	toolRegister.RegistGroup("api_", func(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
 		if e.APIToolbox == nil || !e.APIToolbox.IsExist(name) {

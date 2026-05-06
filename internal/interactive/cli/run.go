@@ -39,6 +39,12 @@ func Run(fn func(chan<- agentTypes.Event) error) error {
 
 	pendingAgentSelect := false
 	for ev := range ch {
+		// store_secret drives its own stdout interaction (prompt + masked input);
+		// any renderer print would race with the prompt and shred the terminal.
+		if ev.ToolName == "store_secret" {
+			continue
+		}
+
 		wasPendingAgentSelect := pendingAgentSelect
 		pendingAgentSelect = false
 

@@ -21,6 +21,7 @@ type Question struct {
 	Question    string   `json:"question"`
 	Options     []string `json:"options,omitempty"`
 	MultiSelect bool     `json:"multi_select,omitempty"`
+	Secret      bool     `json:"secret,omitempty"`
 }
 
 type UserPayload struct {

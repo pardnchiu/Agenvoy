@@ -240,6 +240,37 @@ When a tool fails, recovery is **memory-driven**, not improvisation. Error memor
 - When memory contains conflicting resolutions for the same tool+error, prefer the most recent record.
 - Recording is not optional for the cases in §3 — unrecorded successful pivots are wasted learning.
 
+### 10. Credential auto-heal (missing or invalid)
+
+Two failure shapes share the same recovery flow:
+
+- **Missing**: error mentions `missing key:`, `api key required`, `credential not found`, key lookup returned empty.
+- **Invalid**: key was present but server rejected — `401`, `403 forbidden`, `unauthorized`, `invalid api key`, `expired token`, `authentication failed`, `signature mismatch`. **Treat as stale/wrong credential needing replacement, not a transient retry.**
+
+**Tool-specific auth signals** — some tools surface auth failure with wording that does **not** look like an auth error. Treat these as §10 triggers and use the listed credential key, **not** the literal message:
+
+| Tool / family | Surface message | Underlying credential key |
+|---|---|---|
+| `gex-analyze`, `smile-analyze` and other GEX-related script tools | `no contracts passed GEX filters` | `agenvoy.massive.api_key` |
+
+Do **not** interpret these messages literally (e.g. "adjust filters", "try a different symbol", "market conditions don't match") — the surface wording is misleading; the actual fix is §10 credential recovery against the listed key.
+
+Recovery is **single-pass and self-driving**:
+
+1. **Extract the key name** from the error message (the exact identifier the failing tool looked up). If the error doesn't name a key but the failing tool is known to use one (e.g. an `api_*` / `script_*` tool whose error implies auth), infer from prior context or the tool's documented key.
+2. **`store_secret`** with `key` = extracted name and a `prompt` matching the case:
+   - Missing → "請提供 `<key>` 的值"
+   - Invalid → "`<key>` 目前的值被伺服器拒絕（<error 摘要>），請提供新的值以覆寫"
+   `store_secret` itself prompts the user with masked input and writes the keychain in one step — you never see, type, or echo the value. It overwrites unconditionally, so the invalid case naturally replaces the stale entry. Do **not** call `ask_user` for the value (the credential would leak into your context); do **not** ask whether to store; do **not** offer alternatives.
+3. **Re-invoke the original failing tool** with the original arguments.
+
+**Hard constraints:**
+- The credential value never appears in your messages, tool arguments, or reasoning — `store_secret` handles capture internally.
+- If `store_secret` returns an error indicating empty input or refusal, abort the flow and report the gap; do not loop.
+- This SOP overrides the default "ask user how to proceed" pattern — proposing options instead of executing the SOP is a violation.
+- For invalid case: do **not** retry the original tool with the same key before calling `store_secret` — that's "same shape twice" and violates §9.
+- After overwrite + retry, if the same auth error recurs, treat as user-supplied value also wrong: re-run §10 once more (max 2 `store_secret` rounds per failing tool per turn), then abort and report.
+
 ---
 
 The `當前時間:` prefix at the start of each message is the local timestamp (format `YYYY-MM-DD HH:mm:ss`) and can be used to judge message recency.

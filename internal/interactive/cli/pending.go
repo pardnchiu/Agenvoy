@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/manifoldco/promptui"
+	"golang.org/x/term"
 
 	"github.com/pardnchiu/agenvoy/internal/pending"
 )
@@ -91,6 +92,13 @@ func runAskUser(req pending.Request, reader *bufio.Reader) pending.Reply {
 		}
 
 		switch {
+		case len(q.Options) == 0 && q.Secret:
+			ans, err := askSecretInput(question)
+			if err != nil {
+				return pending.Reply{Err: err}
+			}
+			answers = append(answers, ans)
+
 		case len(q.Options) == 0:
 			ans, err := askInput(reader, question)
 			if err != nil {
@@ -126,6 +134,18 @@ func askInput(reader *bufio.Reader, question string) (string, error) {
 		return "", fmt.Errorf("read input: %w", err)
 	}
 	return strings.TrimRight(line, "\r\n"), nil
+}
+
+func askSecretInput(question string) (string, error) {
+	if _, err := fmt.Fprintf(os.Stdout, "[?] %s: ", question); err != nil {
+		return "", fmt.Errorf("write prompt: %w", err)
+	}
+	raw, readErr := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Fprintln(os.Stdout)
+	if readErr != nil {
+		return "", fmt.Errorf("term.ReadPassword: %w", readErr)
+	}
+	return strings.TrimSpace(string(raw)), nil
 }
 
 func askSingleSelect(question string, options []string) (string, error) {

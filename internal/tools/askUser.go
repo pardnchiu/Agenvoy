@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/manifoldco/promptui"
+	"golang.org/x/term"
 
 	"github.com/pardnchiu/agenvoy/internal/pending"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -20,6 +21,7 @@ type askQuestion struct {
 	Question    string   `json:"question"`
 	Options     []string `json:"options,omitempty"`
 	MultiSelect bool     `json:"multi_select,omitempty"`
+	Secret      bool     `json:"secret,omitempty"`
 }
 
 func registAskUser() {
@@ -51,6 +53,10 @@ func registAskUser() {
 								"type":        "boolean",
 								"description": "When options is non-empty: true = multi-select (comma-separated indices), false = single-select (arrow keys). Ignored for free-text.",
 							},
+							"secret": map[string]any{
+								"type":        "boolean",
+								"description": "Free-text only: true masks input and excludes the answer from logs. Ignored when options is set.",
+							},
 						},
 						"required": []string{"question"},
 					},
@@ -80,6 +86,7 @@ func registAskUser() {
 						Question:    q.Question,
 						Options:     q.Options,
 						MultiSelect: q.MultiSelect,
+						Secret:      q.Secret,
 					})
 				}
 				reply, err := pending.Ask(ctx, pending.Request{
@@ -134,6 +141,13 @@ func registAskUser() {
 				}
 
 				switch {
+				case len(q.Options) == 0 && q.Secret:
+					ans, err := askWithSecretInput(q.Question)
+					if err != nil {
+						return "", err
+					}
+					answers = append(answers, ans)
+
 				case len(q.Options) == 0:
 					ans, err := askWithInput(reader, q.Question)
 					if err != nil {
@@ -175,6 +189,18 @@ func askWithInput(reader *bufio.Reader, question string) (string, error) {
 		return "", fmt.Errorf("read input: %w", err)
 	}
 	return strings.TrimRight(line, "\r\n"), nil
+}
+
+func askWithSecretInput(question string) (string, error) {
+	if _, err := fmt.Fprintf(os.Stdout, "[?] %s: ", question); err != nil {
+		return "", fmt.Errorf("write prompt: %w", err)
+	}
+	raw, readErr := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Fprintln(os.Stdout)
+	if readErr != nil {
+		return "", fmt.Errorf("term.ReadPassword: %w", readErr)
+	}
+	return strings.TrimSpace(string(raw)), nil
 }
 
 func askWithSingleSelect(question string, options []string) (string, error) {
