@@ -36,11 +36,13 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	}
 
 	var matchedSkill *skill.Skill
+	var skillResult agentTypes.Event
 	if externalAgent == "" && scanner != nil {
 		if m, effective := scanner.MatchSkillCall(trimInput); m != nil {
 			matchedSkill = m
 			trimInput = strings.TrimSpace(effective)
-			events <- agentTypes.Event{Type: agentTypes.EventSkillResult, Text: strings.TrimSpace(m.Name)}
+			skillResult = agentTypes.Event{Type: agentTypes.EventSkillResult, Text: strings.TrimSpace(m.Name)}
+			events <- skillResult
 		}
 	}
 
@@ -49,18 +51,20 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	}
 
 	var agent agentTypes.Agent
+	var agentResult agentTypes.Event
 	if externalAgent != "" {
-		events <- agentTypes.Event{
+		agentResult = agentTypes.Event{
 			Type: agentTypes.EventAgentResult,
 			Text: "external:" + externalAgent,
 		}
 	} else {
 		agent = SelectAgent(ctx, bot, registry, trimInput, matchedSkill != nil)
-		events <- agentTypes.Event{
+		agentResult = agentTypes.Event{
 			Type: agentTypes.EventAgentResult,
 			Text: strings.TrimSpace(agent.Name()),
 		}
 	}
+	events <- agentResult
 
 	execData := ExecData{
 		Agent:       agent,
@@ -75,6 +79,13 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	session, err := GetSession(execData)
 	if err != nil {
 		return fmt.Errorf("GetSession: %w", err)
+	}
+
+	if session != nil && session.ID != "" {
+		if matchedSkill != nil {
+			sessionManager.Record(session.ID, skillResult)
+		}
+		sessionManager.Record(session.ID, agentResult)
 	}
 
 	if externalAgent != "" {

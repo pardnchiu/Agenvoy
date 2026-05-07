@@ -89,6 +89,7 @@ type (
 )
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
+	executeStart := time.Now()
 	ctx = context.WithValue(ctx, allowAllCtxKey{}, allowAll)
 
 	if events != nil {
@@ -285,7 +286,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			slog.Warn("usageManager.Update",
 				slog.String("error", err.Error()))
 		}
-		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
+		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 
 		if len(session.Tools) > 0 {
 			if data, err := json.Marshal(session.Tools); err == nil {
@@ -312,7 +313,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				slog.Warn("usageManager.Update",
 					slog.String("error", err.Error()))
 			}
-			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
+			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 			return nil
 		}
 	}
@@ -322,7 +323,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		slog.Warn("usageManager.Update",
 			slog.String("error", err.Error()))
 	}
-	events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
+	events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 	return nil
 }
 

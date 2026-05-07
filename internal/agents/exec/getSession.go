@@ -96,7 +96,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		session.OldHistories = maxHistory
 		session.ToolHistories = []agentTypes.Message{}
 
-		userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), trimInput)
+		userText := fmt.Sprintf("---\n當前時間: %s\n工作目錄: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), execData.WorkDir, trimInput)
 		session.Histories = append(session.Histories, agentTypes.Message{
 			Role:    "user",
 			Content: userText,
@@ -166,7 +166,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		session.OldHistories = maxHistory
 		session.ToolHistories = []agentTypes.Message{}
 
-		userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), trimInput)
+		userText := fmt.Sprintf("---\n當前時間: %s\n工作目錄: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), execData.WorkDir, trimInput)
 		session.Histories = append(session.Histories, agentTypes.Message{
 			Role:    "user",
 			Content: userText,
@@ -188,7 +188,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		session.OldHistories = []agentTypes.Message{}
 		session.ToolHistories = []agentTypes.Message{}
 
-		userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), trimInput)
+		userText := fmt.Sprintf("---\n當前時間: %s\n工作目錄: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), execData.WorkDir, trimInput)
 		session.Histories = append(session.Histories, agentTypes.Message{
 			Role:    "user",
 			Content: userText,

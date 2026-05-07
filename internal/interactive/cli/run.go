@@ -159,7 +159,16 @@ func printLog(name, raw string) string {
 		if s := pick("skill", "name"); s != "" {
 			return s
 		}
-	case "read_file", "write_file", "patch_file", "list_files", "glob_files", "read_image", "save_page_to_file":
+	case "list_files":
+		dir := pick("dir", "path")
+		if dir == "" {
+			break
+		}
+		if r, ok := m["recursive"].(bool); ok && r {
+			return dir + " (recursive)"
+		}
+		return dir
+	case "read_file", "write_file", "patch_file", "glob_files", "read_image", "save_page_to_file":
 		if s := pick("path", "pattern", "save_to"); s != "" {
 			return s
 		}
