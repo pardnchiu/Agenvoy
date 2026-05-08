@@ -111,7 +111,6 @@ func wrapScriptOutput(agent agentTypes.Agent, output string) string {
 }
 
 func Close(b *discordTypes.DiscordBot) error {
-	slog.Info("shutting down")
 	if b.Session == nil {
 		return nil
 	}

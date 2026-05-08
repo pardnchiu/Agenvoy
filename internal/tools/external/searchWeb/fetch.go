@@ -64,9 +64,11 @@ func handler(ctx context.Context, query, timeRange string) (string, error) {
 		return "", err
 	}
 
-	if err = db.Set(cacheKey, items, torii.SetDefault, torii.TTL(ttl)); err != nil {
-		slog.Warn("db.Set",
-			slog.String("error", err.Error()))
+	if items != "[]" {
+		if err = db.Set(cacheKey, items, torii.SetDefault, torii.TTL(ttl)); err != nil {
+			slog.Warn("db.Set",
+				slog.String("error", err.Error()))
+		}
 	}
 
 	return items, nil
@@ -107,7 +109,7 @@ func fetch(ctx context.Context, query, timeRange string) (string, error) {
 
 	items := parse(html)
 	if len(items) == 0 {
-		return "", fmt.Errorf("no result")
+		return "[]", nil
 	}
 
 	bytes, err := json.Marshal(items)

@@ -10,3 +10,5 @@
 docker-compose.yml
 test/copilot_token.json
 __pycache__
+
+_tui_archived
