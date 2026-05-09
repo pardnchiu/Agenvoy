@@ -9,7 +9,7 @@ A high-level view of how Agenvoy fits together. For per-module diagrams, sequenc
 ```mermaid
 graph TB
     subgraph Entry["Entry · cmd/app"]
-        App["agen model · skill · session · mcp<br/>make app · TUI + Discord + REST<br/>make cli / run · single-shot"]
+        App["agen model · session · mcp · stop · update<br/>make app · TUI + Discord + REST<br/>make cli / run · single-shot"]
     end
 
     subgraph Engine["Engine · internal/agents/exec"]
@@ -63,7 +63,7 @@ graph TB
 
 | Layer | Package | Responsibility |
 |---|---|---|
-| Entry | `cmd/app` | argv dispatch (`model` / `skill` / `session` / `mcp` / `cli` / `run`); init env, sandbox, filesystem policy, MCP manager |
+| Entry | `cmd/app` | argv dispatch (`model` / `session` / `mcp` / `cli` / `run` / `stop` / `update`); init env, sandbox, filesystem policy, MCP manager |
 | Runtime singleton | `internal/runtime` | server-mode UID lock; SIGTERM prior server on startup |
 | Engine | `internal/agents/exec` | iteration loop; tool dispatch; provider routing |
 | Subagent | `internal/agents/subagent` | in-process child agent (no HTTP) |

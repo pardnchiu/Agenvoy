@@ -4,16 +4,17 @@
 
 ## Top-level dispatch
 
-`agen` parses `os.Args[1]` and routes to one of six sub-groups; running with no subcommand starts the full app (`runApp`).
+`agen` parses `os.Args[1]` and dispatches to one of the subcommands below; running with no subcommand attaches the TUI (and fork-execs a daemon if none is running).
 
 ```bash
-agen                                           # TUI + Discord + REST stack
+agen                                           # Attach TUI; spawn daemon if not running
 agen model   {add|remove|list|planner|reasoning}
-agen skill   {list}
 agen session {new|switch|config} [name]
 agen mcp     {list|add|remove}
 agen cli     <input...>                        # one-shot, requires per-tool confirm
 agen run     <input...>                        # one-shot, auto-approves all tools
+agen stop                                      # Stop the running daemon
+agen update                                    # Download latest release & rebuild
 ```
 
 ### `agen model`
@@ -42,23 +43,27 @@ agen run     <input...>                        # one-shot, auto-approves all too
 | `add` | Interactive add — name → transport (Local stdio / Remote HTTP) → fields → scope (Global / pick a session) |
 | `remove` | Interactive remove with scope label |
 
-### `agen skill`
+### `agen stop`
 
-`agen skill` (no subcommand) and `agen skill list` both list available skills under `extensions/skills/`.
+SIGTERM the running daemon (5 s grace period, then SIGKILL); clears `~/.config/agenvoy/runtime.uid`. Prints `No daemon running.` and exits 0 if no daemon is alive.
+
+### `agen update`
+
+Always-overwrite update to the latest release. Downloads `https://cloud.agenvoy.com/update.sh` to a `/tmp/agenvoy-update-*.sh` file, executes it via `bash`, and removes the temp file on completion (SIGINT/SIGTERM also cleaned). The script clones the latest tag into `mktemp -d "${TMPDIR:-/tmp}/agenvoy-update.XXXXXX"`, runs `make build`, and prints a summary box pointing to `agen` for the next launch. Daemon keeps the old inode after replacement — run `agen stop` and re-attach to pick up the new build.
 
 ## `make` shortcuts
 
 ```bash
 make build                      # Compile and install to /usr/local/bin/agen
 make app                        # Full stack (TUI + Discord + REST API)
+make stop                       # Stop the running daemon
+make update                     # = agen update
 make discord                    # Legacy Discord-only server
 make cli <input...>             # agen cli <input...>
 make run <input...>             # agen run <input...>
 make model   [add|remove|list|planner|reasoning]
-make skill   [list]
 make session [new|switch|config] [name]
 make mcp     [list|add|remove]
-make test                       # go test ./test/... -v -timeout 60s
 ```
 
 ## TUI shortcuts

@@ -27,6 +27,14 @@ Go-native dispatcher · Planner 將每個步驟派給最適合的模型 · Subag
 
 ***
 
+## 一鍵安裝
+
+```bash
+curl -fsSL https://cloud.agenvoy.com/install.sh | bash
+```
+
+一行指令、單一 binary 落在 `/usr/local/bin/agen`，macOS／Linux 通用。
+
 ## 為什麼 Agenvoy
 
 - **為什麼不要一個模型跑全部？** Claude 擅長規劃、GPT 擅長 diff 推理、Gemini 擅長長 context 批判 —— 為什麼把每一步都塞給同一家 vendor？

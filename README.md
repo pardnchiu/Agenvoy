@@ -27,6 +27,14 @@
 
 ***
 
+## Quick install
+
+```bash
+curl -fsSL https://cloud.agenvoy.com/install.sh | bash
+```
+
+One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
+
 ## Why Agenvoy
 
 - **Why not let one model do everything?** Claude excels at planning, GPT at diff reasoning, Gemini at long-context critique — why pile every step onto a single vendor?

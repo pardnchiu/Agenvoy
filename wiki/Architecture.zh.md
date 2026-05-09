@@ -9,7 +9,7 @@ Agenvoy 各部分的高階全景。模組級圖、sequence 流程、tool dispatc
 ```mermaid
 graph TB
     subgraph Entry["Entry · cmd/app"]
-        App["agen model · skill · session · mcp<br/>make app · TUI + Discord + REST<br/>make cli / run · 單次"]
+        App["agen model · session · mcp · stop · update<br/>make app · TUI + Discord + REST<br/>make cli / run · 單次"]
     end
 
     subgraph Engine["Engine · internal/agents/exec"]
@@ -63,7 +63,7 @@ graph TB
 
 | 層 | Package | 職責 |
 |---|---|---|
-| Entry | `cmd/app` | argv 派發（`model` / `skill` / `session` / `mcp` / `cli` / `run`）；init env、sandbox、filesystem policy、MCP manager |
+| Entry | `cmd/app` | argv 派發（`model` / `session` / `mcp` / `cli` / `run` / `stop` / `update`）；init env、sandbox、filesystem policy、MCP manager |
 | Runtime singleton | `internal/runtime` | server 模式 UID lock；啟動時 SIGTERM 前一個 server |
 | Engine | `internal/agents/exec` | 迭代迴圈；tool 派發；provider 路由 |
 | Subagent | `internal/agents/subagent` | in-process 子 agent（不走 HTTP） |
