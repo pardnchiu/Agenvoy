@@ -85,7 +85,7 @@ func (t TUI) handleAgentEvent(ev agentTypes.Event) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	line, ok := renderAgentEvent(ev, t.runTarget)
+	line, ok := renderAgentEvent(ev, t.runTarget, t.cwd)
 	if !ok {
 		return t, nil
 	}

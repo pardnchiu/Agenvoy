@@ -79,7 +79,7 @@ func messageRow(text, subagent string) string {
 	return sb.String()
 }
 
-func renderAgentEvent(ev agentTypes.Event, sessionLabel string) (string, bool) {
+func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bool) {
 	src := strings.TrimSpace(ev.Source)
 	srcPrefix := ""
 	if src != "" {
@@ -114,11 +114,11 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel string) (string, bool) {
 		if ev.Source != "" {
 			bullet = "  ⎿"
 		}
-		return buildToolLine(bullet, ev.Source, ev.ToolName, ev.ToolArgs), true
+		return buildToolLine(bullet, ev.Source, ev.ToolName, ev.ToolArgs, cwd), true
 
 	case agentTypes.EventToolSkipped:
 		line := "  ⎿ " + srcPrefix + "skipped: " + ev.ToolName
-		if arg := printLog(ev.ToolName, ev.ToolArgs); arg != "" {
+		if arg := printLog(ev.ToolName, ev.ToolArgs, cwd); arg != "" {
 			line += "(" + truncate(arg, 120) + ")"
 		}
 		return hintStyle.Render(line), true
@@ -172,14 +172,14 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel string) (string, bool) {
 	return "", false
 }
 
-func buildToolLine(bullet, source, name, args string) string {
+func buildToolLine(bullet, source, name, args, cwd string) string {
 	src := strings.TrimSpace(source)
 	srcPrefix := ""
 	if src != "" {
 		srcPrefix = "[" + src + "] "
 	}
 	line := bullet + " " + srcPrefix + name
-	if arg := printLog(name, args); arg != "" {
+	if arg := printLog(name, args, cwd); arg != "" {
 		line += "(" + truncate(arg, 120) + ")"
 	}
 	style := hintStyle
@@ -194,7 +194,16 @@ func oneLine(s string) string {
 	return r.Replace(s)
 }
 
-func printLog(name, raw string) string {
+func isCwd(dir, cwd string) bool {
+	d := strings.TrimRight(strings.TrimSpace(dir), "/")
+	if d == "." || d == "./" || d == "" {
+		return true
+	}
+	c := strings.TrimRight(strings.TrimSpace(cwd), "/")
+	return c != "" && d == c
+}
+
+func printLog(name, raw, cwd string) string {
 	if raw == "" {
 		return ""
 	}
@@ -245,6 +254,23 @@ func printLog(name, raw string) string {
 		if s := pick("path", "pattern", "save_to"); s != "" {
 			return s
 		}
+
+	case "search_files":
+		dir := strings.TrimSpace(pick("dir"))
+		if dir == "" {
+			dir = "."
+		}
+		if isCwd(dir, cwd) {
+			dir = "./"
+		}
+		loc := dir
+		if fp := strings.TrimSpace(pick("file_pattern")); fp != "" {
+			loc = strings.TrimRight(dir, "/") + "/" + fp
+		}
+		if pat := pick("pattern"); pat != "" {
+			return loc + " [" + pat + "]"
+		}
+		return loc
 
 	case "search_web", "fetch_google_rss":
 		if q := pick("query", "keyword"); q != "" {

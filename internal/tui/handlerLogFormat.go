@@ -111,7 +111,7 @@ func splitLine(raw string) (kind, body string, ok bool) {
 }
 
 func renderEvent(ev agentTypes.Event) string {
-	line, ok := renderAgentEvent(ev, "")
+	line, ok := renderAgentEvent(ev, "", "")
 	if !ok {
 		return ""
 	}
