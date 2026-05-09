@@ -269,7 +269,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			title:   "Load previous session history?",
 			options: []string{"Yes", "No"},
 			values:  []string{"yes", "no"},
-			cursor:  0,
+			cursor:  1,
 			onConfirm: func(chosen string) any {
 				return LoadHistorySelect{id: sid, load: chosen == "yes"}
 			},
