@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
@@ -24,6 +26,9 @@ type Command struct {
 }
 
 var commands = []Command{
+	{"model-list", "list configured models"},
+	{"model-add", "add a model (opens interactive flow)"},
+	{"model-remove", "remove a configured model"},
 	{"switch", "change current session"},
 	{"clear", "clear conversation"},
 	{"exit", "quit"},
@@ -71,7 +76,7 @@ func getCmdSelectorItems(query string) []CmdSelectorItem {
 	var items []CmdSelectorItem
 
 	for _, c := range commands {
-		if query == "" || strings.HasPrefix(c.name, query) {
+		if query == "" || strings.Contains(c.name, query) {
 			items = append(items, CmdSelectorItem{
 				label:  "/" + c.name,
 				desc:   c.desc,
@@ -85,7 +90,7 @@ func getCmdSelectorItems(query string) []CmdSelectorItem {
 			if name == "" {
 				continue
 			}
-			if query != "" && !strings.HasPrefix(strings.ToLower(name), query) {
+			if query != "" && !strings.Contains(strings.ToLower(name), query) {
 				continue
 			}
 
@@ -105,6 +110,9 @@ func getCmdSelectorItems(query string) []CmdSelectorItem {
 		}
 	}
 
+	sort.SliceStable(items, func(i, j int) bool {
+		return items[i].label < items[j].label
+	})
 	return items
 }
 
@@ -147,18 +155,24 @@ func (t TUI) selectCommand() TUI {
 	return t
 }
 
+const cmdSelectorMaxVisible = 8
+
 func renderCmdSelector(p *CmdSelector) string {
 	if p == nil || len(p.items) == 0 {
 		return ""
 	}
+	total := len(p.items)
+	start, end := windowRange(p.cursor, total, cmdSelectorMaxVisible)
+
 	maxLabel := 0
-	for _, it := range p.items {
+	for _, it := range p.items[start:end] {
 		if w := len([]rune(it.label)); w > maxLabel {
 			maxLabel = w
 		}
 	}
 	var lines []string
-	for i, it := range p.items {
+	for i := start; i < end; i++ {
+		it := p.items[i]
 		marker := "  "
 		labelStyle := textStyle
 		if i == p.cursor {
@@ -172,5 +186,22 @@ func renderCmdSelector(p *CmdSelector) string {
 		}
 		lines = append(lines, line)
 	}
+	if total > cmdSelectorMaxVisible {
+		lines = append(lines, hintStyle.Render(fmt.Sprintf("  %d/%d", p.cursor+1, total)))
+	}
 	return strings.Join(lines, "\n")
+}
+
+func windowRange(cursor, total, size int) (start, end int) {
+	if total <= size {
+		return 0, total
+	}
+	start = cursor - size/2
+	start = max(start, 0)
+	end = start + size
+	if end > total {
+		end = total
+		start = end - size
+	}
+	return start, end
 }

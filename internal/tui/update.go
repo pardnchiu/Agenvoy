@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/pending"
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
@@ -181,6 +182,25 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case SessionSelect:
 		next, cmd := t.runCommandSwitch(msg.id)
 		return next, cmd
+
+	case ModelRemove:
+		next, cmd := t.runModelRemove(msg.name)
+		host.Reload()
+		return next, cmd
+
+	case ModelAddDone:
+		seq := []tea.Cmd{
+			tea.ClearScreen,
+			tea.Println(headerBlock(t.cwd, t.daemonStatus)),
+		}
+		seq = append(seq, loadSessionTail(t.currentSessionID)...)
+		if msg.err != nil {
+			seq = append(seq, tea.Println("\n"+errorStyle.Render(fmt.Sprintf("[!] add-model: %v", msg.err))))
+		} else {
+			host.Reload()
+			seq = append(seq, tea.Println("\n"+hintStyle.Render("⎯ model added · registry reloaded")))
+		}
+		return t, tea.Sequence(seq...)
 
 	case logHistory:
 		if t.mode != logMode {

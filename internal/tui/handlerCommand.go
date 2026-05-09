@@ -31,6 +31,15 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 
 	case "/switch":
 		return t.commandSwitch(parts)
+
+	case "/model-list":
+		return t.commandModelList()
+
+	case "/model-add":
+		return t.commandModelAdd()
+
+	case "/model-remove":
+		return t.commandModelRemove()
 	}
 	return t, nil, false
 }
