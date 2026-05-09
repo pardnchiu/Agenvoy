@@ -23,13 +23,13 @@ session:
 
 else
 
-.PHONY: help build app discord test
+.PHONY: help build app stop test
 
 help:
 	@echo "How to use:"
 	@echo "  make build              Build binary and install to /usr/local/bin/agen"
-	@echo "  make app                Start unified app (TUI + Discord + REST API)"
-	@echo "  make discord            Start Discord bot server (legacy)"
+	@echo "  make app                Attach TUI; spawn server daemon (HTTP + Discord) if not running"
+	@echo "  make stop               Stop the running server daemon"
 	@echo "  make mcp [list|add|remove]                       Manage MCP servers"
 	@echo "  make model [add|remove|list|planner|reasoning]   Manage providers/models, planner, reasoning"
 	@echo "  make skill [list]                                List available skills"
@@ -45,8 +45,8 @@ build:
 app:
 	go run ./cmd/app/
 
-discord:
-	go run ./cmd/server/main.go
+stop:
+	go run ./cmd/app/ stop
 
 test:
 	go test ./test/... -v -timeout 60s

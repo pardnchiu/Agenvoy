@@ -1,0 +1,36 @@
+package tui
+
+import (
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
+
+type SessionSelect struct {
+	id string
+}
+
+func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
+	parts := strings.Fields(cmd)
+	switch parts[0] {
+	case "/exit", "/quit":
+		return t, tea.Sequence(
+			tea.Println("\n"+hintStyle.Render("bye.")),
+			tea.Quit,
+		), true
+
+	case "/clear":
+		t.tokens = 0
+		t.turnCount = 0
+		t.lastIn = 0
+		t.lastOut = 0
+		return t, tea.Sequence(
+			tea.ClearScreen,
+			tea.Println(headerBlock(t.cwd, t.daemonStatus)),
+		), true
+
+	case "/switch":
+		return t.commandSwitch(parts)
+	}
+	return t, nil, false
+}

@@ -12,15 +12,19 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
-func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner, userInput string, imageInputs []string, fileInputs []string, events chan<- agentTypes.Event, allowAll bool) error {
-	workDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("os.Getwd: %w", err)
+func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner, userInput string, imageInputs []string, fileInputs []string, events chan<- agentTypes.Event, allowAll bool, workDir, sessionID string) error {
+	if strings.TrimSpace(workDir) == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("os.Getwd: %w", err)
+		}
+		workDir = wd
 	}
+	sessionID = strings.TrimSpace(sessionID)
 
 	trimInput := strings.TrimSpace(userInput)
 
-	var sessionOverride string
+	sessionOverride := sessionID
 	if name, effective := sessionManager.Match(trimInput); name != "" {
 		resolved := sessionManager.GetSessionIDByName(name)
 		if resolved == "" {

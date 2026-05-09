@@ -355,7 +355,7 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.Sk
 
 	skillsSection := ""
 	if list := toolSearcher.ListBlock(scanner); list != "" {
-		skillsSection = "## Skills\n\nCall `activate_skill` with one of these exact names to activate. The tool result returns the skill body + execution guidance — treat it as binding instructions for subsequent iterations. Never answer from prior knowledge when the user requests a listed skill by name.\n\n" + list
+		skillsSection = "## Skills\n\nThe following skill names are available via `activate_skill`. Only activate when the user explicitly references a skill by its exact name (e.g. `/commit-generate` or the bare `commit-generate` token). Do not infer skills from topic keywords, paraphrases, or partial matches. Once activated, the tool result is binding for subsequent iterations.\n\n" + list
 	}
 
 	personaSection := ""

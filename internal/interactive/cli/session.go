@@ -10,6 +10,7 @@ import (
 	"github.com/manifoldco/promptui"
 
 	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func Session(args []string) {
@@ -61,9 +62,10 @@ func pickSession(label string) (sid string, hasSessions bool) {
 
 	labels := make([]string, len(sessions)+1)
 	for i, s := range sessions {
-		entry := s.id
+		short := utils.ShortenSessionID(s.id)
+		entry := short
 		if s.name != "" && s.name != s.id {
-			entry = fmt.Sprintf("%s (%s)", s.id, s.name)
+			entry = fmt.Sprintf("%s (%s)", short, s.name)
 		}
 		if s.id == current {
 			entry += " [current]"

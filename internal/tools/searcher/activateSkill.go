@@ -19,7 +19,7 @@ const ToolName = "activate_skill"
 
 const maxDescLen = 200
 
-const staticDescription = "Activate a skill by exact name. Available skill names are listed in the system prompt under '## Skills'. The tool result returns the skill body plus execution guidance — treat it as binding instructions for subsequent iterations. Pass skill='none' to clear. When the user's request matches a listed skill (exact name or obvious alias), call this tool immediately instead of answering from prior knowledge."
+const staticDescription = "Activate a skill by exact name from the '## Skills' section of the system prompt; pass 'none' to clear."
 
 type params struct {
 	SkillName string `json:"skill"`

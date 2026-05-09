@@ -98,8 +98,8 @@ func registAskUser() {
 				if err != nil {
 					return "", fmt.Errorf("pending.Ask: %w", err)
 				}
-				if reply.Err != nil {
-					return "", reply.Err
+				if reply.Error != nil {
+					return "", reply.Error
 				}
 				out, err := json.Marshal(map[string]any{"answers": reply.Answers})
 				if err != nil {

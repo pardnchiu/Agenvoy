@@ -90,8 +90,8 @@ func readSecretValue(ctx context.Context, sessionID, question string) (string, e
 		if err != nil {
 			return "", fmt.Errorf("pending.Ask: %w", err)
 		}
-		if reply.Err != nil {
-			return "", reply.Err
+		if reply.Error != nil {
+			return "", reply.Error
 		}
 		if len(reply.Answers) == 0 {
 			return "", fmt.Errorf("pending.Ask returned no answers")

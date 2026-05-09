@@ -43,7 +43,7 @@ type Reply struct {
 	Approve bool
 	Skip    bool
 	Answers []any
-	Err     error
+	Error   error
 }
 
 type entry struct {

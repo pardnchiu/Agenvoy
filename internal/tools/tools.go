@@ -33,10 +33,7 @@ var DeniedConfig = func() deniedConfig {
 	return cfg
 }()
 
-var (
-// * template allow all for testing
-// disallowed = regexp.MustCompile(`[;&|` + "`" + `$(){}!<>\\]`)
-)
+var WorkDirChangeHook func(path string)
 
 func changeWorkDir(e *toolTypes.Executor, args []string) (string, error) {
 	var positional []string
@@ -88,6 +85,9 @@ func changeWorkDir(e *toolTypes.Executor, args []string) (string, error) {
 	}
 
 	e.WorkDir = abs
+	if WorkDirChangeHook != nil {
+		WorkDirChangeHook(abs)
+	}
 	return fmt.Sprintf("Changed working directory to: %s", abs), nil
 }
 

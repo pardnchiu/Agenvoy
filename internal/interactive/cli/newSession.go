@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func NewSession(name string) {
@@ -45,11 +46,11 @@ func NewSession(name string) {
 	}
 
 	if name != "" {
-		fmt.Printf("New session: %s (name=%s)\n", newID, name)
+		fmt.Printf("New session: %s (name=%s)\n", utils.ShortenSessionID(newID), name)
 	} else {
-		fmt.Printf("New session: %s\n", newID)
+		fmt.Printf("New session: %s\n", utils.ShortenSessionID(newID))
 	}
 	if previous != "" && previous != newID {
-		fmt.Printf("Previous: %s\n", previous)
+		fmt.Printf("Previous: %s\n", utils.ShortenSessionID(previous))
 	}
 }
