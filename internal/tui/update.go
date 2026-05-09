@@ -187,6 +187,17 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		host.Reload()
 		return next, cmd
 
+	case BotEditDone:
+		seq := []tea.Cmd{
+			tea.ClearScreen,
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
+		}
+		seq = append(seq, loadSessionTail(t.currentSessionID)...)
+		if msg.err != nil {
+			seq = append(seq, tea.Println("\n"+errorStyle.Render(fmt.Sprintf("[!] bot edit: %v", msg.err))))
+		}
+		return t, tea.Sequence(seq...)
+
 	case ModelAddDone:
 		seq := []tea.Cmd{
 			tea.ClearScreen,

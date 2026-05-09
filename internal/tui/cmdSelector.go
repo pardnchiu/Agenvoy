@@ -33,6 +33,7 @@ var commands = []Command{
 	{"reasoning", "set planner reasoning level"},
 	{"switch", "change current session"},
 	{"new", "create and switch to a new session"},
+	{"bot", "edit current session bot.md in $EDITOR"},
 	{"discord-enable", "enable discord bot (token + guild)"},
 	{"discord-disable", "disable discord bot (token preserved)"},
 	{"clear", "clear conversation"},
