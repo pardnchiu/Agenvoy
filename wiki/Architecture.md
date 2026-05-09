@@ -76,6 +76,7 @@ graph TB
 | Pending | `internal/pending` | global confirm/ask registry |
 | Memory | ToriiDB (`DBSessionHist` / `DBSessionSummary` / `error_memory`) | semantic search + 90-day TTL |
 | Scheduler | `internal/scheduler` (+ TUI watcher) | cron / one-shot tasks; hot-reload on file change |
+| TUI | `internal/tui` | bubbletea inline-chat front-end; single-package by design |
 
 ## Cross-cutting principles
 
@@ -85,6 +86,41 @@ graph TB
 - **Read tools fan out, write tools serialize** — concurrency is opt-in and requires both "no side effects" and "upstream allows parallelism"
 - **One config layer per concern** — providers in `configs/jsons/providors/`, MCP in `mcp.json`, persona in `bot.md`; each tool author / user touches at most one file
 - **Single source of truth per artifact** — `~/.claude/CLAUDE.md` mirrors to the global Obsidian vault; skills mirror between `~/.claude/skills/` and `extensions/skills/`
+
+## TUI design choices
+
+> Per pardn chiu: *"bubbletea isn't designed to be split into separate modules that reference each other — splitting it would make the lifecycle a mess. I don't have the bandwidth to handle it right now."* This module is intentionally kept undivided.
+
+The TUI lives in a single package (`internal/tui`) and is **not** split into subpackages. Every file under `internal/tui/` follows this principle.
+
+### Why bubbletea (not tview / tcell)
+
+The previous TUI used `rivo/tview` (archived under `internal/_tui_archived/`). It was replaced because:
+
+- **Inline scrollback**: bubbletea's `tea.Println` writes lines that scroll into the terminal's native buffer above the input box. tview owns the entire screen and can't co-exist with shell scrollback.
+- **lipgloss styling primitives**: borders, padding, foreground/background composition compose cleanly. tview styles are tag-based and harder to reuse across components.
+- **bubbles ecosystem**: `textarea`, `spinner`, `cursor` are drop-in components that match the rest of the charm-bracelet style.
+
+The cost is that bubbletea is a Go port of [The Elm Architecture](https://guide.elm-lang.org/architecture/) — its `tea.Model` interface is monolithic by design.
+
+### Why a single package
+
+`tea.Model` requires `Update(tea.Msg) (tea.Model, tea.Cmd)` to be a method on the model type. Methods must live in the same package as the type. This forces:
+
+- All `Update` logic in the same package as the model
+- Splitting into subpackages requires a wrapper in a third (root) package, plus exporting **every** model field so the sub-packages can read/write state
+- Currently `unexported` types like `popupState`, `commandPickerState`, `viewMode` would have to become exported, creating an "API" that no one outside `internal/tui` will ever consume
+- `send()` and `program atomic.Pointer[tea.Program]` either move into a sub-package (root sets via setter API) or stay in root and force handlers to import root, which creates a second cycle
+
+A real Go-style TUI would build per-domain widget packages (each owning its state struct, render method, and event handler) with bubbletea acting only as event loop. That refactor is a 600–800 LOC rewrite split into 4 phases. For the current ~1.1k LOC TUI maintained by one developer, the gain doesn't justify the cost.
+
+### When to revisit
+
+Switch to per-domain widget packages when **any one** of:
+
+- TUI exceeds ~3k LOC and code review keeps stalling on "where does this belong"
+- Multiple developers regularly touch the TUI and step on each other's state
+- Specific widgets need independent unit tests against frozen state — currently impossible without instantiating the whole `Model`
 
 ## Where to read more
 
