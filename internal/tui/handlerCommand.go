@@ -40,6 +40,12 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 
 	case "/model-remove":
 		return t.commandModelRemove()
+
+	case "/planner":
+		return t.commandPlanner()
+
+	case "/reasoning":
+		return t.commandReasoning()
 	}
 	return t, nil, false
 }

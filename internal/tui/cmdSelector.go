@@ -29,6 +29,8 @@ var commands = []Command{
 	{"model-list", "list configured models"},
 	{"model-add", "add a model (opens interactive flow)"},
 	{"model-remove", "remove a configured model"},
+	{"planner", "set the planner model"},
+	{"reasoning", "set planner reasoning level"},
 	{"switch", "change current session"},
 	{"clear", "clear conversation"},
 	{"exit", "quit"},

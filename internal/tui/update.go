@@ -202,6 +202,15 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return t, tea.Sequence(seq...)
 
+	case PlannerSelect:
+		next, cmd := t.runPlannerSelect(msg.name)
+		host.Reload()
+		return next, cmd
+
+	case ReasoningSelect:
+		next, cmd := t.runReasoningSelect(msg.level)
+		return next, cmd
+
 	case logHistory:
 		if t.mode != logMode {
 			return t, nil
