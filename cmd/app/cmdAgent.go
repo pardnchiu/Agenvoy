@@ -21,6 +21,8 @@ func cmdAgent(allowAll bool) {
 
 	defer torii.Close()
 
+	modelCheck()
+
 	if !runtime.IsCurrent() {
 		clearSession()
 	}

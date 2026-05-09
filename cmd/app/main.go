@@ -110,6 +110,27 @@ func initCLI() {
 	subagent.Register()
 }
 
+func modelCheck() {
+	cfg, err := session.Load()
+	if err != nil {
+		slog.Error("session.Load",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if len(cfg.Models) > 0 {
+		return
+	}
+
+	fmt.Println("[*] No model configured. Setting up first model…")
+	runAdd()
+
+	cfg, err = session.Load()
+	if err != nil || len(cfg.Models) == 0 {
+		fmt.Println("[!] No model added. Exiting.")
+		os.Exit(0)
+	}
+}
+
 func runModel(args []string) {
 	sub := ""
 	if len(args) > 0 {

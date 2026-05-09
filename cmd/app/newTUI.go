@@ -35,6 +35,8 @@ func newTUI() {
 	}
 	defer torii.Close()
 
+	modelCheck()
+
 	skill.SyncSkills(context.Background(), extensions.Skills)
 
 	if !runtime.IsCurrent() {
