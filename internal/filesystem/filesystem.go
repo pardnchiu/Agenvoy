@@ -111,6 +111,10 @@ func HistoryPath(sessionID string) string {
 	return filepath.Join(SessionsDir, sessionID, "history.md")
 }
 
+func InputHistoryPath(sessionID string) string {
+	return filepath.Join(SessionsDir, sessionID, ".history")
+}
+
 func McpSessionPath(sessionID string) string {
 	return filepath.Join(SessionsDir, sessionID, "mcp.json")
 }

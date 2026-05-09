@@ -11,6 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
+	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
@@ -23,7 +24,10 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 		return fmt.Errorf("os.UserHomeDir: %w", err)
 	}
 
-	dcBot.SkillScanner.Scan()
+	scanner := host.Scanner()
+	if scanner != nil {
+		scanner.Scan()
+	}
 
 	content := receiveMessage.Content
 	externalAgent, externalEffective, externalReadOnly := external.MatchExternal(content)
@@ -32,8 +36,8 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 	}
 
 	var matchedSkill *skill.Skill
-	if externalAgent == "" && dcBot.SkillScanner != nil {
-		if m, effective := dcBot.SkillScanner.MatchSkillCall(content); m != nil {
+	if externalAgent == "" && scanner != nil {
+		if m, effective := scanner.MatchSkillCall(content); m != nil {
 			matchedSkill = m
 			content = strings.TrimSpace(effective)
 			slog.Info("skill", slog.String("skill", m.Name))
@@ -42,7 +46,7 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 
 	var agent agentTypes.Agent
 	if externalAgent == "" {
-		agent = exec.SelectAgent(ctx, dcBot.PlannerAgent, dcBot.AgentRegistry, content, matchedSkill != nil)
+		agent = exec.SelectAgent(ctx, host.Planner(), host.Registry(), content, matchedSkill != nil)
 	}
 
 	execData := exec.ExecData{

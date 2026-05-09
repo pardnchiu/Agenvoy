@@ -19,7 +19,7 @@ func registRunCommand() {
 		Name: "run_command",
 		Description: `
 Run a binary with argv; returns combined stdout/stderr.
-Executes in the work directory — do NOT prepend 'cd'; use absolute paths.
+Executes in the work directory. Use ['cd', '<path>'] to change the work directory for subsequent commands; the path is verified before switching.
 For pipes/redirects/shell expansion, pass argv=['sh','-c','<full shell command>'].`,
 		Parameters: map[string]any{
 			"type": "object",
@@ -73,6 +73,9 @@ func runCommand(ctx context.Context, e *toolTypes.Executor, argv []string) (stri
 			return "", fmt.Errorf("failed to run command: %s is not allowed", inner[0])
 		}
 	} else {
+		if binary == "cd" {
+			return changeWorkDir(e, argv[1:])
+		}
 		if !e.AllowedCommand[binary] {
 			return "", fmt.Errorf("failed to run command: %s is not allowed", binary)
 		}

@@ -7,11 +7,14 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
+type RefreshFunc func() (agentTypes.Agent, agentTypes.AgentRegistry)
+
 var (
-	mu       sync.RWMutex
-	planner  agentTypes.Agent
-	registry agentTypes.AgentRegistry
-	scanner  *skill.SkillScanner
+	mu        sync.RWMutex
+	planner   agentTypes.Agent
+	registry  agentTypes.AgentRegistry
+	scanner   *skill.SkillScanner
+	refresher RefreshFunc
 )
 
 func Set(p agentTypes.Agent, r agentTypes.AgentRegistry, s *skill.SkillScanner) {
@@ -20,6 +23,27 @@ func Set(p agentTypes.Agent, r agentTypes.AgentRegistry, s *skill.SkillScanner) 
 	planner = p
 	registry = r
 	scanner = s
+}
+
+func SetRefresher(fn RefreshFunc) {
+	mu.Lock()
+	defer mu.Unlock()
+	refresher = fn
+}
+
+func Reload() bool {
+	mu.RLock()
+	fn := refresher
+	mu.RUnlock()
+	if fn == nil {
+		return false
+	}
+	p, r := fn()
+	mu.Lock()
+	planner = p
+	registry = r
+	mu.Unlock()
+	return true
 }
 
 func Planner() agentTypes.Agent {

@@ -53,8 +53,9 @@ func getSession(ctx context.Context, dcSession *discordgo.Session, guildID, chan
 	session.OldHistories = maxHistory
 	session.ToolHistories = []agentTypes.Message{}
 
-	userText := fmt.Sprintf("---\n當前時間: %s\n傳送者: %s\n當前頻道 ID: %s\n---\n%s",
+	userText := fmt.Sprintf("---\n當前時間: %s\n工作目錄: %s\n傳送者: %s\n當前頻道 ID: %s\n---\n%s",
 		time.Now().Format("2006-01-02 15:04:05"),
+		data.WorkDir,
 		authorName,
 		channelID,
 		strings.TrimSpace(input),

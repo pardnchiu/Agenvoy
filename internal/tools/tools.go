@@ -33,10 +33,63 @@ var DeniedConfig = func() deniedConfig {
 	return cfg
 }()
 
-var (
-// * template allow all for testing
-// disallowed = regexp.MustCompile(`[;&|` + "`" + `$(){}!<>\\]`)
-)
+var WorkDirChangeHook func(path string)
+
+func changeWorkDir(e *toolTypes.Executor, args []string) (string, error) {
+	var positional []string
+	for _, a := range args {
+		if !strings.HasPrefix(a, "-") {
+			positional = append(positional, a)
+		}
+	}
+	if len(positional) > 1 {
+		return "", fmt.Errorf("cd accepts at most one positional argument, got %d", len(positional))
+	}
+
+	var target string
+	switch {
+	case len(positional) == 0 || positional[0] == "~":
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("os.UserHomeDir: %w", err)
+		}
+		target = home
+	case strings.HasPrefix(positional[0], "~/"):
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("os.UserHomeDir: %w", err)
+		}
+		target = filepath.Join(home, positional[0][2:])
+	default:
+		target = positional[0]
+	}
+
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(e.WorkDir, target)
+	}
+	abs, err := filepath.Abs(target)
+	if err != nil {
+		return "", fmt.Errorf("filepath.Abs: %w", err)
+	}
+	abs = filepath.Clean(abs)
+
+	for _, dir := range DeniedConfig.Dirs {
+		needle := "/" + dir
+		if strings.Contains(abs, needle+"/") || strings.HasSuffix(abs, needle) {
+			return "", fmt.Errorf("access denied: %s", dir)
+		}
+	}
+
+	if !go_pkg_filesystem_reader.IsDir(abs) {
+		return "", fmt.Errorf("not a directory or does not exist: %s", abs)
+	}
+
+	e.WorkDir = abs
+	if WorkDirChangeHook != nil {
+		WorkDirChangeHook(abs)
+	}
+	return fmt.Sprintf("Changed working directory to: %s", abs), nil
+}
 
 func moveToTrash(ctx context.Context, e *toolTypes.Executor, args []string) (string, error) {
 	trashPath := filepath.Join(e.WorkDir, ".Trash")

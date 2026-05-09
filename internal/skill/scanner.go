@@ -48,15 +48,12 @@ func NewScanner() *SkillScanner {
 	paths := []string{
 		filepath.Join(cwd, ".claude", "skills"),
 		filepath.Join(cwd, ".skills"),
+		filesystem.SkillsDir,
 		filepath.Join(home, ".claude", "skills"),
+		filepath.Join(home, ".codex", "skills"),
 		filepath.Join(home, ".opencode", "skills"),
 		filepath.Join(home, ".openai", "skills"),
-		filepath.Join(home, ".codex", "skills"),
-		filesystem.SkillsDir,
 		filesystem.SystemSkillsDir,
-		"/mnt/skills/public",
-		"/mnt/skills/user",
-		"/mnt/skills/examples",
 	}
 
 	scanner := &SkillScanner{
@@ -74,40 +71,12 @@ func (s *SkillScanner) Scan() {
 		Paths:  s.paths,
 	}
 
-	// * concurrent scan path list
-	var wg sync.WaitGroup
-	skillChan := make(chan *Skill, 100)
-	errChan := make(chan error, len(s.paths))
 	for _, path := range s.paths {
-		wg.Add(1)
-
-		go func(dir string) {
-			defer wg.Done()
-			if err := s.scan(dir, skillChan); err != nil {
-				errChan <- fmt.Errorf("s.scan %s: %w", dir, err)
-			}
-		}(path)
-	}
-
-	go func() {
-		wg.Wait()
-		close(skillChan)
-		close(errChan)
-	}()
-
-	for skill := range skillChan {
-		if _, ok := list.ByName[skill.Name]; ok {
-			continue
+		if err := s.scan(path, list); err != nil {
+			slog.Warn("scan error",
+				slog.String("path", path),
+				slog.String("error", err.Error()))
 		}
-		list.ByName[skill.Name] = skill
-		list.ByPath[skill.AbsPath] = skill
-	}
-
-	var errs []error
-	for err := range errChan {
-		errs = append(errs, err)
-		slog.Warn("scan error",
-			slog.String("error", err.Error()))
 	}
 
 	s.mu.Lock()
@@ -115,7 +84,7 @@ func (s *SkillScanner) Scan() {
 	s.mu.Unlock()
 }
 
-func (s *SkillScanner) scan(root string, skillChan chan<- *Skill) error {
+func (s *SkillScanner) scan(root string, list *SkillList) error {
 	if !go_pkg_filesystem_reader.Exists(root) {
 		return nil
 	}
@@ -145,7 +114,11 @@ func (s *SkillScanner) scan(root string, skillChan chan<- *Skill) error {
 				slog.String("error", err.Error()))
 			continue
 		}
-		skillChan <- skill
+		if _, exists := list.ByName[skill.Name]; exists {
+			continue
+		}
+		list.ByName[skill.Name] = skill
+		list.ByPath[skill.AbsPath] = skill
 	}
 
 	return nil

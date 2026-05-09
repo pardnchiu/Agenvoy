@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
 	"time"
 
@@ -107,4 +108,8 @@ func FormatInt(number int) string {
 		result = append(result, byte(c))
 	}
 	return string(result)
+}
+
+func ShortenSessionID(sid string) string {
+	return regexp.MustCompile(`([0-9a-fA-F]{8})-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`).ReplaceAllString(sid, "$1")
 }

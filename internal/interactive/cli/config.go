@@ -14,12 +14,28 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func Config() {
-	sessionID, err := getSessionID()
-	if err != nil {
-		slog.Error("getSessionID",
-			slog.String("error", err.Error()))
-		os.Exit(1)
+func Config(name string) {
+	name = strings.TrimSpace(name)
+
+	var sessionID string
+	if name != "" {
+		sessionID = session.GetSessionIDByName(name)
+		if sessionID == "" {
+			slog.Error("not found")
+			os.Exit(1)
+		}
+	} else {
+		if sid, ok := pickSession("Select session to edit"); ok {
+			sessionID = sid
+		} else {
+			id, err := getSessionID()
+			if err != nil {
+				slog.Error("getSessionID",
+					slog.String("error", err.Error()))
+				os.Exit(1)
+			}
+			sessionID = id
+		}
 	}
 
 	session.SaveBot(sessionID, sessionID, false)

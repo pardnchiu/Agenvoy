@@ -2,16 +2,11 @@ package discordTypes
 
 import (
 	"github.com/bwmarrin/discordgo"
-	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
 type DiscordBot struct {
-	Session       *discordgo.Session
-	Commands      []*discordgo.ApplicationCommand
-	PlannerAgent  agentTypes.Agent
-	AgentRegistry agentTypes.AgentRegistry
-	SkillScanner  *skill.SkillScanner
+	Session  *discordgo.Session
+	Commands []*discordgo.ApplicationCommand
 }
 
 type FileInput struct {

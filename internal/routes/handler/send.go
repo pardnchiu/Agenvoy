@@ -28,7 +28,7 @@ type Request struct {
 	SystemPrompt string   `json:"system_prompt,omitempty"`
 }
 
-func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner) gin.HandlerFunc {
+func Send() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req Request
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -57,6 +57,7 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 		go func() {
 			defer close(events)
 
+			scanner := host.Scanner()
 			trimContent := strings.TrimSpace(req.Content)
 
 			externalAgent, externalEffective, externalReadOnly := external.MatchExternal(trimContent)
@@ -65,28 +66,39 @@ func Send(bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skil
 			}
 
 			var matchedSkill *skill.Skill
+			var skillResult agentTypes.Event
 			if externalAgent == "" && scanner != nil {
 				if m, effective := scanner.MatchSkillCall(trimContent); m != nil {
 					matchedSkill = m
 					trimContent = strings.TrimSpace(effective)
-					events <- agentTypes.Event{Type: agentTypes.EventSkillResult, Text: strings.TrimSpace(m.Name)}
+					skillResult = agentTypes.Event{Type: agentTypes.EventSkillResult, Text: strings.TrimSpace(m.Name)}
+					events <- skillResult
+					if sessionID != "" {
+						sessionManager.Record(sessionID, skillResult)
+					}
 				}
 			}
 
 			events <- agentTypes.Event{Type: agentTypes.EventAgentSelect}
 			var agent agentTypes.Agent
+			var agentResult agentTypes.Event
 			if externalAgent != "" {
-				events <- agentTypes.Event{Type: agentTypes.EventAgentResult, Text: "external:" + externalAgent}
+				agentResult = agentTypes.Event{Type: agentTypes.EventAgentResult, Text: "external:" + externalAgent}
 			} else {
+				registry := host.Registry()
 				if req.Model != "" {
 					if a, ok := registry.Registry[req.Model]; ok {
 						agent = a
 					}
 				}
 				if agent == nil {
-					agent = exec.SelectAgent(ctx, bot, registry, trimContent, false)
+					agent = exec.SelectAgent(ctx, host.Planner(), registry, trimContent, false)
 				}
-				events <- agentTypes.Event{Type: agentTypes.EventAgentResult, Text: agent.Name()}
+				agentResult = agentTypes.Event{Type: agentTypes.EventAgentResult, Text: agent.Name()}
+			}
+			events <- agentResult
+			if sessionID != "" {
+				sessionManager.Record(sessionID, agentResult)
 			}
 
 			workDir, _ := os.UserHomeDir()
@@ -151,8 +163,8 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 	}
 	session.ToolHistories = []agentTypes.Message{}
 
-	userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s",
-		time.Now().Format("2006-01-02 15:04:05"), data.Content)
+	userText := fmt.Sprintf("---\n當前時間: %s\n工作目錄: %s\n---\n%s",
+		time.Now().Format("2006-01-02 15:04:05"), data.WorkDir, data.Content)
 	session.UserInput = agentTypes.Message{Role: "user", Content: userText}
 	session.Histories = append(session.Histories, agentTypes.Message{
 		Role:    "user",

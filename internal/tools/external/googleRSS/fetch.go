@@ -63,9 +63,11 @@ func handler(ctx context.Context, keyword, timeRange, ceid, geo, lang string) (s
 		return "", fmt.Errorf("failed to fetch google rss: %w", err)
 	}
 
-	if err = db.Set(cacheKey, items, torii.SetDefault, torii.TTL(ttl)); err != nil {
-		slog.Warn("db.Set",
-			slog.String("error", err.Error()))
+	if items != "[]" {
+		if err = db.Set(cacheKey, items, torii.SetDefault, torii.TTL(ttl)); err != nil {
+			slog.Warn("db.Set",
+				slog.String("error", err.Error()))
+		}
 	}
 
 	return items, nil
@@ -83,7 +85,7 @@ func fetch(ctx context.Context, reqPath string) (string, error) {
 		return "", fmt.Errorf("status %d", status)
 	}
 	if len(data.Channel.Items) == 0 {
-		return "", fmt.Errorf("no result")
+		return "[]", nil
 	}
 
 	items := deduplicate(data.Channel.Items)

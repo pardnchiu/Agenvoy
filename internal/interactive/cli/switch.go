@@ -11,15 +11,21 @@ import (
 
 func Switch(name string) {
 	name = strings.TrimSpace(name)
-	if name == "" {
-		slog.Error("name is required")
-		os.Exit(1)
-	}
 
-	match := session.GetSessionIDByName(name)
-	if match == "" {
-		slog.Error("not found")
-		os.Exit(1)
+	var match string
+	if name == "" {
+		sid, ok := pickSession("Select session to switch to")
+		if !ok {
+			slog.Error("no sessions available")
+			os.Exit(1)
+		}
+		match = sid
+	} else {
+		match = session.GetSessionIDByName(name)
+		if match == "" {
+			slog.Error("not found")
+			os.Exit(1)
+		}
 	}
 
 	cfg, err := session.Load()

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
@@ -86,7 +87,7 @@ func messageCreate(bot *discordTypes.DiscordBot, dcSession *discordgo.Session, d
 
 	// * without timeout, to ensure the message will be processed like command
 	ctx := context.Background()
-	if message.Cmd == "" && bot.PlannerAgent != nil {
+	if message.Cmd == "" && host.Planner() != nil {
 		dcSession.MessageReactionAdd(dcMessageCreate.ChannelID, dcMessageCreate.ID, "🦍")
 		go func() {
 			if err := run(ctx, bot, dcSession, dcMessageCreate, message); err != nil {

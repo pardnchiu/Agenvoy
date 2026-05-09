@@ -82,8 +82,8 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 		maxHistory = []agentTypes.Message{}
 	}
 
-	userText := fmt.Sprintf("---\n當前時間: %s\n---\n%s",
-		time.Now().Format("2006-01-02 15:04:05"), task)
+	userText := fmt.Sprintf("---\n當前時間: %s\n工作目錄: %s\n---\n%s",
+		time.Now().Format("2006-01-02 15:04:05"), execData.WorkDir, task)
 
 	histories := append([]agentTypes.Message{}, oldHistory...)
 	histories = append(histories, agentTypes.Message{Role: "user", Content: userText})

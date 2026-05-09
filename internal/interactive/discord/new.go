@@ -9,14 +9,14 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	discordCommand "github.com/pardnchiu/agenvoy/internal/interactive/discord/command"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
 	"github.com/pardnchiu/agenvoy/internal/scheduler"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
-func New(plannerAgent agentTypes.Agent, agentRegistry agentTypes.AgentRegistry, skillScanner *skill.SkillScanner) (*discordTypes.DiscordBot, error) {
+func New() (*discordTypes.DiscordBot, error) {
 	token := os.Getenv("DISCORD_TOKEN")
 	if token == "" {
 		return nil, nil
@@ -28,10 +28,7 @@ func New(plannerAgent agentTypes.Agent, agentRegistry agentTypes.AgentRegistry, 
 	}
 
 	bot := &discordTypes.DiscordBot{
-		Session:       session,
-		PlannerAgent:  plannerAgent,
-		AgentRegistry: agentRegistry,
-		SkillScanner:  skillScanner,
+		Session: session,
 	}
 
 	if cronMgr := scheduler.Get(); cronMgr != nil {
@@ -43,7 +40,7 @@ func New(plannerAgent agentTypes.Agent, agentRegistry agentTypes.AgentRegistry, 
 			if strings.HasPrefix(output, "error:") {
 				content = output
 			} else {
-				content = wrapScriptOutput(plannerAgent, output)
+				content = wrapScriptOutput(host.Planner(), output)
 			}
 			if err := Send(bot, channelID, discordTypes.ReplyMessage{Content: content}); err != nil {
 				slog.Warn("Send",
@@ -111,7 +108,6 @@ func wrapScriptOutput(agent agentTypes.Agent, output string) string {
 }
 
 func Close(b *discordTypes.DiscordBot) error {
-	slog.Info("shutting down")
 	if b.Session == nil {
 		return nil
 	}

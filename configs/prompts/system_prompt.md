@@ -278,6 +278,8 @@ The `當前時間:` prefix at the start of each message is the local timestamp (
 Host OS: {{.SystemOS}}
 Work directory: {{.WorkPath}}
 
+The work directory above is the authoritative starting point for this turn. Any `cd` calls, path mentions, or "I'm now in /some/dir" statements in conversation history belong to prior turns and may be stale — do not infer the current work directory from them. If this turn needs a different directory, call `run_command` with `argv=["cd", "<path>"]` explicitly; otherwise treat `{{.WorkPath}}` as the default base for every file/command operation.
+
 {{.ExternalAgents}}
 
 {{.AvailableSkills}}

@@ -89,6 +89,7 @@ type (
 )
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
+	executeStart := time.Now()
 	ctx = context.WithValue(ctx, allowAllCtxKey{}, allowAll)
 
 	if events != nil {
@@ -285,7 +286,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			slog.Warn("usageManager.Update",
 				slog.String("error", err.Error()))
 		}
-		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
+		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 
 		if len(session.Tools) > 0 {
 			if data, err := json.Marshal(session.Tools); err == nil {
@@ -312,7 +313,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				slog.Warn("usageManager.Update",
 					slog.String("error", err.Error()))
 			}
-			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
+			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 			return nil
 		}
 	}
@@ -322,7 +323,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		slog.Warn("usageManager.Update",
 			slog.String("error", err.Error()))
 	}
-	events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage}
+	events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 	return nil
 }
 
@@ -354,7 +355,7 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.Sk
 
 	skillsSection := ""
 	if list := toolSearcher.ListBlock(scanner); list != "" {
-		skillsSection = "## Skills\n\nCall `activate_skill` with one of these exact names to activate. The tool result returns the skill body + execution guidance — treat it as binding instructions for subsequent iterations. Never answer from prior knowledge when the user requests a listed skill by name.\n\n" + list
+		skillsSection = "## Skills\n\nThe following skill names are available via `activate_skill`. Only activate when the user explicitly references a skill by its exact name (e.g. `/commit-generate` or the bare `commit-generate` token). Do not infer skills from topic keywords, paraphrases, or partial matches. Once activated, the tool result is binding for subsequent iterations.\n\n" + list
 	}
 
 	personaSection := ""

@@ -13,6 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/openai"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
 func buildAgentRegistry() agentTypes.AgentRegistry {
@@ -57,4 +58,18 @@ func buildAgentRegistry() agentTypes.AgentRegistry {
 	}
 
 	return registry
+}
+
+func plannerSelector(registry agentTypes.AgentRegistry) agentTypes.Agent {
+	if cfg, err := session.Load(); err == nil && cfg.PlannerModel != "" {
+		if a, ok := registry.Registry[cfg.PlannerModel]; ok {
+			return a
+		}
+	}
+	return registry.Fallback
+}
+
+func refreshHost() (agentTypes.Agent, agentTypes.AgentRegistry) {
+	registry := buildAgentRegistry()
+	return plannerSelector(registry), registry
 }

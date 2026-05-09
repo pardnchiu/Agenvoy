@@ -4,18 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
-	"os/signal"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/extensions"
@@ -23,21 +19,14 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/summary"
-	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	"github.com/pardnchiu/agenvoy/internal/interactive/cli"
-	"github.com/pardnchiu/agenvoy/internal/interactive/discord"
-	"github.com/pardnchiu/agenvoy/internal/routes"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/scheduler"
-	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
-	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
-	"github.com/pardnchiu/agenvoy/internal/tui"
 )
 
 func init() {
@@ -59,45 +48,17 @@ func init() {
 func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		case "add":
+		case "model":
 			initCLI()
-			runAdd()
+			runModel(os.Args[2:])
 			return
-		case "remove":
+		case "skill":
 			initCLI()
-			cli.RunRemove()
+			runSkill(os.Args[2:])
 			return
-		case "reasoning":
+		case "session":
 			initCLI()
-			runReasoning()
-			return
-		case "planner":
-			initCLI()
-			runPlanner()
-			return
-		case "list":
-			initCLI()
-			runList()
-			return
-		case "config":
-			initCLI()
-			cli.Config()
-			return
-		case "new":
-			initCLI()
-			name := ""
-			if len(os.Args) >= 3 {
-				name = os.Args[2]
-			}
-			cli.NewSession(name)
-			return
-		case "switch":
-			if len(os.Args) < 3 {
-				fmt.Fprintf(os.Stderr, "Usage: agen switch <name>\n")
-				os.Exit(1)
-			}
-			initCLI()
-			cli.Switch(os.Args[2])
+			cli.Session(os.Args[2:])
 			return
 		case "mcp":
 			initCLI()
@@ -110,7 +71,13 @@ func main() {
 				os.Exit(1)
 			}
 			initCLI()
-			runAgent(os.Args[1] == "run")
+			cmdAgent(os.Args[1] == "run")
+			return
+		case "stop":
+			runStop()
+			return
+		case "--daemon":
+			cmdDaemon()
 			return
 		default:
 			printUsage()
@@ -118,7 +85,7 @@ func main() {
 		}
 	}
 
-	runApp()
+	newTUI()
 }
 
 func initCLI() {
@@ -143,35 +110,67 @@ func initCLI() {
 	subagent.Register()
 }
 
-func runList() {
-	if len(os.Args) > 2 && os.Args[2] == "skill" {
-		skill.SyncSkills(context.Background(), extensions.Skills)
-		scanner := skill.NewScanner()
-
-		if len(scanner.Skills.ByName) == 0 {
-			fmt.Println("No skills found")
-			fmt.Println("\nScanned paths:")
-			for _, path := range scanner.Skills.Paths {
-				fmt.Printf("  - %s\n", path)
-			}
-			return
-		}
-
-		names := scanner.List()
-		sort.Strings(names)
-
-		fmt.Printf("Found %d skill(s):\n\n", len(names))
-		for _, name := range names {
-			s := scanner.Skills.ByName[name]
-			fmt.Printf("• %s\n", name)
-			if s.Description != "" {
-				fmt.Printf("  %s\n", s.Description)
-			}
-			fmt.Printf("  Path: %s\n\n", s.Path)
-		}
+func modelCheck() {
+	cfg, err := session.Load()
+	if err != nil {
+		slog.Error("session.Load",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if len(cfg.Models) > 0 {
 		return
 	}
 
+	fmt.Println("[*] No model configured. Setting up first model…")
+	runAdd()
+
+	cfg, err = session.Load()
+	if err != nil || len(cfg.Models) == 0 {
+		fmt.Println("[!] No model added. Exiting.")
+		os.Exit(0)
+	}
+}
+
+func runModel(args []string) {
+	sub := ""
+	if len(args) > 0 {
+		sub = strings.ToLower(strings.TrimSpace(args[0]))
+	}
+	if sub == "" {
+		sub = cli.Pick("Select model action", []string{"add", "remove", "list", "planner", "reasoning"})
+	}
+	switch sub {
+	case "add":
+		runAdd()
+	case "remove", "rm":
+		cli.RunRemove()
+	case "list":
+		runModelList()
+	case "planner":
+		runPlanner()
+	case "reasoning":
+		runReasoning()
+	default:
+		fmt.Fprintf(os.Stderr, "Usage: agen model [add|remove|list|planner|reasoning]\n")
+		os.Exit(1)
+	}
+}
+
+func runSkill(args []string) {
+	sub := ""
+	if len(args) > 0 {
+		sub = strings.ToLower(strings.TrimSpace(args[0]))
+	}
+	switch sub {
+	case "list", "":
+		runSkillList()
+	default:
+		fmt.Fprintf(os.Stderr, "Usage: agen skill [list]\n")
+		os.Exit(1)
+	}
+}
+
+func runModelList() {
 	cfg, err := session.Load()
 	if err != nil {
 		slog.Error("session.Load", slog.String("error", err.Error()))
@@ -192,176 +191,61 @@ func runList() {
 	}
 }
 
-func runAgent(allowAll bool) {
-	defer torii.Close()
-
-	if !runtime.IsCurrent() {
-		clearSession()
-	}
-
-	userInput := strings.TrimSpace(strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n"))
-
-	mcpManager := initMCP(context.Background())
-	defer mcpManager.Close()
-
-	registry := buildAgentRegistry()
-	ctx, cancel := context.WithCancel(context.Background())
-	skill.SyncSkills(ctx, extensions.Skills)
-	scanner := skill.NewScanner()
-	defer cancel()
-
-	var selectorBot agentTypes.Agent
-	if cfg, err := session.Load(); err == nil && cfg.PlannerModel != "" {
-		selectorBot = cli.SelectAgent(cfg.PlannerModel)
-	}
-	if selectorBot == nil {
-		selectorBot = registry.Fallback
-	}
-
-	host.Set(selectorBot, registry, scanner)
-
-	go cli.NewPending(ctx)
-
-	if err := cli.Run(func(ch chan<- agentTypes.Event) error {
-		return exec.Run(ctx, selectorBot, registry, scanner, userInput, nil, nil, ch, allowAll)
-	}); err != nil && ctx.Err() == nil {
-		slog.Error("failed to execute",
-			slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-}
-
-func runApp() {
-	if err := filesystem.Init(); err != nil {
-		slog.Error("filesystem.Init",
-			slog.String("error", err.Error()))
-		return
-	}
-	if err := torii.Init(filesystem.StoreDir); err != nil {
-		slog.Error("store.Init",
-			slog.String("error", err.Error()))
-		return
-	}
-	defer torii.Close()
-
-	if _, err := runtime.Init(); err != nil {
-		slog.Warn("runtime.Init",
-			slog.String("error", err.Error()))
-	}
-	session.Clean()
-	session.CleanAllTask()
-
-	tui.New()
-	tui.SetSlog()
-
-	if err := go_pkg_sandbox.CheckDependence(); err != nil {
-		slog.Error("sandbox.CheckDependence",
-			slog.String("error", err.Error()))
-	}
-
-	if err := scheduler.New(); err != nil {
-		slog.Error("scheduler.New",
-			slog.String("error", err.Error()))
-	} else {
-		if err := tasks.Setup(scheduler.Get()); err != nil {
-			slog.Warn("tasks.Setup",
-				slog.String("error", err.Error()))
-		}
-		if err := crons.Setup(scheduler.Get()); err != nil {
-			slog.Warn("crons.Setup",
-				slog.String("error", err.Error()))
-		}
-	}
-
-	if cfg, err := session.Load(); err == nil {
-		provider.SetReasoningLevel(cfg.ReasoningLevel)
-	}
-	subagent.Register()
-
-	mcpManager := initMCP(context.Background())
-	defer mcpManager.Close()
-
-	registry := buildAgentRegistry()
+func runSkillList() {
 	skill.SyncSkills(context.Background(), extensions.Skills)
 	scanner := skill.NewScanner()
 
-	var selectorBot agentTypes.Agent
-	if cfg, err := session.Load(); err == nil && cfg.PlannerModel != "" {
-		if a, ok := registry.Registry[cfg.PlannerModel]; ok {
-			selectorBot = a
+	if len(scanner.Skills.ByName) == 0 {
+		fmt.Println("No skills found")
+		fmt.Println("\nScanned paths:")
+		for _, path := range scanner.Skills.Paths {
+			fmt.Printf("  - %s\n", path)
 		}
-	}
-	if selectorBot == nil {
-		selectorBot = registry.Fallback
+		return
 	}
 
-	host.Set(selectorBot, registry, scanner)
+	names := scanner.List()
+	sort.Strings(names)
 
-	if selectorBot != nil {
-		slog.Info("agent registry built",
-			slog.Int("entries", len(registry.Entries)),
-			slog.String("fallback", selectorBot.Name()))
-
-		bot, err := discord.New(selectorBot, registry, scanner)
-		if err != nil {
-			slog.Error("discord.New",
-				slog.String("error", err.Error()))
-		} else if bot == nil {
-			slog.Warn("DISCORD_TOKEN not set, bot disabled")
+	fmt.Printf("Found %d skill(s):\n\n", len(names))
+	for _, name := range names {
+		s := scanner.Skills.ByName[name]
+		fmt.Printf("• %s\n", name)
+		if s.Description != "" {
+			fmt.Printf("  %s\n", s.Description)
 		}
-
-		route := routes.New(selectorBot, registry, scanner)
-
-		port := go_pkg_utils.GetWithDefault("PORT", "17989")
-
-		server := &http.Server{
-			Addr:    ":" + port,
-			Handler: route,
-		}
-
-		go func() {
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				slog.Error("server.ListenAndServe",
-					slog.String("error", err.Error()))
-			}
-		}()
-		slog.Info("server started",
-			slog.String("port", port))
-
-		defer func() {
-			scheduler.Stop()
-			if bot != nil {
-				discord.Close(bot)
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			_ = server.Shutdown(ctx)
-		}()
-	} else {
-		slog.Warn("no agents configured, server and discord disabled")
-		defer scheduler.Stop()
-	}
-
-	if selectorBot != nil {
-		go setSummaryCron(selectorBot, registry)
-	}
-
-	go tui.FileMonitor()
-	go tui.SchedulerMonitor()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-quit
-		tui.Stop()
-	}()
-
-	if err := tui.Set(); err != nil {
-		fmt.Fprintf(os.Stderr, "tui.Set error: %v\n", err)
+		fmt.Printf("  Path: %s\n\n", s.Path)
 	}
 }
 
-func setSummaryCron(bot agentTypes.Agent, registry agentTypes.AgentRegistry) {
+func runStop() {
+	if err := filesystem.Init(); err != nil {
+		fmt.Fprintf(os.Stderr, "filesystem.Init: %v\n", err)
+		os.Exit(1)
+	}
+	r, err := runtime.Read()
+	if err != nil || r == nil {
+		fmt.Println("No daemon running.")
+		return
+	}
+	if !runtime.IsAlive(r.PID) {
+		fmt.Printf("Daemon record stale (pid=%d not alive); clearing.\n", r.PID)
+		_ = runtime.Clear()
+		return
+	}
+	fmt.Printf("Stopping daemon (pid=%d)...\n", r.PID)
+	if err := runtime.Stop(r.PID); err != nil {
+		fmt.Fprintf(os.Stderr, "runtime.Stop: %v\n", err)
+		os.Exit(1)
+	}
+	if err := runtime.Clear(); err != nil {
+		slog.Warn("runtime.Clear",
+			slog.String("error", err.Error()))
+	}
+	fmt.Println("Daemon stopped.")
+}
+
+func setSummaryCron() {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
@@ -380,7 +264,7 @@ func setSummaryCron(bot agentTypes.Agent, registry agentTypes.AgentRegistry) {
 				continue
 			}
 			bgCtx := context.Background()
-			summaryAgent := exec.SelectAgent(bgCtx, bot, registry, "[summary] 整理對話摘要，選擇最輕量可完成任務的模型", false)
+			summaryAgent := exec.SelectAgent(bgCtx, host.Planner(), host.Registry(), "[summary] 整理對話摘要，選擇最輕量可完成任務的模型", false)
 			summary.Generate(bgCtx, summaryAgent, sid, summaryHistories)
 			slog.Info("summary done",
 				slog.String("session", sid))
@@ -419,17 +303,12 @@ func clearSession() {
 
 func printUsage() {
 	fmt.Println("Usage:")
-	fmt.Println("  agen                    Start TUI + server + Discord bot")
-	fmt.Println("  agen add                Add a provider/model")
-	fmt.Println("  agen remove             Remove a provider/model")
-	fmt.Println("  agen list               List configured models")
-	fmt.Println("  agen list skill         List available skills")
-	fmt.Println("  agen config             Edit current CLI session bot.md in $EDITOR")
-	fmt.Println("  agen new [name]         Start a new CLI session (optional bot.md name) and switch primary pointer")
-	fmt.Println("  agen switch <name>      Switch primary pointer to the cli- session whose bot.md name matches")
-	fmt.Println("  agen mcp [list|add|remove]  Manage MCP servers")
-	fmt.Println("  agen planner            Set planner model")
-	fmt.Println("  agen reasoning          Set reasoning level")
-	fmt.Println("  agen cli <input...>     Run agent (requires tool confirmation)")
-	fmt.Println("  agen run <input...>     Run agent (allow all tools)")
+	fmt.Println("  agen                                            Attach TUI; spawn server daemon if not running")
+	fmt.Println("  agen stop                                       Stop the running server daemon")
+	fmt.Println("  agen model [add|remove|list|planner|reasoning]  Manage providers/models, planner, reasoning")
+	fmt.Println("  agen skill [list]                               List available skills")
+	fmt.Println("  agen mcp [list|add|remove]                      Manage MCP servers")
+	fmt.Println("  agen session [new|switch|config] [name]         Manage CLI sessions (interactive picker if no name)")
+	fmt.Println("  agen cli <input...>                             Run agent (requires tool confirmation)")
+	fmt.Println("  agen run <input...>                             Run agent (allow all tools)")
 }

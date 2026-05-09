@@ -42,7 +42,7 @@ func NewPending(ctx context.Context) {
 func process(id string, req pending.Request, reader *bufio.Reader) {
 	if req.Ctx != nil {
 		if err := req.Ctx.Err(); err != nil {
-			pending.Resolve(id, pending.Reply{Err: err})
+			pending.Resolve(id, pending.Reply{Error: err})
 			return
 		}
 	}
@@ -53,7 +53,7 @@ func process(id string, req pending.Request, reader *bufio.Reader) {
 	case pending.KindAskUser:
 		pending.Resolve(id, runAskUser(req, reader))
 	default:
-		pending.Resolve(id, pending.Reply{Err: fmt.Errorf("unknown pending kind: %s", req.Kind)})
+		pending.Resolve(id, pending.Reply{Error: fmt.Errorf("unknown pending kind: %s", req.Kind)})
 	}
 }
 
@@ -71,7 +71,7 @@ func runToolConfirm(req pending.Request) pending.Reply {
 	idx, _, err := prompt.Run()
 	switch {
 	case err != nil || idx == 2:
-		return pending.Reply{Approve: false, Err: fmt.Errorf("user stopped")}
+		return pending.Reply{Approve: false, Error: fmt.Errorf("user stopped")}
 	case idx == 1:
 		return pending.Reply{Approve: false, Skip: true}
 	default:
@@ -81,42 +81,42 @@ func runToolConfirm(req pending.Request) pending.Reply {
 
 func runAskUser(req pending.Request, reader *bufio.Reader) pending.Reply {
 	if req.AskUser == nil || len(req.AskUser.Questions) == 0 {
-		return pending.Reply{Err: fmt.Errorf("ask_user with no questions")}
+		return pending.Reply{Error: fmt.Errorf("ask_user with no questions")}
 	}
 
 	answers := make([]any, 0, len(req.AskUser.Questions))
 	for i, q := range req.AskUser.Questions {
 		question := strings.TrimSpace(q.Question)
 		if question == "" {
-			return pending.Reply{Err: fmt.Errorf("question #%d is empty", i+1)}
+			return pending.Reply{Error: fmt.Errorf("question #%d is empty", i+1)}
 		}
 
 		switch {
 		case len(q.Options) == 0 && q.Secret:
 			ans, err := askSecretInput(question)
 			if err != nil {
-				return pending.Reply{Err: err}
+				return pending.Reply{Error: err}
 			}
 			answers = append(answers, ans)
 
 		case len(q.Options) == 0:
 			ans, err := askInput(reader, question)
 			if err != nil {
-				return pending.Reply{Err: err}
+				return pending.Reply{Error: err}
 			}
 			answers = append(answers, ans)
 
 		case q.MultiSelect:
 			ans, err := askMultiSelect(reader, question, q.Options, i+1)
 			if err != nil {
-				return pending.Reply{Err: err}
+				return pending.Reply{Error: err}
 			}
 			answers = append(answers, ans)
 
 		default:
 			ans, err := askSingleSelect(question, q.Options)
 			if err != nil {
-				return pending.Reply{Err: err}
+				return pending.Reply{Error: err}
 			}
 			answers = append(answers, ans)
 		}
