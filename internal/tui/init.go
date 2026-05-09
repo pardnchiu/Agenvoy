@@ -96,8 +96,22 @@ func (t TUI) Init() tea.Cmd {
 			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
 		),
 	}
-	seq = append(seq, loadSessionTail(t.currentSessionID)...)
+	if sid := strings.TrimSpace(t.currentSessionID); sid != "" {
+		path := filepath.Join(filesystem.SessionsDir, sid, "action.log")
+		if go_pkg_filesystem_reader.Exists(path) && fileSize(path) > 0 {
+			seq = append(seq, func() tea.Msg { return LoadHistoryCheck{id: sid} })
+		}
+	}
 	return tea.Sequence(seq...)
+}
+
+type LoadHistoryCheck struct {
+	id string
+}
+
+type LoadHistorySelect struct {
+	id   string
+	load bool
 }
 
 func newModel(ctx context.Context) TUI {

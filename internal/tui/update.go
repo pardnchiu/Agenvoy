@@ -235,6 +235,26 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd := t.runReasoningSelect(msg.level)
 		return next, cmd
 
+	case LoadHistoryCheck:
+		sid := msg.id
+		t.popup = &Popup{
+			kind:    popupSingleSelect,
+			title:   "Load previous session history?",
+			options: []string{"Yes", "No"},
+			values:  []string{"yes", "no"},
+			cursor:  0,
+			onConfirm: func(chosen string) any {
+				return LoadHistorySelect{id: sid, load: chosen == "yes"}
+			},
+		}
+		return t, nil
+
+	case LoadHistorySelect:
+		if !msg.load {
+			return t, nil
+		}
+		return t, tea.Sequence(loadSessionTail(msg.id)...)
+
 	case logHistory:
 		if t.mode != logMode {
 			return t, nil
