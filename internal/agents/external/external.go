@@ -13,6 +13,13 @@ import (
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 )
 
+var binaryByAgent = map[string]string{
+	"codex":   "codex",
+	"copilot": "gh",
+	"claude":  "claude",
+	"gemini":  "gemini",
+}
+
 const (
 	defaultExternalAgentTimeoutMin = 10
 	hardCapExternalAgentTimeoutMin = 60
@@ -62,7 +69,7 @@ type Result struct {
 func Agents() []string {
 	var agents []string
 	for _, name := range []string{"codex", "copilot", "claude", "gemini"} {
-		if os.Getenv("EXTERNAL_"+strings.ToUpper(name)) == "true" {
+		if _, err := exec.LookPath(binaryByAgent[name]); err == nil {
 			agents = append(agents, name)
 		}
 	}

@@ -62,8 +62,9 @@ configs/
 | `MAX_SESSION_TASKS` | 否 | `3`（cap `10`） | per-session 併發上限，超過排隊 |
 | `MAX_SUBAGENT_TIMEOUT_MIN` | 否 | `10`（cap `60`） | `invoke_subagent` 總上限（分鐘） |
 | `MAX_EXTERNAL_AGENT_TIMEOUT_MIN` | 否 | `10`（cap `60`） | 外部 CLI subprocess 上限（分鐘） |
-| `EXTERNAL_COPILOT` / `EXTERNAL_CLAUDE` / `EXTERNAL_CODEX` / `EXTERNAL_GEMINI` | 否 | — | 自訂外部 CLI binary 路徑 |
 | `OPENAI_API_KEY` | 否 | — | 啟用語意搜尋（`text-embedding-3-small`） |
+
+外部 CLI agent（`codex` / `gh` / `claude` / `gemini`）以 `exec.LookPath` 自動偵測；只要 binary 存在於 `PATH` 即啟用，不需設定 env flag。
 
 整數變數會 clamp 至文件 cap；`≤ 0` 退回預設。
 

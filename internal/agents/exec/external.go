@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -14,7 +13,7 @@ func CallExternal(ctx context.Context, sessionID, agent, prompt string, readOnly
 	label := "external:" + agent
 
 	if !slices.Contains(external.Agents(), agent) {
-		msg := fmt.Sprintf("外部 agent %s 未宣告（請設定 EXTERNAL_%s=true）。", agent, strings.ToUpper(agent))
+		msg := fmt.Sprintf("外部 agent %s 不可用（PATH 未偵測到對應 CLI binary）。", agent)
 		events <- agentTypes.Event{Type: agentTypes.EventText, Text: msg}
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: label}
 		return nil

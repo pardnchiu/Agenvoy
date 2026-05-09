@@ -57,7 +57,7 @@ func registInvokeExternalAgent() {
 
 			if !slices.Contains(external.Agents(), params.Provider) {
 				return fmt.Sprintf(
-					"please enable in env first, supported agents: %s",
+					"please install the CLI binary first, detected agents: %s",
 					strings.Join(external.Agents(), ","),
 				), nil
 			}

@@ -490,11 +490,11 @@ func buildExternalAgentsPrompt() string {
 	agents := external.Agents()
 	if len(agents) == 0 {
 		return `## 外部 Agent
-目前無宣告的外部 agent，禁止呼叫 cross_review_with_external_agents 與 invoke_external_agent。`
+PATH 未偵測到任何外部 CLI binary，禁止呼叫 cross_review_with_external_agents 與 invoke_external_agent。`
 	}
 	return fmt.Sprintf(
 		`## 外部 Agent
-已宣告（呼叫時仍即時驗證安裝與登入）：%s
+已偵測安裝（呼叫時仍即時驗證版本與登入）：%s
 - cross_review_with_external_agents：對已產出的結果，送所有可用 agent 並行交叉審查，回傳獨立回饋供修正
 - invoke_external_agent：指定單一 agent 直接生成結果
 

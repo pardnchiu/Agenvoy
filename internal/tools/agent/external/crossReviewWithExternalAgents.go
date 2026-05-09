@@ -44,7 +44,7 @@ Run a concrete completed result through all available external agents (codex / c
 			}
 
 			if len(external.Agents()) == 0 {
-				return `外部驗證已忽略：未宣告任何外部 agent。若需外部驗證，請在環境變數設定 EXTERNAL_CODEX=true / EXTERNAL_COPILOT=true / EXTERNAL_CLAUDE=true / EXTERNAL_GEMINI=true，並安裝對應 CLI。`, nil
+				return `外部驗證已忽略：PATH 未偵測到任何外部 CLI（codex / gh / claude / gemini）。請先安裝對應 CLI。`, nil
 			}
 
 			agents, errors := external.CheckAgents()
