@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	osexec "os/exec"
+	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -85,6 +88,10 @@ func main() {
 
 		case "stop":
 			runStop()
+			return
+
+		case "update":
+			runUpdate()
 			return
 
 		case "--daemon":
@@ -323,10 +330,52 @@ func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  agen                                            Attach TUI; spawn server daemon if not running")
 	fmt.Println("  agen stop                                       Stop the running server daemon")
+	fmt.Println("  agen update                                     Update agen to the latest release")
 	fmt.Println("  agen model [add|remove|list|planner|reasoning]  Manage providers/models, planner, reasoning")
 	fmt.Println("  agen skill [list]                               List available skills")
 	fmt.Println("  agen mcp [list|add|remove]                      Manage MCP servers")
 	fmt.Println("  agen session [new|switch|config] [name]         Manage CLI sessions (interactive picker if no name)")
 	fmt.Println("  agen cli <input...>                             Run agent (requires tool confirmation)")
 	fmt.Println("  agen run <input...>                             Run agent (allow all tools)")
+}
+
+func runUpdate() {
+	const remoteURL = "https://cloud.agenvoy.com/update.sh"
+
+	f, err := os.CreateTemp("", "agenvoy-update-*.sh")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "create temp: %v\n", err)
+		os.Exit(1)
+	}
+	tmpPath := f.Name()
+	f.Close()
+
+	cleanup := func() { _ = os.Remove(tmpPath) }
+	defer cleanup()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		cleanup()
+		os.Exit(130)
+	}()
+
+	fmt.Printf("Fetching updater from %s -> %s\n", remoteURL, tmpPath)
+	curl := osexec.Command("curl", "-fsSL", remoteURL, "-o", tmpPath)
+	curl.Stdout = os.Stdout
+	curl.Stderr = os.Stderr
+	if err := curl.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "download failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	cmd := osexec.Command("bash", tmpPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "update failed: %v\n", err)
+		os.Exit(1)
+	}
 }

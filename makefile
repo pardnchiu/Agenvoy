@@ -23,13 +23,14 @@ session:
 
 else
 
-.PHONY: help build app stop test
+.PHONY: help build app stop update test
 
 help:
 	@echo "How to use:"
 	@echo "  make build              Build binary and install to /usr/local/bin/agen"
 	@echo "  make app                Attach TUI; spawn server daemon (HTTP + Discord) if not running"
 	@echo "  make stop               Stop the running server daemon"
+	@echo "  make update             Update agen to the latest release (always overwrite)"
 	@echo "  make mcp [list|add|remove]                       Manage MCP servers"
 	@echo "  make model [add|remove|list|planner|reasoning]   Manage providers/models, planner, reasoning"
 	@echo "  make skill [list]                                List available skills"
@@ -47,6 +48,9 @@ app:
 
 stop:
 	go run ./cmd/app/ stop
+
+update:
+	@go run ./cmd/app/ update
 
 test:
 	go test ./test/... -v -timeout 60s

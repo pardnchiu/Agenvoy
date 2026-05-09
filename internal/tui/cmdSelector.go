@@ -36,6 +36,7 @@ var commands = []Command{
 	{"bot", "edit current session bot.md in $EDITOR"},
 	{"discord-enable", "enable discord bot (token + guild)"},
 	{"discord-disable", "disable discord bot (token preserved)"},
+	{"update", "update agen to latest release (exits TUI)"},
 	{"clear", "clear conversation"},
 	{"exit", "quit"},
 }

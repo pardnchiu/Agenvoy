@@ -243,6 +243,25 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd := t.runSessionReasoningChosen(msg.model, msg.reasoning)
 		return next, cmd
 
+	case UpdateConfirm:
+		if !msg.ok {
+			return t, tea.Println("\n" + hintStyle.Render("⎯ update cancelled"))
+		}
+		return t, tea.Sequence(
+			tea.Println("\n"+hintStyle.Render("⎯ stopping daemon · downloading latest · expect sudo prompt")),
+			runUpdateExec(),
+		)
+
+	case UpdateDone:
+		t.quitting = true
+		if msg.err != nil {
+			return t, tea.Sequence(
+				tea.Println("\n"+errorStyle.Render(fmt.Sprintf("[!] update: %v", msg.err))),
+				tea.Quit,
+			)
+		}
+		return t, tea.Quit
+
 	case LoadHistoryCheck:
 		sid := msg.id
 		t.popup = &Popup{

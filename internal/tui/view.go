@@ -11,6 +11,9 @@ import (
 )
 
 func (t TUI) View() string {
+	if t.quitting {
+		return ""
+	}
 	if t.popup != nil {
 		return t.viewPopup()
 	}

@@ -57,6 +57,9 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 
 	case "/discord-disable":
 		return t.commandDiscord("disable")
+
+	case "/update":
+		return t.commandUpdate()
 	}
 	return t, nil, false
 }

@@ -86,6 +86,8 @@ type TUI struct {
 
 	inputHistory    []string
 	inputHistoryIdx int
+
+	quitting bool
 }
 
 func (t TUI) Init() tea.Cmd {
