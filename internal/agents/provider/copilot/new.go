@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -35,10 +34,10 @@ const (
 )
 
 func New(model ...string) (*Agent, error) {
-	usedModel := provider.Default("copilot")
-	if len(model) > 0 && strings.HasPrefix(model[0], prefix) {
-		usedModel = strings.TrimPrefix(model[0], prefix)
+	if len(model) == 0 || !strings.HasPrefix(model[0], prefix) {
+		return nil, fmt.Errorf("copilot.New: model arg required with %q prefix", prefix)
 	}
+	usedModel := strings.TrimPrefix(model[0], prefix)
 
 	workDir, err := os.Getwd()
 	if err != nil {

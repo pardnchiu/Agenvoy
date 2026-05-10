@@ -1,63 +1,51 @@
 {
-  "default": "gpt-5-mini",
-  "models": {
-    "gpt-5.5": {
-      "description": "OpenAI 最新旗艦模型，可調推理深度（low／medium／high／xhigh），1.05M 上下文",
-      "no_temperature": true,
-      "reasoning_effort": true
-    },
-    "gpt-5.4": {
-      "description": "前代旗艦推理模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
-    },
-    "gpt-5.4-mini": {
-      "description": "GPT-5.4 高效版，保留超長上下文與電腦控制能力，速度更快且成本更低"
-    },
-    "gpt-5.4-nano": {
-      "description": "GPT-5.4 最輕量版，超長上下文支援，專為低延遲與高吞吐場景設計"
-    },
-    "gpt-5": {
-      "description": "智慧推理模型，支援可配置推理深度，適合程式與 Agentic 任務",
-      "no_temperature": true,
-      "reasoning_effort": true
-    },
-    "gpt-5-mini": {
-      "description": "GPT-5 高效版，速度更快且成本更低，適合明確定義的任務",
-      "no_temperature": true,
-      "reasoning_effort": true
-    },
-    "gpt-5-nano": {
-      "description": "GPT-5 最輕量版，專為摘要與分類設計，延遲與成本最低",
-      "no_temperature": true,
-      "reasoning_effort": true
-    },
-    "gpt-4.1": {
-      "description": "非推理旗艦模型，指令遵循與工具呼叫最佳化，低延遲快速推理",
-      "no_temperature": true
-    },
-    "gpt-4o": { "description": "多模態旗艦模型，支援文字、圖像與音訊輸入" },
-    "gpt-5.3-codex": {
-      "description": "GPT-5.3 Codex，強化程式生成與 Agentic coding 能力",
-      "no_temperature": true
-    },
-    "gpt-5.2-codex": {
-      "description": "GPT-5.2 Codex，穩定的程式生成模型",
-      "no_temperature": true
-    },
-    "gpt-5.1-codex-max": {
-      "description": "GPT-5.1 Codex Max，最大上下文程式生成版本",
-      "no_temperature": true
-    },
-    "gpt-5.1-codex": {
-      "description": "GPT-5.1 Codex，適合程式補全與 Agentic 任務",
-      "no_temperature": true
-    },
-    "gpt-5.1-codex-mini": {
-      "description": "GPT-5.1 Codex Mini，輕量程式生成，低延遲",
-      "no_temperature": true
-    },
-    "gpt-5-codex": {
-      "description": "GPT-5 Codex，基礎程式生成模型",
-      "no_temperature": true
-    }
+  "gpt-5.5": {
+    "description": "OpenAI 最新旗艦模型，可調推理深度（low／medium／high／xhigh），1.05M 上下文",
+    "no_temperature": true,
+    "reasoning_effort": true
+  },
+  "gpt-5.4": {
+    "description": "前代旗艦推理模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
+  },
+  "gpt-5.4-mini": {
+    "description": "GPT-5.4 高效版，保留超長上下文與電腦控制能力，速度更快且成本更低"
+  },
+  "gpt-5.4-nano": {
+    "description": "GPT-5.4 最輕量版，超長上下文支援，專為低延遲與高吞吐場景設計"
+  },
+  "gpt-5.2-codex": {
+    "description": "GPT-5.2 Codex，穩定的程式生成模型",
+    "no_temperature": true
+  },
+  "gpt-5.1-codex-max": {
+    "description": "GPT-5.1 Codex Max，最大上下文程式生成版本",
+    "no_temperature": true
+  },
+  "gpt-5.1-codex": {
+    "description": "GPT-5.1 Codex，適合程式補全與 Agentic 任務",
+    "no_temperature": true
+  },
+  "gpt-5.1-codex-mini": {
+    "description": "GPT-5.1 Codex Mini，輕量程式生成，低延遲",
+    "no_temperature": true
+  },
+  "gpt-5": {
+    "description": "智慧推理模型，支援可配置推理深度，適合程式與 Agentic 任務",
+    "no_temperature": true,
+    "reasoning_effort": true
+  },
+  "gpt-5-codex": {
+    "description": "GPT-5 Codex，基礎程式生成模型",
+    "no_temperature": true
+  },
+  "gpt-5-mini": {
+    "description": "GPT-5 高效版，速度更快且成本更低，適合明確定義的任務",
+    "no_temperature": true,
+    "reasoning_effort": true
+  },
+  "gpt-5-nano": {
+    "description": "GPT-5 最輕量版，專為摘要與分類設計，延遲與成本最低",
+    "no_temperature": true,
+    "reasoning_effort": true
   }
 }
