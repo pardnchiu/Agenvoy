@@ -240,7 +240,7 @@ func setSummaryCron() {
 				continue
 			}
 			bgCtx := context.Background()
-			summaryAgent := exec.SelectAgent(bgCtx, host.Planner(), host.Registry(), "[summary] 整理對話摘要，選擇最輕量可完成任務的模型", false, sid)
+			summaryAgent := exec.SelectAgent(bgCtx, host.Planner(), host.Registry(), "[summary] background summary cron", false, sid)
 			summary.Generate(bgCtx, summaryAgent, sid, summaryHistories)
 			slog.Info("summary done",
 				slog.String("session", sid))

@@ -21,7 +21,7 @@ import (
 const (
 	path      = "https://lite.duckduckgo.com/lite/"
 	ttl       = 300
-	ddgMinGap = 1 * time.Second
+	ddgMinGap = 2 * time.Second
 )
 
 var (
