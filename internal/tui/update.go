@@ -60,6 +60,9 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case tea.KeyShiftTab:
+			if t.running {
+				return t, nil
+			}
 			return t.logMode(t.mode == cliMode)
 
 		case tea.KeyUp:
