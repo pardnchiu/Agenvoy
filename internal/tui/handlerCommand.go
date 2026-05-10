@@ -10,6 +10,8 @@ type SessionSelect struct {
 	id string
 }
 
+type SessionNew struct{}
+
 func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 	parts := strings.Fields(cmd)
 	switch parts[0] {

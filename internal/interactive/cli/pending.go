@@ -7,12 +7,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/manifoldco/promptui"
 	"golang.org/x/term"
 
 	"github.com/pardnchiu/agenvoy/internal/pending"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func NewPending(ctx context.Context) {
@@ -49,7 +49,7 @@ func process(id string, req pending.Request, reader *bufio.Reader) {
 
 	switch req.Kind {
 	case pending.KindToolConfirm:
-		pending.Resolve(id, runToolConfirm(req))
+		pending.Resolve(id, runToolConfirm(req, reader))
 	case pending.KindAskUser:
 		pending.Resolve(id, runAskUser(req, reader))
 	default:
@@ -57,23 +57,33 @@ func process(id string, req pending.Request, reader *bufio.Reader) {
 	}
 }
 
-func runToolConfirm(req pending.Request) pending.Reply {
-	if req.ToolName == "run_command" {
-		writeStdoutLine(ansiYellow + fmt.Sprintf("[$] [%s] %s", time.Now().Format("15:04:05"), printLogCommand(req.ToolArgs)) + ansiReset)
-		dollarLinePending.Store(true)
+func runToolConfirm(req pending.Request, reader *bufio.Reader) pending.Reply {
+	display := utils.FormatTool(req.ToolName, req.ToolArgs)
+	if display == "" {
+		display = req.ToolArgs
 	}
+	writeStdoutLine(ansiYellow + fmt.Sprintf("[$] %s: %s", req.ToolName, display) + ansiReset)
+	dollarLinePending.Store(true)
 	prompt := promptui.Select{
 		Label:        fmt.Sprintf("Run %s?", req.ToolName),
-		Items:        []string{"Yes", "Skip", "Stop"},
-		Size:         3,
+		Items:        []string{"Yes", "Yes, don't ask again", "No", "No, with reason", "Stop"},
+		Size:         5,
 		HideSelected: true,
 	}
 	idx, _, err := prompt.Run()
 	switch {
-	case err != nil || idx == 2:
+	case err != nil || idx == 4:
 		return pending.Reply{Approve: false, Error: fmt.Errorf("user stopped")}
-	case idx == 1:
+	case idx == 3:
+		reason, readErr := askInput(reader, "Reason (Enter to skip without reason)")
+		if readErr != nil {
+			return pending.Reply{Approve: false, Skip: true}
+		}
+		return pending.Reply{Approve: false, Skip: true, Reason: strings.TrimSpace(reason)}
+	case idx == 2:
 		return pending.Reply{Approve: false, Skip: true}
+	case idx == 1:
+		return pending.Reply{Approve: true, Remember: true}
 	default:
 		return pending.Reply{Approve: true}
 	}

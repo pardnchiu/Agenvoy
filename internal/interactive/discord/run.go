@@ -87,7 +87,13 @@ func run(ctx context.Context, dcBot *discordTypes.DiscordBot, dcSession *discord
 		utils.EventLog("[Discord]", e, session.ID, "")
 		switch e.Type {
 		case agentTypes.EventText:
-			replyText = e.Text
+			if replyText != "" {
+				replyText += "\n"
+			}
+			replyText += e.Text
+
+		case agentTypes.EventTextDone:
+			break
 
 		case agentTypes.EventExecError:
 			slog.Warn("EventExecError",

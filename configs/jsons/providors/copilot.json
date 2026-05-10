@@ -1,75 +1,74 @@
 {
-  "default": "gpt-4.1",
-  "models": {
-    "gpt-5.4": {
-      "description": "OpenAI 最新旗艦模型，支援多層次推理深度，具備原生電腦控制與超長上下文"
-    },
-    "gpt-5.4-mini": {
-      "description": "GPT-5.4 高效版，接近旗艦 coding/computer-use 表現，速度為 GPT-5 mini 2x+，適合 subagent executor 與高吞吐工作負載"
-    },
-    "gpt-5.3-codex": {
-      "description": "GPT-5.3 Codex，強化程式生成與 Agentic coding 能力",
-      "no_temperature": true
-    },
-    "gpt-5.2-codex": {
-      "description": "GPT-5.2 Codex，穩定的程式生成模型",
-      "no_temperature": true
-    },
-    "gpt-5.1-codex-max": {
-      "description": "GPT-5.1 Codex Max，最大上下文程式生成版本",
-      "no_temperature": true
-    },
-    "gpt-5.1-codex": {
-      "description": "GPT-5.1 Codex，適合程式補全與 Agentic 任務",
-      "no_temperature": true
-    },
-    "gpt-5.1-codex-mini": {
-      "description": "GPT-5.1 Codex Mini，輕量程式生成，低延遲",
-      "no_temperature": true
-    },
-    "gpt-5-mini": {
-      "description": "GPT-5 高效版，速度更快且成本更低，適合明確定義的任務",
-      "no_temperature": true,
-      "reasoning_effort": true
-    },
-    "gpt-4.1": {
-      "description": "非推理旗艦模型，指令遵循與工具呼叫最佳化，低延遲快速推理"
-    },
-    "gpt-4o": { "description": "多模態旗艦模型，支援文字、圖像與音訊輸入" },
-    "claude-sonnet-4.6": {
-      "description": "效能與速度平衡，適合多數生產環境",
-      "no_temperature": true
-    },
-    "claude-opus-4.6": {
-      "description": "最強大的 Claude 模型，適合複雜推理與長篇任務",
-      "no_temperature": true
-    },
-    "claude-opus-4.5": {
-      "description": "高效能 Claude 模型，適合高要求任務",
-      "no_temperature": true
-    },
-    "claude-sonnet-4.5": {
-      "description": "穩定的中階模型，具備強大程式碼與分析能力",
-      "no_temperature": true
-    },
-    "claude-haiku-4.5": {
-      "description": "輕量模型，適合簡單任務，延遲極低",
-      "no_temperature": true
-    },
-    "gemini-3.1-pro-preview": {
-      "description": "Gemini 3.1 旗艦模型，具備強大推理與 Agentic 程式能力",
-      "no_temperature": true
-    },
-    "gemini-3-pro-preview": {
-      "description": "Gemini 3 旗艦模型，強化多步驟推理與工具呼叫能力",
-      "no_temperature": true
-    },
-    "gemini-2.5-pro": {
-      "description": "Google 最強大的多模態模型，支援超長上下文與深度推理"
-    },
-    "gemini-3-flash-preview": {
-      "description": "Gemini 3 Flash，支援可配置思考深度，適合結構化輸出與工具呼叫",
-      "no_temperature": true
-    }
+  "gpt-5-mini": {
+    "description": "Mid-tier reasoning, faster and cheaper, suited for well-defined tasks",
+    "no_temperature": true,
+    "reasoning_effort": true
+  },
+  "gpt-5.2-codex": {
+    "description": "Stable code generation",
+    "no_temperature": true
+  },
+  "gpt-5.2": {
+    "description": "Reasoning model with configurable depth",
+    "no_temperature": true,
+    "reasoning_effort": true
+  },
+  "gpt-5.3-codex": {
+    "description": "Code generation and agentic tasks",
+    "no_temperature": true
+  },
+  "gpt-5.4-mini": {
+    "description": "Extra-long context with computer use, efficient and low cost"
+  },
+  "gpt-5.4": {
+    "description": "Multi-level reasoning depth, native computer use, extra-long context"
+  },
+  "gpt-5.5": {
+    "description": "Configurable reasoning depth (low/medium/high/xhigh), 1.05M context; requires Copilot Pro+ or higher",
+    "no_temperature": true,
+    "reasoning_effort": true
+  },
+  "gpt-4o-mini": {
+    "description": "Compact multimodal, low latency and cost"
+  },
+  "gpt-4o": {
+    "description": "Multimodal flagship with text, image, and audio input"
+  },
+  "gpt-4.1": {
+    "description": "Non-reasoning instruction-tuned model with low-latency tool calling"
+  },
+  "claude-haiku-4.5": {
+    "description": "Lightweight, lowest latency, suited for simple tasks",
+    "no_temperature": true
+  },
+  "claude-sonnet-4.5": {
+    "description": "Balanced with strong coding and analysis capability",
+    "no_temperature": true
+  },
+  "claude-opus-4.5": {
+    "description": "High capability for demanding reasoning workloads; requires Copilot Pro+ or higher",
+    "no_temperature": true
+  },
+  "claude-sonnet-4.6": {
+    "description": "Balanced performance with adaptive thinking",
+    "no_temperature": true
+  },
+  "claude-opus-4.7": {
+    "description": "Strongest reasoning capability with adaptive thinking; requires Copilot Pro+ or higher",
+    "no_temperature": true
+  },
+  "gemini-2.5-pro": {
+    "description": "Strong multimodal with extra-long context and deep reasoning"
+  },
+  "gemini-3-flash-preview": {
+    "description": "Mid-tier reasoning balancing quality and cost",
+    "no_temperature": true
+  },
+  "gemini-3.1-pro-preview": {
+    "description": "Flagship reasoning and agentic coding capability",
+    "no_temperature": true
+  },
+  "grok-code-fast-1": {
+    "description": "Fast code-focused model optimized for agentic coding"
   }
 }

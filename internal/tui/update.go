@@ -60,6 +60,9 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case tea.KeyShiftTab:
+			if t.running {
+				return t, tea.Println(hintStyle.Render("⎯ is running · shift+tab disabled"))
+			}
 			return t.logMode(t.mode == cliMode)
 
 		case tea.KeyUp:
@@ -153,6 +156,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.cancelExec = nil
 		t.activity = ""
 		t.runTarget = ""
+		t.streaming = false
 		if t.currentSessionID != "" {
 			t.currentSessionName, _ = session.GetBot(t.currentSessionID)
 		}
@@ -180,6 +184,10 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case SessionSelect:
 		next, cmd := t.runCommandSwitch(msg.id)
+		return next, cmd
+
+	case SessionNew:
+		next, cmd, _ := t.commandNew(nil)
 		return next, cmd
 
 	case ModelRemove:

@@ -118,3 +118,13 @@ func InputHistoryPath(sessionID string) string {
 func McpSessionPath(sessionID string) string {
 	return filepath.Join(SessionsDir, sessionID, "mcp.json")
 }
+
+const AllowListRelPath = ".agenvoy/allow_list"
+
+func AllowListPath(workDir string) string {
+	return filepath.Join(workDir, AllowListRelPath)
+}
+
+func AllowListDir(workDir string) string {
+	return filepath.Join(workDir, filepath.Dir(AllowListRelPath))
+}

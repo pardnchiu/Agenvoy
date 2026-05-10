@@ -73,7 +73,7 @@ func SelectAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.
 
 	userContent := strings.TrimSpace(trimInput)
 	if hasSkill {
-		userContent = "[執行 Skill] " + userContent
+		userContent = "[Run Skill] " + userContent
 	}
 
 	messages := []agentTypes.Message{
@@ -82,12 +82,8 @@ func SelectAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.
 			Content: strings.TrimSpace(configs.AgentSelector),
 		},
 		{
-			Role: "user",
-			Content: fmt.Sprintf(
-				"Available agents:\n%s\nUser request: %s",
-				string(agentJson),
-				userContent,
-			),
+			Role:    "user",
+			Content: fmt.Sprintf("Available agents:\n%s\nUser request: %s", string(agentJson), userContent),
 		},
 	}
 

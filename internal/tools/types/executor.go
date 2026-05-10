@@ -26,7 +26,6 @@ type Executor struct {
 	APIToolbox     *apiAdapter.Translator
 	ScriptToolbox  ScriptToolExecutor
 
-	ActiveSkill  *skill.Skill
 	SkillScanner *skill.SkillScanner
 }
 

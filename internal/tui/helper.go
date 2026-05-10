@@ -23,6 +23,9 @@ func activityVerb(activity string) string {
 	case activity == "":
 		return "Thinking"
 
+	case activity == "responding":
+		return "Responsing"
+
 	case activity == "selecting agent…":
 		return "Selecting agent"
 

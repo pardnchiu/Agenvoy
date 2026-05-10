@@ -45,6 +45,8 @@ func sendResult(c *gin.Context, sessionID string, input string, events <-chan ag
 				sb.WriteByte('\n')
 			}
 			sb.WriteString(event.Text)
+		case agentTypes.EventTextDone:
+
 		case agentTypes.EventDone:
 			resp.Model = event.Model
 			resp.Usage = event.Usage

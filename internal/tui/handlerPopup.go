@@ -2,9 +2,11 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pardnchiu/agenvoy/internal/pending"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 type popupType int
@@ -29,7 +31,8 @@ type Popup struct {
 	cursor  int
 	multi   map[int]bool
 
-	input string
+	input          string
+	skipWithReason bool
 
 	questions   []pending.Question
 	questionIdx int
@@ -88,6 +91,13 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		t = t.closePopup()
 
 	case tea.KeyEnter:
+		if p.cursor == 3 {
+			p.kind = popupText
+			p.skipWithReason = true
+			p.title = "Reason (Enter to skip without reason):"
+			p.input = ""
+			return t, nil
+		}
 		var reply pending.Reply
 		switch p.cursor {
 		case 0:
@@ -97,11 +107,17 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		case 1:
 			reply = pending.Reply{
+				Approve:  true,
+				Remember: true,
+			}
+
+		case 2:
+			reply = pending.Reply{
 				Approve: false,
 				Skip:    true,
 			}
 
-		case 2:
+		case 4:
 			reply = pending.Reply{
 				Approve: false,
 				Error:   fmt.Errorf("user stopped"),
@@ -109,29 +125,6 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		pending.Resolve(p.pendingId, reply)
 		t = t.closePopup()
-
-	default:
-		if len(msg.Runes) == 1 {
-			switch msg.Runes[0] {
-			case 'y', 'Y':
-				pending.Resolve(p.pendingId, pending.Reply{
-					Approve: true,
-				})
-				t = t.closePopup()
-			case 's', 'S':
-				pending.Resolve(p.pendingId, pending.Reply{
-					Approve: false,
-					Skip:    true,
-				})
-				t = t.closePopup()
-			case 'n', 'N':
-				pending.Resolve(p.pendingId, pending.Reply{
-					Approve: false,
-					Error:   fmt.Errorf("user stopped"),
-				})
-				t = t.closePopup()
-			}
-		}
 	}
 	return t, nil
 }
@@ -223,6 +216,15 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		t = t.closePopup()
 
 	case tea.KeyEnter:
+		if p.skipWithReason {
+			pending.Resolve(p.pendingId, pending.Reply{
+				Approve: false,
+				Skip:    true,
+				Reason:  strings.TrimSpace(p.input),
+			})
+			t = t.closePopup()
+			return t, nil
+		}
 		resolved, reply := p.advanceOrResolve(p.input)
 		if resolved {
 			pending.Resolve(p.pendingId, reply)
@@ -245,14 +247,20 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func newPopup(id string, req pending.Request) *Popup {
 	switch req.Kind {
 	case pending.KindToolConfirm:
+		display := utils.FormatTool(req.ToolName, req.ToolArgs)
+		if display == "" {
+			display = req.ToolArgs
+		}
 		return &Popup{
 			pendingId: id,
 			kind:      popupConfirm,
 			title:     fmt.Sprintf("Run %s?", req.ToolName),
-			subtitle:  truncate(req.ToolArgs, 200),
+			subtitle:  truncate(display, 200),
 			options: []string{
 				"Yes",
-				"Skip",
+				"Yes, don't ask again",
+				"No",
+				"No, with reason",
 				"Stop",
 			},
 		}

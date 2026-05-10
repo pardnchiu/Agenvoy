@@ -77,6 +77,30 @@ func (t TUI) handleAgentEvent(ev agentTypes.Event) (tea.Model, tea.Cmd) {
 	case agentTypes.EventSummaryGenerate:
 		t.activity = "summarizing…"
 
+	case agentTypes.EventText:
+		if ev.Source == "" {
+			line := ev.Text
+			var rendered string
+			if !t.streaming {
+				t.streaming = true
+				t.activity = "responding"
+				prefix := systemStyle.Render("⏺ ")
+				if strings.TrimSpace(t.runTarget) != "" {
+					prefix = warnStyle.Render("⏺ [" + t.runTarget + "] ")
+				}
+				rendered = prefix + line
+			} else {
+				rendered = "  " + line
+			}
+			return t, tea.Println(rendered)
+		}
+
+	case agentTypes.EventTextDone:
+		if ev.Source == "" {
+			t.streaming = false
+		}
+		return t, nil
+
 	case agentTypes.EventDone:
 		if ev.Usage != nil {
 			t.tokens = ev.Usage.Input + ev.Usage.Output

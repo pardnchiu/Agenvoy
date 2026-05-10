@@ -15,11 +15,11 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-const ToolName = "activate_skill"
-
-const maxDescLen = 200
-
-const staticDescription = "Activate a skill by exact name from the '## Skills' section of the system prompt; pass 'none' to clear."
+const (
+	ToolName          = "activate_skill"
+	maxDescLen        = 200
+	staticDescription = "Fetch a skill's reference material by exact name; treat the result like any other tool output — consult, integrate what fits, ignore what doesn't."
+)
 
 type params struct {
 	SkillName string `json:"skill"`
@@ -37,7 +37,7 @@ func registSelectSkill() {
 			"properties": map[string]any{
 				"skill": map[string]any{
 					"type":        "string",
-					"description": "Exact skill name from the '## Skills' section of the system prompt, or 'none' to clear.",
+					"description": "Exact skill name from the '## Skills' section of the system prompt.",
 				},
 			},
 			"required": []string{"skill"},
@@ -89,32 +89,16 @@ func handle(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (str
 		return availableList(e.SkillScanner, "skill is required"), nil
 	}
 
-	if strings.EqualFold(name, "none") {
-		e.ActiveSkill = nil
-		return "active skill cleared", nil
-	}
-
 	s, ok := e.SkillScanner.Skills.ByName[name]
 	if !ok {
 		return availableList(e.SkillScanner, fmt.Sprintf("skill not found: %q", name)), nil
 	}
 
-	e.ActiveSkill = s
-	return RenderActivation(s), nil
+	return RenderReference(s), nil
 }
 
 func RenderActivation(s *skill.Skill) string {
-	return renderSkill(s)
-}
-
-func renderSkill(s *skill.Skill) string {
-	content := s.Content
-	for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
-		resolved := filepath.Join(s.Path, prefix)
-		if go_pkg_filesystem_reader.Exists(resolved) {
-			content = strings.ReplaceAll(content, prefix, resolved+string(filepath.Separator))
-		}
-	}
+	content := resolveSkillPaths(s)
 
 	var b strings.Builder
 	fmt.Fprintf(&b, "active skill: %s\nskill directory: %s\n\n---\n\n", s.Name, s.Path)
@@ -124,6 +108,29 @@ func renderSkill(s *skill.Skill) string {
 	}
 	b.WriteString(content)
 	return b.String()
+}
+
+// RenderReference returns the skill body without the skill_execution.md
+// preamble. Used by the `activate_skill` tool path so the LLM receives the
+// skill content as ordinary reference material rather than binding directives.
+func RenderReference(s *skill.Skill) string {
+	content := resolveSkillPaths(s)
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "skill: %s\nskill directory: %s\n\n---\n\n", s.Name, s.Path)
+	b.WriteString(content)
+	return b.String()
+}
+
+func resolveSkillPaths(s *skill.Skill) string {
+	content := s.Content
+	for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
+		resolved := filepath.Join(s.Path, prefix)
+		if go_pkg_filesystem_reader.Exists(resolved) {
+			content = strings.ReplaceAll(content, prefix, resolved+string(filepath.Separator))
+		}
+	}
+	return content
 }
 
 func availableList(scanner *skill.SkillScanner, reason string) string {

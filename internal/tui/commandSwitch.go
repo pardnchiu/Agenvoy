@@ -34,6 +34,9 @@ func (t TUI) commandSwitch(parts []string) (TUI, tea.Cmd, bool) {
 		return t, tea.Println("\n" + hintStyle.Render("no sessions available")), true
 	}
 	popup.onConfirm = func(chosen string) any {
+		if chosen == "" {
+			return SessionNew{}
+		}
 		return SessionSelect{id: chosen}
 	}
 	t.popup = popup
@@ -98,9 +101,6 @@ func listSessions() []Session {
 
 func popupSwitch(sid string) *Popup {
 	sessions := listSessions()
-	if len(sessions) == 0 {
-		return nil
-	}
 
 	sort.SliceStable(sessions, func(i, j int) bool {
 		if sessions[i].id == sid && sessions[j].id != sid {
@@ -112,8 +112,8 @@ func popupSwitch(sid string) *Popup {
 		return sessions[i].id < sessions[j].id
 	})
 
-	names := make([]string, len(sessions))
-	sids := make([]string, len(sessions))
+	names := make([]string, 0, len(sessions)+1)
+	sids := make([]string, 0, len(sessions)+1)
 	cursor := 0
 	for i, e := range sessions {
 		short := utils.ShortenSessionID(e.id)
@@ -125,9 +125,12 @@ func popupSwitch(sid string) *Popup {
 			label += "  [current]"
 			cursor = i
 		}
-		names[i] = label
-		sids[i] = e.id
+		names = append(names, label)
+		sids = append(sids, e.id)
 	}
+
+	names = append(names, "(new session)")
+	sids = append(sids, "")
 
 	return &Popup{
 		kind:    popupSingleSelect,

@@ -7,11 +7,6 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 )
 
-type ProviderItem struct {
-	Default string               `json:"default"`
-	Models  map[string]ModelItem `json:"models"`
-}
-
 type ModelItem struct {
 	Description     string `json:"description"`
 	NoTemperature   bool   `json:"no_temperature,omitempty"`
@@ -58,14 +53,14 @@ func ThinkingBudget(level string) int {
 	}
 }
 
-func parse(data []byte) ProviderItem {
-	var cfg ProviderItem
-	json.Unmarshal(data, &cfg)
-	return cfg
+func parse(data []byte) map[string]ModelItem {
+	var m map[string]ModelItem
+	json.Unmarshal(data, &m)
+	return m
 }
 
-func providers() map[string]ProviderItem {
-	return map[string]ProviderItem{
+func providers() map[string]map[string]ModelItem {
+	return map[string]map[string]ModelItem{
 		"claude":  parse(configs.ClaudeModels),
 		"codex":   parse(configs.CodexModels),
 		"copilot": parse(configs.CopilotModels),
@@ -75,32 +70,19 @@ func providers() map[string]ProviderItem {
 	}
 }
 
-func Default(provider string) string {
-	return providers()[provider].Default
-}
-
 func Get(provider, model string) ModelItem {
-	cfg, exist := providers()[provider]
+	models, exist := providers()[provider]
 	if !exist {
 		return ModelItem{}
 	}
-
-	if info, exist := cfg.Models[model]; exist {
-		return info
-	}
-
-	if info, exist := cfg.Models[cfg.Default]; exist {
+	if info, exist := models[model]; exist {
 		return info
 	}
 	return ModelItem{}
 }
 
 func Models(provider string) map[string]ModelItem {
-	cfg, exist := providers()[provider]
-	if !exist {
-		return nil
-	}
-	return cfg.Models
+	return providers()[provider]
 }
 
 func SupportTemperature(providerName, model string) bool {

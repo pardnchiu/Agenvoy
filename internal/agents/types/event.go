@@ -13,6 +13,7 @@ func (e EventType) MarshalJSON() ([]byte, error) {
 
 const (
 	EventText EventType = iota
+	EventTextDone
 	EventSkillResult
 	EventAgentSelect
 	EventAgentResult
@@ -33,6 +34,8 @@ func (e EventType) String() string {
 	switch e {
 	case EventText:
 		return "EventText"
+	case EventTextDone:
+		return "EventTextDone"
 	case EventSkillResult:
 		return "EventSkillResult"
 	case EventAgentSelect:

@@ -76,22 +76,21 @@ func runAdd() {
 	}
 
 	p := providers[index]
-	defaultModel := provider.Default(p.name())
 
 	var model, description string
 	switch p.name() {
 	case "copilot":
-		model, description = addCopilot(p.Prefix, defaultModel)
+		model, description = addCopilot(p.Prefix)
 
 	case "compat":
 		model, description = addCompat()
 
 	case "codex":
-		model, description = addOpenAICodex(p.Prefix, defaultModel)
+		model, description = addOpenAICodex(p.Prefix)
 
 	default:
 		addAPIKey(p.label(), p.envKey())
-		model, description = getModelName(p.Prefix, defaultModel)
+		model, description = getModelName(p.Prefix)
 	}
 
 	if model != "" {
@@ -99,7 +98,26 @@ func runAdd() {
 	}
 }
 
-func addCopilot(prefix, defaultModel string) (string, string) {
+func addCopilot(prefix string) (string, string) {
+	if copilot.HasToken() {
+		confirm := promptui.Select{
+			Label:        "Copilot token exists, re-login?",
+			Items:        []string{"No", "Yes"},
+			HideSelected: true,
+		}
+		idx, _, err := confirm.Run()
+		if err != nil {
+			os.Exit(1)
+		}
+		if idx == 0 {
+			return getModelName(prefix)
+		}
+		if err := copilot.ClearToken(); err != nil {
+			slog.Error("copilot.ClearToken", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 	if err := copilot.Authenticate(ctx); err != nil {
@@ -107,7 +125,7 @@ func addCopilot(prefix, defaultModel string) (string, string) {
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	return getModelName(prefix, defaultModel)
+	return getModelName(prefix)
 }
 
 func addCompat() (string, string) {
@@ -181,7 +199,7 @@ func addCompat() (string, string) {
 	}
 
 	prefix := fmt.Sprintf("compat[%s]@", providor)
-	model, _ := getModelName(prefix, "")
+	model, _ := getModelName(prefix)
 	return model, ""
 }
 
@@ -226,14 +244,14 @@ func addAPIKey(label, envKey string) {
 	fmt.Printf("[*] %s saved\n", envKey)
 }
 
-func getModelName(prefix, defaultModel string) (string, string) {
+func getModelName(prefix string) (string, string) {
 	p := strings.TrimSuffix(prefix, "@")
 	if idx := strings.Index(p, "["); idx != -1 {
 		p = ""
 	}
 
 	if p != "" {
-		if model, desc, ok := selectModelFromList(prefix, p, defaultModel); ok {
+		if model, desc, ok := selectModelFromList(prefix, p); ok {
 			return model, desc
 		}
 	}
@@ -252,7 +270,7 @@ func getModelName(prefix, defaultModel string) (string, string) {
 	return prefix + model, ""
 }
 
-func selectModelFromList(prefix, providerName, defaultModel string) (model, desc string, ok bool) {
+func selectModelFromList(prefix, providerName string) (model, desc string, ok bool) {
 	models := provider.Models(providerName)
 	if len(models) == 0 {
 		return "", "", false
@@ -263,18 +281,20 @@ func selectModelFromList(prefix, providerName, defaultModel string) (model, desc
 		info provider.ModelItem
 	}
 
-	entries := make([]entry, 0, len(models))
-	if info, exists := models[defaultModel]; exists {
-		entries = append(entries, entry{defaultModel, info})
-	}
-	others := make([]string, 0, len(models))
+	names := make([]string, 0, len(models))
 	for name := range models {
-		if name != defaultModel {
-			others = append(others, name)
-		}
+		names = append(names, name)
 	}
-	sort.Strings(others)
-	for _, name := range others {
+	sort.SliceStable(names, func(i, j int) bool {
+		pi, pj := isPreviewModel(names[i]), isPreviewModel(names[j])
+		if pi != pj {
+			return !pi
+		}
+		return names[i] < names[j]
+	})
+
+	entries := make([]entry, 0, len(names))
+	for _, name := range names {
 		entries = append(entries, entry{name, models[name]})
 	}
 
@@ -383,7 +403,8 @@ func runPlanner() {
 
 func upsertModel(name, defaultDesc string) {
 	descriptionInput := promptui.Prompt{
-		Label: "Model description",
+		Label:   "Model description",
+		Default: defaultDesc,
 	}
 	description, err := descriptionInput.Run()
 	if err != nil {
@@ -440,7 +461,7 @@ func upsertModel(name, defaultDesc string) {
 	}
 }
 
-func addOpenAICodex(prefix, defaultModel string) (string, string) {
+func addOpenAICodex(prefix string) (string, string) {
 	if openaicodex.HasToken() {
 		confirm := promptui.Select{
 			Label:        "OpenAI Codex token exists, re-login?",
@@ -452,7 +473,7 @@ func addOpenAICodex(prefix, defaultModel string) (string, string) {
 			os.Exit(1)
 		}
 		if idx == 0 {
-			return getModelName(prefix, defaultModel)
+			return getModelName(prefix)
 		}
 		if err := openaicodex.ClearToken(); err != nil {
 			slog.Error("openaicodex.ClearToken", slog.String("error", err.Error()))
@@ -476,7 +497,11 @@ func addOpenAICodex(prefix, defaultModel string) (string, string) {
 		os.Exit(1)
 	}
 
-	return getModelName(prefix, defaultModel)
+	return getModelName(prefix)
+}
+
+func isPreviewModel(name string) bool {
+	return strings.Contains(name, "-preview") || strings.Contains(name, "-experimental")
 }
 
 type brokenModel struct {

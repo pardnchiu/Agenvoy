@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -23,10 +22,11 @@ const (
 )
 
 func New(model ...string) (*Agent, error) {
-	usedModel := provider.Default("claude")
-	if len(model) > 0 && strings.HasPrefix(model[0], prefix) {
-		usedModel = strings.TrimPrefix(model[0], prefix)
+	if len(model) == 0 || !strings.HasPrefix(model[0], prefix) {
+		return nil, fmt.Errorf("claude.New: model arg required with %q prefix", prefix)
 	}
+	usedModel := strings.TrimPrefix(model[0], prefix)
+
 	apiKey := keychain.Get("CLAUDE_API_KEY")
 	if apiKey == "" {
 		return nil, fmt.Errorf("keychain.Get: CLAUDE_API_KEY is required")
@@ -50,8 +50,13 @@ func (a *Agent) Name() string {
 }
 
 func (a *Agent) maxOutputTokens() int {
-	if a.model == "claude-opus-4-6" {
+	switch {
+	case strings.HasPrefix(a.model, "claude-opus-4-6"),
+		strings.HasPrefix(a.model, "claude-opus-4-7"):
 		return 128000
+	case strings.HasPrefix(a.model, "claude-opus-4-1-"),
+		strings.HasPrefix(a.model, "claude-opus-4-2"):
+		return 32000
 	}
 	return 64000
 }

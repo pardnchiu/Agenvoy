@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -156,8 +157,19 @@ func (t TUI) sessionName() string {
 	}
 
 	short := utils.ShortenSessionID(sid)
+	base := short
 	if name != "" && name != sid {
-		return fmt.Sprintf("%s (%s)", name, short)
+		base = fmt.Sprintf("%s (%s)", name, short)
 	}
-	return short
+
+	s := sessionManager.ReadStatus(sid)
+	model := strings.TrimSpace(s.Model)
+	reasoning := strings.TrimSpace(s.Reasoning)
+	if model == "" {
+		model = sessionManager.StatusModel
+	}
+	if reasoning == "" {
+		reasoning = sessionManager.StatusReasoning
+	}
+	return fmt.Sprintf("%s (%s/%s)", base, model, reasoning)
 }

@@ -83,6 +83,7 @@ type TUI struct {
 	daemonStatus  string
 	discordStatus string
 	runTarget     string
+	streaming     bool
 
 	inputHistory    []string
 	inputHistoryIdx int

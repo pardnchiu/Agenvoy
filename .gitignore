@@ -6,6 +6,7 @@
 *.out
 .claude
 .wiki
+.agenvoy
 
 docker-compose.yml
 test/copilot_token.json

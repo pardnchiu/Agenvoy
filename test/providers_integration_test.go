@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -16,8 +15,17 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/nvidia"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/openai"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
+
+func TestMain(m *testing.M) {
+	if err := filesystem.Init(); err != nil {
+		fmt.Fprintf(os.Stderr, "filesystem.Init: %v\n", err)
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
 
 var minimalMessages = []agentTypes.Message{
 	{Role: "user", Content: "say ok"},
@@ -118,13 +126,8 @@ func TestProviderNvidia(t *testing.T) {
 }
 
 func TestProviderCopilot(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		t.Skip("cannot determine home dir")
-	}
-	tokenFile := filepath.Join(homeDir, ".config", "agenvoy", "copilot_token.json")
-	if _, err := os.Stat(tokenFile); os.IsNotExist(err) {
-		t.Skip("copilot_token.json not found, run agenvoy login copilot first")
+	if keychain.Get("agenvoy.copilot.token") == "" {
+		t.Skip("agenvoy.copilot.token not in keychain, run `agen model add` to authenticate")
 	}
 	for model := range provider.Models("copilot") {
 		model := model

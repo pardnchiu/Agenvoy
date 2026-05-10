@@ -13,28 +13,25 @@ func CallExternal(ctx context.Context, sessionID, agent, prompt string, readOnly
 	label := "external:" + agent
 
 	if !slices.Contains(external.Agents(), agent) {
-		msg := fmt.Sprintf("外部 agent %s 不可用（PATH 未偵測到對應 CLI binary）。", agent)
-		events <- agentTypes.Event{Type: agentTypes.EventText, Text: msg}
+		sendText(events, fmt.Sprintf("external agent %s unavailable (not found).", agent))
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: label}
 		return nil
 	}
 
 	if err := external.Check(agent); err != nil {
-		msg := fmt.Sprintf("外部 agent %s 不可用：%s", agent, err.Error())
-		events <- agentTypes.Event{Type: agentTypes.EventText, Text: msg}
+		sendText(events, fmt.Sprintf("external agent %s unavailable: %s", agent, err.Error()))
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: label}
 		return nil
 	}
 
 	out, err := external.Call(ctx, agent, prompt, readOnly)
 	if err != nil {
-		msg := fmt.Sprintf("外部呼叫失敗（%s）：%s", agent, err.Error())
-		events <- agentTypes.Event{Type: agentTypes.EventText, Text: msg}
+		sendText(events, fmt.Sprintf("failed to call external (%s): %s", agent, err.Error()))
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: label}
 		return nil
 	}
 
-	events <- agentTypes.Event{Type: agentTypes.EventText, Text: out}
+	sendText(events, out)
 	if sessionID != "" {
 		writeSessionHistEntry(sessionID, agentTypes.Message{
 			Role:    "assistant",
