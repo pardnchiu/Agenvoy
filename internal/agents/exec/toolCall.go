@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 
@@ -93,7 +94,8 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 
 		if !allowAll && !toolRegister.IsReadOnly(toolName) {
 			proceed := true
-			if pending.Active.Load() {
+			reason := ""
+			if pending.Active.Load() && !matchAllowList(getAllowList(ctx), toolName, toolArg) {
 				reply, err := pending.Ask(ctx, pending.Request{
 					Kind:      pending.KindToolConfirm,
 					SessionID: sessionData.ID,
@@ -104,17 +106,29 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 					proceed = false
 				} else {
 					proceed = reply.Approve
+					reason = reply.Reason
+					if reply.Approve && reply.Remember {
+						if err = appendAllowListRule(exec.WorkDir, toolName, toolArg); err != nil {
+							slog.Warn("appendAllowListRule",
+								slog.String("error", err.Error()))
+						}
+					}
 				}
 			}
 			if !proceed {
+				message := "Skipped by user"
+				if reason != "" {
+					message = fmt.Sprintf("Skipped by user. Reason: %s", reason)
+				}
 				events <- agentTypes.Event{
 					Type:     agentTypes.EventToolSkipped,
 					ToolName: toolName,
 					ToolArgs: toolArg,
 					ToolID:   toolID,
+					Text:     reason,
 				}
 				slots[i].state = slotSkipped
-				slots[i].preMsg = "Skipped by user"
+				slots[i].preMsg = message
 				continue
 			}
 		}

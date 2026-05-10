@@ -1,15 +1,14 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 const (
@@ -75,7 +74,7 @@ func Run(fn func(chan<- agentTypes.Event) error) error {
 			if removeCommandConfirm() {
 				fmt.Print("\033[F\033[2K")
 			}
-			writeStdoutLine(colorize(ev, fmt.Sprintf("%s[*] [%s] Tool: %s - ", soruce, time.Now().Format("15:04:05"), ev.ToolName)) + ansiGray + printLog(ev.ToolName, ev.ToolArgs) + ansiReset)
+			writeStdoutLine(colorize(ev, fmt.Sprintf("%s[*] [%s] Tool: %s - ", soruce, time.Now().Format("15:04:05"), ev.ToolName)) + ansiGray + utils.FormatTool(ev.ToolName, ev.ToolArgs) + ansiReset)
 
 		case agentTypes.EventToolResult:
 			if ev.ToolName == "ask_user" {
@@ -86,7 +85,7 @@ func Run(fn func(chan<- agentTypes.Event) error) error {
 			if removeCommandConfirm() {
 				fmt.Print("\033[F\033[2K")
 			}
-			writeStdoutLine(colorize(ev, fmt.Sprintf("%s[~] [%s] Skipped: %s - ", soruce, time.Now().Format("15:04:05"), ev.ToolName)) + ansiGray + printLog(ev.ToolName, ev.ToolArgs) + ansiReset)
+			writeStdoutLine(colorize(ev, fmt.Sprintf("%s[~] [%s] Skipped: %s - ", soruce, time.Now().Format("15:04:05"), ev.ToolName)) + ansiGray + utils.FormatTool(ev.ToolName, ev.ToolArgs) + ansiReset)
 
 		case agentTypes.EventText:
 			text := ev.Text
@@ -144,113 +143,6 @@ func Run(fn func(chan<- agentTypes.Event) error) error {
 	}
 
 	return execErr
-}
-
-func printLog(name, raw string) string {
-	if raw == "" {
-		return ""
-	}
-	var m map[string]any
-	if err := json.Unmarshal([]byte(raw), &m); err != nil {
-		return raw
-	}
-	pick := func(keys ...string) string {
-		for _, k := range keys {
-			if v, ok := m[k]; ok {
-				if s, ok := v.(string); ok && strings.TrimSpace(s) != "" {
-					return s
-				}
-			}
-		}
-		return ""
-	}
-	switch name {
-	case "invoke_subagent":
-		return printLogSubagent(m, pick)
-	case "activate_skill":
-		if s := pick("skill", "name"); s != "" {
-			return s
-		}
-	case "list_files":
-		dir := pick("dir", "path")
-		if dir == "" {
-			break
-		}
-		if r, ok := m["recursive"].(bool); ok && r {
-			return dir + " (recursive)"
-		}
-		return dir
-	case "read_file", "write_file", "patch_file", "glob_files", "read_image", "save_page_to_file":
-		if s := pick("path", "pattern", "save_to"); s != "" {
-			return s
-		}
-	case "search_web", "fetch_google_rss":
-		if q := pick("query", "keyword"); q != "" {
-			if tr := pick("time_range", "time"); tr != "" {
-				return fmt.Sprintf("%s (%s)", q, tr)
-			}
-			return q
-		}
-	case "fetch_yahoo_finance":
-		if sym := pick("symbol"); sym != "" {
-			if tr := pick("time_range"); tr != "" {
-				return fmt.Sprintf("%s (%s)", sym, tr)
-			}
-			return sym
-		}
-	case "fetch_page", "fetch_youtube_transcript":
-		if s := pick("link", "url"); s != "" {
-			return s
-		}
-	case "calculate":
-		if s := pick("expression"); s != "" {
-			return s
-		}
-	case "remember_error":
-		if s := pick("symptom", "cause", "action"); s != "" {
-			return s
-		}
-	case "search_error_memory", "search_conversation_history":
-		if s := pick("keyword", "query"); s != "" {
-			return s
-		}
-	case "run_command":
-		return printLogCommand(raw)
-	}
-	return raw
-}
-
-func printLogSubagent(_ map[string]any, pick func(...string) string) string {
-	label := pick("name", "session_id")
-	if label == "" {
-		label = "subagent"
-	}
-	if model := pick("model"); model != "" {
-		label = fmt.Sprintf("%s (%s)", label, model)
-	}
-	task := pick("task")
-	if task == "" {
-		return label
-	}
-	return fmt.Sprintf("%s: %s", label, oneLineReplacer.Replace(task))
-}
-
-func printLogCommand(raw string) string {
-	var p struct {
-		Argv []string `json:"argv"`
-	}
-	if err := json.Unmarshal([]byte(raw), &p); err != nil || len(p.Argv) == 0 {
-		return raw
-	}
-	parts := make([]string, len(p.Argv))
-	for i, a := range p.Argv {
-		if a == "" || strings.ContainsAny(a, " \t\n\"'\\") {
-			parts[i] = strconv.Quote(a)
-		} else {
-			parts[i] = a
-		}
-	}
-	return strings.Join(parts, " ")
 }
 
 func colorize(ev agentTypes.Event, line string) string {

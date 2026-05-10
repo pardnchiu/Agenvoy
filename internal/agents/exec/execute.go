@@ -83,14 +83,24 @@ type ExecData struct {
 }
 
 type (
-	allowAllCtxKey   struct{}
-	parentEventsKey  struct{}
-	parentWorkDirKey struct{}
+	allowAllCtxKey    struct{}
+	allowListRulesKey struct{}
+	parentEventsKey   struct{}
+	parentWorkDirKey  struct{}
 )
+
+func getAllowList(ctx context.Context) []allowListRule {
+	rules, _ := ctx.Value(allowListRulesKey{}).([]allowListRule)
+	return rules
+}
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
 	executeStart := time.Now()
 	ctx = context.WithValue(ctx, allowAllCtxKey{}, allowAll)
+
+	if !allowAll {
+		ctx = context.WithValue(ctx, allowListRulesKey{}, loadAllowList(data.WorkDir))
+	}
 
 	if events != nil {
 		ctx = context.WithValue(ctx, parentEventsKey{}, events)

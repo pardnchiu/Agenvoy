@@ -14,6 +14,7 @@ import (
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 const (
@@ -160,8 +161,8 @@ func formatActionEvent(ev agentTypes.Event) string {
 		return formatActionLine("assistant", flatten(text))
 	case agentTypes.EventToolCall:
 		body := ev.ToolName
-		if ev.ToolArgs != "" {
-			body = fmt.Sprintf("%s %s", body, flatten(ev.ToolArgs))
+		if display := utils.FormatTool(ev.ToolName, ev.ToolArgs); display != "" {
+			body = fmt.Sprintf("%s %s", body, flatten(display))
 		}
 		return formatActionLine("tool_call", body)
 	case agentTypes.EventToolResult:

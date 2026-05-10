@@ -40,10 +40,12 @@ type Request struct {
 }
 
 type Reply struct {
-	Approve bool
-	Skip    bool
-	Answers []any
-	Error   error
+	Approve  bool
+	Skip     bool
+	Remember bool
+	Reason   string
+	Answers  []any
+	Error    error
 }
 
 type entry struct {
