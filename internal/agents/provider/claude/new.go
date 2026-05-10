@@ -50,8 +50,13 @@ func (a *Agent) Name() string {
 }
 
 func (a *Agent) maxOutputTokens() int {
-	if a.model == "claude-opus-4-6" {
+	switch {
+	case strings.HasPrefix(a.model, "claude-opus-4-6"),
+		strings.HasPrefix(a.model, "claude-opus-4-7"):
 		return 128000
+	case strings.HasPrefix(a.model, "claude-opus-4-1-"),
+		strings.HasPrefix(a.model, "claude-opus-4-2"):
+		return 32000
 	}
 	return 64000
 }

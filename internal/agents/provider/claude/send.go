@@ -63,9 +63,11 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	requestBody := map[string]any{
 		"model":      a.model,
 		"max_tokens": a.maxOutputTokens(),
-		"system":     systemPrompts,
 		"messages":   newMessages,
 		"tools":      newTools,
+	}
+	if len(systemPrompts) > 0 {
+		requestBody["system"] = systemPrompts
 	}
 	switch thinkingType {
 	case "adaptive":
