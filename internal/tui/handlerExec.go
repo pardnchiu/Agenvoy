@@ -22,7 +22,7 @@ type agentExecDone struct {
 	err error
 }
 
-func runExec(parentCtx context.Context, input string, allowAll bool, workDir, sessionID string) {
+func runExec(parentCtx context.Context, input string, allowAll bool, workDir, sessionID string, webMode bool) {
 	ctx, cancel := context.WithCancel(parentCtx)
 	send(agentExec{cancel: cancel})
 
@@ -42,6 +42,7 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 			allowAll,
 			workDir,
 			sessionID,
+			webMode,
 		)
 		close(ch)
 		done <- err

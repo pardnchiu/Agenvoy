@@ -140,9 +140,9 @@ func (t TUI) sessionTag() string {
 	modeTag := lipgloss.NewStyle().Foreground(t.mode.color()).Render(t.mode.String())
 	parts := []string{modeTag}
 	if name := t.sessionName(); name != "" {
-		parts = append(parts, name)
+		parts = append(parts, hintStyle.Render(name))
 	}
-	return hintStyle.Render(strings.Join(parts, " · ") + "  ")
+	return strings.Join(parts, hintStyle.Render(" · ")) + hintStyle.Render("  ")
 }
 
 func (t TUI) sessionName() string {

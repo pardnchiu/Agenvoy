@@ -12,7 +12,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
-func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner, userInput string, imageInputs []string, fileInputs []string, events chan<- agentTypes.Event, allowAll bool, workDir, sessionID string) error {
+func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner, userInput string, imageInputs []string, fileInputs []string, events chan<- agentTypes.Event, allowAll bool, workDir, sessionID string, webMode bool) error {
 	if strings.TrimSpace(workDir) == "" {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -79,6 +79,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		ImageInputs: imageInputs,
 		FileInputs:  fileInputs,
 		AllowAll:    allowAll,
+		WebMode:     webMode,
 	}
 	session, err := GetSession(execData)
 	if err != nil {

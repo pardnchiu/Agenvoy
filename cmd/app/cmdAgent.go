@@ -52,7 +52,7 @@ func cmdAgent(allowAll bool) {
 	go cli.NewPending(ctx)
 
 	if err := cli.Run(func(ch chan<- agentTypes.Event) error {
-		return exec.Run(ctx, selectorBot, registry, scanner, userInput, nil, nil, ch, allowAll, "", "")
+		return exec.Run(ctx, selectorBot, registry, scanner, userInput, nil, nil, ch, allowAll, "", "", false)
 	}); err != nil && ctx.Err() == nil {
 		slog.Error("failed to execute",
 			slog.String("error", err.Error()))

@@ -24,6 +24,9 @@ var SummaryMergePrompt string
 //go:embed prompts/system_prompt.md
 var SystemPrompt string
 
+//go:embed prompts/webmode_system_prompt.md
+var WebModeSystemPrompt string
+
 //go:embed prompts/discord_system_prompt.md
 var DiscordSystemPrompt string
 

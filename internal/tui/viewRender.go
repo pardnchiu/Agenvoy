@@ -212,6 +212,9 @@ func printLog(name, raw, cwd string) string {
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
 		return raw
 	}
+	if len(m) == 0 {
+		return ""
+	}
 	pick := func(keys ...string) string {
 		for _, k := range keys {
 			if v, ok := m[k]; ok {
@@ -255,6 +258,9 @@ func printLog(name, raw, cwd string) string {
 		if s := pick("path", "pattern", "save_to"); s != "" {
 			return s
 		}
+
+	case "update_page":
+		return ""
 
 	case "search_files":
 		dir := strings.TrimSpace(pick("dir"))

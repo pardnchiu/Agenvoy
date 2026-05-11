@@ -72,7 +72,7 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 	}
 
 	if err := session.Save(cfg); err != nil {
-		return t, tea.Println("\n" + errorStyle.Render(fmt.Sprintf("[!] session.Save: %v", err)) + "\n")
+		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Save: %v", err)) + "\n")
 	}
 
 	lines := []string{hintStyle.Render(fmt.Sprintf("⎯ removed: %s", name))}

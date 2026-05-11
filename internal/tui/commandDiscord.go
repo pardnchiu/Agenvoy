@@ -54,8 +54,8 @@ func runDiscordAction(action string) tea.Cmd {
 		return DiscordDone{action: action, err: err}
 	})
 
-	return t, tea.Sequence(
-		tea.Println("\n"+hintStyle.Render(fmt.Sprintf("⎯ discord %s · ctrl+c to cancel", action))),
-		exec,
-	), true
+	return tea.Sequence(
+		tea.Println(hintStyle.Render(fmt.Sprintf("⎯ discord %s · ctrl+c to cancel", action))+"\n"),
+		execCmd,
+	)
 }

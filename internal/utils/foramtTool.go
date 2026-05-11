@@ -16,6 +16,9 @@ func FormatTool(name, raw string) string {
 	if err := json.Unmarshal([]byte(raw), &argMap); err != nil {
 		return raw
 	}
+	if len(argMap) == 0 {
+		return ""
+	}
 	arg := func(keys ...string) string {
 		for _, k := range keys {
 			if v, ok := argMap[k]; ok {
@@ -62,6 +65,9 @@ func FormatTool(name, raw string) string {
 		if val := arg("path", "pattern", "save_to"); val != "" {
 			return val
 		}
+
+	case "update_page":
+		return ""
 
 	case "search_web", "fetch_google_rss":
 		if val := arg("query", "keyword"); val != "" {

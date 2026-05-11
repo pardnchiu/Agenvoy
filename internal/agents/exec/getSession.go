@@ -88,7 +88,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		oldHistory, maxHistory := sessionManager.GetHistory(overrideID)
 		session.Histories = oldHistory
 
-		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner, overrideID, execData.AllowAll)}}
+		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner, overrideID, execData.AllowAll, execData.WebMode)}}
 		if summary := sessionManager.GetSummaryPrompt(overrideID, OldestMessageTime(maxHistory)); summary != "" {
 			session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 		}
@@ -158,7 +158,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 		session.Histories = oldHistory
 
-		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner, sessionID, execData.AllowAll)}}
+		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner, sessionID, execData.AllowAll, execData.WebMode)}}
 		if summary := sessionManager.GetSummaryPrompt(sessionID, OldestMessageTime(maxHistory)); summary != "" {
 			session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 		}
@@ -184,7 +184,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 			return nil, fmt.Errorf("newSessionID: %w", err)
 		}
 
-		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner, sessionID, execData.AllowAll)}}
+		session.SystemPrompts = []agentTypes.Message{{Role: "system", Content: GetSystemPrompt(execData.WorkDir, execData.ExtraSystemPrompt, scanner, sessionID, execData.AllowAll, execData.WebMode)}}
 		session.OldHistories = []agentTypes.Message{}
 		session.ToolHistories = []agentTypes.Message{}
 

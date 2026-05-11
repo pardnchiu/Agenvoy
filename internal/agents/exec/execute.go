@@ -80,6 +80,7 @@ type ExecData struct {
 	ExcludeTools      []string
 	ExtraSystemPrompt string
 	AllowAll          bool
+	WebMode           bool
 }
 
 type (
@@ -332,7 +333,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	return nil
 }
 
-func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.SkillScanner, sessionID string, allowAll bool) string {
+func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.SkillScanner, sessionID string, allowAll bool, webMode bool) string {
 	systemOS := runtime.GOOS
 	// var skillPath string
 	// var skillExt string
@@ -356,6 +357,11 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.Sk
 	var extraSection string
 	if extra := strings.TrimSpace(extraSystemPrompt); extra != "" {
 		extraSection = "---\n\n## Additional Instructions\n\n" + extra + "\n\n---\n\n"
+	}
+
+	template := configs.SystemPrompt
+	if webMode {
+		template = configs.WebModeSystemPrompt
 	}
 
 	skillsSection := ""
@@ -391,7 +397,7 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.Sk
 		"{{.AvailableSkills}}", skillsSection,
 		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
 		"{{.ExtraSystemPrompt}}", extraSection,
-	).Replace(configs.SystemPrompt)
+	).Replace(template)
 }
 
 func buildPermissionModeSection(allowAll bool) string {
