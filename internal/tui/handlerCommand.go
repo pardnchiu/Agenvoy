@@ -43,13 +43,13 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 		return t.commandModel(parts)
 
 	case "/planner":
-		return t.commandPlanner(parts)
+		return t.commandPlanner()
 
 	case "/reasoning":
 		return t.commandReasoning(parts)
 
 	case "/discord":
-		return t.commandDiscord()
+		return t.commandDiscord(parts)
 
 	case "/update":
 		return t.commandUpdate()

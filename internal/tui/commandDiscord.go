@@ -19,7 +19,15 @@ type DiscordDone struct {
 	err    error
 }
 
-func (t TUI) commandDiscord() (TUI, tea.Cmd, bool) {
+func (t TUI) commandDiscord(parts []string) (TUI, tea.Cmd, bool) {
+	if len(parts) > 1 {
+		switch parts[1] {
+		case "enable", "disable":
+			action := parts[1]
+			return t, func() tea.Msg { return DiscordAction{action: action} }, true
+		}
+	}
+
 	enabled := false
 	if cfg, err := session.Load(); err == nil && cfg != nil {
 		enabled = cfg.DiscordEnabled

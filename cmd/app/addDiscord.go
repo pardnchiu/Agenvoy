@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/bwmarrin/discordgo"
 	"github.com/manifoldco/promptui"
 	"github.com/pardnchiu/agenvoy/internal/interactive/discord"
 	"github.com/pardnchiu/agenvoy/internal/session"
@@ -87,12 +88,40 @@ func runDiscordEnable() {
 	}
 
 	cfg.DiscordGuildID = strings.TrimSpace(rawGuild)
-	cfg.DiscordEnabled = true
 
+	token := keychain.Get(discord.Key)
+	if token == "" {
+		fmt.Fprintln(os.Stderr, "[!] no discord token in keychain")
+		os.Exit(1)
+	}
+	if err := verifyDiscordConnection(token); err != nil {
+		fmt.Fprintf(os.Stderr, "[!] discord connect failed: %v\n", err)
+		fmt.Fprintln(os.Stderr, "[*] disabled; fix token / intents and rerun `agen discord enable`")
+		if cfg.DiscordEnabled {
+			cfg.DiscordEnabled = false
+			if err := session.Save(cfg); err != nil {
+				slog.Warn("session.Save rollback", slog.String("error", err.Error()))
+			}
+		}
+		os.Exit(1)
+	}
+
+	cfg.DiscordEnabled = true
 	if err := session.Save(cfg); err != nil {
 		slog.Error("session.Save", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+}
+
+func verifyDiscordConnection(token string) error {
+	s, err := discordgo.New("Bot " + token)
+	if err != nil {
+		return fmt.Errorf("discordgo.New: %w", err)
+	}
+	if err := s.Open(); err != nil {
+		return fmt.Errorf("open gateway: %w", err)
+	}
+	return s.Close()
 }
 
 func runDiscordDisable() {
