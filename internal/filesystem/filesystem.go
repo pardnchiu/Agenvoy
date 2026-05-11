@@ -119,6 +119,10 @@ func McpSessionPath(sessionID string) string {
 	return filepath.Join(SessionsDir, sessionID, "mcp.json")
 }
 
+func PagePath(sessionID string) string {
+	return filepath.Join(SessionsDir, sessionID, "page")
+}
+
 const AllowListRelPath = ".agenvoy/allow_list"
 
 func AllowListPath(workDir string) string {

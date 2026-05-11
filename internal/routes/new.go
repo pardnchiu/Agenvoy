@@ -19,6 +19,8 @@ func New() *gin.Engine {
 	r.POST("/v1/tool/:tool_name", handler.CallTool())
 	r.GET("/v1/session/:session_id/status", handler.GetSessionStatus())
 	r.GET("/v1/session/:session_id/log", handler.StreamSessionLog())
+	r.GET("/v1/page/listener/:session_id", handler.PageListener())
+	r.GET("/:session_id/*filepath", handler.PageView())
 
 	return r
 }

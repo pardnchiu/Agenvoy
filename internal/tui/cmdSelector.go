@@ -37,6 +37,7 @@ var commands = []Command{
 	{"discord-enable", "enable discord bot (token + guild)"},
 	{"discord-disable", "disable discord bot (token preserved)"},
 	{"update", "update agen to latest release (exits TUI)"},
+	{"mode", "switch tui mode (cli / log / web)"},
 	{"clear", "clear conversation"},
 	{"exit", "quit"},
 }

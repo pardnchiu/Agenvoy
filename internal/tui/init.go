@@ -27,6 +27,7 @@ type TUIMode int
 const (
 	cliMode TUIMode = iota
 	logMode
+	webMode
 
 	historyLoad = 50 // just for cli mode
 )
@@ -37,6 +38,8 @@ func (m TUIMode) String() string {
 		return "cli"
 	case logMode:
 		return "log"
+	case webMode:
+		return "web"
 	}
 	return "unknow"
 }
@@ -47,6 +50,8 @@ func (m TUIMode) color() lipgloss.Color {
 		return colSystem
 	case logMode:
 		return colWarn
+	case webMode:
+		return colOk
 	}
 	return colError
 }

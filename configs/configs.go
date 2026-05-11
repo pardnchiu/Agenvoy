@@ -66,3 +66,6 @@ var CodexModels []byte
 
 //go:embed jsons/providors/openai.json
 var OpenaiModels []byte
+
+//go:embed webmode.html
+var WebmodeHTML string

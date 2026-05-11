@@ -62,6 +62,9 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 
 	case "/update":
 		return t.commandUpdate()
+
+	case "/mode":
+		return t.commandMode()
 	}
 	return t, nil, false
 }
