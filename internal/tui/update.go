@@ -183,6 +183,39 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd, _ := t.commandNew(nil)
 		return next, cmd
 
+	case ModelScopeSelect:
+		switch msg.scope {
+		case "global":
+			next, cmd := t.openModelGlobalPopup()
+			return next, cmd
+		case "session":
+			next, cmd, _ := t.commandSessionModel()
+			return next, cmd
+		}
+		return t, nil
+
+	case ModelAction:
+		switch msg.action {
+		case "add":
+			next, cmd, _ := t.commandModelAdd()
+			return next, cmd
+		case "remove":
+			next, cmd, _ := t.commandModelRemove()
+			return next, cmd
+		}
+		return t, nil
+
+	case ReasoningScopeSelect:
+		switch msg.scope {
+		case "global":
+			next, cmd := t.openReasoningGlobalPopup()
+			return next, cmd
+		case "session":
+			next, cmd := t.openReasoningSessionPopup()
+			return next, cmd
+		}
+		return t, nil
+
 	case ModelRemove:
 		next, cmd := t.runModelRemove(msg.name)
 		host.Reload()
@@ -237,11 +270,11 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return next, cmd
 
 	case SessionModelSelect:
-		next, cmd := t.openSessionReasoningPopup(msg.model)
+		next, cmd := t.runSessionModelSelect(msg.model)
 		return next, cmd
 
 	case SessionReasoningSelect:
-		next, cmd := t.runSessionReasoningChosen(msg.model, msg.reasoning)
+		next, cmd := t.runSessionReasoningSelect(msg.reasoning)
 		return next, cmd
 
 	case UpdateConfirm:

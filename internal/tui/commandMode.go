@@ -8,7 +8,18 @@ type ModeSelect struct {
 	mode TUIMode
 }
 
-func (t TUI) commandMode() (TUI, tea.Cmd, bool) {
+func (t TUI) commandMode(parts []string) (TUI, tea.Cmd, bool) {
+	if len(parts) > 1 {
+		switch parts[1] {
+		case "cli":
+			next, cmd := t.runModeSelect(cliMode)
+			return next, cmd, true
+		case "web":
+			next, cmd := t.runModeSelect(webMode)
+			return next, cmd, true
+		}
+	}
+
 	cursor := 0
 	if t.mode == webMode {
 		cursor = 1

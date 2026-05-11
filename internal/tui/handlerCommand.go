@@ -39,20 +39,14 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 	case "/bot":
 		return t.commandBot()
 
-	case "/model-add":
-		return t.commandModelAdd()
-
-	case "/model-remove":
-		return t.commandModelRemove()
+	case "/model":
+		return t.commandModel(parts)
 
 	case "/planner":
-		return t.commandPlanner()
+		return t.commandPlanner(parts)
 
 	case "/reasoning":
-		return t.commandReasoning()
-
-	case "/session-model":
-		return t.commandSessionModel()
+		return t.commandReasoning(parts)
 
 	case "/discord":
 		return t.commandDiscord()
@@ -61,7 +55,7 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 		return t.commandUpdate()
 
 	case "/mode":
-		return t.commandMode()
+		return t.commandMode(parts)
 	}
 	return t, nil, false
 }

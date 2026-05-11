@@ -11,13 +11,22 @@ type PlannerSelect struct {
 	name string
 }
 
-func (t TUI) commandPlanner() (TUI, tea.Cmd, bool) {
+func (t TUI) commandPlanner(parts []string) (TUI, tea.Cmd, bool) {
 	cfg, err := session.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n"), true
 	}
 	if len(cfg.Models) == 0 {
-		return t, tea.Println(hintStyle.Render("no models configured · use /model-add") + "\n"), true
+		return t, tea.Println(hintStyle.Render("no models configured · use /model") + "\n"), true
+	}
+
+	if len(parts) > 1 {
+		name := parts[1]
+		for _, m := range cfg.Models {
+			if m.Name == name {
+				return t, func() tea.Msg { return PlannerSelect{name: name} }, true
+			}
+		}
 	}
 
 	options := make([]string, len(cfg.Models))

@@ -77,7 +77,7 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 
 	lines := []string{hintStyle.Render(fmt.Sprintf("⎯ removed: %s", name))}
 	if clearedPlanner {
-		lines = append(lines, warnStyle.Render("planner cleared · run /model-add or set a new planner"))
+		lines = append(lines, warnStyle.Render("planner cleared · run /model or set a new planner"))
 	}
 	return t, tea.Println(strings.Join(lines, "\n") + "\n")
 }

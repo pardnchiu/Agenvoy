@@ -26,18 +26,16 @@ type Command struct {
 }
 
 var commands = []Command{
-	{"model-add", "add a model (opens interactive flow)"},
-	{"model-remove", "remove a configured model"},
+	{"model", "configure models (global: add/remove · session: select)"},
 	{"planner", "set the planner model"},
-	{"reasoning", "set planner reasoning level"},
-	{"session-model", "set current session model + reasoning"},
+	{"reasoning", "set reasoning level (global / session)"},
 	{"switch", "change current session"},
 	{"new", "create and switch to a new session"},
 	{"bot", "edit current session bot.md in $EDITOR"},
 	{"discord", "enable / disable discord bot"},
 	{"update", "update agen to latest release (exits TUI)"},
 	{"mode", "switch tui mode (cli / web)"},
-	{"clear", "clear conversation"},
+	{"clear", "clear window display (memory untouched)"},
 	{"exit", "quit"},
 }
 
@@ -80,15 +78,19 @@ func queryCmdSelector(content string) (query string, ok bool) {
 
 func getCmdSelectorItems(query string) []CmdSelectorItem {
 	query = strings.ToLower(query)
-	var items []CmdSelectorItem
+	var nameItems, descItems []CmdSelectorItem
 
 	for _, c := range commands {
-		if query == "" || strings.Contains(c.name, query) {
-			items = append(items, CmdSelectorItem{
-				label:  "/" + c.name,
-				desc:   c.desc,
-				insert: "/" + c.name + " ",
-			})
+		item := CmdSelectorItem{
+			label:  "/" + c.name,
+			desc:   c.desc,
+			insert: "/" + c.name + " ",
+		}
+		switch {
+		case query == "" || strings.Contains(c.name, query):
+			nameItems = append(nameItems, item)
+		case strings.Contains(strings.ToLower(c.desc), query):
+			descItems = append(descItems, item)
 		}
 	}
 
@@ -109,7 +111,7 @@ func getCmdSelectorItems(query string) []CmdSelectorItem {
 					}
 				}
 			}
-			items = append(items, CmdSelectorItem{
+			nameItems = append(nameItems, CmdSelectorItem{
 				label:  "/" + name,
 				desc:   desc,
 				insert: "/" + name + " ",
@@ -117,10 +119,12 @@ func getCmdSelectorItems(query string) []CmdSelectorItem {
 		}
 	}
 
-	sort.SliceStable(items, func(i, j int) bool {
-		return items[i].label < items[j].label
-	})
-	return items
+	byLabel := func(s []CmdSelectorItem) func(i, j int) bool {
+		return func(i, j int) bool { return s[i].label < s[j].label }
+	}
+	sort.SliceStable(nameItems, byLabel(nameItems))
+	sort.SliceStable(descItems, byLabel(descItems))
+	return append(nameItems, descItems...)
 }
 
 func skillSource(path string) string {
