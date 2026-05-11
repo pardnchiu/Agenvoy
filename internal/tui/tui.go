@@ -18,11 +18,13 @@ var (
 	colHint   = lipgloss.Color("240") // gray
 	colWarn   = lipgloss.Color("141") // purple
 	colOk     = lipgloss.Color("114") // green
+	colSkill  = lipgloss.Color("208") // orange
 	colError  = lipgloss.Color("203") // red
 
 	systemStyle = lipgloss.NewStyle().Foreground(colSystem)
 	okayStyle   = lipgloss.NewStyle().Foreground(colOk)
 	warnStyle   = lipgloss.NewStyle().Foreground(colWarn)
+	skillStyle  = lipgloss.NewStyle().Foreground(colSkill)
 	hintStyle   = lipgloss.NewStyle().Foreground(colHint)
 	errorStyle  = lipgloss.NewStyle().Foreground(colError)
 	textStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
