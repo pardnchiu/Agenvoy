@@ -221,15 +221,34 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		host.Reload()
 		return next, cmd
 
-	case BotEditDone:
-		seq := []tea.Cmd{
-			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
+	case BotNameSubmit:
+		sid := strings.TrimSpace(t.currentSessionID)
+		if sid == "" {
+			t.botBodyDraft = ""
+			return t, tea.Println(errorStyle.Render("[!] no current session") + "\n")
 		}
+		if cmd, ok := t.botCheckConflict(sid, msg.name); !ok {
+			t.botBodyDraft = ""
+			return t, cmd
+		}
+		next, cmd := t.openBotBodyPopup(msg.name)
+		return next, cmd
+
+	case BotBodySubmit:
+		sid := strings.TrimSpace(t.currentSessionID)
+		if sid == "" {
+			return t, tea.Println(errorStyle.Render("[!] no current session") + "\n")
+		}
+		return t, t.botSaveCmd(sid, msg.name, msg.body)
+
+	case BotSaved:
 		if msg.err != nil {
-			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] bot edit: %v", msg.err))+"\n"))
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] bot save: %v", msg.err)) + "\n")
 		}
-		return t, tea.Sequence(seq...)
+		if t.currentSessionID != "" {
+			t.currentSessionName = msg.name
+		}
+		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ bot saved: %s", msg.name)) + "\n")
 
 	case ModelAddDone:
 		seq := []tea.Cmd{

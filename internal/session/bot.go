@@ -47,6 +47,27 @@ func SaveBot(sessionID, name string, force bool) {
 	}
 }
 
+func SaveBotFull(sessionID, name, body string) error {
+	if sessionID == "" {
+		return fmt.Errorf("sessionID is empty")
+	}
+	if name == "" {
+		return fmt.Errorf("name is empty")
+	}
+
+	dir := filepath.Join(filesystem.SessionsDir, sessionID)
+	if err := go_pkg_filesystem.CheckDir(dir, true); err != nil {
+		return fmt.Errorf("CheckDir: %w", err)
+	}
+
+	content := fmt.Sprintf("---\nname: %s\n---\n%s", name, body)
+	path := filepath.Join(dir, "bot.md")
+	if err := go_pkg_filesystem.WriteFile(path, content, 0644); err != nil {
+		return fmt.Errorf("WriteFile: %w", err)
+	}
+	return nil
+}
+
 func GetSessionIDByName(name string) string {
 	if name == "" {
 		return ""

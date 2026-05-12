@@ -1,44 +1,81 @@
 package tui
 
 import (
-	"os"
-	"os/exec"
-	"path/filepath"
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
-type BotEditDone struct {
-	err error
+type BotNameSubmit struct {
+	name string
 }
 
-func (t TUI) commandBot() (TUI, tea.Cmd, bool) {
+type BotBodySubmit struct {
+	name string
+	body string
+}
+
+type BotSaved struct {
+	name string
+	err  error
+}
+
+func (t TUI) commandBot(parts []string) (TUI, tea.Cmd, bool) {
 	sid := strings.TrimSpace(t.currentSessionID)
 	if sid == "" {
 		return t, tea.Println(errorStyle.Render("[!] no current session") + "\n"), true
 	}
 
-	session.SaveBot(sid, sid, false)
-	path := filepath.Join(filesystem.SessionsDir, sid, "bot.md")
-
-	editor := strings.TrimSpace(os.Getenv("EDITOR"))
-	if editor == "" {
-		editor = "vi"
-	}
-	parts := strings.Fields(editor)
-	if len(parts) == 0 {
-		return t, tea.Println(errorStyle.Render("[!] EDITOR is empty") + "\n"), true
+	if len(parts) >= 3 {
+		name := strings.TrimSpace(parts[1])
+		body := strings.TrimSpace(strings.Join(parts[2:], " "))
+		if cmd, ok := t.botCheckConflict(sid, name); !ok {
+			return t, cmd, true
+		}
+		return t, t.botSaveCmd(sid, name, body), true
 	}
 
-	args := append(parts[1:], path)
-	cmd := exec.Command(parts[0], args...)
-	cmd.Env = os.Environ()
+	existingName, existingBody := session.GetBot(sid)
+	t.popup = &Popup{
+		kind:  popupText,
+		title: "Bot name",
+		input: existingName,
+		onConfirm: func(value string) any {
+			return BotNameSubmit{name: strings.TrimSpace(value)}
+		},
+	}
+	t.botBodyDraft = existingBody
+	return t, nil, true
+}
 
-	return t, tea.ExecProcess(cmd, func(err error) tea.Msg {
-		return BotEditDone{err: err}
-	}), true
+func (t TUI) botCheckConflict(sid, name string) (tea.Cmd, bool) {
+	if name == "" {
+		return tea.Println(errorStyle.Render("[!] bot name required") + "\n"), false
+	}
+	if owner := session.GetSessionIDByName(name); owner != "" && owner != sid {
+		return tea.Println(errorStyle.Render(fmt.Sprintf("[!] bot name %q already used by session %s", name, owner)) + "\n"), false
+	}
+	return nil, true
+}
+
+func (t TUI) openBotBodyPopup(name string) (TUI, tea.Cmd) {
+	t.popup = &Popup{
+		kind:      popupText,
+		title:     fmt.Sprintf("Bot description (%s)", name),
+		multiline: true,
+		input:     t.botBodyDraft,
+		onConfirm: func(value string) any {
+			return BotBodySubmit{name: name, body: value}
+		},
+	}
+	t.botBodyDraft = ""
+	return t, nil
+}
+
+func (t TUI) botSaveCmd(sid, name, body string) tea.Cmd {
+	err := session.SaveBotFull(sid, name, body)
+	return func() tea.Msg { return BotSaved{name: name, err: err} }
 }

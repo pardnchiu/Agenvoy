@@ -60,8 +60,9 @@ type TUI struct {
 	cancelExec   context.CancelFunc
 	runStartedAt time.Time
 
-	popup      *Popup
-	popupQueue []Pending
+	popup        *Popup
+	popupQueue   []Pending
+	botBodyDraft string
 
 	selector *CmdSelector
 

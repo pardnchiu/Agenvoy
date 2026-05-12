@@ -17,8 +17,8 @@ func (t TUI) commandNew(parts []string) (TUI, tea.Cmd, bool) {
 	}
 
 	if name != "" {
-		if existing := session.GetSessionIDByName(name); existing != "" {
-			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] name %q already used", name)) + "\n"), true
+		if owner := session.GetSessionIDByName(name); owner != "" {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] name %q already used by session %s", name, owner)) + "\n"), true
 		}
 	}
 

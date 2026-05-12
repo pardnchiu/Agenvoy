@@ -115,10 +115,27 @@ func (t TUI) viewPopup() string {
 		body = append(body, hintStyle.Render("↑/↓ move · space toggle · enter confirm · esc cancel"))
 
 	case popupText:
-		field := systemStyle.Render("> ") + p.input + systemStyle.Render("▏")
-		body = append(body, field)
-		body = append(body, "")
-		body = append(body, hintStyle.Render("enter confirm · esc cancel"))
+		if p.multiline {
+			lines := strings.Split(p.input, "\n")
+			for i, ln := range lines {
+				prefix := systemStyle.Render("  ")
+				if i == 0 {
+					prefix = systemStyle.Render("> ")
+				}
+				if i == len(lines)-1 {
+					body = append(body, prefix+ln+systemStyle.Render("▏"))
+				} else {
+					body = append(body, prefix+ln)
+				}
+			}
+			body = append(body, "")
+			body = append(body, hintStyle.Render("ctrl+s confirm · enter newline · esc cancel"))
+		} else {
+			field := systemStyle.Render("> ") + p.input + systemStyle.Render("▏")
+			body = append(body, field)
+			body = append(body, "")
+			body = append(body, hintStyle.Render("enter confirm · esc cancel"))
+		}
 
 	case popupSecret:
 		mask := strings.Repeat("•", len([]rune(p.input)))

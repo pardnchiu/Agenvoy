@@ -32,6 +32,7 @@ type Popup struct {
 	multi   map[int]bool
 
 	input          string
+	multiline      bool
 	skipWithReason bool
 
 	questions   []pending.Question
@@ -208,14 +209,16 @@ func (t TUI) updateMultiSelectPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	p := t.popup
-	switch msg.Type {
-	case tea.KeyEsc:
-		pending.Resolve(p.pendingId, pending.Reply{
-			Error: fmt.Errorf("user cancelled"),
-		})
-		t = t.closePopup()
-
-	case tea.KeyEnter:
+	submit := func() (tea.Model, tea.Cmd) {
+		if p.pendingId == "" {
+			cb := p.onConfirm
+			value := p.input
+			t = t.closePopup()
+			if cb == nil {
+				return t, nil
+			}
+			return t, func() tea.Msg { return cb(value) }
+		}
 		if p.skipWithReason {
 			pending.Resolve(p.pendingId, pending.Reply{
 				Approve: false,
@@ -230,6 +233,31 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			pending.Resolve(p.pendingId, reply)
 			t = t.closePopup()
 		}
+		return t, nil
+	}
+
+	switch msg.Type {
+	case tea.KeyEsc:
+		if p.pendingId == "" {
+			t = t.closePopup()
+			return t, nil
+		}
+		pending.Resolve(p.pendingId, pending.Reply{
+			Error: fmt.Errorf("user cancelled"),
+		})
+		t = t.closePopup()
+
+	case tea.KeyCtrlS:
+		if p.multiline {
+			return submit()
+		}
+
+	case tea.KeyEnter:
+		if p.multiline {
+			p.input += "\n"
+			return t, nil
+		}
+		return submit()
 
 	case tea.KeyBackspace:
 		if r := []rune(p.input); len(r) > 0 {
