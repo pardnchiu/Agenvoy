@@ -13,7 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/runtime/discord/types"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )

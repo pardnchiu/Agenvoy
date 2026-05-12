@@ -4,7 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/bwmarrin/discordgo"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/runtime/discord/types"
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 

@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	discordCommand "github.com/pardnchiu/agenvoy/internal/interactive/discord/command"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
+	discordCommand "github.com/pardnchiu/agenvoy/internal/runtime/discord/command"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/runtime/discord/types"
 )
 
 func interactionCreate(dcSession *discordgo.Session, dcInteractionCreate *discordgo.InteractionCreate) {

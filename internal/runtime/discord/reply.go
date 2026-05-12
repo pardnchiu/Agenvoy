@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/bwmarrin/discordgo"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/runtime/discord/types"
 )
 
 const (
