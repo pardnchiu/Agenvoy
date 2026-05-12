@@ -12,35 +12,33 @@ import (
 )
 
 var (
-	filesystemOnce      sync.Once
-	AgenvoyDir          string
-	ConfigPath          string
-	UsagePath           string
-	McpPath             string
-	StoreDir            string
-	SessionsDir         string
-	APIToolsDir         string
-	ScriptToolsDir      string
-	ErrorsDir           string
-	SchedulerDir        string
-	SchedulerStateDir   string
-	SchedulerRecordsDir string
-	TasksPath           string
-	CronsPath           string
-	ScriptsDir          string
-	SkillsDir           string
-	SystemSkillsDir     string
-	ToolsDir            string
-	DownloadDir         string
+	filesystemOnce  sync.Once
+	AgenvoyDir      string
+	ConfigPath      string
+	UsagePath       string
+	McpPath         string
+	StoreDir        string
+	SessionsDir     string
+	ToolsDir        string
+	APIToolsDir     string
+	ScriptToolsDir  string
+	ErrorsDir       string
+	TasksPath       string
+	CronsPath       string
+	SkillsDir       string
+	SystemSkillsDir string
+	DownloadDir     string
 
 	WorkAgenvoyDir     string
 	WorkAPIToolsDir    string
 	WorkScriptToolsDir string
 	WorkSkillsDir      string
 
-	ToolFetchPage      string
-	ToolSearchWeb      string
-	ToolFetchGoogleRSS string
+	// will deprecated
+	LegacyAPIToolsDir        string
+	LegacyScriptToolsDir     string
+	LegacyWorkAPIToolsDir    string
+	LegacyWorkScriptToolsDir string
 )
 
 const (
@@ -66,22 +64,18 @@ func Init() error {
 
 		StoreDir = filepath.Join(AgenvoyDir, ".store")
 		SessionsDir = filepath.Join(AgenvoyDir, "sessions")
-		APIToolsDir = filepath.Join(AgenvoyDir, "api_tools")
-		ScriptToolsDir = filepath.Join(AgenvoyDir, "script_tools")
+		ToolsDir = filepath.Join(AgenvoyDir, "tools")
+		APIToolsDir = filepath.Join(ToolsDir, "api")
+		ScriptToolsDir = filepath.Join(ToolsDir, "script")
 		ErrorsDir = filepath.Join(AgenvoyDir, "errors")
-		SchedulerDir = filepath.Join(AgenvoyDir, "scheduler")
-		SchedulerStateDir = filepath.Join(SchedulerDir, "state")
-		SchedulerRecordsDir = filepath.Join(SchedulerDir, "cron_records")
-		TasksPath = filepath.Join(SchedulerDir, "tasks.json")
-		CronsPath = filepath.Join(SchedulerDir, "crons.json")
-		ScriptsDir = filepath.Join(SchedulerDir, "scripts")
+		TasksPath = filepath.Join(AgenvoyDir, "tasks.json")
+		CronsPath = filepath.Join(AgenvoyDir, "crons.json")
 
 		SkillsDir = filepath.Join(AgenvoyDir, "skills")
 		SystemSkillsDir = filepath.Join(SkillsDir, ".system")
-		ToolsDir = filepath.Join(AgenvoyDir, "tools")
-		ToolFetchPage = filepath.Join(ToolsDir, "fetch_page")
-		ToolSearchWeb = filepath.Join(ToolsDir, "search_web")
-		ToolFetchGoogleRSS = filepath.Join(ToolsDir, "google_rss")
+
+		LegacyAPIToolsDir = filepath.Join(AgenvoyDir, "api_tools")
+		LegacyScriptToolsDir = filepath.Join(AgenvoyDir, "script_tools")
 
 		systemDownloads := filepath.Join(homeDir, "Downloads")
 		if go_pkg_filesystem_reader.IsDir(systemDownloads) {
@@ -91,9 +85,12 @@ func Init() error {
 		}
 
 		WorkAgenvoyDir = filepath.Join(workDir, ".config", projectName)
-		WorkAPIToolsDir = filepath.Join(WorkAgenvoyDir, "api_tools")
-		WorkScriptToolsDir = filepath.Join(WorkAgenvoyDir, "script_tools")
+		WorkAPIToolsDir = filepath.Join(WorkAgenvoyDir, "tools", "api")
+		WorkScriptToolsDir = filepath.Join(WorkAgenvoyDir, "tools", "script")
 		WorkSkillsDir = filepath.Join(WorkAgenvoyDir, "skills")
+
+		LegacyWorkAPIToolsDir = filepath.Join(WorkAgenvoyDir, "api_tools")
+		LegacyWorkScriptToolsDir = filepath.Join(WorkAgenvoyDir, "script_tools")
 	})
 
 	for _, dir := range []string{AgenvoyDir, DownloadDir} {
