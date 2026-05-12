@@ -48,6 +48,12 @@ func (t TUI) refreshCmdSelector() TUI {
 		return t
 	}
 
+	if t.selector == nil {
+		if scanner := host.Scanner(); scanner != nil {
+			scanner.Scan()
+		}
+	}
+
 	items := getCmdSelectorItems(query)
 	if len(items) == 0 {
 		t.selector = nil

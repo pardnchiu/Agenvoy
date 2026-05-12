@@ -29,12 +29,17 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 	ch := make(chan agentTypes.Event, 16)
 	done := make(chan error, 1)
 
+	scanner := host.Scanner()
+	if scanner != nil {
+		scanner.Scan()
+	}
+
 	go func() {
 		err := exec.Run(
 			ctx,
 			host.Planner(),
 			host.Registry(),
-			host.Scanner(),
+			scanner,
 			input,
 			nil,
 			nil,

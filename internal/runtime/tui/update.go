@@ -56,7 +56,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if t.running && t.cancelExec != nil {
 				t.cancelExec()
-				return t, tea.Println(hintStyle.Render("⎯ cancelling…"))
+				return t, tea.Println(hintStyle.Render("⎯ cancelling…") + "\n")
 			}
 
 		case tea.KeyUp:

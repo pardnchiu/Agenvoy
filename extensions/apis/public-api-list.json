@@ -1,0 +1,26 @@
+{
+  "name": "public_api_list",
+  "description": "List public APIs, categories, or APIs in a specific category from Agenvoy Public API List.",
+  "endpoint": {
+    "url": "https://public-api-list.agenvoy.com/",
+    "method": "GET",
+    "content_type": "json",
+    "timeout": 30
+  },
+  "parameters": {
+    "type": {
+      "type": "string",
+      "description": "Optional query mode. Use \"category\" to list all available categories.",
+      "required": false,
+      "enum": ["category"]
+    },
+    "category": {
+      "type": "string",
+      "description": "Optional category name to filter APIs, for example \"Animals\".",
+      "required": false
+    }
+  },
+  "response": {
+    "format": "json"
+  }
+}
