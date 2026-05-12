@@ -105,6 +105,16 @@ func FormatTool(name, raw string) string {
 			return val
 		}
 
+	case "add_task", "add_cron":
+		skill := arg("skill_name")
+		t := arg("time")
+		if skill != "" && t != "" {
+			return fmt.Sprintf("%s [%s]", skill, t)
+		}
+		if skill != "" {
+			return skill
+		}
+
 	case "run_command":
 		var p struct {
 			Argv []string `json:"argv"`

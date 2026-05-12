@@ -315,6 +315,16 @@ func printLog(name, raw, cwd string) string {
 			return s
 		}
 
+	case "add_task", "add_cron":
+		skill := pick("skill_name")
+		t := pick("time")
+		if skill != "" && t != "" {
+			return fmt.Sprintf("%s [%s]", skill, t)
+		}
+		if skill != "" {
+			return skill
+		}
+
 	case "run_command":
 		var p struct {
 			Argv []string `json:"argv"`
