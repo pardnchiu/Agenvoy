@@ -162,6 +162,10 @@ func reload() error {
 				slog.Warn("RemoveTask",
 					slog.String("error", err.Error()))
 			}
+			if err := filesystem.TrashScheduleSkill(entryCopy.Skill); err != nil {
+				slog.Warn("filesystem.TrashScheduleSkill",
+					slog.String("error", err.Error()))
+			}
 		})
 		st.timers[keyCopy] = timer
 	}

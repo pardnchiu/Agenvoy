@@ -25,9 +25,11 @@ var (
 	ErrorsDir       string
 	TasksPath       string
 	CronsPath       string
-	SkillsDir       string
-	SystemSkillsDir string
-	DownloadDir     string
+	SkillsDir            string
+	SystemSkillsDir      string
+	ScheduleSkillsDir    string
+	ScheduleSkillTrashDir string
+	DownloadDir          string
 
 	WorkAgenvoyDir     string
 	WorkAPIToolsDir    string
@@ -73,6 +75,8 @@ func Init() error {
 
 		SkillsDir = filepath.Join(AgenvoyDir, "skills")
 		SystemSkillsDir = filepath.Join(SkillsDir, ".system")
+		ScheduleSkillsDir = filepath.Join(SkillsDir, "scheduler")
+		ScheduleSkillTrashDir = filepath.Join(ScheduleSkillsDir, ".Trash")
 
 		LegacyAPIToolsDir = filepath.Join(AgenvoyDir, "api_tools")
 		LegacyScriptToolsDir = filepath.Join(AgenvoyDir, "script_tools")

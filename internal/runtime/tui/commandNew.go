@@ -45,6 +45,8 @@ func (t TUI) commandNew(parts []string) (TUI, tea.Cmd, bool) {
 	t.currentModel = ""
 	t.activity = ""
 
+	t = t.restartTailer()
+
 	label := utils.ShortenSessionID(id)
 	if name != "" {
 		label = fmt.Sprintf("%s (%s)", name, label)

@@ -109,7 +109,7 @@ func FormatTool(name, raw string) string {
 		skill := arg("skill_name")
 		t := arg("time")
 		if skill != "" && t != "" {
-			return fmt.Sprintf("%s [%s]", skill, t)
+			return fmt.Sprintf("%s %s", t, skill)
 		}
 		if skill != "" {
 			return skill

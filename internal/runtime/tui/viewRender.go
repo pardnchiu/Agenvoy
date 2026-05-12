@@ -319,7 +319,7 @@ func printLog(name, raw, cwd string) string {
 		skill := pick("skill_name")
 		t := pick("time")
 		if skill != "" && t != "" {
-			return fmt.Sprintf("%s [%s]", skill, t)
+			return fmt.Sprintf("%s %s", t, skill)
 		}
 		if skill != "" {
 			return skill
