@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -26,6 +28,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 )
@@ -126,6 +129,16 @@ func cmdDaemon() {
 
 	host.Set(selectorBot, registry, scanner)
 	host.SetRefresher(refreshHost)
+
+	runtime.SetRunner(runSkill)
+	if err := runtime.NewScheduler(); err != nil {
+		slog.Error("runtime.SchedulerInit",
+			slog.String("error", err.Error()))
+	}
+	defer runtime.StopScheduler()
+
+	stopSchedulerWatcher := runtime.SchedulerWatcher(context.Background())
+	defer stopSchedulerWatcher()
 
 	stopWatcher := watchConfig(context.Background())
 	defer stopWatcher()
@@ -241,4 +254,17 @@ func watchConfig(ctx context.Context) func() {
 		}
 	}()
 	return func() { close(stopCh) }
+}
+
+func runSkill(ctx context.Context, sessionID, skillName string) (string, error) {
+	body, err := filesystem.ScheduleSkillBody(skillName)
+	if err != nil {
+		return "", fmt.Errorf("scheduler skill %q unreadable: %w", skillName, err)
+	}
+	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+	if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
+		return "", err
+	}
+	session.SaveBot(sessionID, sessionID, false)
+	return exec.ExecWithSubagent(ctx, body, sessionID, "", "", nil)
 }
