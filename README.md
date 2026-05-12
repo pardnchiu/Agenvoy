@@ -35,65 +35,108 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 
-## Why Agenvoy
+## CLI commands
 
-- **Why not let one model do everything?** Claude excels at planning, GPT at diff reasoning, Gemini at long-context critique — why pile every step onto a single vendor?
-- **What does "model collaboration" cost?** Sub-agents over HTTP / RPC, or goroutines living in one process?
-- **Where does the sandbox boundary sit?** Around the agent's own bash tool, or around every model and CLI you dispatch?
+> Run as `agen <sub>`. `make <sub>` wrappers exist in the repo Makefile for development.
 
-Agenvoy answers with one idea: a single command splits the work, hands each step to the model that does it best, and merges the results — all in one process.
+| Command | Description |
+|---|---|
+| `agen` | Attach interactive TUI; forks daemon (HTTP + Discord + scheduler + summary cron) if not running. |
+| `agen cli <input>` | One-shot agent run; every tool call asks for confirmation. |
+| `agen run <input>` | One-shot agent run; auto-approves every tool call. |
+| `agen stop` | Stop the running daemon (SIGTERM 5s grace → SIGKILL → clear `runtime.uid`). |
+| `agen update` | Fetch latest release, rebuild, stop daemon — re-attach to load the new binary. |
+| `agen model {add\|remove\|list\|planner\|reasoning}` | Manage providers / worker models, pick planner model, set reasoning level. |
+| `agen mcp {list\|add\|remove}` | Manage MCP servers (stdio / HTTP) across global and per-session scope. |
+| `agen session {new\|switch\|config} [name]` | Manage CLI sessions; bare `switch` / `config` opens an interactive picker. |
+| `agen discord {enable\|disable}` | Toggle the Discord bot; `enable` prompts for token, verifies connection, then writes to keychain. |
 
-|  | Agenvoy | Claude Code | Codex CLI | Gemini CLI | OpenClaw | Hermes |
-|---|---|---|---|---|---|---|
-| Runtime | Go | Node.js | Rust | Node.js | Node.js | Python |
-| Providers | 7 + planner | 1 | 1 | 1 | Multi | 18+ |
-| Sandbox scope | Framework + delegated CLIs | Own bash tool | Own shell exec | Own shell exec | Skill / shell | Terminal backend |
-| Model dispatch | Planner picks per call · goroutine fan-out | Single vendor | Single vendor | Single vendor | Sub-agents over HTTP | Sub-agents over HTTP / RPC |
-| Cross-model verify | codex / claude / copilot / gemini · ≤3 rounds | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Error memory | ToriiDB · 90d TTL · semantic | Vendor history | Vendor rollouts | Vendor history | Memory wiki | Skills + history search |
-| Distribution | Single binary | npm + native | npm (Rust) | npm | npm + daemon | curl script |
+## TUI slash commands
 
-The row that matters most is **Model dispatch**. Other frameworks pin you to one vendor (Claude Code, Codex, Gemini CLI) or push sub-agents through HTTP / RPC (OpenClaw, Hermes). Agenvoy keeps it all in one process: a planner picks among seven providers per call, `invoke_subagent` fans out as goroutines, results merge through a single event stream. **Cross-model verification** stacks on top — four external CLIs cross-check one result for up to three rounds. **Sandbox** is the floor — every delegated CLI sits inside one `go-pkg/sandbox` boundary, one policy.
+> Available inside `agen`'s TUI prompt. Type `/` to filter; popup commands transition cleanly back to the prompt.
 
-## Features
+| Command | Description |
+|---|---|
+| `/switch` | Switch active session via picker (current session pre-selected). |
+| `/new [name]` | Create a new session; optional name pins it to the registry. Name is conflict-checked against existing sessions; abort on duplicate. |
+| `/bot` | Edit the current session's bot via two sequential popups: name textfield (conflict-checked against other sessions; abort on conflict) → description textarea (`Ctrl+S` confirms, `Enter` newline, `Esc` cancels). |
+| `/model [global\|session]` | Scope picker; `global` → `[add, remove]` (registry), `session` → pick a configured model. Inline arg skips the scope popup. |
+| `/mcp [add\|remove]` | Action picker; `add` walks a chained popup form (name → transport → command/args/env or url/headers → scope → optional session pick), `remove` lists configured servers across global and session scopes. Restart the daemon to apply changes. Inline arg skips the action popup. |
+| `/planner` | Pick the planner model from `cfg.Models` via popup. No inline arg. |
+| `/reasoning [global\|session]` | Pick `low` / `medium` / `high` for the planner (global) or the active session. Inline arg skips the scope popup. |
+| `/discord [enable\|disable]` | Toggle Discord bot connection. Inline arg switches without the popup. |
+| `/mode [cli\|web]` | Switch between `cli` (TUI rendering) and `web` (browser page). Inline arg switches without the popup. |
+| `/update` | Confirm popup → `agen stop && agen update` via `tea.ExecProcess` → quit TUI. |
+| `/clear` | Clear the current window display only — like terminal `clear`; conversation memory is untouched. |
+| `/exit`, `/quit` | Exit TUI (daemon keeps running; re-attach with `agen`). |
 
-> `make build` · installs to `/usr/local/bin/agen` · [Documentation](https://github.com/pardnchiu/agenvoy/wiki)
+## Built-in tools
 
-- **Right model for the right job**<br>
-  A planner reads each task and routes it to the best-fit provider; `invoke_subagent` enums all seven providers with `Concurrent: true`, so the parent fans out Claude / GPT / Gemini in one goroutine batch — no HTTP between them, results merge in one event stream. `cross_review_with_external_agents` stacks codex / claude / copilot / gemini on top for up to three review rounds.
-- **Pluggable tools, one sandbox**<br>
-  Drop `extensions/apis/*.json` or `extensions/scripts/<name>/` to register a tool; MCP (stdio + HTTP/SSE) merges global and per-session config. Every command, script, and external CLI runs inside `go-pkg/sandbox` (bwrap / sandbox-exec).
-- **Cross-session error memory**<br>
-  ToriiDB indexes tool failures and turns with a 90-day TTL that refreshes on hit; `search_error_memory` and `search_conversation_history` run keyword + semantic in parallel — the same trap isn't hit twice.
+> Tools auto-load on demand; stub names appear first, full schema activates on use. See [Tools wiki](https://github.com/pardnchiu/agenvoy/wiki/Tools) for parameters and routing.
 
-## Architecture
+| Tool | Description |
+|---|---|
+| **File** |  |
+| `read_file` | Read a text, PDF, DOCX, PPTX, CSV/TSV, or image file. |
+| `write_file` | Write content to a file, overwriting if it exists. |
+| `patch_file` | Replace an exact string match inside a file. |
+| `list_files` | List directory entries; `recursive=true` walks subtree files. |
+| `glob_files` | Find files matching a glob pattern within a directory. |
+| `search_files` | Search file contents by RE2 regex within a directory. |
+| **Web** |  |
+| `fetch_page` | Fetch a web page and return its content as Markdown. |
+| `save_page_to_file` | Fetch a web page and save its content to a local file. |
+| `search_web` | Search the web via DuckDuckGo Lite; returns top 10 results. |
+| `fetch_google_rss` | Search Google News RSS and return article titles, summaries, links. |
+| `fetch_yahoo_finance` | Query Yahoo Finance quotes and K-line (OHLCV). |
+| `fetch_youtube_transcript` | Transcribe a YouTube video with timestamps. |
+| `send_http_request` | Send an HTTP request to a specified URL. |
+| **Shell** |  |
+| `run_command` | Run a binary with argv; returns combined stdout/stderr. |
+| **Render** |  |
+| `update_page` | Overwrite the rendered HTML page for the current session; tabs auto-reload. |
+| **Calc** |  |
+| `calculate` | Evaluate a mathematical expression and return the exact result. |
+| **Discovery** |  |
+| `list_tools` | List all currently available built-in and dynamically loaded tools. |
+| `search_tools` | Search available tools by keyword and inject matches into the request. |
+| `activate_skill` | Fetch a skill's reference material by exact name. |
+| **Interactive** |  |
+| `ask_user` | Ask the user one or more questions and return their answers. |
+| `store_secret` | Prompt the user for a secret with masked input and persist to the system keychain. |
+| **Memory** |  |
+| `search_conversation_history` | Search the session's past messages by keyword and semantic similarity. |
+| `search_error_memory` | Semantically search past tool-error records; hits refresh 3-month TTL. |
+| `read_error_memory` | Fetch a prior tool-error record by hash. |
+| `remember_error` | Persist a tool-error record for future retrieval. |
+| **Agent** |  |
+| `invoke_subagent` | Run a subtask in an internal subagent session and return its final text. |
+| `invoke_external_agent` | Invoke one external CLI agent (codex / copilot / claude / gemini) for a second opinion. |
+| `cross_review_with_external_agents` | Cross-review a completed result across all available external agents in parallel. |
+| `review_result` | Review a result against the original input and return issues and improvements. |
+| **Scheduler** *(WIP)* |  |
+| `add_task` | Schedule a one-shot task to run a script at a specific time. |
+| `add_cron` | Schedule a recurring task driven by a standard cron expression. |
+| **Skill Git** |  |
+| `skill_git_commit` / `skill_git_log` / `skill_git_rollback` | Commit, list, or roll back the `~/.config/agenvoy/skills` git history. |
 
-> [Full Architecture](https://github.com/pardnchiu/agenvoy/wiki/Architecture)
+Dynamic tool families (auto-registered, not listed above): `mcp__<server>__<tool>` from configured MCP servers, `api_<name>` from `extensions/apis/*.json`, `script_<name>` from `extensions/scripts/<name>/`.
 
-```mermaid
-graph TB
-    Entry[Entry · cmd/app/main.go]
-    Engine[exec.Run / Execute<br/>≤128 iterations]
-    Providers[LLM Providers · 7]
-    Pending[Pending Registry<br/>confirm / ask]
+## Wiki
 
-    subgraph Tools[Tool Subsystem]
-        MCP[MCP Adapter<br/>stdio / HTTP]
-        Sub[Subagent · in-process]
-        Ext[External CLI · 4 vendors]
-        Builtin[Built-in Tools<br/>file / web / api / script]
-    end
-
-    Sandbox[Sandbox<br/>bwrap / sandbox-exec]
-    Session[Session<br/>ToriiDB / bot.md / status.json]
-
-    Entry --> Engine
-    Engine --> Providers
-    Engine --> Tools
-    Engine <--> Pending
-    Engine <--> Session
-    Builtin --> Sandbox
-```
+| English | 中文 |
+|---|---|
+| [Getting Started](https://github.com/pardnchiu/agenvoy/wiki/Getting-Started) | [新手入門](https://github.com/pardnchiu/agenvoy/wiki/新手入門) |
+| [Architecture](https://github.com/pardnchiu/agenvoy/wiki/Architecture) | [架構](https://github.com/pardnchiu/agenvoy/wiki/架構) |
+| [Core Concepts](https://github.com/pardnchiu/agenvoy/wiki/Core-Concepts) | [核心概念](https://github.com/pardnchiu/agenvoy/wiki/核心概念) |
+| [Providers](https://github.com/pardnchiu/agenvoy/wiki/Providers) | [Provider 設定](https://github.com/pardnchiu/agenvoy/wiki/Provider-設定) |
+| [Tools](https://github.com/pardnchiu/agenvoy/wiki/Tools) | [工具系統](https://github.com/pardnchiu/agenvoy/wiki/工具系統) |
+| [Memory System](https://github.com/pardnchiu/agenvoy/wiki/Memory-System) | [記憶系統](https://github.com/pardnchiu/agenvoy/wiki/記憶系統) |
+| [Skill System](https://github.com/pardnchiu/agenvoy/wiki/Skill-System) | [Skill 系統](https://github.com/pardnchiu/agenvoy/wiki/Skill-系統) |
+| [MCP Integration](https://github.com/pardnchiu/agenvoy/wiki/MCP-Integration) | [MCP 整合](https://github.com/pardnchiu/agenvoy/wiki/MCP-整合) |
+| [Security and Sandbox](https://github.com/pardnchiu/agenvoy/wiki/Security-and-Sandbox) | [安全與沙箱](https://github.com/pardnchiu/agenvoy/wiki/安全與沙箱) |
+| [CLI Reference](https://github.com/pardnchiu/agenvoy/wiki/CLI-Reference) | [命令列參考](https://github.com/pardnchiu/agenvoy/wiki/命令列參考) |
+| [Configuration](https://github.com/pardnchiu/agenvoy/wiki/Configuration) | [設定檔](https://github.com/pardnchiu/agenvoy/wiki/設定檔) |
 
 ## License
 
@@ -104,16 +147,16 @@ This project is licensed under the [Apache License 2.0](LICENSE).
 Just [open an issue](https://github.com/pardnchiu/agenvoy/issues/new) to share an idea.
 
 <a href="https://github.com/pardnchiu/agenvoy/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=pardnchiu/agenvoy&cache_bust=2026-05-05" alt="Agenvoy contributors" />
+  <img src="https://contrib.rocks/image?repo=pardnchiu/agenvoy&cache_bust=2026-05-12" alt="Agenvoy contributors" />
 </a>
 
 ## Star History
 
 <a href="https://star-history.com/#pardnchiu/agenvoy&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&theme=dark&cache_bust=2026-05-05" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&cache_bust=2026-05-05" />
-    <img alt="Agenvoy star history" src="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&cache_bust=2026-05-05" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&theme=dark&cache_bust=2026-05-12" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&cache_bust=2026-05-12" />
+    <img alt="Agenvoy star history" src="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&cache_bust=2026-05-12" />
   </picture>
 </a>
 
