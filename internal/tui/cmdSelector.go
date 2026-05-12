@@ -28,6 +28,7 @@ type Command struct {
 
 var commands = []Command{
 	{"model", "add / remove provider · pick session model"},
+	{"mcp", "add / remove MCP server · global or session scope"},
 	{"planner", "pick / set planner model from registry"},
 	{"reasoning", "set reasoning depth · global (planner) / session"},
 	{"switch", "switch / change current session via picker"},

@@ -205,6 +205,97 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return t, nil
 
+	case McpAction:
+		switch msg.action {
+		case "add":
+			next, cmd, _ := t.commandMcpAdd()
+			return next, cmd
+		case "remove":
+			next, cmd, _ := t.commandMcpRemove()
+			return next, cmd
+		}
+		return t, nil
+
+	case McpRemove:
+		return t.runMcpRemove(msg)
+
+	case McpAddName:
+		if msg.name == "" {
+			t.mcpAdd = nil
+			return t, tea.Println(errorStyle.Render("[!] mcp name required") + "\n")
+		}
+		t.mcpAdd.name = msg.name
+		next, cmd := t.openMcpAddTransport()
+		return next, cmd
+
+	case McpAddTransport:
+		t.mcpAdd.transport = msg.transport
+		switch msg.transport {
+		case "stdio":
+			next, cmd := t.openMcpAddCommand()
+			return next, cmd
+		case "http":
+			next, cmd := t.openMcpAddURL()
+			return next, cmd
+		}
+		t.mcpAdd = nil
+		return t, nil
+
+	case McpAddCommand:
+		if msg.command == "" {
+			t.mcpAdd = nil
+			return t, tea.Println(errorStyle.Render("[!] command required") + "\n")
+		}
+		t.mcpAdd.command = msg.command
+		next, cmd := t.openMcpAddArgs()
+		return next, cmd
+
+	case McpAddArgs:
+		t.mcpAdd.args = parseArgsCSV(msg.raw)
+		next, cmd := t.openMcpAddEnv()
+		return next, cmd
+
+	case McpAddEnv:
+		t.mcpAdd.env = parseKV(msg.raw)
+		next, cmd := t.openMcpAddScope()
+		return next, cmd
+
+	case McpAddURL:
+		if msg.url == "" {
+			t.mcpAdd = nil
+			return t, tea.Println(errorStyle.Render("[!] url required") + "\n")
+		}
+		t.mcpAdd.url = msg.url
+		next, cmd := t.openMcpAddHeaders()
+		return next, cmd
+
+	case McpAddHeaders:
+		t.mcpAdd.headers = parseKV(msg.raw)
+		next, cmd := t.openMcpAddScope()
+		return next, cmd
+
+	case McpAddScope:
+		t.mcpAdd.scope = msg.scope
+		switch msg.scope {
+		case "global":
+			return t.finalizeMcpAdd()
+		case "session":
+			next, cmd := t.openMcpAddSessionPick()
+			return next, cmd
+		}
+		t.mcpAdd = nil
+		return t, nil
+
+	case McpAddSessionPick:
+		t.mcpAdd.sessionID = msg.id
+		return t.finalizeMcpAdd()
+
+	case McpAddSaved:
+		if msg.err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] mcp add: %v", msg.err)) + "\n")
+		}
+		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ mcp added: %s (%s) · restart daemon to apply", msg.name, msg.scope)) + "\n")
+
 	case ReasoningScopeSelect:
 		switch msg.scope {
 		case "global":
