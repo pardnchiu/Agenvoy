@@ -1,11 +1,11 @@
 ---
 name: api-tool-add
-description: Convert user-supplied API source (Swagger/OpenAPI JSON, cURL, or natural-language endpoint description) into Agenvoy APIDocumentData format and write each endpoint as a separate JSON file under `~/.config/agenvoy/api_tools/`. Triggers on requests like "add an API tool", "新增 api tool", "把這個 swagger 轉成 api tool", "註冊一個 API 給 agent 用". Handles auth schema (bearer / apikey / basic) and warns on intranet/localhost hosts before write.
+description: Convert user-supplied API source (Swagger/OpenAPI JSON, cURL, or natural-language endpoint description) into Agenvoy APIDocumentData format and write each endpoint as a separate JSON file under `~/.config/agenvoy/tools/api/`. Triggers on requests like "add an API tool", "新增 api tool", "把這個 swagger 轉成 api tool", "註冊一個 API 給 agent 用". Handles auth schema (bearer / apikey / basic) and warns on intranet/localhost hosts before write.
 ---
 
 # API Tool Adder
 
-把任意 API 來源轉為 Agenvoy `APIDocumentData` 格式並落地至 `~/.config/agenvoy/api_tools/`，每個 endpoint 一個獨立 JSON 檔。
+把任意 API 來源轉為 Agenvoy `APIDocumentData` 格式並落地至 `~/.config/agenvoy/tools/api/`，每個 endpoint 一個獨立 JSON 檔。
 
 ---
 
@@ -14,7 +14,7 @@ description: Convert user-supplied API source (Swagger/OpenAPI JSON, cURL, or na
 | 項目 | 說明 |
 |---|---|
 | **輸入** | Swagger 2.x / OpenAPI 3.x JSON（URL 或本機路徑）、cURL 指令、或純文字 endpoint 描述（method／URL／參數） |
-| **輸出** | 每 endpoint 一檔，寫入 `~/.config/agenvoy/api_tools/<tool_name>.json` |
+| **輸出** | 每 endpoint 一檔，寫入 `~/.config/agenvoy/tools/api/<tool_name>.json` |
 | **格式** | Agenvoy `APIDocumentData`（非 OpenAI function-calling schema、非 Claude tool schema） |
 
 ---
@@ -283,7 +283,7 @@ runtime 自動依 method 分派，**不**需在 schema 標明位置。
 ### 路徑
 
 ```
-~/.config/agenvoy/api_tools/<name>.json
+~/.config/agenvoy/tools/api/<name>.json
 ```
 
 其中 `<name>` 為 schema 內的 `name` 欄位（snake_case，不加 `api_` 前綴）。一個 endpoint 一個檔案。
@@ -292,7 +292,7 @@ runtime 自動依 method 分派，**不**需在 schema 標明位置。
 
 | 條件 | 行為 |
 |---|---|
-| 目錄不存在 | `run_command` 跑 `mkdir -p ~/.config/agenvoy/api_tools` |
+| 目錄不存在 | `run_command` 跑 `mkdir -p ~/.config/agenvoy/tools/api` |
 | 同名檔已存在 | 用 `read_file` 讀現有內容比對；不一致時 `AskUserQuestion` 詢問「覆蓋／改名／略過」 |
 | 多 endpoint 批次 | 全部處理完並回報清單；單一失敗不阻斷其他 endpoint |
 
@@ -307,7 +307,7 @@ runtime 自動依 method 分派，**不**需在 schema 標明位置。
 每個 endpoint 寫入後輸出：
 
 ```
-✅ <tool_name> → ~/.config/agenvoy/api_tools/<tool_name>.json
+✅ <tool_name> → ~/.config/agenvoy/tools/api/<tool_name>.json
    <METHOD> <URL>
    auth: <type|none>  params: <required>/<total>
 ```
@@ -315,7 +315,7 @@ runtime 自動依 method 分派，**不**需在 schema 標明位置。
 最後總結：
 
 ```
-Wrote N tool(s) to ~/.config/agenvoy/api_tools/
+Wrote N tool(s) to ~/.config/agenvoy/tools/api/
 重啟 agen daemon（`agen stop && agen`）即可載入。
 ```
 

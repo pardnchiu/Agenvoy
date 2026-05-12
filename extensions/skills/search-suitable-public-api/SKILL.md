@@ -1,11 +1,11 @@
 ---
 name: search-suitable-public-api
-description: Search the curated Agenvoy public API list for an API that fits the current user need or skill context, then chain into the `api-tool-add` skill to register it under `~/.config/agenvoy/api_tools/`. Triggers when the agent lacks a tool for a data lookup (weather, currency, geocoding, dictionary, etc.), when the user says "找個 API"／"有沒有 XXX 的 API"／"我需要查 XXX 但你沒工具"／"add a public API for this", or when an upstream skill needs an external data source that is not yet wired.
+description: Search the curated Agenvoy public API list for an API that fits the current user need or skill context, then chain into the `api-tool-add` skill to register it under `~/.config/agenvoy/tools/api/`. Triggers when the agent lacks a tool for a data lookup (weather, currency, geocoding, dictionary, etc.), when the user says "找個 API"／"有沒有 XXX 的 API"／"我需要查 XXX 但你沒工具"／"add a public API for this", or when an upstream skill needs an external data source that is not yet wired.
 ---
 
 # Public API Discovery & Auto-Register
 
-從 Agenvoy 維護的公開 API 清單中挑選符合當前需求的 API，抓取其文件，整理為結構化 endpoint 描述，最後透過 `api-tool-add` skill 寫入 `~/.config/agenvoy/api_tools/`。
+從 Agenvoy 維護的公開 API 清單中挑選符合當前需求的 API，抓取其文件，整理為結構化 endpoint 描述，最後透過 `api-tool-add` skill 寫入 `~/.config/agenvoy/tools/api/`。
 
 ---
 
@@ -15,7 +15,7 @@ description: Search the curated Agenvoy public API list for an API that fits the
 |---|---|
 | Agent 當下缺 tool | 使用者問匯率／天氣／IP 地理／字典／笑話／詩詞，agent 環顧 tool list 無對應 |
 | 使用者明說 | 「幫我找個翻譯 API」、「有沒有可以查股價的開源 API」、「add a weather API tool」 |
-| 上游 skill 依賴外部資料 | 某 skill 流程需要查 XXX 但本機 api_tools 無 — 先跑本 skill 補齊 |
+| 上游 skill 依賴外部資料 | 某 skill 流程需要查 XXX 但本機 tools/api 無 — 先跑本 skill 補齊 |
 
 **不觸發**：使用者只想知道某 API 存不存在但**不要新增**（直接 grep 清單回答即可，不必啟動完整 5 步流程）— 此情境用 `api_public_api_list` tool 一次性查詢回答。
 
@@ -97,7 +97,7 @@ multiSelect: true
 | 只要 HTTPS | 剔除 `https != "Yes"` |
 | CORS 不重要 | runtime daemon 走 server-side 呼叫，不受 CORS 限制 — `cors` 欄位**不**作為過濾條件 |
 
-**已存在檢查**：對每個候選比對 `~/.config/agenvoy/api_tools/` 與 `extensions/apis/` 內已有檔案（用 `list_files`／`run_command` 跑 `ls`）— 同名／同 host 已存在則標註「⚠️ 已存在」並讓使用者決定是否重複註冊。
+**已存在檢查**：對每個候選比對 `~/.config/agenvoy/tools/api/` 與 `extensions/apis/` 內已有檔案（用 `list_files`／`run_command` 跑 `ls`）— 同名／同 host 已存在則標註「⚠️ 已存在」並讓使用者決定是否重複註冊。
 
 依**描述相關度**（LLM 判斷）+ HTTPS／免認證偏好排序，取 **≤ 5 個**候選。
 
@@ -184,7 +184,7 @@ multi-endpoint API（如 OpenWeatherMap 含 `/current`／`/forecast`／`/onecall
 | Gate 4（auth）| 候選 API `auth` 欄位非空 → 必走 — 詢問環境變數名稱、auth type（bearer／apikey／basic）|
 | Gate 5（試打）| **必跑** — 用 Step 5 提供的範例值試打；失敗回到本 skill Step 4 換候選或 Step 5 修正描述 |
 
-**勿**自行寫檔到 `~/.config/agenvoy/api_tools/` — 一律透過 api-tool-add 完成（保持 Gate 5 試打驗證為單一強制路徑）。
+**勿**自行寫檔到 `~/.config/agenvoy/tools/api/` — 一律透過 api-tool-add 完成（保持 Gate 5 試打驗證為單一強制路徑）。
 
 ---
 
@@ -195,7 +195,7 @@ multi-endpoint API（如 OpenWeatherMap 含 `/current`／`/forecast`／`/onecall
 📋 候選: Open-Meteo / OpenWeatherMap / WeatherAPI
 ✅ 選擇: Open-Meteo（免認證）
 📄 文件解析: https://open-meteo.com/ → /v1/forecast
-🔧 已交棒 api-tool-add → 試打通過 → 寫入 ~/.config/agenvoy/api_tools/open_meteo_forecast.json
+🔧 已交棒 api-tool-add → 試打通過 → 寫入 ~/.config/agenvoy/tools/api/open_meteo_forecast.json
 
 下一步: 重啟 agen daemon（`agen stop && agen`）即可使用 api_open_meteo_forecast tool。
 ```
@@ -208,7 +208,7 @@ multi-endpoint API（如 OpenWeatherMap 含 `/current`／`/forecast`／`/onecall
 2. **`url` 欄位非 API URL**：清單回的 `url` 永遠視為文件入口，不直接寫入 `endpoint.url`。
 3. **`auth: ""` 不等於完全免費**：部分 API 文件層才提到 rate limit／註冊建議；記入 description。
 4. **候選 ≤ 5**：超過會稀釋使用者注意力；不足 5 個是常態，不必湊數。
-5. **api-tool-add 不可跳過**：寫入路徑唯一走 api-tool-add Gate 5 試打 — 本 skill 不直接 `write_file` 到 `api_tools/`。
+5. **api-tool-add 不可跳過**：寫入路徑唯一走 api-tool-add Gate 5 試打 — 本 skill 不直接 `write_file` 到 `tools/api/`。
 
 ---
 
@@ -217,4 +217,4 @@ multi-endpoint API（如 OpenWeatherMap 含 `/current`／`/forecast`／`/onecall
 - 清單 API tool：`extensions/apis/public-api-list.json`（`api_public_api_list`）
 - 上游服務：`https://public-api-list.agenvoy.com/`
 - 寫入 skill：`extensions/skills/api-tool-add/SKILL.md`
-- 寫入目標：`~/.config/agenvoy/api_tools/`
+- 寫入目標：`~/.config/agenvoy/tools/api/`
