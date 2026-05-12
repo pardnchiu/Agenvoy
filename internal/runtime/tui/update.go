@@ -394,6 +394,47 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd := t.runCronEditSubmit(msg.skill, msg.expression, msg.requirement)
 		return next, cmd
 
+	case TaskAction:
+		switch msg.action {
+		case "add":
+			next, cmd, _ := t.commandTaskAdd()
+			return next, cmd
+		case "remove":
+			next, cmd, _ := t.commandTaskRemove()
+			return next, cmd
+		case "edit":
+			next, cmd, _ := t.commandTaskEdit()
+			return next, cmd
+		}
+		return t, nil
+
+	case TaskAddSubmit:
+		next, cmd := t.runTaskAddSubmit(msg.requirement)
+		return next, cmd
+
+	case TaskRemoveSelect:
+		tasks := listTaskEntries()
+		if msg.idx < 0 || msg.idx >= len(tasks) {
+			return t, tea.Println(errorStyle.Render("[!] task index out of range") + "\n")
+		}
+		next, cmd := t.openTaskRemoveConfirm(tasks[msg.idx].Skill)
+		return next, cmd
+
+	case TaskRemoveConfirm:
+		if !msg.yes {
+			return t, tea.Println(hintStyle.Render("⎯ task remove cancelled") + "\n")
+		}
+		next, cmd := t.runTaskRemove(msg.skill)
+		return next, cmd
+
+	case TaskEditSelect:
+		next, cmd := t.openTaskEditRequirement(msg.skill, msg.at)
+		return next, cmd
+
+	case TaskEditSubmit:
+		next, cmd := t.runTaskEditSubmit(msg.skill, msg.at, msg.requirement)
+		return next, cmd
+
 	case DiscordDone:
 		t.discordStatus = getDiscordStatus()
 		seq := []tea.Cmd{

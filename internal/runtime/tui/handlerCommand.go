@@ -60,6 +60,9 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 	case "/cron":
 		return t.commandCron(parts)
 
+	case "/task":
+		return t.commandTask(parts)
+
 	case "/update":
 		return t.commandUpdate()
 

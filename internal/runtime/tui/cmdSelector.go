@@ -19,9 +19,10 @@ type CmdSelector struct {
 }
 
 type CmdSelectorItem struct {
-	label   string
-	desc    string
-	isSkill bool
+	label       string
+	desc        string
+	isSkill     bool
+	isScheduler bool
 }
 
 type Command struct {
@@ -39,6 +40,7 @@ var commands = []Command{
 	{"bot", "edit / rename current session · name / description (persona)"},
 	{"discord", "enable / disable Discord bot · gateway validated on enable"},
 	{"cron", "add / remove / edit scheduled recurring task"},
+	{"task", "add / remove / edit one-shot scheduled task"},
 	{"update", "update / upgrade · fetch latest release · rebuild · quit TUI"},
 	{"mode", "switch / change rendering · TUI (cli) or browser (web)"},
 	{"clear", "clear visible transcript / history · memory untouched"},
@@ -165,9 +167,9 @@ func getCmdSelectorItems(query string) []CmdSelectorItem {
 				desc = "(" + expr + ") scheduler skill"
 			}
 			schedulerItems = append(schedulerItems, CmdSelectorItem{
-				label:   label,
-				desc:    desc,
-				isSkill: true,
+				label:       label,
+				desc:        desc,
+				isScheduler: true,
 			})
 		}
 	}
@@ -250,7 +252,10 @@ func renderCmdSelector(p *CmdSelector) string {
 		if i == p.cursor {
 			marker = systemStyle.Render("> ")
 			labelStyle = systemStyle
-			if it.isSkill {
+			switch {
+			case it.isScheduler:
+				labelStyle = warnStyle
+			case it.isSkill:
 				labelStyle = skillStyle
 			}
 		}
