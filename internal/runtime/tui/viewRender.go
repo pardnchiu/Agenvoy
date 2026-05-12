@@ -315,13 +315,18 @@ func printLog(name, raw, cwd string) string {
 			return s
 		}
 
-	case "add_task", "add_cron":
+	case "add_task", "add_cron", "patch_task", "patch_cron":
 		skill := pick("skill_name")
 		t := pick("time")
 		if skill != "" && t != "" {
 			return fmt.Sprintf("%s %s", t, skill)
 		}
 		if skill != "" {
+			return skill
+		}
+
+	case "remove_task", "remove_cron":
+		if skill := pick("skill_name"); skill != "" {
 			return skill
 		}
 

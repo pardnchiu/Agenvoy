@@ -143,7 +143,7 @@ func reload() error {
 		}
 		if !entry.At.After(now) {
 			go func(e TaskEntry) {
-				if _, err := RemoveTask(e); err != nil {
+				if _, err := RemoveTask(e.Skill); err != nil {
 					slog.Warn("RemoveTask",
 						slog.String("error", err.Error()))
 				}
@@ -158,7 +158,7 @@ func reload() error {
 			st.mu.Lock()
 			delete(st.timers, keyCopy)
 			st.mu.Unlock()
-			if _, err := RemoveTask(entryCopy); err != nil {
+			if _, err := RemoveTask(entryCopy.Skill); err != nil {
 				slog.Warn("RemoveTask",
 					slog.String("error", err.Error()))
 			}
