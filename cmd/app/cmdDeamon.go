@@ -23,9 +23,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/runtime/discord/types"
-	"github.com/pardnchiu/agenvoy/internal/scheduler"
-	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
-	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
@@ -115,20 +112,6 @@ func cmdDaemon() {
 			slog.String("error", err.Error()))
 	}
 
-	if err := scheduler.New(); err != nil {
-		slog.Error("scheduler.New",
-			slog.String("error", err.Error()))
-	} else {
-		if err := tasks.Setup(scheduler.Get()); err != nil {
-			slog.Warn("tasks.Setup",
-				slog.String("error", err.Error()))
-		}
-		if err := crons.Setup(scheduler.Get()); err != nil {
-			slog.Warn("crons.Setup",
-				slog.String("error", err.Error()))
-		}
-	}
-
 	if cfg, err := session.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
@@ -182,7 +165,6 @@ func cmdDaemon() {
 	<-quit
 	slog.Info("daemon shutting down")
 
-	scheduler.Stop()
 	discordMu.Lock()
 	if discordBot != nil {
 		_ = discord.Close(discordBot)

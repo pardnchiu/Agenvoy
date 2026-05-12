@@ -5,14 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	discordCommand "github.com/pardnchiu/agenvoy/internal/runtime/discord/command"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/runtime/discord/types"
-	"github.com/pardnchiu/agenvoy/internal/scheduler"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
@@ -36,24 +33,6 @@ func New() (*discordTypes.DiscordBot, error) {
 
 	bot := &discordTypes.DiscordBot{
 		Session: session,
-	}
-
-	if cronMgr := scheduler.Get(); cronMgr != nil {
-		cronMgr.OnCompleted = func(channelID, output string) {
-			if output == "" {
-				output = "任務完成"
-			}
-			var content string
-			if strings.HasPrefix(output, "error:") {
-				content = output
-			} else {
-				content = wrapScriptOutput(host.Planner(), output)
-			}
-			if err := Send(bot, channelID, discordTypes.ReplyMessage{Content: content}); err != nil {
-				slog.Warn("Send",
-					slog.String("error", err.Error()))
-			}
-		}
 	}
 
 	session.AddHandler(interactionCreate)

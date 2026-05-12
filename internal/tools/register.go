@@ -11,14 +11,11 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/external"
 	"github.com/pardnchiu/agenvoy/internal/tools/file"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
-	cronTools "github.com/pardnchiu/agenvoy/internal/tools/scheduler/cron"
-	taskTools "github.com/pardnchiu/agenvoy/internal/tools/scheduler/task"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 
 	"github.com/pardnchiu/agenvoy/internal/tools/fetchPage"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/git"
-	scriptTools "github.com/pardnchiu/agenvoy/internal/tools/scheduler/script"
 )
 
 func init() {
@@ -29,9 +26,6 @@ func init() {
 	fetchPage.Register()
 	file.Register()
 	errorMemory.Register()
-	scriptTools.Register()
-	cronTools.Register()
-	taskTools.Register()
 	toolSearcher.Register()
 
 	registRunCommand()
