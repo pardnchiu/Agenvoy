@@ -24,7 +24,7 @@ func registInvokeSubagent() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "invoke_subagent",
-		ReadOnly:    true,
+		AlwaysAllow:    true,
 		Concurrent:  true,
 		Description: "Run a subtask in an internal subagent session and return its final text.",
 		Parameters: map[string]any{

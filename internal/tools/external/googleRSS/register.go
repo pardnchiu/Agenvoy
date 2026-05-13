@@ -18,10 +18,10 @@ var timeRanges = []string{
 
 func Register() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "fetch_google_rss",
-		ReadOnly:   true,
-		Concurrent: true,
-		Description: "Search Google News RSS and return article titles, summaries, and links.",
+		Name:        "fetch_google_rss",
+		AlwaysAllow: true,
+		Concurrent:  true,
+		Description: "[system-default] Search Google News RSS and return article titles, summaries, and links.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

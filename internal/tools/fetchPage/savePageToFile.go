@@ -18,7 +18,7 @@ import (
 func registSavePageToFile() {
 	toolRegister.Regist(toolRegister.Def{
 		Name: "save_page_to_file",
-		Description: "Fetch a web page and save its content to a local file.",
+		Description: "[system-default] Fetch a web page and save its content to a local file.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

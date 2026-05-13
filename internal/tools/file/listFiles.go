@@ -16,7 +16,7 @@ import (
 func registListFiles() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "list_files",
-		ReadOnly:   true,
+		AlwaysAllow:   true,
 		Concurrent: true,
 		Description: `
 List directory entries.

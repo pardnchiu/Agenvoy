@@ -12,7 +12,7 @@ import (
 func Register() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "calculate",
-		ReadOnly:    true,
+		AlwaysAllow:    true,
 		Concurrent:  true,
 		Description: "Evaluate a mathematical expression and return the exact result.",
 		Parameters: map[string]any{

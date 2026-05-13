@@ -25,6 +25,7 @@ type Script struct {
 type ScriptDoc struct {
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
+	AlwaysAllow bool            `json:"always_allow,omitempty"`
 	Parameters  json.RawMessage `json:"parameters,omitempty"`
 }
 
@@ -52,7 +53,7 @@ func (t *Translator) Scan(dir string) error {
 		if !entry.IsDir() {
 			continue
 		}
-		if strings.HasPrefix(entry.Name(), "_") {
+		if strings.HasPrefix(entry.Name(), "_") || strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
 		toolDir := filepath.Join(dir, entry.Name())
@@ -94,6 +95,16 @@ func (t *Translator) GetTools() []map[string]any {
 		})
 	}
 	return tools
+}
+
+func (t *Translator) AlwaysAllowNames() []string {
+	names := make([]string, 0, len(t.scripts))
+	for _, script := range t.scripts {
+		if script.Doc.AlwaysAllow {
+			names = append(names, "script_"+script.Doc.Name)
+		}
+	}
+	return names
 }
 
 func loadDir(dir string) (*ScriptDoc, string, string, error) {

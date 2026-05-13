@@ -19,7 +19,7 @@ type Def struct {
 	Description string
 	Parameters  map[string]any
 	Handler     Handler
-	ReadOnly    bool
+	AlwaysAllow    bool
 	AlwaysLoad  bool
 	Concurrent  bool
 }
@@ -54,7 +54,7 @@ func Regist(d Def) {
 	}
 	handlerMap[d.Name] = d.Handler
 	defList = append(defList, tool)
-	if d.ReadOnly {
+	if d.AlwaysAllow {
 		readOnlySet[d.Name] = true
 	}
 	if d.AlwaysLoad {
@@ -71,6 +71,14 @@ func IsAlwaysLoad(name string) bool {
 
 func IsReadOnly(name string) bool {
 	return readOnlySet[name]
+}
+
+func MarkAlwaysAllow(name string) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return
+	}
+	readOnlySet[name] = true
 }
 
 func IsConcurrent(name string) bool {

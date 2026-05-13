@@ -17,7 +17,7 @@ import (
 func registSearchFiles() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "search_files",
-		ReadOnly:   true,
+		AlwaysAllow:   true,
 		Concurrent: true,
 		Description: `
 Search file contents by RE2 regex within a directory.

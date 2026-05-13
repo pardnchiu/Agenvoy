@@ -12,16 +12,23 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
+const systemDefaultMarker = "[system-default]"
+
 type result struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	SystemDefault bool   `json:"system_default,omitempty"`
+}
+
+func isSystemDefault(description string) bool {
+	return strings.HasPrefix(strings.TrimSpace(description), systemDefaultMarker)
 }
 
 func registSearchTools() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "search_tools",
-		ReadOnly:   true,
-		AlwaysLoad: true,
+		Name:        "search_tools",
+		AlwaysAllow: true,
+		AlwaysLoad:  true,
 		Description: "Search available tools by keyword and inject matching tools into the current request.",
 		Parameters: map[string]any{
 			"type": "object",
@@ -200,11 +207,14 @@ func searchByKeyword(query string, tools []toolTypes.Tool, maxResults int) []res
 			}
 
 			if pat.MatchString(descLower) {
-				score += 2
+				score += 4
 			}
 		}
 
 		if score > 0 {
+			if isSystemDefault(tool.Function.Description) {
+				score--
+			}
 			candidates = append(candidates, scored{tool, score})
 		}
 	}
@@ -220,8 +230,9 @@ func searchByKeyword(query string, tools []toolTypes.Tool, maxResults int) []res
 	out := make([]result, 0, len(candidates))
 	for _, c := range candidates {
 		out = append(out, result{
-			Name:        c.tool.Function.Name,
-			Description: c.tool.Function.Description,
+			Name:          c.tool.Function.Name,
+			Description:   c.tool.Function.Description,
+			SystemDefault: isSystemDefault(c.tool.Function.Description),
 		})
 	}
 	return out
@@ -243,8 +254,9 @@ func selectByName(names string, tools []toolTypes.Tool) []result {
 		if t, ok := index[name]; ok && !seen[name] {
 			seen[name] = true
 			out = append(out, result{
-				Name:        t.Function.Name,
-				Description: t.Function.Description,
+				Name:          t.Function.Name,
+				Description:   t.Function.Description,
+				SystemDefault: isSystemDefault(t.Function.Description),
 			})
 		}
 	}

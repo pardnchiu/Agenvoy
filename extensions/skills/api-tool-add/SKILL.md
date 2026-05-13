@@ -181,6 +181,57 @@ multiSelect: false
 
 試打捕捉以上所有類型，**比 schema 視覺檢查可靠百倍**。
 
+### Gate 6：always_allow 設定
+
+試打通過後、寫入前，為每個 endpoint 決定 `always_allow` 旗標。此旗標控制 `agen cli` 互動模式下是否跳過 confirm prompt——`true` = 不問直接執行、`false`（預設）= 每次 confirm。
+
+#### 預設推薦
+
+| 條件 | 預設建議 | 理由 |
+|---|---|---|
+| `method=GET` 且路徑無 `delete`／`remove`／`destroy`／`logout` 等動詞 | `true` | 純讀取，無副作用 |
+| `method=GET` 但回傳含敏感資料（個資、密鑰、財務）| `false` | 隱私，使用者應每次明示 |
+| `method=POST` 且語意為「查詢／搜尋」（如 `search`、`query`、`list`，POST 是為了複雜 filter body）| `true` | 形 POST 實 GET |
+| `method=POST`／`PUT`／`PATCH` 一般寫入 | `false` | 有副作用 |
+| `method=DELETE` | `false` | 不可逆 |
+| 金流／支付／轉帳 | `false` | 強制每次 confirm |
+| 對外發送（mail／sms／webhook／social post）| `false` | 一發出無法收回 |
+
+#### 詢問
+
+對每個 endpoint，用 `AskUserQuestion`：
+
+```
+question: "<tool_name>（<METHOD> <path>）是否設為 always_allow？建議：<true|false>，理由：<推薦理由>"
+header: "Auto-allow"
+options:
+  - label: "是，跳過每次 confirm"  description: "agen cli 互動模式直接執行，不問使用者"
+  - label: "否，每次 confirm"      description: "agen cli 互動模式每次跳出確認 prompt"
+multiSelect: false
+```
+
+#### 批次優化
+
+同一批 swagger 多 endpoint 時，第一輪可一次性問：
+
+```
+question: "本批 N 個 endpoint 的 always_allow 預設策略？"
+header: "Batch policy"
+options:
+  - label: "全部採推薦值"           description: "GET → true、寫入類 → false（依上表）"
+  - label: "全部 always_allow=true" description: "整批都自動執行（僅當你完全信任此 API）"
+  - label: "全部 always_allow=false" description: "整批都每次 confirm（最保守）"
+  - label: "逐個詢問"               description: "對每個 endpoint 個別問"
+multiSelect: false
+```
+
+選前三項即批次套用；選「逐個詢問」走前一段流程。
+
+#### 規則
+- 寫入 schema 頂層 `always_allow: <bool>`。
+- 預設不寫（缺省 = `false`）；只有使用者明確選 `true` 才寫入此欄位（`omitempty` 語意）。
+- **勿**將 `always_allow=true` 套用到任何「不可逆／有外部副作用」的 endpoint，即使使用者選「全部 always_allow=true」也須二次確認該 endpoint 是否真要繞過 confirm（顯示具體 method + path + 風險點）。
+
 ---
 
 ## 輸出格式（嚴格遵守）
@@ -247,6 +298,7 @@ multiSelect: false
 |---|---|---|
 | `name` | ✅ | snake_case，不加 `api_` 前綴（runtime 自動補） |
 | `description` | ✅ | 一句動詞開頭，描述用途；英文優先 |
+| `always_allow` | optional | `true` = `agen cli` 跳過 confirm；缺省／`false` = 每次 confirm。僅讀取／無副作用 endpoint 可設 `true`，由 Gate 6 決定 |
 | `endpoint.url` | ✅ | 完整 URL，path 變數用 `{var_name}` |
 | `endpoint.method` | ✅ | `GET`／`POST`／`PUT`／`PATCH`／`DELETE` |
 | `endpoint.content_type` | ✅ | 預設 `json`；form data 用 `form` |
@@ -309,7 +361,7 @@ runtime 自動依 method 分派，**不**需在 schema 標明位置。
 ```
 ✅ <tool_name> → ~/.config/agenvoy/tools/api/<tool_name>.json
    <METHOD> <URL>
-   auth: <type|none>  params: <required>/<total>
+   auth: <type|none>  params: <required>/<total>  auto-allow: <yes|no>
 ```
 
 最後總結：
@@ -330,6 +382,7 @@ Wrote N tool(s) to ~/.config/agenvoy/tools/api/
 5. **無禁止格式**：沒有 `input_schema`／`properties` 包裝層／OpenAI function 結構。
 6. **Host 已確認**：intranet／localhost host 已通過 Gate 3 確認或替換。
 7. **試打通過**：Gate 5 對該 endpoint 取得 2xx（或使用者明確允許的 4xx／5xx）。未試打或 unreachable → **拒絕寫入**。
+8. **always_allow 確認**：Gate 6 已決定；`always_allow=true` 的 endpoint 必須為純讀取／無外部副作用（寫入類、刪除類、發送類即使使用者批量選 true 也須個別二次確認）。
 
 ---
 
@@ -345,8 +398,9 @@ User: `幫我把這個 swagger 轉成 api tool: /Users/me/swagger.json`
    - `user_get` 用 swagger example `id=42` → `200 OK` ✅
    - `user_create` 用 body `{"name":"test"}` → `422` 缺 email → 使用者選「修改參數重試」追加 `email` → `201` ✅
    - `health_check` → `200 OK` ✅
-6. **寫入**：`user_get.json`／`user_create.json`／`health_check.json` 三檔（`health_check` 不掛 auth — swagger 對 `/health` 標 `security: []`）
-7. **回報**：列出三檔路徑 + 試打結果摘要 + 提醒設 `STAGING_API_KEY` env
+6. **Gate 6**：`AskUserQuestion`「本批策略？」→ 使用者選「全部採推薦值」→ `user_get` / `health_check` 設 `always_allow=true`（GET 純讀取），`user_create` 不寫此欄位（缺省 false）
+7. **寫入**：`user_get.json`／`user_create.json`／`health_check.json` 三檔（`health_check` 不掛 auth — swagger 對 `/health` 標 `security: []`）
+8. **回報**：列出三檔路徑 + 試打結果摘要 + 各 endpoint `always_allow` 狀態 + 提醒設 `STAGING_API_KEY` env
 
 ---
 

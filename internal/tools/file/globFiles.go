@@ -16,7 +16,7 @@ import (
 func registGlobFiles() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "glob_files",
-		ReadOnly:   true,
+		AlwaysAllow:   true,
 		Concurrent: true,
 		Description: `
 Find files matching a glob pattern within a directory.

@@ -13,8 +13,8 @@ import (
 
 func registCrossReviewWithExternalAgents() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:     "cross_review_with_external_agents",
-		ReadOnly: true,
+		Name:        "cross_review_with_external_agents",
+		AlwaysAllow: true,
 		Description: `
 Run a concrete completed result through all available external agents (codex / copilot / claude / gemini) in parallel for cross-review.`,
 		Parameters: map[string]any{

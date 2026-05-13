@@ -5,6 +5,7 @@ import "encoding/json"
 type APIDocumentData struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	AlwaysAllow bool   `json:"always_allow,omitempty"`
 	Endpoint    struct {
 		URL         string            `json:"url"`
 		Method      string            `json:"method"`

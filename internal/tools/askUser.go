@@ -27,7 +27,7 @@ type askQuestion struct {
 func registAskUser() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "ask_user",
-		ReadOnly:    true,
+		AlwaysAllow: true,
 		AlwaysLoad:  true,
 		Description: "Ask the user one or more questions and return their answers.",
 		Parameters: map[string]any{

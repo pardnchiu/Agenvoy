@@ -13,7 +13,7 @@ import (
 func skillLog() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "skill_git_log",
-		ReadOnly:    true,
+		AlwaysAllow:    true,
 		Description: "List the git commit history for ~/.config/agenvoy/skills in oneline format.",
 		Parameters: map[string]any{
 			"type": "object",

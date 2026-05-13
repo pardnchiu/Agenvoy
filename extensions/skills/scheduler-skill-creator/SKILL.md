@@ -140,12 +140,58 @@ python3 scripts/init_scheduler_skill.py <short-name>
 
 **重綁定既有 skill 的時間**（user 說「把那個 X 改成 Y」）：不再跑 init 腳本，直接用既存 full name 進步驟 5；既存 full name 可從先前回報訊息找，或 `list_files ~/.config/agenvoy/skills/scheduler/` 列出選擇。
 
+### 3.5 工具／skill 搭配探索（步驟 4 前置）
+
+填 skill body 之前**必須**確認會用到的 skill／tool 真實存在，否則觸發時 subagent 找不到 → 直接 abort、使用者拿不到結果。
+
+**Skill 優先於 tool**：skill 是預先封裝好的高階流程（含 prompt 規則／步驟／格式），tool 是低階呼叫；同樣的任務若有對應 skill，body 寫 `/<skill-name>` 比直接組 tool call 更穩定且符合既有設計。
+
+**強制探索順序**（**禁止跳順序、禁止只跑其中一步**）：
+
+1. **讀 system prompt 的 `## Skills` 區段**（你的 context 內已有）：把使用者意圖（步驟 1 的「任務」）對照所有 skill 的 `description`，列出**任何描述提及相關主題的候選**。例：
+   - 「分析比特幣」「BTC 價格」→ `bitcoin-lookup`（描述含「BTC／Bitcoin／比特幣價格／行情／分析」）
+   - 「彙整 commit 訊息」→ `commit-generate`
+   - 「跑程式碼 review」→ `code-reviewer`
+2. **逐個 `activate_skill` 驗證**候選：activate 成功代表存在，body 改寫成 `任務：呼叫 /<skill-name> 觸發本任務`。失敗（skill 不存在）才往下一步。
+3. **無匹配 skill 時，`search_tools` 找 raw tool**：抽出步驟 1 任務的動詞，對每個動詞呼一次 `search_tools`。回傳的 tool name 才能寫進 body：
+
+   ```
+   search_tools({"query": "fetch stock price", "max_results": 5})
+   search_tools({"query": "yahoo finance", "max_results": 5})
+   ```
+
+4. **`search_tools` 也找不到**（例：使用者要求「打卡」但無此 tool 也無對應 skill）→ 回 `ask_user`：「目前環境沒有可完成 X 的 skill／tool，可以改成 Y 嗎？」。**禁止**寫不存在的 skill／tool name 進 body。
+
+**判定原則**：
+
+| 情境 | body 怎麼寫 |
+|---|---|
+| 有 skill 命中（步驟 2 activate 成功）| `任務：呼叫 /<skill-name>，把結果整理成「## 輸出格式」要求的形式` |
+| 無 skill 但有 tool（步驟 3 search 命中）| `任務：呼叫 <tool-name>，參數 ...` |
+| 兩者都無（步驟 4）| 中止 init，先 `ask_user` 確認替代方案 |
+
+**常用 skill／tool 速查**（先想想再去 activate／search）：
+
+| 任務類型 | 候選 skill（優先） | 候選 tool（退一步） |
+|---|---|---|
+| 比特幣行情／分析 | `bitcoin-lookup` | `fetch_yahoo_finance`（BTC-USD）|
+| 一般股價／財經 | （視 `## Skills` 是否有對應）| `fetch_yahoo_finance` |
+| HN／RSS 摘要 | （視是否有 digest skill）| `fetch_google_rss` |
+| 影片字幕 | — | `fetch_youtube_transcript` |
+| 網頁／API 抓取 | — | `fetch_page`／`send_http_request`／`api_*` |
+| 程式碼 review | `code-reviewer` | — |
+| Commit／版號 | `commit-generate`／`version-generate` | — |
+| 計算 | — | `calculator` |
+| 純文字提醒（無 IO） | — | 不需 tool，body 直接寫死要輸出的文字 |
+
+**`scheduler-skill-creator` 與 `scheduler/` 下任何 skill 不算候選** —— 前者是本流程自己、不能遞迴；後者是 scheduler 用內部 skill（透過 `add_task` 綁定觸發、不能用 `/<name>` 從 body 呼叫）。
+
 ### 4. 填充 skill body
 
 用 `patch_file` 取代模板中的 `[TODO: ...]` 段：
 
 - `description:` ← 步驟 1 收集到的「一句話描述」
-- `## 任務` ← 步驟 1 收集到的「行為細節」，引用具體 tool 名稱與參數
+- `## 任務` ← 步驟 1 收集到的「行為細節」，引用**步驟 3.5 已確認存在**的 tool 名稱與參數
 - `## 輸出格式` ← 期望輸出形式
 
 **禁止**在 skill body 內加任何「推送到 channel」「呼叫 send_http_request 給 Discord」「呼叫 MCP discord tool」之類的 notify 指令 —— scheduler 觸發後 runtime 自動把輸出送回原 caller channel（Discord 來源送回原頻道、CLI／HTTP 來源送回 action.log）。Skill body 只需專注產出**任務結果文字**。
@@ -254,3 +300,4 @@ description: 每 5 分鐘抓取台積電 2330.TW 即時股價並提醒。
 - **不**留 `[TODO: ...]` 佔位符在最終 skill —— 步驟 4 須把所有 TODO 替換為具體內容
 - **不**用任意預設值補齊時間 —— 缺時間就 `ask_user` 問清楚，不要「應該是 9 點」之類腦補
 - **不**跳過步驟 5 的 `add_task` / `add_cron` —— skill 建立但沒綁時間 = 排程不會觸發
+- **不**在 body 引用未經 `search_tools` 確認存在的 tool name —— 觸發時 subagent 找不到 tool 會直接 abort，使用者拿不到結果也看不到錯誤原因

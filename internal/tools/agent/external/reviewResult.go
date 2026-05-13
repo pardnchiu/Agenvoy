@@ -38,7 +38,7 @@ func selectReviewModelKey() string {
 func registReviewResult() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "review_result",
-		ReadOnly:    true,
+		AlwaysAllow: true,
 		Description: "Review a result against the original task input and return concrete issues and improvement suggestions.",
 		Parameters: map[string]any{
 			"type": "object",

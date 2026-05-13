@@ -29,7 +29,7 @@ func registSelectSkill() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        ToolName,
 		Description: staticDescription,
-		ReadOnly:    true,
+		AlwaysAllow:    true,
 		AlwaysLoad:  true,
 		Concurrent:  false,
 		Parameters: map[string]any{

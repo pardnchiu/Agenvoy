@@ -11,9 +11,9 @@ import (
 
 func registListTools() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "list_tools",
-		ReadOnly:   true,
-		Concurrent: true,
+		Name:        "list_tools",
+		AlwaysAllow: true,
+		Concurrent:  true,
 		Description: "List all currently available built-in and dynamically loaded tools.",
 		Parameters: map[string]any{
 			"type":       "object",

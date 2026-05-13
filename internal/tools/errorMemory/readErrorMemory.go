@@ -14,7 +14,7 @@ import (
 func registReadErrorMemory() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "read_error_memory",
-		ReadOnly:   true,
+		AlwaysAllow:   true,
 		Concurrent: true,
 		Description: `
 Fetch a prior tool error record by hash.

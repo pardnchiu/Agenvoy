@@ -20,9 +20,9 @@ func Register() {
 	yahooFinance.Register()
 	youtube.Register()
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "send_http_request",
-		ReadOnly:   true,
-		Concurrent: true,
+		Name:        "send_http_request",
+		AlwaysAllow: true,
+		Concurrent:  true,
 		Description: "Send an HTTP request to the specified URL.",
 		Parameters: map[string]any{
 			"type": "object",

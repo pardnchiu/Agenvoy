@@ -14,7 +14,7 @@ import (
 func registSearchErrorMemory() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "search_error_memory",
-		ReadOnly:   true,
+		AlwaysAllow:   true,
 		Concurrent: true,
 		Description: `
 Semantically search past tool-error records for root cause and prior resolution.

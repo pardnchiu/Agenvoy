@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -35,7 +34,6 @@ func cmdAgent(allowAll bool) {
 
 	registry := buildAgentRegistry()
 	ctx, cancel := context.WithCancel(context.Background())
-	skill.SyncSkills(ctx, extensions.Skills)
 	scanner := skill.NewScanner()
 	defer cancel()
 

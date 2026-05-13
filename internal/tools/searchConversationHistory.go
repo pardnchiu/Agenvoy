@@ -38,9 +38,9 @@ var historyTimeRanges = map[string]time.Duration{
 
 func registSearchConversationHistory() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "search_conversation_history",
-		ReadOnly:   true,
-		Concurrent: true,
+		Name:        "search_conversation_history",
+		AlwaysAllow: true,
+		Concurrent:  true,
 		Description: "Search this session's past messages by keyword and semantic similarity.",
 		Parameters: map[string]any{
 			"type": "object",

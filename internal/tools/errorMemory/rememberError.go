@@ -14,7 +14,7 @@ import (
 func registRememberError() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:     "remember_error",
-		ReadOnly: true,
+		AlwaysAllow: true,
 		Description: `
 Persist a tool-error record for future retrieval via search_tool_errors.
 Call after resolving or abandoning the error.`,

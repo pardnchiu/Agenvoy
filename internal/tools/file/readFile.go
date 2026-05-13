@@ -21,7 +21,7 @@ const (
 func registReadFile() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:       "read_file",
-		ReadOnly:   true,
+		AlwaysAllow:   true,
 		Concurrent: true,
 		Description: `
 Read a text, PDF, DOCX, PPTX, CSV/TSV, or image file.
