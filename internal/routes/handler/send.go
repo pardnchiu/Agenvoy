@@ -58,6 +58,9 @@ func Send() gin.HandlerFunc {
 			defer close(events)
 
 			scanner := host.Scanner()
+			if scanner != nil {
+				scanner.Scan()
+			}
 			trimContent := strings.TrimSpace(req.Content)
 
 			externalAgent, externalEffective, externalReadOnly := external.MatchExternal(trimContent)

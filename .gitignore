@@ -13,3 +13,5 @@ test/copilot_token.json
 __pycache__
 
 _tui_archived
+_scheduler
+_script_tools

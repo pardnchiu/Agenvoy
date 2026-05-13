@@ -75,8 +75,8 @@ graph TB
 | Session | `internal/session` | bot.md / status.json / action.log / fsnotify observer |
 | Pending | `internal/pending` | global confirm/ask registry |
 | Memory | ToriiDB (`DBSessionHist` / `DBSessionSummary` / `error_memory`) | semantic search + 90-day TTL |
-| Scheduler | `internal/scheduler` (+ TUI watcher) | cron / one-shot tasks; hot-reload on file change |
-| TUI | `internal/tui` | bubbletea inline-chat front-end; single-package by design |
+| Scheduler | `internal/runtime/scheduler.go` (+ `runtime.SchedulerWatcher` fsnotify) | cron / one-shot tasks bound to scheduler skills; hot-reload on `{tasks,crons}.json` change |
+| TUI | `internal/runtime/tui` | bubbletea inline-chat front-end; single-package by design |
 
 ## Cross-cutting principles
 

@@ -67,11 +67,15 @@
 
 | 工具 | 說明 |
 |---|---|
-| `add_task` / `get_task` / `list_tasks` / `update_task` / `remove_task` | 一次性排程任務 |
-| `add_cron` / `get_cron` / `list_crons` / `update_cron` / `remove_cron` | 週期 cron 任務 |
-| `read_script` / `update_script` | 排程腳本讀寫 |
+| `add_task` / `add_cron` | 把既有 scheduler skill 綁定至 one-shot 時間或 5 欄 cron expression。`add_task` time 格式：`+5m`（相對）／`HH:MM`（今天）／`YYYY-MM-DD HH:MM`／RFC3339。**應由 `scheduler-skill-creator` skill 呼叫，不直接呼**——直呼前提是 skill 已存在於 `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/`。 |
+| `patch_task` / `patch_cron` | 依 `skill_name` 改時間；只動時間、不動 SKILL body。 |
+| `remove_task` / `remove_cron` | 依 `skill_name` 取消；綁定的 scheduler skill 目錄一併搬到 `.Trash/`。 |
 
-TUI 模式下 `internal/tui/schedulerMonitor.go` 用 fsnotify 監看 scheduler 目錄，JSON 檔變動即熱重載 task／cron；過期 task 在啟動或重載時自動補跑。
+`scheduler-skill-creator` 是高階 skill：**建立** scheduler skill body 後呼叫 `add_task`／`add_cron` 完成綁定。新的週期／一次性任務需求應 activate 該 skill，而非直呼低階 tool。
+
+Daemon 端 runtime（`internal/runtime/scheduler.go`）用 fsnotify 監看 `~/.config/agenvoy/{tasks,crons}.json`，Write／Create／Rename 觸發即熱重載；過期 task 在啟動或重載時自動觸發並移除；觸發走 `runtime.SetRunner` → 對 scheduler skill body 起 in-process subagent（always-allow context）。
+
+TUI 提供三個 slash command 管排程：`/cron`、`/task`（add／remove／edit）、`/sched-<name>`（手動觸發既有 scheduler skill body）。Popup 流程見 [CLI Reference](CLI-Reference.zh)。
 
 ## 工具擴展
 

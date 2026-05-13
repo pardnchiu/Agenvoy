@@ -17,7 +17,7 @@ func Register() {
 		Concurrent: true,
 		Description: `
 Transcribe YouTube video with timestamps.
-Video → text for analysis, summarization, quote extraction.`,
+Video to text for analysis, summarization, quote extraction.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

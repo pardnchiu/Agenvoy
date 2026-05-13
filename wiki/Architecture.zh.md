@@ -75,8 +75,8 @@ graph TB
 | Session | `internal/session` | bot.md / status.json / action.log / fsnotify observer |
 | Pending | `internal/pending` | 全域 confirm/ask registry |
 | Memory | ToriiDB（`DBSessionHist` / `DBSessionSummary` / `error_memory`） | 語意搜尋 + 90 天 TTL |
-| Scheduler | `internal/scheduler`（+ TUI watcher） | cron／一次性任務；檔案變動熱重載 |
-| TUI | `internal/tui` | bubbletea inline-chat 前端；單一 package 設計 |
+| Scheduler | `internal/runtime/scheduler.go`（+ `runtime.SchedulerWatcher` fsnotify） | scheduler skill 綁定 cron／one-shot；`{tasks,crons}.json` 變動熱重載 |
+| TUI | `internal/runtime/tui` | bubbletea inline-chat 前端；單一 package 設計 |
 
 ## 跨切原則
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,20 +16,19 @@ import (
 	"github.com/fsnotify/fsnotify"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
-	"github.com/pardnchiu/agenvoy/internal/interactive/discord"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/interactive/discord/types"
 	"github.com/pardnchiu/agenvoy/internal/routes"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/scheduler"
-	"github.com/pardnchiu/agenvoy/internal/scheduler/crons"
-	"github.com/pardnchiu/agenvoy/internal/scheduler/tasks"
+	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
+	discordTypes "github.com/pardnchiu/agenvoy/internal/runtime/discord/types"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 )
@@ -115,20 +115,6 @@ func cmdDaemon() {
 			slog.String("error", err.Error()))
 	}
 
-	if err := scheduler.New(); err != nil {
-		slog.Error("scheduler.New",
-			slog.String("error", err.Error()))
-	} else {
-		if err := tasks.Setup(scheduler.Get()); err != nil {
-			slog.Warn("tasks.Setup",
-				slog.String("error", err.Error()))
-		}
-		if err := crons.Setup(scheduler.Get()); err != nil {
-			slog.Warn("crons.Setup",
-				slog.String("error", err.Error()))
-		}
-	}
-
 	if cfg, err := session.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
@@ -143,6 +129,16 @@ func cmdDaemon() {
 
 	host.Set(selectorBot, registry, scanner)
 	host.SetRefresher(refreshHost)
+
+	runtime.SetRunner(runSkill)
+	if err := runtime.NewScheduler(); err != nil {
+		slog.Error("runtime.SchedulerInit",
+			slog.String("error", err.Error()))
+	}
+	defer runtime.StopScheduler()
+
+	stopSchedulerWatcher := runtime.SchedulerWatcher(context.Background())
+	defer stopSchedulerWatcher()
 
 	stopWatcher := watchConfig(context.Background())
 	defer stopWatcher()
@@ -182,7 +178,6 @@ func cmdDaemon() {
 	<-quit
 	slog.Info("daemon shutting down")
 
-	scheduler.Stop()
 	discordMu.Lock()
 	if discordBot != nil {
 		_ = discord.Close(discordBot)
@@ -259,4 +254,17 @@ func watchConfig(ctx context.Context) func() {
 		}
 	}()
 	return func() { close(stopCh) }
+}
+
+func runSkill(ctx context.Context, sessionID, skillName string) (string, error) {
+	body, err := filesystem.ScheduleSkillBody(skillName)
+	if err != nil {
+		return "", fmt.Errorf("scheduler skill %q unreadable: %w", skillName, err)
+	}
+	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+	if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
+		return "", err
+	}
+	session.SaveBot(sessionID, sessionID, false)
+	return exec.ExecWithSubagent(ctx, body, sessionID, "", "", nil)
 }

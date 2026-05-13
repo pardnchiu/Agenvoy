@@ -68,25 +68,37 @@ make mcp     [list|add|remove]
 
 ## TUI shortcuts
 
-Main view (`Content` / `Logs`):
+Single bubbletea textarea (`internal/runtime/tui`); slash commands open transient popups that close cleanly back to the prompt.
 
 | Key | Action |
 |---|---|
-| `i` | Open Message input (`> ` prompt, multi-line; `Shift+Enter` inserts newline on capable terminals) |
-| `c` | Open Command input (`$ ` prompt, single-line) |
-| `Enter` | Submit (Message: send + clear; Command: run) |
-| `Esc` | Close input / popup |
-| `Tab` | Toggle Content / Logs view; in input pages toggles Command ↔ Message |
-| `Ctrl+P` | Toggle co-work dashboard (Sessions / Log / Pending three-panel) |
-| `h` / `l` / arrows | Navigate panels |
-| `j` / `k` | Scroll active view |
-| `Ctrl+C` | Cancel current execution |
+| `Ctrl+S` | Submit current textarea content (Enter inserts a newline; `Alt+Enter` also inserts newline) |
+| `/` | Begin slash-command filter (popup picker — Up / Down to navigate, Tab / Enter to autocomplete into the textarea, Esc to dismiss) |
+| `Up` / `Down` (on empty / single-line input) | Walk input history (per-session `input_history` file) |
+| `Esc` | Cancel running exec (if running) or dismiss the active popup |
+| `Ctrl+C` | Exit TUI (daemon keeps running) |
 
-Co-work dashboard:
+The TUI auto-tails the active session's `action.log` (foreign-process writes prefixed with `▌ ` in warn-purple). Single-session view only — multi-session dashboard archived; see `internal/_tui_archived/sessionObserver.go` if you need it back.
 
-- **Sessions** — left pane, lists tracked `cli-*` and `http-*` sessions (no `temp-*` / `dc-*`)
-- **Log** — center, tails the selected session's `action.log` formatted CLI-style
-- **Pending** — right pane, only visible when `pending.Snapshot()` returns ≥1 entry; selecting an item jumps Sessions to that sid
+## TUI slash commands
+
+| Command | Description |
+|---|---|
+| `/switch` | Pick a session (current pre-selected; `(new session)` sentinel at the bottom). |
+| `/new [name]` | Create a session; optional name pins it to the registry (conflict-checked). |
+| `/bot [name body...]` | Edit bot persona — two-popup form (name then multiline body), or inline `parts≥3` for fast path. |
+| `/model [global\|session]` | `global` → add / remove from registry, `session` → pick from `cfg.Models`. |
+| `/mcp [add\|remove]` | Chained popup form for MCP server config; restart daemon to apply. |
+| `/planner` | Pick the planner model from `cfg.Models`. |
+| `/reasoning [global\|session]` | `low` / `medium` / `high`. |
+| `/discord [enable\|disable]` | Toggle Discord bot connection (gateway-validated on enable via CLI subprocess). |
+| `/cron [add\|remove\|edit]` | Recurring schedules. `add` → multiline requirement → dispatches `/scheduler-skill-creator <requirement>` (skill asks for missing when/what via `ask_user`). `remove` → list → confirm → `runtime.RemoveCron` + trashes skill dir. `edit` → list → requirement → agent picks `patch_cron` or rewrites SKILL body. |
+| `/task [add\|remove\|edit]` | One-shot tasks (mirrors `/cron`; uses `add_task` / `patch_task` / `remove_task`). |
+| `/sched-<name>` | Surfaced in the slash picker after regular skills (warn-purple label) — picks an existing scheduler skill and dispatches its body with an explicit "execute, do NOT activate scheduler-skill-creator" preamble. |
+| `/mode [cli\|web]` | TUI rendering vs browser page. |
+| `/update` | Confirm → `agen stop && agen update` via `tea.ExecProcess` → quit (re-attach with `agen` to pick up the new binary). |
+| `/clear` | Clear terminal display only — memory untouched. |
+| `/exit`, `/quit` | Exit TUI. |
 
 ## Input prefixes
 

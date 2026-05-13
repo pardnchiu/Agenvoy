@@ -11,8 +11,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
-	"github.com/pardnchiu/agenvoy/internal/interactive/cli"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/runtime/cli"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 )

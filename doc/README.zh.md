@@ -35,65 +35,113 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 一行指令、單一 binary 落在 `/usr/local/bin/agen`，macOS／Linux 通用。
 
-## 為什麼 Agenvoy
+## CLI 指令
 
-- **為什麼不要一個模型跑全部？** Claude 擅長規劃、GPT 擅長 diff 推理、Gemini 擅長長 context 批判 —— 為什麼把每一步都塞給同一家 vendor？
-- **「模型協作」的代價是什麼？** Sub-agent 走 HTTP／RPC，還是 goroutine 在同一 process 跑？
-- **沙箱邊界劃在哪？** 只圈住 agent 自己的 bash tool，還是每一家被你派工的模型與 CLI？
+> 直接以 `agen <sub>` 執行；repo Makefile 提供 `make <sub>` wrapper 供開發使用。
 
-Agenvoy 的答案是一件事：一個指令把工作拆開、每一步交給最適合的模型、結果在同一 process 收斂。
+| 指令 | 描述 |
+|---|---|
+| `agen` | Attach 互動式 TUI；daemon（HTTP + Discord + scheduler + summary cron）未跑時 fork-exec 一份。 |
+| `agen cli <input>` | One-shot 跑一次 agent，每個 tool call 都會問確認。 |
+| `agen run <input>` | One-shot 跑一次 agent，自動放行所有 tool。 |
+| `agen stop` | 停止 daemon（SIGTERM 5s 寬限 → SIGKILL → 清 `runtime.uid`）。 |
+| `agen update` | 抓最新 release、重編、停 daemon；重新 attach 載入新 binary。 |
+| `agen model {add\|remove\|list\|planner\|reasoning}` | 管理 provider／worker model、選 planner、設 reasoning level。 |
+| `agen mcp {list\|add\|remove}` | 管理 MCP server（stdio／HTTP），global 與 per-session scope。 |
+| `agen session {new\|switch\|config} [name]` | 管理 CLI session；裸 `switch`／`config` 開互動 picker。 |
+| `agen discord {enable\|disable}` | 啟用／停用 Discord bot；`enable` 會問 token、驗證連線後寫入 keychain。 |
 
-|  | Agenvoy | Claude Code | Codex CLI | Gemini CLI | OpenClaw | Hermes |
-|---|---|---|---|---|---|---|
-| Runtime | Go | Node.js | Rust | Node.js | Node.js | Python |
-| Provider | 7 + planner | 1 | 1 | 1 | 多家 | 18+ |
-| 沙箱範圍 | 框架 + 委派 CLI | 僅 own bash tool | 僅 own shell exec | 僅 own shell exec | Skill / shell | 僅 terminal backend |
-| 模型派發 | Planner 每次呼叫挑一家 · goroutine fan-out | 單 vendor | 單 vendor | 單 vendor | Sub-agent over HTTP | Sub-agent over HTTP / RPC |
-| 多模型互審 | codex / claude / copilot / gemini · ≤3 輪 | ✗ | ✗ | ✗ | ✗ | ✗ |
-| 錯誤記憶 | ToriiDB · 90 天 TTL · 語意 | Vendor history | Vendor rollout | Vendor history | Memory wiki | Skill + 對話檢索 |
-| 安裝方式 | 單一 binary | npm + native | npm（Rust） | npm | npm + daemon | curl script |
+## TUI 指令
 
-最關鍵的一行是 **模型派發**。其他框架要嘛綁死單一 vendor（Claude Code、Codex、Gemini CLI），要嘛 sub-agent 走 HTTP／RPC（OpenClaw、Hermes）。Agenvoy 全部留在同一 process —— planner 每次呼叫挑七家其一、`invoke_subagent` 以 goroutine fan-out、結果走單一 event stream 收斂。**多模型互審** 疊在上層 —— 四家外部 CLI 對單一結果交叉檢核最多三輪。**沙箱** 是底層地基 —— 每個被委派的 CLI 都關進同一個 `go-pkg/sandbox` 邊界、套同一份 policy。
+> 在 `agen` 的 TUI prompt 輸入；輸入 `/` 即時過濾，popup 結束會回到 prompt。
 
-## 功能特點
+| 指令 | 描述 |
+|---|---|
+| `/switch` | 切換當前 session（picker，預設高亮當前）。 |
+| `/new [name]` | 建新 session；帶 name 即固定登錄至 registry。Name 會與既有 session 比對，重複則中止。 |
+| `/bot` | 依序兩段 popup 編輯當前 session 的 bot：name textfield（比對其他 session，重複則中止回饋）→ description textarea（`Ctrl+S` 確認、`Enter` 換行、`Esc` 取消）。 |
+| `/model [global\|session]` | Scope picker；`global` → `[add, remove]`（管理註冊表），`session` → 從已註冊 model 挑一個套到當前 session。Inline arg 跳過 scope popup。 |
+| `/mcp [add\|remove]` | Action picker；`add` 走串接 popup 表單（name → transport → command/args/env 或 url/headers → scope → optional session pick），`remove` 列出 global 與 session 兩 scope 全部已設定的 server。修改後須重啟 daemon 才會載入。Inline arg 跳過 action popup。 |
+| `/planner` | popup 從 `cfg.Models` 挑 planner model。不支援 inline arg。 |
+| `/reasoning [global\|session]` | 選 `low`／`medium`／`high`，套到 planner（global）或當前 session。Inline arg 跳過 scope popup。 |
+| `/discord [enable\|disable]` | 切換 Discord bot 啟用／停用。Inline arg 直接切換、不彈 popup。 |
+| `/cron [add\|remove\|edit]` | 週期性排程管理。`add` 開 multiline textarea 取需求 → 派 `/scheduler-skill-creator <需求>`（缺 when/what 由 skill 透過 `ask_user` 補問）。`remove` 列出 crons → 確認 popup → `runtime.RemoveCron` + 將 skill 目錄移至 .Trash。`edit` 列出 crons → textarea 取需求 → 由 agent 自選走 `patch_cron` 或重寫 SKILL.md body。Inline arg 跳過 action popup。 |
+| `/task [add\|remove\|edit]` | 一次性排程（鏡像 `/cron`；使用 `add_task` / `patch_task` / `remove_task`）。Picker 顯示 `<YYYY-MM-DD HH:MM>  <skill>`。 |
+| `/sched-<name>` | 立即執行已存在的 scheduler skill body（手動 trigger）。顯示於 `/` picker 最末段（一般 skill 之後），label 套 warn-purple 標示為呼叫類。Dispatch 會加 `[執行已存在 scheduler skill: <name> · 此為手動 trigger，不是建立新 schedule]` preamble 並明示禁止 activate `scheduler-skill-creator` 或跑 init script。 |
+| `/mode [cli\|web]` | 切換 `cli`（TUI 渲染）與 `web`（瀏覽器頁面）模式。Inline arg 直接切換、不彈 popup。 |
+| `/update` | Popup 確認 → 走 `tea.ExecProcess` 跑 `agen stop && agen update` → 退出 TUI。 |
+| `/clear` | 僅清除當前視窗顯示，等同 terminal `clear`；對話記憶不動。 |
+| `/exit`, `/quit` | 退出 TUI（daemon 仍在跑，重 `agen` 即可 attach）。 |
 
-> `make build` · 安裝至 `/usr/local/bin/agen` · [完整文件](https://github.com/agenvoy/Agenvoy/wiki)
+## 內建工具
 
-- **對的工作交給對的模型**<br>
-  planner 讀每個任務再選最適合的 provider；`invoke_subagent` enum 七家 provider、標 `Concurrent: true` —— parent 在同一個 goroutine batch fan-out Claude／GPT／Gemini，彼此無 HTTP，事件回流走同一條 stream。`cross_review_with_external_agents` 疊在上層，把 codex／claude／copilot／gemini 串成最多三輪互審。
-- **可插拔工具，單一沙箱**<br>
-  `extensions/apis/*.json` 或 `extensions/scripts/<name>/` 丟入即成 tool；MCP（stdio + HTTP/SSE）自動合併 global 與 per-session 設定。所有 command／script／外部 CLI 一律進 `go-pkg/sandbox`（bwrap／sandbox-exec）。
-- **跨 session 錯誤記憶**<br>
-  ToriiDB 將 tool 失敗與對話 turn 索引化，TTL 90 天、命中即續期；`search_error_memory` 與 `search_conversation_history` 並聯 keyword + semantic —— 同個雷不踩第二次。
+> Tool 以 stub 形式 lazy load，首次呼叫才展開完整 schema。參數與分派細節見 [Tools wiki](https://github.com/pardnchiu/agenvoy/wiki/工具系統)。
 
-## 架構
+| Tool | 描述 |
+|---|---|
+| **檔案** |  |
+| `read_file` | 讀取 text／PDF／DOCX／PPTX／CSV／TSV／image。 |
+| `write_file` | 寫入檔案，已存在則覆蓋。 |
+| `patch_file` | 在檔案內以 exact match 替換字串。 |
+| `list_files` | 列出目錄項目；`recursive=true` 走子樹檔案。 |
+| `glob_files` | 以 glob pattern 在目錄中尋找檔案。 |
+| `search_files` | 以 RE2 regex 搜尋目錄內檔案內容。 |
+| **網頁** |  |
+| `fetch_page` | 抓取網頁並回傳 Markdown。 |
+| `save_page_to_file` | 抓取網頁並存成本地檔案。 |
+| `search_web` | 走 DuckDuckGo Lite 搜尋，回前 10 筆結果。 |
+| `fetch_google_rss` | 搜尋 Google News RSS，回標題／摘要／連結。 |
+| `fetch_yahoo_finance` | 查 Yahoo Finance 報價與 K 線（OHLCV）。 |
+| `fetch_youtube_transcript` | 抓 YouTube 影片逐字稿含時間戳。 |
+| `send_http_request` | 對指定 URL 發 HTTP 請求。 |
+| **Shell** |  |
+| `run_command` | 以 argv 執行 binary，回 stdout/stderr 合併輸出。 |
+| **渲染** |  |
+| `update_page` | 覆寫當前 session 的 HTML 頁面，瀏覽器分頁自動 reload。 |
+| **計算** |  |
+| `calculate` | 計算數學表達式，回精確結果。 |
+| **探索** |  |
+| `list_tools` | 列出當前所有 built-in 與動態載入的 tool。 |
+| `search_tools` | 以 keyword 搜 tool 並把匹配項注入當前 request。 |
+| `activate_skill` | 以名稱拉取 skill 的參考內容。 |
+| **互動** |  |
+| `ask_user` | 對使用者問一或多個問題並回答案。 |
+| `store_secret` | 以遮罩輸入向使用者要 secret 並存進系統 keychain。 |
+| **記憶** |  |
+| `search_conversation_history` | 在本 session 歷史以 keyword + semantic 並聯搜尋。 |
+| `search_error_memory` | 語意搜尋過去 tool error 記錄，命中即續期 3 個月 TTL。 |
+| `read_error_memory` | 以 hash 拉取單筆過去 tool error 內容。 |
+| `remember_error` | 寫入一筆 tool error 記錄供未來查詢。 |
+| **Agent** |  |
+| `invoke_subagent` | 在內部 subagent session 跑子任務，回最終文字。 |
+| `invoke_external_agent` | 喚起單一外部 CLI（codex／copilot／claude／gemini）取得第二意見。 |
+| `cross_review_with_external_agents` | 把已完成結果並聯丟給所有可用外部 CLI 互審。 |
+| `review_result` | 對結果與原任務做比對，回具體問題與改進建議。 |
+| **Scheduler** |  |
+| `add_task` | 把既有 scheduler skill 綁定在特定時間執行一次（`+5m`／`HH:MM`／`YYYY-MM-DD HH:MM`／RFC3339）。 |
+| `add_cron` | 把既有 scheduler skill 綁定於 5 欄 cron expression 週期觸發。 |
+| `patch_task` / `patch_cron` | 依 skill name 改既有 task／cron 的時間（只動時間、不動 skill body）。 |
+| `remove_task` / `remove_cron` | 依 skill name 取消 task／cron；綁定的 scheduler skill 目錄一併搬到 `.Trash/`。 |
+| **Skill Git** |  |
+| `skill_git_commit` / `skill_git_log` / `skill_git_rollback` | Commit／列出／回滾 `~/.config/agenvoy/skills` 的 git 歷史。 |
 
-> [完整架構](https://github.com/agenvoy/Agenvoy/wiki/架構)
+動態 tool 群（自動註冊、上表不列）：MCP server 注入的 `mcp__<server>__<tool>`、`extensions/apis/*.json` 註冊的 `api_<name>`、`extensions/scripts/<name>/` 註冊的 `script_<name>`。
 
-```mermaid
-graph TB
-    Entry[Entry · cmd/app/main.go]
-    Engine[exec.Run / Execute<br/>≤128 iterations]
-    Providers[LLM Providers · 7]
-    Pending[Pending Registry<br/>confirm / ask]
+## Wiki
 
-    subgraph Tools[Tool Subsystem]
-        MCP[MCP Adapter<br/>stdio / HTTP]
-        Sub[Subagent · in-process]
-        Ext[External CLI · 4 家]
-        Builtin[Built-in Tools<br/>file / web / api / script]
-    end
-
-    Sandbox[Sandbox<br/>bwrap / sandbox-exec]
-    Session[Session<br/>ToriiDB / bot.md / status.json]
-
-    Entry --> Engine
-    Engine --> Providers
-    Engine --> Tools
-    Engine <--> Pending
-    Engine <--> Session
-    Builtin --> Sandbox
-```
+| English | 中文 |
+|---|---|
+| [Getting Started](https://github.com/pardnchiu/agenvoy/wiki/Getting-Started) | [新手入門](https://github.com/pardnchiu/agenvoy/wiki/新手入門) |
+| [Architecture](https://github.com/pardnchiu/agenvoy/wiki/Architecture) | [架構](https://github.com/pardnchiu/agenvoy/wiki/架構) |
+| [Core Concepts](https://github.com/pardnchiu/agenvoy/wiki/Core-Concepts) | [核心概念](https://github.com/pardnchiu/agenvoy/wiki/核心概念) |
+| [Providers](https://github.com/pardnchiu/agenvoy/wiki/Providers) | [Provider 設定](https://github.com/pardnchiu/agenvoy/wiki/Provider-設定) |
+| [Tools](https://github.com/pardnchiu/agenvoy/wiki/Tools) | [工具系統](https://github.com/pardnchiu/agenvoy/wiki/工具系統) |
+| [Memory System](https://github.com/pardnchiu/agenvoy/wiki/Memory-System) | [記憶系統](https://github.com/pardnchiu/agenvoy/wiki/記憶系統) |
+| [Skill System](https://github.com/pardnchiu/agenvoy/wiki/Skill-System) | [Skill 系統](https://github.com/pardnchiu/agenvoy/wiki/Skill-系統) |
+| [MCP Integration](https://github.com/pardnchiu/agenvoy/wiki/MCP-Integration) | [MCP 整合](https://github.com/pardnchiu/agenvoy/wiki/MCP-整合) |
+| [Security and Sandbox](https://github.com/pardnchiu/agenvoy/wiki/Security-and-Sandbox) | [安全與沙箱](https://github.com/pardnchiu/agenvoy/wiki/安全與沙箱) |
+| [CLI Reference](https://github.com/pardnchiu/agenvoy/wiki/CLI-Reference) | [命令列參考](https://github.com/pardnchiu/agenvoy/wiki/命令列參考) |
+| [Configuration](https://github.com/pardnchiu/agenvoy/wiki/Configuration) | [設定檔](https://github.com/pardnchiu/agenvoy/wiki/設定檔) |
 
 ## 授權
 
@@ -104,16 +152,16 @@ graph TB
 想丟想法 [開個 issue](https://github.com/pardnchiu/agenvoy/issues/new) 聊聊也行。
 
 <a href="https://github.com/pardnchiu/agenvoy/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=pardnchiu/agenvoy&cache_bust=2026-05-05" alt="Agenvoy 貢獻者" />
+  <img src="https://contrib.rocks/image?repo=pardnchiu/agenvoy&cache_bust=2026-05-12" alt="Agenvoy 貢獻者" />
 </a>
 
 ## Star History
 
 <a href="https://star-history.com/#pardnchiu/agenvoy&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&theme=dark&cache_bust=2026-05-05" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&cache_bust=2026-05-05" />
-    <img alt="Agenvoy star history" src="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&cache_bust=2026-05-05" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&theme=dark&cache_bust=2026-05-12" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&cache_bust=2026-05-12" />
+    <img alt="Agenvoy star history" src="https://api.star-history.com/svg?repos=pardnchiu/agenvoy&type=Date&cache_bust=2026-05-12" />
   </picture>
 </a>
 

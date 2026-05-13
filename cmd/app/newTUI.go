@@ -14,10 +14,10 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/runtime/tui"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
-	"github.com/pardnchiu/agenvoy/internal/tui"
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 )
 

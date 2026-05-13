@@ -73,3 +73,51 @@ Agenvoy scans this directory at startup. The system prompt's `## Skills` block i
 The execution loop is driven by `configs/prompts/skill_execution.md`, which carries the rules every skill obeys (output discipline, tool-name mapping, mandatory principles).
 
 Tool-name mapping example: external skills written for the Anthropic SDK may reference `AskUserQuestion`; agenvoy maps these to `ask_user` automatically through the **Tool Name Mapping** table in `skill_execution.md`. No alias registration in Go is needed.
+
+## Scheduler skills (isolated namespace)
+
+Scheduler-triggered skills live in a separate tree, **not** scanned by `host.Scanner()`:
+
+```
+~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md
+```
+
+| Aspect | Regular skill | Scheduler skill |
+|---|---|---|
+| Path | `~/.config/agenvoy/skills/<name>/SKILL.md` | `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md` |
+| Frontmatter `name` | `<name>` | `<short>-<hash8>` (no `scheduler-` prefix) |
+| `/<name>` autocompletion | yes | no — surfaced as `/sched-<name>` (warn-purple) at the bottom of the picker |
+| Trigger | `MatchSkillCall` → activate_skill | (a) cron / one-shot fire from daemon `runtime.SetRunner`, (b) manual `/sched-<name>` from TUI |
+
+### Creation flow
+
+The `scheduler-skill-creator` skill is the canonical entry for **new** schedules. It:
+
+1. Pre-flight gate (Step 0): if the user message lacks a time token (`+5m` / `HH:MM` / `每 N 分` / `明天 X 點` …) or task token, it must call `ask_user` first — no defaulting to `+10m`, no inferring "probably 9am".
+2. Runs `python3 scripts/init_scheduler_skill.py <short>` to create the skill dir with hash suffix.
+3. Patches the SKILL.md body (description + `## 任務` + `## 輸出格式`).
+4. Calls `add_task` or `add_cron` to bind the schedule.
+
+Direct `add_task` / `add_cron` calls are allowed only for **rebinding** existing schedules (changing the time of an already-created scheduler skill).
+
+### Manual execution (`/sched-<name>`)
+
+The TUI command picker lists every directory under `scheduler/` as `/sched-<name>`. Selecting one reads the body and dispatches it to the current agent **with a preamble**:
+
+```
+[執行已存在 scheduler skill: <name> · 此為手動 trigger，不是建立新 schedule]
+依下方 SKILL body instructions 立即執行並輸出結果。
+**禁止** activate `scheduler-skill-creator`、**禁止** 跑 `init_scheduler_skill.py`、**禁止** add_task／add_cron
+```
+
+The preamble blocks weaker models from misreading the SKILL.md-shaped body as a schedule-creation request and re-running the creator.
+
+### Daemon fire
+
+`runtime.SetRunner` registers `runSkill(ctx, sessionID, skillName)`. When the scheduler fires (cron tick or one-shot deadline), the runner:
+
+1. Reads body via `filesystem.ScheduleSkillBody(skillName)`.
+2. Ensures the session directory exists; writes a default `bot.md`.
+3. Calls `exec.ExecWithSubagent(ctx, body, sessionID, "", "", nil)` — an in-process subagent with always-allow context.
+
+One-shot tasks are removed and the skill dir is trashed after a successful fire.

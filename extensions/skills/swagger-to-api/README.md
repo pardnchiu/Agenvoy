@@ -81,7 +81,7 @@ swagger-to-api/
 
 | File | Description |
 |------|-------------|
-| `~/.config/agenvoy/api_tools/{name}.json` | One JSON file per endpoint in agenvoy APIDocumentData format |
+| `~/.config/agenvoy/tools/api/{name}.json` | One JSON file per endpoint in agenvoy APIDocumentData format |
 
 ### Auth Type Mapping
 
