@@ -1,6 +1,7 @@
 {
   "name": "usgs_earthquake",
   "description": "Query real-time or historical earthquake data from the USGS Earthquake Hazards API.",
+  "always_allow": true,
   "endpoint": {
     "url": "https://earthquake.usgs.gov/fdsnws/event/1/query",
     "method": "GET",

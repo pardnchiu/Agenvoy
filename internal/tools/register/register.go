@@ -73,6 +73,14 @@ func IsReadOnly(name string) bool {
 	return readOnlySet[name]
 }
 
+func MarkAlwaysAllow(name string) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return
+	}
+	readOnlySet[name] = true
+}
+
 func IsConcurrent(name string) bool {
 	return concurrentSet[name]
 }

@@ -159,3 +159,13 @@ func (t *Translator) GetTools() []map[string]any {
 	}
 	return tools
 }
+
+func (t *Translator) AlwaysAllowNames() []string {
+	names := make([]string, 0, len(t.apis))
+	for _, api := range t.apis {
+		if api.AlwaysAllow {
+			names = append(names, "api_"+api.Name)
+		}
+	}
+	return names
+}

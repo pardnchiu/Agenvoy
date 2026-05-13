@@ -1,6 +1,7 @@
 {
   "name": "world_bank_indicator",
   "description": "Query a World Bank indicator for one country or all countries.",
+  "always_allow": true,
   "endpoint": {
     "url": "https://api.worldbank.org/v2/country/{country}/indicator/{indicator}",
     "method": "GET",

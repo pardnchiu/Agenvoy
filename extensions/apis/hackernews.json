@@ -1,6 +1,7 @@
 {
   "name": "hackernews_item",
   "description": "Get a Hacker News item by ID from the Firebase API.",
+  "always_allow": true,
   "endpoint": {
     "url": "https://hacker-news.firebaseio.com/v0/item/{id}.json",
     "method": "GET",

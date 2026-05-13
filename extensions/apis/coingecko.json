@@ -1,6 +1,7 @@
 {
   "name": "coingecko_price",
   "description": "Get real-time cryptocurrency prices, market caps, 24-hour volume, and price change from CoinGecko.",
+  "always_allow": true,
   "endpoint": {
     "url": "https://api.coingecko.com/api/v3/simple/price",
     "method": "GET",

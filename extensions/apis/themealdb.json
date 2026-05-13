@@ -1,6 +1,7 @@
 {
   "name": "themealdb_search",
   "description": "Search recipes from TheMealDB by name.",
+  "always_allow": true,
   "endpoint": {
     "url": "https://www.themealdb.com/api/json/v1/1/search.php",
     "method": "GET",

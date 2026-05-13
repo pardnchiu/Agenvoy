@@ -1,6 +1,7 @@
 {
   "name": "exchange_rate",
   "description": "Get real-time exchange rates for the specified base currency.",
+  "always_allow": true,
   "endpoint": {
     "url": "https://open.er-api.com/v6/latest/{currency}",
     "method": "GET",

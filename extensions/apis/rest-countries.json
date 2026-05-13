@@ -1,6 +1,7 @@
 {
   "name": "rest_countries",
   "description": "Get country details from REST Countries by name, code, region, language, or all countries.",
+  "always_allow": true,
   "endpoint": {
     "url": "https://restcountries.com/v3.1/{mode}/{query}",
     "method": "GET",

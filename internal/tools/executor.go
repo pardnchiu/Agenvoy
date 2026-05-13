@@ -56,8 +56,13 @@ func NewExecutor(workPath, sessionID string, scanner *skill.SkillScanner) (*tool
 		tools = append(tools, t)
 	}
 
+	for _, name := range apiToolbox.AlwaysAllowNames() {
+		toolRegister.MarkAlwaysAllow(name)
+	}
+
 	scriptToolbox := scriptAdapter.New()
 	for _, dir := range []string{
+		filesystem.SystemToolsDir,
 		filesystem.LegacyScriptToolsDir,
 		filesystem.LegacyWorkScriptToolsDir,
 		filesystem.ScriptToolsDir,
@@ -76,6 +81,10 @@ func NewExecutor(workPath, sessionID string, scanner *skill.SkillScanner) (*tool
 			continue
 		}
 		tools = append(tools, t)
+	}
+
+	for _, name := range scriptToolbox.AlwaysAllowNames() {
+		toolRegister.MarkAlwaysAllow(name)
 	}
 
 	// * order fixed, for cache hit

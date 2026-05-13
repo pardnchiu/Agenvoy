@@ -1,6 +1,7 @@
 {
   "name": "nominatim_geocode",
   "description": "Geocode an address or place name, or reverse-geocode coordinates, using OpenStreetMap Nominatim.",
+  "always_allow": true,
   "endpoint": {
     "url": "https://nominatim.openstreetmap.org/search",
     "method": "GET",

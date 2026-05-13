@@ -1,6 +1,7 @@
 {
   "name": "wikipedia_summary",
   "description": "Get the summary for a Wikipedia page title.",
+  "always_allow": true,
   "endpoint": {
     "url": "https://en.wikipedia.org/api/rest_v1/page/summary/{title}",
     "method": "GET",
