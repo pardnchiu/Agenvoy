@@ -1,6 +1,6 @@
 {
   "name": "public_api_list",
-  "description": "List public APIs, categories, or APIs in a specific category from Agenvoy Public API List.",
+  "description": "[system-default] List public APIs, categories, or APIs in a specific category from Agenvoy Public API List.",
   "always_allow": true,
   "endpoint": {
     "url": "https://public-api-list.agenvoy.com/",

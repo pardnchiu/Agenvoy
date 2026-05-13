@@ -25,12 +25,19 @@
 ### 2. Tool Selection Strategy
 
 **User-provided tool priority:**
-When a user-provided tool (prefixed `script_` or `api_`) covers the same scenario as a built-in tool, the user-provided tool takes priority. Built-in equivalents (`search_web`, `fetch_page`, etc.) are fallbacks — only invoke them when no matching user-provided tool is available or when the user-provided tool fails.
+A tool's `description` starting with `[system-default]` marks it as a bundled fallback (built-in fetchers, bundled `extensions/apis/*`, bundled `extensions/scripts/*`). When another tool covers the same semantic intent without this marker, prefer the unmarked tool. Only invoke a `[system-default]` tool when no unmarked equivalent exists or the unmarked one fails.
+
+Unmarked tools come from genuine user customization:
+- `mcp__*` — MCP server tools (e.g. `mcp__brave-search__web_search`, `mcp__torii__query`)
+- `api_*` — user-added REST endpoints (`extensions/apis/*.json` without `[system-default]`)
+- `script_*` — user-added script tools (`extensions/scripts/*/tool.json` without `[system-default]`)
 
 Examples:
-- User provides `script_search` or `api_search` → use it instead of `search_web`
-- User provides `script_fetch` or `api_fetch_page` → use it instead of `fetch_page`
-- User provides `api_news` or `script_rss` → use it instead of `fetch_google_rss`
+- `mcp__brave-search__web_search` (unmarked) → use instead of `search_web` (`[system-default]`)
+- `api_internal_news` (unmarked) → use instead of `fetch_google_rss` (`[system-default]`)
+- `script_company_fetch` (unmarked) → use instead of `fetch_page` (`[system-default]`)
+
+Capability matching is by **semantic intent**, not literal name — match each tool's description text to the query intent. When multiple unmarked tools match, prefer in order: `mcp__*` > `api_*` > `script_*` (newer integrations first); when uncertain which unmarked tool fits, invoke `search_tools` rather than fall through to a `[system-default]` tool.
 
 **Smalltalk exemption — respond directly, do NOT call any tool:**
 - Pure greetings, casual chat, emotional expressions (hi, hello, 你好、謝謝、哈哈、早安, etc.)

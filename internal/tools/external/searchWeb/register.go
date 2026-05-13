@@ -20,7 +20,7 @@ func Register() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:     "search_web",
 		AlwaysAllow: true,
-		Description: `
+		Description: `[system-default]
 Search the web via DuckDuckGo Lite; returns top 10 results (Taiwan locale).
 General queries, docs, product research.
 Call fetch_page on each link for full article content.`,

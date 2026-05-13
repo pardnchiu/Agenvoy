@@ -1,6 +1,6 @@
 {
   "name": "ip_location",
-  "description": "Get geolocation details for an IP address, or the local IP when omitted.",
+  "description": "[system-default] Get geolocation details for an IP address, or the local IP when omitted.",
   "always_allow": true,
   "endpoint": {
     "url": "http://ip-api.com/json/{ip}",

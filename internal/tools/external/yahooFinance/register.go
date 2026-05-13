@@ -26,7 +26,7 @@ func Register() {
 		Name:       "fetch_yahoo_finance",
 		AlwaysAllow:   true,
 		Concurrent: true,
-		Description: `
+		Description: `[system-default]
 Query Yahoo Finance quotes and K-line.
 Equity prices, indices, intraday / historical OHLCV.`,
 		Parameters: map[string]any{

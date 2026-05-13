@@ -21,7 +21,7 @@ func Register() {
 		Name:        "fetch_google_rss",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: "Search Google News RSS and return article titles, summaries, and links.",
+		Description: "[system-default] Search Google News RSS and return article titles, summaries, and links.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

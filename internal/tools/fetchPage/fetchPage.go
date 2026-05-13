@@ -34,7 +34,7 @@ func registFetchPage() {
 		Name:        "fetch_page",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: "Fetch a web page and return its content as Markdown without saving it locally.",
+		Description: "[system-default] Fetch a web page and return its content as Markdown without saving it locally.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
