@@ -19,9 +19,10 @@ var (
 	McpPath         string
 	StoreDir        string
 	SessionsDir     string
-	ToolsDir        string
-	APIToolsDir     string
-	ScriptToolsDir  string
+	ToolsDir       string
+	APIToolsDir    string
+	ScriptToolsDir string
+	SystemToolsDir string
 	ErrorsDir       string
 	TasksPath       string
 	CronsPath       string
@@ -69,6 +70,7 @@ func Init() error {
 		ToolsDir = filepath.Join(AgenvoyDir, "tools")
 		APIToolsDir = filepath.Join(ToolsDir, "api")
 		ScriptToolsDir = filepath.Join(ToolsDir, "script")
+		SystemToolsDir = filepath.Join(ToolsDir, ".system")
 		ErrorsDir = filepath.Join(AgenvoyDir, "errors")
 		TasksPath = filepath.Join(AgenvoyDir, "tasks.json")
 		CronsPath = filepath.Join(AgenvoyDir, "crons.json")

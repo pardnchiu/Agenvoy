@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -37,8 +36,6 @@ func newTUI() {
 	defer torii.Close()
 
 	modelCheck()
-
-	skill.SyncSkills(context.Background(), extensions.Skills)
 
 	if !runtime.IsCurrent() {
 		if err := newDaemon(); err != nil {
