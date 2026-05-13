@@ -65,6 +65,9 @@ One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 | `/planner` | Pick the planner model from `cfg.Models` via popup. No inline arg. |
 | `/reasoning [global\|session]` | Pick `low` / `medium` / `high` for the planner (global) or the active session. Inline arg skips the scope popup. |
 | `/discord [enable\|disable]` | Toggle Discord bot connection. Inline arg switches without the popup. |
+| `/cron [add\|remove\|edit]` | Manage recurring schedules. `add` opens a multiline requirement textarea → dispatches `/scheduler-skill-creator <requirement>` (asks for missing when/what via `ask_user`). `remove` lists crons → confirm popup → `runtime.RemoveCron` + trashes the skill dir. `edit` lists crons → requirement textarea → agent picks `patch_cron` or rewrites the SKILL.md body. Inline arg skips the action popup. |
+| `/task [add\|remove\|edit]` | Manage one-shot scheduled tasks (mirrors `/cron`; uses `add_task` / `patch_task` / `remove_task`). Picker shows `<YYYY-MM-DD HH:MM>  <skill>`. |
+| `/sched-<name>` | Execute an existing scheduler skill body inline (manual trigger). Surfaced at the bottom of the `/` picker after regular skills; label rendered in warn-purple to mark it as an invocation. The dispatch wraps the body with an explicit "execute, do NOT activate scheduler-skill-creator" preamble. |
 | `/mode [cli\|web]` | Switch between `cli` (TUI rendering) and `web` (browser page). Inline arg switches without the popup. |
 | `/update` | Confirm popup → `agen stop && agen update` via `tea.ExecProcess` → quit TUI. |
 | `/clear` | Clear the current window display only — like terminal `clear`; conversation memory is untouched. |
@@ -114,9 +117,11 @@ One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 | `invoke_external_agent` | Invoke one external CLI agent (codex / copilot / claude / gemini) for a second opinion. |
 | `cross_review_with_external_agents` | Cross-review a completed result across all available external agents in parallel. |
 | `review_result` | Review a result against the original input and return issues and improvements. |
-| **Scheduler** *(WIP)* |  |
-| `add_task` | Schedule a one-shot task to run a script at a specific time. |
-| `add_cron` | Schedule a recurring task driven by a standard cron expression. |
+| **Scheduler** |  |
+| `add_task` | Bind an existing scheduler skill to fire once at a specific time (`+5m` / `HH:MM` / `YYYY-MM-DD HH:MM` / RFC3339). |
+| `add_cron` | Bind an existing scheduler skill to a recurring 5-field cron expression. |
+| `patch_task` / `patch_cron` | Reschedule an existing task / cron by skill name (changes only the time, leaves the bound skill body untouched). |
+| `remove_task` / `remove_cron` | Cancel a scheduled task / cron by skill name; the bound scheduler skill dir is moved to `.Trash/`. |
 | **Skill Git** |  |
 | `skill_git_commit` / `skill_git_log` / `skill_git_rollback` | Commit, list, or roll back the `~/.config/agenvoy/skills` git history. |
 

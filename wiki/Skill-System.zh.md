@@ -73,3 +73,51 @@ Agenvoy 啟動時掃描此目錄。System prompt 的 `## Skills` 區段由 `skil
 執行迴圈由 `configs/prompts/skill_execution.md` 驅動，內含每個 skill 都遵守的規則（輸出紀律、tool name mapping、mandatory principles）。
 
 Tool name mapping 範例：外部 skill 可能引用 Anthropic SDK 的 `AskUserQuestion`；agenvoy 透過 `skill_execution.md` 的 **Tool Name Mapping** 表自動映射至 `ask_user`，**不需**在 Go 端註冊 alias。
+
+## Scheduler skill（隔離命名空間）
+
+排程觸發的 skill 放在獨立目錄，`host.Scanner()` **不掃**：
+
+```
+~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md
+```
+
+| 比較 | 一般 skill | scheduler skill |
+|---|---|---|
+| 路徑 | `~/.config/agenvoy/skills/<name>/SKILL.md` | `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md` |
+| frontmatter `name` | `<name>` | `<short>-<hash8>`（無 `scheduler-` 前綴）|
+| `/<name>` 補全 | 有 | 無 —— picker 末端以 `/sched-<name>`（warn-purple）顯示 |
+| 觸發 | `MatchSkillCall` → activate_skill | (a) daemon `runtime.SetRunner` 在 cron 觸發或 one-shot 到時呼叫、(b) TUI 手動 `/sched-<name>` |
+
+### 建立流程
+
+`scheduler-skill-creator` 是**新**排程的唯一入口：
+
+1. Pre-flight gate（Step 0）：訊息缺時間 token（`+5m`／`HH:MM`／`每 N 分`／`明天 X 點` …）或任務 token 時，**必須**先呼叫 `ask_user` 補問；禁止用 `+10m` 預設值、禁止腦補「應該是 9 點」。
+2. 跑 `python3 scripts/init_scheduler_skill.py <short>` 建立含 hash suffix 的 skill 目錄。
+3. `patch_file` 填補 SKILL.md（description / `## 任務` / `## 輸出格式`）。
+4. 呼叫 `add_task` 或 `add_cron` 綁定時間。
+
+直呼 `add_task` / `add_cron` 僅允許用於 **rebinding**（既存 scheduler skill 改時間）。
+
+### 手動執行（`/sched-<name>`）
+
+TUI command picker 列出 `scheduler/` 下每個目錄為 `/sched-<name>`。選取後讀 body 派給當前 agent，並加 **preamble**：
+
+```
+[執行已存在 scheduler skill: <name> · 此為手動 trigger，不是建立新 schedule]
+依下方 SKILL body instructions 立即執行並輸出結果。
+**禁止** activate `scheduler-skill-creator`、**禁止** 跑 `init_scheduler_skill.py`、**禁止** add_task／add_cron
+```
+
+Preamble 防止較弱 model 把 SKILL.md 結構的 body 誤判為「建立排程需求」而重跑 creator。
+
+### Daemon 觸發
+
+`runtime.SetRunner` 註冊 `runSkill(ctx, sessionID, skillName)`。Scheduler 觸發（cron tick 或 one-shot 到時）時：
+
+1. `filesystem.ScheduleSkillBody(skillName)` 讀 body。
+2. 確保 session 目錄存在；寫預設 `bot.md`。
+3. `exec.ExecWithSubagent(ctx, body, sessionID, "", "", nil)` —— in-process subagent，always-allow context。
+
+One-shot task 成功 fire 後移除 entry、skill 目錄移至 `.Trash/`。

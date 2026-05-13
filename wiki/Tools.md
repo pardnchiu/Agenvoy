@@ -67,11 +67,15 @@
 
 | Tool | Description |
 |---|---|
-| `add_task` / `get_task` / `list_tasks` / `update_task` / `remove_task` | One-shot scheduled tasks |
-| `add_cron` / `get_cron` / `list_crons` / `update_cron` / `remove_cron` | Recurring cron tasks |
-| `read_script` / `update_script` | Read or update scheduled scripts |
+| `add_task` / `add_cron` | Bind an existing scheduler skill to a one-shot fire time or a 5-field cron expression. `add_task` time formats: `+5m` (relative), `HH:MM` (today), `YYYY-MM-DD HH:MM`, or RFC3339. **Must be invoked by `scheduler-skill-creator` skill, not directly** — direct call requires the skill to already exist under `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/`. |
+| `patch_task` / `patch_cron` | Reschedule by `skill_name`; changes only the time, leaves the bound SKILL body untouched. |
+| `remove_task` / `remove_cron` | Cancel by `skill_name`; the bound scheduler skill dir is moved to `.Trash/`. |
 
-In TUI mode, `internal/tui/schedulerMonitor.go` watches the scheduler directory with fsnotify and hot-reloads tasks/crons whenever the JSON files change. Past-due tasks are auto-fired on startup or reload.
+`scheduler-skill-creator` is the high-level skill that **creates** a scheduler skill body and calls `add_task` / `add_cron` to bind it. New recurring / one-shot requests should activate that skill, not call the low-level tools directly.
+
+The daemon-side runtime (`internal/runtime/scheduler.go`) watches `~/.config/agenvoy/{tasks,crons}.json` with fsnotify and hot-reloads on Write / Create / Rename. Past-due tasks are auto-fired and removed on startup or reload; fire executes via `runtime.SetRunner` → in-process subagent over the scheduler skill body (always-allow context).
+
+TUI surfaces three slash commands for managing schedules: `/cron`, `/task` (add / remove / edit), and `/sched-<name>` (manual trigger of an existing scheduler skill body). See [CLI Reference](CLI-Reference) for popup flows.
 
 ## Tool extension
 

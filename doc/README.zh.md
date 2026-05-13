@@ -65,6 +65,9 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `/planner` | popup 從 `cfg.Models` 挑 planner model。不支援 inline arg。 |
 | `/reasoning [global\|session]` | 選 `low`／`medium`／`high`，套到 planner（global）或當前 session。Inline arg 跳過 scope popup。 |
 | `/discord [enable\|disable]` | 切換 Discord bot 啟用／停用。Inline arg 直接切換、不彈 popup。 |
+| `/cron [add\|remove\|edit]` | 週期性排程管理。`add` 開 multiline textarea 取需求 → 派 `/scheduler-skill-creator <需求>`（缺 when/what 由 skill 透過 `ask_user` 補問）。`remove` 列出 crons → 確認 popup → `runtime.RemoveCron` + 將 skill 目錄移至 .Trash。`edit` 列出 crons → textarea 取需求 → 由 agent 自選走 `patch_cron` 或重寫 SKILL.md body。Inline arg 跳過 action popup。 |
+| `/task [add\|remove\|edit]` | 一次性排程（鏡像 `/cron`；使用 `add_task` / `patch_task` / `remove_task`）。Picker 顯示 `<YYYY-MM-DD HH:MM>  <skill>`。 |
+| `/sched-<name>` | 立即執行已存在的 scheduler skill body（手動 trigger）。顯示於 `/` picker 最末段（一般 skill 之後），label 套 warn-purple 標示為呼叫類。Dispatch 會加 `[執行已存在 scheduler skill: <name> · 此為手動 trigger，不是建立新 schedule]` preamble 並明示禁止 activate `scheduler-skill-creator` 或跑 init script。 |
 | `/mode [cli\|web]` | 切換 `cli`（TUI 渲染）與 `web`（瀏覽器頁面）模式。Inline arg 直接切換、不彈 popup。 |
 | `/update` | Popup 確認 → 走 `tea.ExecProcess` 跑 `agen stop && agen update` → 退出 TUI。 |
 | `/clear` | 僅清除當前視窗顯示，等同 terminal `clear`；對話記憶不動。 |
@@ -114,9 +117,11 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `invoke_external_agent` | 喚起單一外部 CLI（codex／copilot／claude／gemini）取得第二意見。 |
 | `cross_review_with_external_agents` | 把已完成結果並聯丟給所有可用外部 CLI 互審。 |
 | `review_result` | 對結果與原任務做比對，回具體問題與改進建議。 |
-| **Scheduler** *(WIP)* |  |
-| `add_task` | 註冊在特定時間執行一次的 one-shot task。 |
-| `add_cron` | 註冊由 cron expression 驅動的循環任務。 |
+| **Scheduler** |  |
+| `add_task` | 把既有 scheduler skill 綁定在特定時間執行一次（`+5m`／`HH:MM`／`YYYY-MM-DD HH:MM`／RFC3339）。 |
+| `add_cron` | 把既有 scheduler skill 綁定於 5 欄 cron expression 週期觸發。 |
+| `patch_task` / `patch_cron` | 依 skill name 改既有 task／cron 的時間（只動時間、不動 skill body）。 |
+| `remove_task` / `remove_cron` | 依 skill name 取消 task／cron；綁定的 scheduler skill 目錄一併搬到 `.Trash/`。 |
 | **Skill Git** |  |
 | `skill_git_commit` / `skill_git_log` / `skill_git_rollback` | Commit／列出／回滾 `~/.config/agenvoy/skills` 的 git 歷史。 |
 

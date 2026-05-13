@@ -68,25 +68,37 @@ make mcp     [list|add|remove]
 
 ## TUI 快捷鍵
 
-主畫面（`Content` / `Logs`）：
+單一 bubbletea textarea（`internal/runtime/tui`）；slash command 開暫時 popup，結束自動回 prompt。
 
 | 鍵 | 行為 |
 |---|---|
-| `i` | 開啟 Message 輸入（`> ` prompt、多行；支援 modifier 的終端 `Shift+Enter` 插入換行） |
-| `c` | 開啟 Command 輸入（`$ ` prompt、單行） |
-| `Enter` | 送出（Message：送出 + 清空；Command：執行） |
-| `Esc` | 關閉輸入 / popup |
-| `Tab` | 切換 Content / Logs；在 input pages 內切換 Command ↔ Message |
-| `Ctrl+P` | 切換 co-work dashboard（Sessions / Log / Pending 三 panel） |
-| `h` / `l` / 方向鍵 | 切換 panel |
-| `j` / `k` | 滾動當前 view |
-| `Ctrl+C` | 取消當前執行 |
+| `Ctrl+S` | 送出 textarea 內容（Enter 改插換行；`Alt+Enter` 亦插換行） |
+| `/` | 觸發 slash command 選單（popup picker — 上／下移動、Tab／Enter 補完到 textarea、Esc 關閉） |
+| `Up` / `Down`（空 textarea 或單行時） | 走訪 input history（per-session `input_history` 檔） |
+| `Esc` | 中斷目前 exec（若正在跑）或關閉當前 popup |
+| `Ctrl+C` | 退出 TUI（daemon 仍在跑） |
 
-Co-work dashboard：
+TUI 自動 tail 當前 session 的 `action.log`（外部 process 寫入前綴 `▌ ` 紫色顯示）。單 session 視角；多 session dashboard 已封存（要復活見 `internal/_tui_archived/sessionObserver.go`）。
 
-- **Sessions** —— 左 pane，列出追蹤中的 `cli-*` 與 `http-*`（不含 `temp-*` / `dc-*`）
-- **Log** —— 中間，依 CLI 風格 tail 選取 session 的 `action.log`
-- **Pending** —— 右 pane，僅當 `pending.Snapshot()` ≥1 entry 才顯示；選取 entry 自動跳 Sessions 至該 sid
+## TUI slash command
+
+| 指令 | 說明 |
+|---|---|
+| `/switch` | 切換 session（picker，當前預選；最末 `(new session)` sentinel）。 |
+| `/new [name]` | 建立 session；帶 name 即固定登錄（衝突檢查）。 |
+| `/bot [name body...]` | 編輯 bot persona — 兩段 popup（name → multiline body），或 `parts≥3` 走 inline 直存。 |
+| `/model [global\|session]` | `global` → 加／刪 registry；`session` → 從 `cfg.Models` 挑一個。 |
+| `/mcp [add\|remove]` | MCP server 設定串接 popup；改動須重啟 daemon 才生效。 |
+| `/planner` | 從 `cfg.Models` 挑 planner model。 |
+| `/reasoning [global\|session]` | `low` / `medium` / `high`。 |
+| `/discord [enable\|disable]` | 啟用／停用 Discord bot（CLI 子進程在 enable 路徑會 gateway 驗證 token）。 |
+| `/cron [add\|remove\|edit]` | 週期排程。`add` → 多行 textarea 取需求 → 派 `/scheduler-skill-creator <需求>`（skill 缺 when/what 透過 `ask_user` 補問）。`remove` → 列出 → 確認 popup → `runtime.RemoveCron` + 移 skill 目錄至 `.Trash`。`edit` → 列出 → 取需求 → agent 自選走 `patch_cron` 或重寫 SKILL body。 |
+| `/task [add\|remove\|edit]` | 一次性排程（鏡像 `/cron`；使用 `add_task` / `patch_task` / `remove_task`）。 |
+| `/sched-<name>` | 顯示於 slash picker 最末（warn-purple label）；選取後派該 scheduler skill 的 body，dispatch 加入「執行 已存在 schedule，不要 activate creator」preamble。 |
+| `/mode [cli\|web]` | TUI 渲染 vs 瀏覽器頁面。 |
+| `/update` | 確認 popup → `tea.ExecProcess` 跑 `agen stop && agen update` → 退出（重 `agen` attach 拿新 binary）。 |
+| `/clear` | 清視窗顯示；記憶不動。 |
+| `/exit`, `/quit` | 退出 TUI。 |
 
 ## 輸入前綴
 
