@@ -37,7 +37,7 @@ scheduler 採 skill-based 觸發：到時間時，daemon 讀 `scheduler/<short>/
 ## 成功標準
 
 - 生成檔案: `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md`，frontmatter `name: <short>-<hash8>`（無前綴）
-- skill body 描述任務行為、引用具體 tool、（必要時）含 Notify 段
+- skill body 描述任務行為、引用具體 tool
 - 呼叫 `add_task(time, skill_name=<short>-<hash8>)` 或 `add_cron(time, skill_name=<short>-<hash8>)` 綁定時間成功
 - 回報生成位置、full name（含 hash）、排程類型（one-shot／recurring）、下次觸發時間
 
@@ -148,7 +148,7 @@ python3 scripts/init_scheduler_skill.py <short-name>
 - `## 任務` ← 步驟 1 收集到的「行為細節」，引用具體 tool 名稱與參數
 - `## 輸出格式` ← 期望輸出形式
 
-caller session 為 `dc-*` 起源時，在末段追加 Discord Notify 段（見下方規則）。
+**禁止**在 skill body 內加任何「推送到 channel」「呼叫 send_http_request 給 Discord」「呼叫 MCP discord tool」之類的 notify 指令 —— scheduler 觸發後 runtime 自動把輸出送回原 caller channel（Discord 來源送回原頻道、CLI／HTTP 來源送回 action.log）。Skill body 只需專注產出**任務結果文字**。
 
 ### 5. 綁定時間
 
@@ -185,19 +185,16 @@ add_cron(time="<cron_expression>", skill_name="<short>-<hash8>")
 
 **禁止**自行產生／猜測 hash suffix。Hash **必須**由 init script 用 `secrets.token_hex(4)` 隨機生成，LLM 從 stdout 抓 `[OK] skill name:` 那行的值即可。
 
-## Discord Notify 段（條件性）
+## 輸出路由（runtime 自動處理）
 
-caller session ID 以 `dc-` 開頭時，於 skill body 末段插入：
+scheduler 觸發後，runtime 會把 subagent 產出的最終文字自動送回 caller 端：
 
-```markdown
-## Notify
+| Caller session prefix | 路由行為 |
+|---|---|
+| `dc-*`（Discord） | 自動 `ChannelMessageSend` 回原頻道（含 ` - <skill 短名>` 標籤） |
+| `cli-*`／`http-*`／TUI 觸發 | 留在 session history／action.log，由 caller 端工具讀取 |
 
-完成後將最終結果以 `send_http_request` 或 MCP discord tool 推送至 channel `<channel_id>`。
-```
-
-`<channel_id>` 從 caller session ID 推斷（`dc-<guild>-<channel>-...` 格式抽取）或直接問使用者。
-
-caller 來源非 `dc-*`（TUI/CLI/HTTP）時跳過此段，結果留在 session history 由 caller 查看。
+**所以 skill body 不需要、也禁止**寫「推送到 channel」「呼叫 `send_http_request` 發 Discord webhook」「呼叫 MCP discord tool」之類的 notify 指令。寫了會在觸發時造成多餘的 token 與認證錯誤（subagent 沒 `DISCORD_BOT_TOKEN` 互動環境）。
 
 ## 時間敏感性提醒（寫入 skill body 時注意）
 

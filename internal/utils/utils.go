@@ -110,6 +110,13 @@ func FormatInt(number int) string {
 	return string(result)
 }
 
+var (
+	uuidShortRegex   = regexp.MustCompile(`([0-9a-fA-F]{8})-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
+	sha256ShortRegex = regexp.MustCompile(`\b([0-9a-fA-F]{8})[0-9a-fA-F]{56}\b`)
+)
+
 func ShortenSessionID(sid string) string {
-	return regexp.MustCompile(`([0-9a-fA-F]{8})-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`).ReplaceAllString(sid, "$1")
+	sid = uuidShortRegex.ReplaceAllString(sid, "$1")
+	sid = sha256ShortRegex.ReplaceAllString(sid, "$1")
+	return sid
 }

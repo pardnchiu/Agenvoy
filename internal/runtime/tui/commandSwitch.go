@@ -85,7 +85,7 @@ func listSessions() []Session {
 	results := make([]Session, 0, len(dirs))
 	for _, dir := range dirs {
 		sid := dir.Name
-		if !strings.HasPrefix(sid, "cli-") && !strings.HasPrefix(sid, "http-") {
+		if !strings.HasPrefix(sid, "cli-") && !strings.HasPrefix(sid, "http-") && !strings.HasPrefix(sid, "dc-") {
 			continue
 		}
 		name, _ := session.GetBot(sid)

@@ -16,7 +16,7 @@ import (
 func registAddTask() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "add_task",
-		Description: "Low-level time-binding for an existing scheduler skill. DO NOT call directly when the user asks for a new reminder/scheduled task — use the scheduler-skill-creator skill instead (it creates the skill body then calls this tool). Use this tool directly ONLY when the skill_name already exists under ~/.config/agenvoy/skills/scheduler/<name>/ and the user is rebinding/changing the time.",
+		Description: "Internal time-binding called by the scheduler-skill-creator skill flow. LLM must NOT call directly — every scheduler skill uses a hash-suffixed name that only scheduler-skill-creator generates, so any hand-made skill_name will fail.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -26,7 +26,7 @@ func registAddTask() {
 				},
 				"skill_name": map[string]any{
 					"type":        "string",
-					"description": "Scheduler skill short name (e.g. 'meeting-reminder'). No 'scheduler-' prefix. Must already exist under ~/.config/agenvoy/skills/scheduler/<name>/.",
+					"description": "Hashed scheduler skill name '<short>-<hash8>' produced by scheduler-skill-creator (no 'scheduler-' prefix). Never hand-craft this value.",
 				},
 			},
 			"required": []string{"time", "skill_name"},
@@ -53,7 +53,7 @@ func registAddTask() {
 				return "", fmt.Errorf("skill_name is required")
 			}
 			if !filesystem.ScheduleSkillExists(skill) {
-				return "", fmt.Errorf("skill %q not found under %s. If the user is requesting a new reminder/scheduled task, you should be running the scheduler-skill-creator skill (which handles create + bind in one flow), not calling add_task directly. If you have just created the skill, call add_task again with the same arguments now to complete the binding", skill, filesystem.ScheduleSkillPath(skill))
+				return "", fmt.Errorf("skill %q not found under %s. add_task is an internal binding called by the scheduler-skill-creator skill flow. Run scheduler-skill-creator skill which generates a hashed skill name and binds time in one flow. Do not call add_task with a hand-made name", skill, filesystem.ScheduleSkillPath(skill))
 			}
 
 			entry := runtime.TaskEntry{

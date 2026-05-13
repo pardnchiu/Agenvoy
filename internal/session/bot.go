@@ -80,7 +80,7 @@ func GetSessionIDByName(name string) string {
 
 	for _, dir := range dirs {
 		sid := dir.Name
-		if !strings.HasPrefix(sid, "cli-") && !strings.HasPrefix(sid, "http-") {
+		if !strings.HasPrefix(sid, "cli-") && !strings.HasPrefix(sid, "http-") && !strings.HasPrefix(sid, "dc-") {
 			continue
 		}
 
