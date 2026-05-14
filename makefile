@@ -44,6 +44,7 @@ build:
 	@find "$$HOME/.config/agenvoy/skills/.system" "$$HOME/.config/agenvoy/tools/.system" -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
 
 app:
+	@$(MAKE) stop
 	@$(MAKE) build
 	@agen
 
