@@ -484,6 +484,19 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return t, tea.Quit
 
+	case LogDone:
+		if msg.err != nil {
+			return t, tea.Sequence(
+				tea.ClearScreen,
+				tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
+				tea.Println(errorStyle.Render(fmt.Sprintf("[!] log: %v", msg.err))+"\n"),
+			)
+		}
+		return t, tea.Sequence(
+			tea.ClearScreen,
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
+		)
+
 	case LoadHistoryCheck:
 		sid := msg.id
 		t.popup = &Popup{

@@ -70,6 +70,8 @@ One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 | `/sched-<name>` | Execute an existing scheduler skill body inline (manual trigger). Surfaced at the bottom of the `/` picker after regular skills; label rendered in warn-purple to mark it as an invocation. The dispatch wraps the body with an explicit "execute, do NOT activate scheduler-skill-creator" preamble. |
 | `/mode [cli\|web]` | Switch between `cli` (TUI rendering) and `web` (browser page). Inline arg switches without the popup. |
 | `/update` | Confirm popup → `agen stop && agen update` via `tea.ExecProcess` → quit TUI. |
+| `/history` | Reload visible transcript — clear screen, reprint header, render the last 100 entries from the session's `action.log`. |
+| `/log` | Open the raw `action.log` in `$PAGER` (fallback `less -Rf +G`, jumps to bottom). `\x1F` markers are expanded back to newlines for readability. |
 | `/clear` | Clear the current window display only — like terminal `clear`; conversation memory is untouched. |
 | `/exit`, `/quit` | Exit TUI (daemon keeps running; re-attach with `agen`). |
 

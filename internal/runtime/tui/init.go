@@ -28,7 +28,7 @@ const (
 	cliMode TUIMode = iota
 	webMode
 
-	historyLoad = 50 // just for cli mode
+	historyLoad = 100
 )
 
 func (m TUIMode) String() string {

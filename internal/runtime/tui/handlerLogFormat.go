@@ -11,7 +11,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
-var userWrapperRe = regexp.MustCompile(`^---\n當前時間:[^\n]*\n工作目錄:[^\n]*\n---\n`)
+var userWrapperRe = regexp.MustCompile(`^---\n當前時間:[^\n]*\n(?:[^\n]+\n)*?---\n`)
 
 type parsedAction struct {
 	hash string

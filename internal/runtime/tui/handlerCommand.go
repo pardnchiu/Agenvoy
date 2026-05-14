@@ -68,6 +68,30 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 
 	case "/mode":
 		return t.commandMode(parts)
+
+	case "/history":
+		return t.commandHistory()
+
+	case "/log":
+		return t.commandLog()
 	}
 	return t, nil, false
+}
+
+func (t TUI) commandHistory() (TUI, tea.Cmd, bool) {
+	sid := strings.TrimSpace(t.currentSessionID)
+	if sid == "" {
+		return t, tea.Println(hintStyle.Render("no active session") + "\n"), true
+	}
+	seq := []tea.Cmd{
+		tea.ClearScreen,
+		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
+	}
+	tail := loadSessionTail(sid)
+	if len(tail) == 0 {
+		seq = append(seq, tea.Println(hintStyle.Render("⎯ no history yet")+"\n"))
+	} else {
+		seq = append(seq, tail...)
+	}
+	return t, tea.Sequence(seq...), true
 }

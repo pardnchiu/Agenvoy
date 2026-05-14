@@ -70,6 +70,8 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `/sched-<name>` | 立即執行已存在的 scheduler skill body（手動 trigger）。顯示於 `/` picker 最末段（一般 skill 之後），label 套 warn-purple 標示為呼叫類。Dispatch 會加 `[執行已存在 scheduler skill: <name> · 此為手動 trigger，不是建立新 schedule]` preamble 並明示禁止 activate `scheduler-skill-creator` 或跑 init script。 |
 | `/mode [cli\|web]` | 切換 `cli`（TUI 渲染）與 `web`（瀏覽器頁面）模式。Inline arg 直接切換、不彈 popup。 |
 | `/update` | Popup 確認 → 走 `tea.ExecProcess` 跑 `agen stop && agen update` → 退出 TUI。 |
+| `/history` | 重整顯示——清空畫面、重印 header、從當前 session 的 `action.log` 讀最近 100 筆 entry 重新渲染。 |
+| `/log` | 以 `$PAGER`（fallback `less -Rf +G`，直接跳到檔尾）開啟 raw `action.log`。`\x1F` marker 會還原為實際換行以利閱讀。 |
 | `/clear` | 僅清除當前視窗顯示，等同 terminal `clear`；對話記憶不動。 |
 | `/exit`, `/quit` | 退出 TUI（daemon 仍在跑，重 `agen` 即可 attach）。 |
 
