@@ -344,7 +344,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ModelAddDone:
 		seq := []tea.Cmd{
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		}
 		if msg.err != nil {
 			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] add-model: %v", msg.err))+"\n"))
@@ -458,7 +458,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.discordStatus = getDiscordStatus()
 		seq := []tea.Cmd{
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		}
 		if msg.err != nil {
 			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] discord %s: %v", msg.action, msg.err))+"\n"))
@@ -471,7 +471,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.telegramStatus = getTelegramStatus()
 		seq := []tea.Cmd{
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		}
 		if msg.err != nil {
 			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] telegram %s: %v", msg.action, msg.err))+"\n"))
@@ -520,13 +520,13 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return t, tea.Sequence(
 				tea.ClearScreen,
-				tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus, t.telegramStatus)),
+				tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 				tea.Println(errorStyle.Render(fmt.Sprintf("[!] log: %v", msg.err))+"\n"),
 			)
 		}
 		return t, tea.Sequence(
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		)
 
 	case LoadHistoryCheck:
@@ -554,6 +554,12 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, nil
 		}
 		return t, tea.Println(msg.line)
+
+	case Log:
+		if t.mode != cliMode {
+			return t, nil
+		}
+		return t, tea.Println(renderLogLine(msg))
 
 	case initTailer:
 		return t.restartTailer(), nil

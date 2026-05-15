@@ -74,7 +74,8 @@ func enableTelegram(token string) tea.Cmd {
 		if token == "" {
 			return TelegramDone{action: "enable", err: fmt.Errorf("token is required")}
 		}
-		if err := verifyTelegram(token); err != nil {
+		username, err := verifyTelegram(token)
+		if err != nil {
 			return TelegramDone{action: "enable", err: err}
 		}
 		if err := keychain.Set(telegram.Key, token); err != nil {
@@ -85,6 +86,7 @@ func enableTelegram(token string) tea.Cmd {
 			return TelegramDone{action: "enable", err: fmt.Errorf("session.Load: %w", err)}
 		}
 		cfg.TelegramEnabled = true
+		cfg.TelegramUsername = username
 		if err := session.Save(cfg); err != nil {
 			return TelegramDone{action: "enable", err: fmt.Errorf("session.Save: %w", err)}
 		}
@@ -110,16 +112,18 @@ func disableTelegram() tea.Cmd {
 	}
 }
 
-func verifyTelegram(token string) error {
+func verifyTelegram(token string) (string, error) {
 	client, err := go_bot_telegram.New(token)
 	if err != nil {
-		return fmt.Errorf("github.com/pardnchiu/go-bot/telegram New: %w", err)
+		return "", fmt.Errorf("github.com/pardnchiu/go-bot/telegram New: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := client.Start(ctx); err != nil {
-		return fmt.Errorf("github.com/pardnchiu/go-bot/telegram Start: %w", err)
+		return "", fmt.Errorf("github.com/pardnchiu/go-bot/telegram Start: %w", err)
 	}
-	return client.Close()
+	username := client.Status().Username
+	_ = client.Close()
+	return username, nil
 }

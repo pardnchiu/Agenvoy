@@ -21,6 +21,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 )
 
 type TUIMode int
@@ -84,6 +85,7 @@ type TUI struct {
 	height         int
 	cwd            string
 	daemonStatus   string
+	httpStatus     string
 	discordStatus  string
 	telegramStatus string
 	runTarget      string
@@ -100,7 +102,7 @@ func (t TUI) Init() tea.Cmd {
 		tea.ClearScreen,
 		tea.Batch(
 			textarea.Blink,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		),
 	}
 	seq = append(seq, func() tea.Msg { return initTailer{} })
@@ -187,6 +189,7 @@ func newModel(ctx context.Context) TUI {
 		spinner:            sp,
 		cwd:                cwd,
 		daemonStatus:       getDaemonStatus(),
+		httpStatus:         getHttpStatus(),
 		discordStatus:      getDiscordStatus(),
 		telegramStatus:     getTelegramStatus(),
 		mode:               cliMode,
@@ -203,23 +206,40 @@ func getDiscordStatus() string {
 	if err != nil || cfg == nil || !cfg.DiscordEnabled || keychain.Get(discord.Key) == "" {
 		return hintStyle.Render("discord:  disabled")
 	}
-	return textStyle.Render("discord:   ") + okayStyle.Render("enabled")
+	name := cfg.DiscordUsername
+	if name == "" {
+		name = "enabled"
+	}
+	return textStyle.Render("discord:  ") + okayStyle.Render(name)
 }
 
 func getTelegramStatus() string {
 	cfg, err := session.Load()
 	if err != nil || cfg == nil || !cfg.TelegramEnabled || keychain.Get(telegram.Key) == "" {
-		return hintStyle.Render("telegram: disabled")
+		return textStyle.Render("telegram: ") + hintStyle.Render("disable")
 	}
-	return textStyle.Render("telegram: ") + okayStyle.Render("enabled")
+	name := cfg.TelegramUsername
+	if name == "" {
+		name = "enabled"
+	}
+	return textStyle.Render("telegram: ") + okayStyle.Render(name)
 }
 
 func getDaemonStatus() string {
 	r, err := runtime.Read()
 	if err != nil || r == nil || !runtime.IsAlive(r.PID) {
-		return "daemon:   not running"
+		return textStyle.Render("daemon:   ") + errorStyle.Render("failed")
 	}
-	return "daemon:   running pid=" + strconv.Itoa(r.PID)
+	return textStyle.Render("daemon:   ") + okayStyle.Render(strconv.Itoa(r.PID))
+}
+
+func getHttpStatus() string {
+	port := go_pkg_utils.GetWithDefault("PORT", "17989")
+	r, err := runtime.Read()
+	if err != nil || r == nil || !runtime.IsAlive(r.PID) {
+		return textStyle.Render("http:     ") + errorStyle.Render("failed")
+	}
+	return textStyle.Render("http:     ") + okayStyle.Render(port)
 }
 
 func loadSessionTail(sid string) []tea.Cmd {

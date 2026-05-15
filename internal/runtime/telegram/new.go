@@ -35,12 +35,8 @@ func New() (*Bot, error) {
 	bot := &Bot{client: client}
 
 	client.Reply(func(ctx context.Context, in telegram.Input) string {
-		slog.Info("telegram message",
-			slog.Int64("chat", in.ChatID),
-			slog.String("from", in.Username),
-			slog.String("text", in.Text))
 		if err := run(ctx, bot, in); err != nil {
-			slog.Warn("telegram run",
+			slog.Warn("run",
 				slog.Int64("chat", in.ChatID),
 				slog.String("error", err.Error()))
 		}
@@ -54,8 +50,14 @@ func New() (*Bot, error) {
 	}
 	bot.cancel = cancel
 
-	slog.Info("telegram bot is running",
-		slog.String("user", client.Status().Username))
+	username := client.Status().Username
+	if cfg, err := session.Load(); err == nil && cfg != nil && cfg.TelegramUsername != username {
+		cfg.TelegramUsername = username
+		if err := session.Save(cfg); err != nil {
+			slog.Warn("github.com/pardnchiu/agenvoy/internal/session Save",
+				slog.String("error", err.Error()))
+		}
+	}
 
 	return bot, nil
 }

@@ -127,7 +127,6 @@ func reloadTelegram() {
 		return
 	}
 	telegramBot = bot
-	slog.Info("telegram reloaded")
 }
 
 func cmdDaemon() {
@@ -212,8 +211,6 @@ func cmdDaemon() {
 					slog.String("error", err.Error()))
 			}
 		}()
-		slog.Info("server started",
-			slog.String("port", port))
 
 		go setSummaryCron()
 	} else {
