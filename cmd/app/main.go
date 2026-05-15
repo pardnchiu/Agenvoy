@@ -65,11 +65,6 @@ func main() {
 			cli.MCP(os.Args[2:])
 			return
 
-		case "discord":
-			initCLI()
-			runDiscord(os.Args[2:])
-			return
-
 		case "cli", "run":
 			if len(os.Args) < 3 {
 				fmt.Fprintf(os.Stderr, "Usage: agen cli <input...>\n")

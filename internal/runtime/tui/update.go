@@ -355,7 +355,23 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t, tea.Sequence(seq...)
 
 	case DiscordAction:
-		return t, runDiscordAction(msg.action)
+		switch msg.action {
+		case "enable":
+			next, cmd := t.openDiscordTokenPrompt()
+			return next, cmd
+		case "disable":
+			return t, tea.Sequence(
+				tea.Println(hintStyle.Render("⎯ discord disabling")+"\n"),
+				disableDiscord(),
+			)
+		}
+		return t, nil
+
+	case DiscordTokenSubmit:
+		return t, tea.Sequence(
+			tea.Println(hintStyle.Render("⎯ discord verifying token")+"\n"),
+			enableDiscord(msg.token),
+		)
 
 	case TelegramAction:
 		switch msg.action {

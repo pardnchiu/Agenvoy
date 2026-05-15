@@ -2,16 +2,22 @@ package tui
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
+	"strings"
 
+	"github.com/bwmarrin/discordgo"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
 type DiscordAction struct {
 	action string
+}
+
+type DiscordTokenSubmit struct {
+	token string
 }
 
 type DiscordDone struct {
@@ -30,7 +36,7 @@ func (t TUI) commandDiscord(parts []string) (TUI, tea.Cmd, bool) {
 
 	enabled := false
 	if cfg, err := session.Load(); err == nil && cfg != nil {
-		enabled = cfg.DiscordEnabled
+		enabled = cfg.DiscordEnabled && keychain.Get(discord.Key) != ""
 	}
 	cursor := 0
 	if enabled {
@@ -49,21 +55,68 @@ func (t TUI) commandDiscord(parts []string) (TUI, tea.Cmd, bool) {
 	return t, nil, true
 }
 
-func runDiscordAction(action string) tea.Cmd {
-	self, err := os.Executable()
-	if err != nil {
-		return tea.Println(errorStyle.Render(fmt.Sprintf("[!] os.Executable: %v", err)) + "\n")
+func (t TUI) openDiscordTokenPrompt() (TUI, tea.Cmd) {
+	t.popup = &Popup{
+		kind:     popupText,
+		title:    "Discord Bot Token",
+		subtitle: "from Developer Portal · Enter to submit · Esc to cancel",
+		onConfirm: func(value string) any {
+			return DiscordTokenSubmit{token: strings.TrimSpace(value)}
+		},
 	}
+	return t, nil
+}
 
-	cmd := exec.Command(self, "discord", action)
-	cmd.Env = os.Environ()
+func enableDiscord(token string) tea.Cmd {
+	return func() tea.Msg {
+		if token == "" {
+			return DiscordDone{action: "enable", err: fmt.Errorf("token is required")}
+		}
+		if err := verifyDiscord(token); err != nil {
+			return DiscordDone{action: "enable", err: err}
+		}
+		if err := keychain.Set(discord.Key, token); err != nil {
+			return DiscordDone{action: "enable", err: fmt.Errorf("keychain.Set: %w", err)}
+		}
 
-	execCmd := tea.ExecProcess(cmd, func(err error) tea.Msg {
-		return DiscordDone{action: action, err: err}
-	})
+		cfg, err := session.Load()
+		if err != nil {
+			return DiscordDone{action: "enable", err: fmt.Errorf("session.Load: %w", err)}
+		}
 
-	return tea.Sequence(
-		tea.Println(hintStyle.Render(fmt.Sprintf("⎯ discord %s · ctrl+c to cancel", action))+"\n"),
-		execCmd,
-	)
+		cfg.DiscordEnabled = true
+		if err := session.Save(cfg); err != nil {
+			return DiscordDone{action: "enable", err: fmt.Errorf("session.Save: %w", err)}
+		}
+		return DiscordDone{action: "enable"}
+	}
+}
+
+func disableDiscord() tea.Cmd {
+	return func() tea.Msg {
+		cfg, err := session.Load()
+		if err != nil {
+			return DiscordDone{action: "disable", err: fmt.Errorf("session.Load: %w", err)}
+		}
+		if !cfg.DiscordEnabled && keychain.Get(discord.Key) == "" {
+			return DiscordDone{action: "disable"}
+		}
+		_ = keychain.Delete(discord.Key)
+		cfg.DiscordEnabled = false
+		if err := session.Save(cfg); err != nil {
+			return DiscordDone{action: "disable", err: fmt.Errorf("session.Save: %w", err)}
+		}
+		return DiscordDone{action: "disable"}
+	}
+}
+
+func verifyDiscord(token string) error {
+	s, err := discordgo.New("Bot " + token)
+	if err != nil {
+		return fmt.Errorf("github.com/bwmarrin/discordgo New: %w", err)
+	}
+	if err := s.Open(); err != nil {
+		return fmt.Errorf("open gateway: %w", err)
+	}
+	return s.Close()
 }
