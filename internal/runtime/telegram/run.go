@@ -237,13 +237,16 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	}
 	footer := model
 	if doneEvent.Usage != nil {
-		footer = fmt.Sprintf("\n%s | in:%dk out:%dk", footer, doneEvent.Usage.Input/1000, doneEvent.Usage.Output/1000)
+		footer = fmt.Sprintf("%s | in:%dk out:%dk", footer, doneEvent.Usage.Input/1000, doneEvent.Usage.Output/1000)
 	}
-	replyText = fmt.Sprintf("%s\n<blockquote expandable>%s</blockquote>", replyText, footer)
+	replyText = fmt.Sprintf("%s\n\n<blockquote expandable>%s</blockquote>", replyText, footer)
 	if len(execErrors) > 0 {
-		replyText = fmt.Sprintf("%s\n<blockquote expandable>⚠️ %s</blockquote>", replyText, strings.Join(execErrors, ", "))
+		replyText = fmt.Sprintf("%s\n\n<blockquote expandable>⚠️ %s</blockquote>", replyText, strings.Join(execErrors, ", "))
 	}
 
+	if in.MessageID != 0 {
+		replyText = "​\n" + replyText
+	}
 	if _, err := b.client.Send(ctx, in.ChatID, in.MessageID, replyText, go_bot_telegram.TypeHTML); err != nil {
 		slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.Send",
 			slog.String("error", err.Error()))

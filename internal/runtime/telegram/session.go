@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -27,10 +26,7 @@ func getSession(chatID int64, username, content string, data exec.ExecData) (*ag
 	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 	sess.Histories = oldHistory
 
-	sess.SystemPrompts = []agentTypes.Message{
-		{Role: "system", Content: configs.TelegramSystemPrompt},
-		{Role: "system", Content: exec.GetSystemPrompt(data.WorkDir, data.ExtraSystemPrompt, host.Scanner(), sessionID, data.AllowAll, false)},
-	}
+	sess.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, host.Scanner(), sessionID, data.AllowAll, false)
 	if summary := sessionManager.GetSummaryPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
 		sess.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
