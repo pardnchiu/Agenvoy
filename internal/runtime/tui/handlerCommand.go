@@ -74,6 +74,9 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 
 	case "/log":
 		return t.commandLog()
+
+	case "/cmd":
+		return t.commandCmd(cmd)
 	}
 	return t, nil, false
 }

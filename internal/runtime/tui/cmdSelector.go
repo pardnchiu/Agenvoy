@@ -45,6 +45,7 @@ var commands = []Command{
 	{"mode", "switch / change rendering · TUI (cli) or browser (web)"},
 	{"history", "reload visible transcript · last 100 entries from action.log"},
 	{"log", "open / view raw action.log via $PAGER (less)"},
+	{"cmd", "run / exec shell command directly in cwd · sh -c"},
 	{"clear", "clear visible transcript / history · memory untouched"},
 	{"exit", "exit / quit TUI · daemon keeps running"},
 }
