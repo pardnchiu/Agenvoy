@@ -150,6 +150,19 @@ func GetChannelID(sessionID string) (string, error) {
 	return config["channel_id"], nil
 }
 
+func GetChatID(sessionID string) (string, error) {
+	if sessionID == "" {
+		return "", fmt.Errorf("sessionID is required")
+	}
+
+	configPath := filepath.Join(filesystem.SessionsDir, sessionID, "config.json")
+	config, err := go_pkg_filesystem.ReadJSON[map[string]string](configPath)
+	if err != nil {
+		return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem ReadJSON: %w", err)
+	}
+	return config["chat_id"], nil
+}
+
 var MaxHistoryMessages = func() int {
 	if n := go_pkg_utils.GetWithDefaultInt("MAX_HISTORY_MESSAGES", 16); n > 0 {
 		return n

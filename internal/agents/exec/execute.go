@@ -128,7 +128,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		teed := make(chan agentTypes.Event, 64)
 		done := make(chan struct{})
 		sid := session.ID
-		isDcPush := strings.HasPrefix(sid, "dc-") && !isDcPushSuppressed(ctx) && ResultHook != nil
+		pushHook, hasPush := lookupPushHook(sid)
+		isDcPush := hasPush && !isDcPushSuppressed(ctx)
 		var pushTextBuf strings.Builder
 		var pushDoneEv agentTypes.Event
 		go func() {
@@ -159,7 +160,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			if isDcPush {
 				text := strings.TrimSpace(pushTextBuf.String())
 				if text != "" {
-					ResultHook(ctx, DiscordPayload{
+					pushHook(ctx, PushPayload{
 						SessionID: sid,
 						Text:      text,
 						Model:     pushDoneEv.Model,

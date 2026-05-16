@@ -2,11 +2,13 @@ package exec
 
 import (
 	"context"
+	"strings"
+	"sync"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
-type DiscordPayload struct {
+type PushPayload struct {
 	SessionID string
 	Text      string
 	Model     string
@@ -14,28 +16,48 @@ type DiscordPayload struct {
 	Prefix    string
 }
 
-type DiscordPushFunc func(ctx context.Context, payload DiscordPayload)
+type PushFunc func(ctx context.Context, payload PushPayload)
 
-var ResultHook DiscordPushFunc
+var (
+	pushHookMu sync.RWMutex
+	pushHooks  = map[string]PushFunc{}
+)
 
-type DiscordPushKey struct{}
+func RegisterPushHook(prefix string, fn PushFunc) {
+	pushHookMu.Lock()
+	pushHooks[prefix] = fn
+	pushHookMu.Unlock()
+}
+
+func lookupPushHook(sid string) (PushFunc, bool) {
+	pushHookMu.RLock()
+	defer pushHookMu.RUnlock()
+	for prefix, fn := range pushHooks {
+		if strings.HasPrefix(sid, prefix) {
+			return fn, true
+		}
+	}
+	return nil, false
+}
+
+type pushSuppressKey struct{}
 
 func SuppressDcPush(ctx context.Context) context.Context {
-	return context.WithValue(ctx, DiscordPushKey{}, true)
+	return context.WithValue(ctx, pushSuppressKey{}, true)
 }
 
 func isDcPushSuppressed(ctx context.Context) bool {
-	v, _ := ctx.Value(DiscordPushKey{}).(bool)
+	v, _ := ctx.Value(pushSuppressKey{}).(bool)
 	return v
 }
 
-type DiscordPushPrefix struct{}
+type pushPrefixKey struct{}
 
 func WithDcPushPrefix(ctx context.Context, prefix string) context.Context {
-	return context.WithValue(ctx, DiscordPushPrefix{}, prefix)
+	return context.WithValue(ctx, pushPrefixKey{}, prefix)
 }
 
 func dcPushPrefix(ctx context.Context) string {
-	v, _ := ctx.Value(DiscordPushPrefix{}).(string)
+	v, _ := ctx.Value(pushPrefixKey{}).(string)
 	return v
 }
