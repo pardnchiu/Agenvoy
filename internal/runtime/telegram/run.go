@@ -16,12 +16,14 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
 var (
-	fileMarkerRegex = regexp.MustCompile(`\[SEND_FILE:([^\]]+)\]`)
-	tsPrefixRegex   = regexp.MustCompile(`^ts:\d+\n`)
-	imageExts       = map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".webp": true}
+	fileMarkerRegex  = regexp.MustCompile(`\[SEND_FILE:([^\]]+)\]`)
+	voiceMarkerRegex = regexp.MustCompile(`\[SEND_VOICE:([^\]]+)\]`)
+	tsPrefixRegex    = regexp.MustCompile(`^ts:\d+\n`)
+	imageExts        = map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".webp": true}
 )
 
 func truncateStatus(s string) string {
@@ -228,6 +230,14 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	}
 	replyText = strings.TrimSpace(fileMarkerRegex.ReplaceAllString(replyText, ""))
 
+	var voiceTexts []string
+	for _, match := range voiceMarkerRegex.FindAllStringSubmatch(replyText, -1) {
+		if t := strings.TrimSpace(match[1]); t != "" {
+			voiceTexts = append(voiceTexts, t)
+		}
+	}
+	replyText = strings.TrimSpace(voiceMarkerRegex.ReplaceAllString(replyText, ""))
+
 	model := doneEvent.Model
 	if model == "" && agent != nil {
 		model = agent.Name()
@@ -247,26 +257,77 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	if in.MessageID != 0 {
 		replyText = "​\n" + replyText
 	}
-	if _, err := b.client.Send(ctx, in.ChatID, in.MessageID, replyText, go_bot_telegram.TypeHTML); err != nil {
+	replyMsg, sendErr := b.client.Send(ctx, in.ChatID, in.MessageID, replyText, go_bot_telegram.TypeHTML)
+	if sendErr != nil {
 		slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.Send",
-			slog.String("error", err.Error()))
+			slog.String("error", sendErr.Error()))
 	}
 
+	var photoPaths []string
+	var docPaths []string
 	for _, path := range filePaths {
-		ext := strings.ToLower(filepath.Ext(path))
-		if imageExts[ext] {
-			if _, err := b.client.SendPhoto(ctx, in.ChatID, []string{path}); err != nil {
-				slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendPhoto",
-					slog.String("path", path),
-					slog.String("error", err.Error()))
-			}
+		if imageExts[strings.ToLower(filepath.Ext(path))] {
+			photoPaths = append(photoPaths, path)
 			continue
 		}
+		docPaths = append(docPaths, path)
+	}
+
+	if len(photoPaths) == 0 && len(docPaths) == 0 && len(voiceTexts) == 0 {
+		return nil
+	}
+
+	replyToID := 0
+	if replyMsg != nil {
+		replyToID = replyMsg.ID
+	}
+	sendStatus := func(text string) {
+		if err := b.client.SendStatus(ctx, in.ChatID, replyToID, text); err != nil {
+			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendStatus",
+				slog.String("text", text),
+				slog.Int64("chat", in.ChatID),
+				slog.Int("replyTo", replyToID),
+				slog.String("error", err.Error()))
+		}
+	}
+	sendStatus("⏵ sending…")
+
+	for start := 0; start < len(photoPaths); start += 10 {
+		end := start + 10
+		end = min(end, len(photoPaths))
+		if _, err := b.client.SendPhoto(ctx, in.ChatID, photoPaths[start:end]); err != nil {
+			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendPhoto",
+				slog.Int("count", end-start),
+				slog.String("error", err.Error()))
+		}
+	}
+	for _, path := range docPaths {
 		if _, err := b.client.SendFile(ctx, in.ChatID, go_bot_telegram.TypeDocument, path); err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendFile",
 				slog.String("path", path),
 				slog.String("error", err.Error()))
 		}
+	}
+
+	if len(voiceTexts) > 0 {
+		apiKey := strings.TrimSpace(keychain.Get("GEMINI_API_KEY"))
+		if apiKey == "" {
+			slog.Warn("keychain.Get GEMINI_API_KEY missing",
+				slog.Int64("chat", in.ChatID))
+		} else {
+			for _, text := range voiceTexts {
+				if _, err := b.client.SendVoice(ctx, in.ChatID, text, apiKey); err != nil {
+					slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendVoice",
+						slog.String("error", err.Error()))
+				}
+			}
+		}
+	}
+
+	if err := b.client.FinishStatus(ctx, in.ChatID); err != nil {
+		slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.FinishStatus",
+			slog.Int64("chat", in.ChatID),
+			slog.String("error", err.Error()))
 	}
 
 	return nil

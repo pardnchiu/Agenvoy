@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"sync/atomic"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/go-bot/telegram"
@@ -17,6 +20,19 @@ type Bot struct {
 	cancel context.CancelFunc
 }
 
+var current atomic.Pointer[Bot]
+
+func Current() *Bot {
+	return current.Load()
+}
+
+func (b *Bot) Client() *telegram.Bot {
+	if b == nil {
+		return nil
+	}
+	return b.client
+}
+
 func New() (*Bot, error) {
 	cfg, err := session.Load()
 	if err != nil || cfg == nil || !cfg.TelegramEnabled {
@@ -27,7 +43,9 @@ func New() (*Bot, error) {
 		return nil, nil
 	}
 
-	client, err := telegram.New(token)
+	client, err := telegram.New(token,
+		telegram.WithHTTPClient(&http.Client{Timeout: 5 * time.Minute}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("github.com/pardnchiu/go-bot/telegram New: %w", err)
 	}
@@ -49,6 +67,7 @@ func New() (*Bot, error) {
 		return nil, fmt.Errorf("github.com/pardnchiu/go-bot/telegram Start: %w", err)
 	}
 	bot.cancel = cancel
+	current.Store(bot)
 
 	username := client.Status().Username
 	if cfg, err := session.Load(); err == nil && cfg != nil && cfg.TelegramUsername != username {
@@ -66,6 +85,7 @@ func Close(b *Bot) error {
 	if b == nil || b.client == nil {
 		return nil
 	}
+	current.CompareAndSwap(b, nil)
 	if b.cancel != nil {
 		b.cancel()
 	}
