@@ -13,6 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
@@ -118,6 +119,16 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		scanner.Scan()
 	}
 
+	var sessionOverride, sessionMissing string
+	if name, effective := session.Match(content); name != "" {
+		if id := session.GetSessionIDByName(name); id != "" {
+			sessionOverride = id
+		} else {
+			sessionMissing = name
+		}
+		content = strings.TrimSpace(effective)
+	}
+
 	externalAgent, externalEffective, externalReadOnly := external.MatchExternal(content)
 	if externalAgent != "" {
 		content = strings.TrimSpace(externalEffective)
@@ -145,7 +156,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		AllowAll: true,
 	}
 
-	sess, err := getSession(in.ChatID, in.Username, content, execData)
+	sess, err := getSession(in.ChatID, in.Username, content, execData, sessionOverride, sessionMissing)
 	if err != nil {
 		return fmt.Errorf("getSession: %w", err)
 	}
