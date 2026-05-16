@@ -9,7 +9,7 @@ A high-level view of how Agenvoy fits together. For per-module diagrams, sequenc
 ```mermaid
 graph TB
     subgraph Entry["Entry · cmd/app"]
-        App["agen model · session · mcp · stop · update<br/>make app · TUI + Discord + REST<br/>make cli / run · single-shot"]
+        App["agen model · session · mcp · stop · update<br/>make app · TUI + Discord + Telegram + REST<br/>make cli / run · single-shot"]
     end
 
     subgraph Engine["Engine · internal/agents/exec"]
@@ -18,8 +18,8 @@ graph TB
         Sub["ExecWithSubagent<br/>in-process · ctx inheritance"]
     end
 
-    subgraph Pending["Pending · internal/pending"]
-        Reg["Global confirm/ask registry<br/>per-entry buffered=1 reply ch"]
+    subgraph Pending["Pending · internal/runtime"]
+        Reg["Prefix-routed listener registry<br/>per-entry buffered=1 reply ch<br/>TUI/CLI listen '' · Telegram listens 'tg-'"]
     end
 
     subgraph Providers["LLM Providers · 7"]
@@ -73,7 +73,7 @@ graph TB
 | Sandbox | `go-pkg/sandbox` | OS-native isolation, single entry `Wrap()` |
 | Filesystem | `go-pkg/filesystem` (+ `reader/`) + `internal/filesystem` | policy-aware writes; ToriiDB pathing |
 | Session | `internal/session` | bot.md / status.json / action.log / fsnotify observer |
-| Pending | `internal/pending` | global confirm/ask registry |
+| Pending | `internal/runtime/pending.go` | prefix-routed confirm/ask listener registry; per-runtime listener via `RegisterListener(prefix)`, claim via `PickNextFor(prefix)` |
 | Memory | ToriiDB (`DBSessionHist` / `DBSessionSummary` / `error_memory`) | semantic search + 90-day TTL |
 | Scheduler | `internal/runtime/scheduler.go` (+ `runtime.SchedulerWatcher` fsnotify) | cron / one-shot tasks bound to scheduler skills; hot-reload on `{tasks,crons}.json` change |
 | TUI | `internal/runtime/tui` | bubbletea inline-chat front-end; single-package by design |

@@ -3,6 +3,7 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -31,8 +32,19 @@ var (
 			Padding(0, 1)
 )
 
-func headerBlock(cwd, daemon, discord string) string {
+func headerBlock(cwd, daemon, http, discord, telegram string) string {
 	logo := textStyle.Bold(true).Render("✻ Agenvoy ") + hintStyle.Render(projectVersion)
+	cwdStyle := textStyle
+	displayCwd := cwd
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		switch {
+		case cwd == home:
+			cwdStyle = hintStyle
+			displayCwd = "~"
+		case strings.HasPrefix(cwd, home+"/"):
+			displayCwd = "~" + cwd[len(home):]
+		}
+	}
 	body := strings.Join([]string{
 		logo,
 		"",
@@ -41,9 +53,11 @@ func headerBlock(cwd, daemon, discord string) string {
 		textStyle.Render("/bot      ") + hintStyle.Render("edit bot persona"),
 		textStyle.Render("/mode     ") + hintStyle.Render("switch mode (cli / web)"),
 		"",
-		hintStyle.Render("cwd:     " + cwd),
-		hintStyle.Render(daemon),
-		hintStyle.Render(discord),
+		cwdStyle.Render("cwd:      " + displayCwd),
+		daemon,
+		http,
+		discord,
+		telegram,
 	}, "\n")
 	return headerStyle.Render(body)
 }

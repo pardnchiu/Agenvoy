@@ -22,8 +22,18 @@ type agentExecDone struct {
 	err error
 }
 
+func truncatePushPrefix(s string, max int) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.TrimSpace(s)
+	r := []rune(s)
+	if len(r) > max {
+		return string(r[:max]) + "..."
+	}
+	return string(r)
+}
+
 func runExec(parentCtx context.Context, input string, allowAll bool, workDir, sessionID string, webMode bool) {
-	ctx, cancel := context.WithCancel(parentCtx)
+	ctx, cancel := context.WithCancel(exec.WithDcPushPrefix(parentCtx, truncatePushPrefix(input, 32)))
 	send(agentExec{cancel: cancel})
 
 	ch := make(chan agentTypes.Event, 16)

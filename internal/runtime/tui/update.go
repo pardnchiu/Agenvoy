@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
-	"github.com/pardnchiu/agenvoy/internal/pending"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
@@ -165,7 +165,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case Pending:
 		popup := newPopup(msg.id, msg.request)
 		if popup == nil {
-			pending.Resolve(msg.id, pending.Reply{Error: fmt.Errorf("invalid pending request")})
+			runtime.Resolve(msg.id, runtime.Reply{Error: fmt.Errorf("invalid pending request")})
 			return t, nil
 		}
 
@@ -344,7 +344,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ModelAddDone:
 		seq := []tea.Cmd{
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		}
 		if msg.err != nil {
 			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] add-model: %v", msg.err))+"\n"))
@@ -355,7 +355,42 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t, tea.Sequence(seq...)
 
 	case DiscordAction:
-		return t, runDiscordAction(msg.action)
+		switch msg.action {
+		case "enable":
+			next, cmd := t.openDiscordTokenPrompt()
+			return next, cmd
+		case "disable":
+			return t, tea.Sequence(
+				tea.Println(hintStyle.Render("⎯ discord disabling")+"\n"),
+				disableDiscord(),
+			)
+		}
+		return t, nil
+
+	case DiscordTokenSubmit:
+		return t, tea.Sequence(
+			tea.Println(hintStyle.Render("⎯ discord verifying token")+"\n"),
+			enableDiscord(msg.token),
+		)
+
+	case TelegramAction:
+		switch msg.action {
+		case "enable":
+			next, cmd := t.openTelegramTokenPrompt()
+			return next, cmd
+		case "disable":
+			return t, tea.Sequence(
+				tea.Println(hintStyle.Render("⎯ telegram disabling")+"\n"),
+				disableTelegram(),
+			)
+		}
+		return t, nil
+
+	case TelegramTokenSubmit:
+		return t, tea.Sequence(
+			tea.Println(hintStyle.Render("⎯ telegram verifying token (≤10s)")+"\n"),
+			enableTelegram(msg.token),
+		)
 
 	case CronAction:
 		switch msg.action {
@@ -439,12 +474,25 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.discordStatus = getDiscordStatus()
 		seq := []tea.Cmd{
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		}
 		if msg.err != nil {
 			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] discord %s: %v", msg.action, msg.err))+"\n"))
 		} else {
 			seq = append(seq, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ discord %sd · daemon reloading", msg.action))+"\n"))
+		}
+		return t, tea.Sequence(seq...)
+
+	case TelegramDone:
+		t.telegramStatus = getTelegramStatus()
+		seq := []tea.Cmd{
+			tea.ClearScreen,
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
+		}
+		if msg.err != nil {
+			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] telegram %s: %v", msg.action, msg.err))+"\n"))
+		} else {
+			seq = append(seq, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ telegram %sd · daemon reloading", msg.action))+"\n"))
 		}
 		return t, tea.Sequence(seq...)
 
@@ -488,13 +536,13 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return t, tea.Sequence(
 				tea.ClearScreen,
-				tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
+				tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 				tea.Println(errorStyle.Render(fmt.Sprintf("[!] log: %v", msg.err))+"\n"),
 			)
 		}
 		return t, tea.Sequence(
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		)
 
 	case LoadHistoryCheck:
@@ -522,6 +570,12 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, nil
 		}
 		return t, tea.Println(msg.line)
+
+	case Log:
+		if t.mode != cliMode {
+			return t, nil
+		}
+		return t, tea.Println(renderLogLine(msg))
 
 	case initTailer:
 		return t.restartTailer(), nil

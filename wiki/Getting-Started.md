@@ -38,7 +38,7 @@ The main config lives at `~/.config/agenvoy/config.json`.
 # Create a named cli- session and switch the primary pointer to it
 agen session new my-assistant
 
-# Launch the full stack (TUI + Discord + REST)
+# Launch the full stack (TUI + Discord + Telegram + REST)
 make app
 ```
 

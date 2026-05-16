@@ -47,7 +47,7 @@ func CreateSession(prefix string) (string, error) {
 	uuid := h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:]
 	sessionID := prefix + uuid
 	if err := go_pkg_filesystem.CheckDir(filepath.Join(filesystem.SessionsDir, sessionID), true); err != nil {
-		return "", fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
+		return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
 	}
 	SaveBot(sessionID, sessionID, false)
 	return sessionID, nil
@@ -70,6 +70,30 @@ func LockConfig() (func(), error) {
 		_ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
 		file.Close()
 	}, nil
+}
+
+func GetTelegramSession(chatID int64) (string, error) {
+	key := fmt.Sprintf("tg_%d", chatID)
+	config := map[string]string{
+		"chat_id": fmt.Sprintf("%d", chatID),
+	}
+	sum := sha256.Sum256([]byte(key))
+
+	sessionID := "tg-" + hex.EncodeToString(sum[:])
+	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+	configPath := filepath.Join(sessionDir, "config.json")
+
+	if !go_pkg_filesystem_reader.Exists(configPath) {
+		if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
+		}
+		if err := go_pkg_filesystem.WriteJSON(configPath, config, false); err != nil {
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteJSON: %w", err)
+		}
+	}
+
+	SaveBot(sessionID, sessionID, false)
+	return sessionID, nil
 }
 
 func GetDiscordSession(guildID, channelID, userID string) (string, error) {
@@ -102,10 +126,10 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 
 	if !go_pkg_filesystem_reader.Exists(configPath) {
 		if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
-			return "", fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
 		}
 		if err := go_pkg_filesystem.WriteJSON(configPath, config, false); err != nil {
-			return "", fmt.Errorf("WriteJSON: %w", err)
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteJSON: %w", err)
 		}
 	}
 
@@ -121,9 +145,22 @@ func GetChannelID(sessionID string) (string, error) {
 	configPath := filepath.Join(filesystem.SessionsDir, sessionID, "config.json")
 	config, err := go_pkg_filesystem.ReadJSON[map[string]string](configPath)
 	if err != nil {
-		return "", fmt.Errorf("go_pkg_filesystem.ReadJSON: %w", err)
+		return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem ReadJSON: %w", err)
 	}
 	return config["channel_id"], nil
+}
+
+func GetChatID(sessionID string) (string, error) {
+	if sessionID == "" {
+		return "", fmt.Errorf("sessionID is required")
+	}
+
+	configPath := filepath.Join(filesystem.SessionsDir, sessionID, "config.json")
+	config, err := go_pkg_filesystem.ReadJSON[map[string]string](configPath)
+	if err != nil {
+		return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem ReadJSON: %w", err)
+	}
+	return config["chat_id"], nil
 }
 
 var MaxHistoryMessages = func() int {
@@ -164,7 +201,7 @@ func Clean() {
 		sessionDir := filepath.Join(filesystem.SessionsDir, entry.Name())
 		if now.Sub(latestModTime(sessionDir)) > time.Hour {
 			if err := os.RemoveAll(sessionDir); err != nil {
-				slog.Warn("CleanupTempSessions",
+				slog.Warn("Clean",
 					slog.String("dir", entry.Name()),
 					slog.String("error", err.Error()))
 			}
@@ -193,12 +230,12 @@ func latestModTime(dir string) time.Time {
 func SaveHistory(sessionID, content string) error {
 	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
 	if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
-		return fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
 	}
 
 	historyPath := filepath.Join(sessionDir, "history.json")
 	if err := go_pkg_filesystem.WriteFile(historyPath, content, 0644); err != nil {
-		return fmt.Errorf("WriteFile: %w", err)
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteFile: %w", err)
 	}
 	return nil
 }

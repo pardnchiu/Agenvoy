@@ -41,7 +41,7 @@ One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 
 | Command | Description |
 |---|---|
-| `agen` | Attach interactive TUI; forks daemon (HTTP + Discord + scheduler + summary cron) if not running. |
+| `agen` | Attach interactive TUI; forks daemon (HTTP + Discord + Telegram + scheduler + summary cron) if not running. |
 | `agen cli <input>` | One-shot agent run; every tool call asks for confirmation. |
 | `agen run <input>` | One-shot agent run; auto-approves every tool call. |
 | `agen stop` | Stop the running daemon (SIGTERM 5s grace → SIGKILL → clear `runtime.uid`). |
@@ -49,7 +49,6 @@ One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 | `agen model {add\|remove\|list\|planner\|reasoning}` | Manage providers / worker models, pick planner model, set reasoning level. |
 | `agen mcp {list\|add\|remove}` | Manage MCP servers (stdio / HTTP) across global and per-session scope. |
 | `agen session {new\|switch\|config} [name]` | Manage CLI sessions; bare `switch` / `config` opens an interactive picker. |
-| `agen discord {enable\|disable}` | Toggle the Discord bot; `enable` prompts for token, verifies connection, then writes to keychain. |
 
 ## TUI slash commands
 
@@ -64,7 +63,8 @@ One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 | `/mcp [add\|remove]` | Action picker; `add` walks a chained popup form (name → transport → command/args/env or url/headers → scope → optional session pick), `remove` lists configured servers across global and session scopes. Restart the daemon to apply changes. Inline arg skips the action popup. |
 | `/planner` | Pick the planner model from `cfg.Models` via popup. No inline arg. |
 | `/reasoning [global\|session]` | Pick `low` / `medium` / `high` for the planner (global) or the active session. Inline arg skips the scope popup. |
-| `/discord [enable\|disable]` | Toggle Discord bot connection. Inline arg switches without the popup. |
+| `/discord [enable\|disable]` | Toggle Discord bot connection (token entry, verification, keychain write, daemon reload all happen in-TUI). Inline arg switches without the popup. |
+| `/telegram [enable\|disable]` | Toggle Telegram bot connection (same in-TUI popup chain as `/discord`; first chat to message the bot must pass an in-chat verification code). Inline arg switches without the popup. |
 | `/cron [add\|remove\|edit]` | Manage recurring schedules. `add` opens a multiline requirement textarea → dispatches `/scheduler-skill-creator <requirement>` (asks for missing when/what via `ask_user`). `remove` lists crons → confirm popup → `runtime.RemoveCron` + trashes the skill dir. `edit` lists crons → requirement textarea → agent picks `patch_cron` or rewrites the SKILL.md body. Inline arg skips the action popup. |
 | `/task [add\|remove\|edit]` | Manage one-shot scheduled tasks (mirrors `/cron`; uses `add_task` / `patch_task` / `remove_task`). Picker shows `<YYYY-MM-DD HH:MM>  <skill>`. |
 | `/sched-<name>` | Execute an existing scheduler skill body inline (manual trigger). Surfaced at the bottom of the `/` picker after regular skills; label rendered in warn-purple to mark it as an invocation. The dispatch wraps the body with an explicit "execute, do NOT activate scheduler-skill-creator" preamble. |

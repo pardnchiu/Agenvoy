@@ -38,7 +38,7 @@ agen model add
 # 建立具名 cli- session 並切為主指標
 agen session new my-assistant
 
-# 啟動完整堆疊（TUI + Discord + REST）
+# 啟動完整堆疊（TUI + Discord + Telegram + REST）
 make app
 ```
 

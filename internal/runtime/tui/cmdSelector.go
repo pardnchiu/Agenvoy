@@ -39,6 +39,7 @@ var commands = []Command{
 	{"new", "create / add new session · name conflict-checked"},
 	{"bot", "edit / rename current session · name / description (persona)"},
 	{"discord", "enable / disable Discord bot · gateway validated on enable"},
+	{"telegram", "enable / disable Telegram bot · getMe validated on enable"},
 	{"cron", "add / remove / edit scheduled recurring task"},
 	{"task", "add / remove / edit one-shot scheduled task"},
 	{"update", "update / upgrade · fetch latest release · rebuild · quit TUI"},

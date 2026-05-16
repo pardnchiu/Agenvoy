@@ -25,6 +25,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/cli"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
+	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
@@ -44,7 +45,8 @@ func init() {
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	exec.ResultHook = discord.PushDiscordResult
+	exec.RegisterPushHook("dc-", discord.PushDiscordResult)
+	exec.RegisterPushHook("tg-", telegram.PushTelegramResult)
 }
 
 func main() {
@@ -63,11 +65,6 @@ func main() {
 		case "mcp":
 			initCLI()
 			cli.MCP(os.Args[2:])
-			return
-
-		case "discord":
-			initCLI()
-			runDiscord(os.Args[2:])
 			return
 
 		case "cli", "run":

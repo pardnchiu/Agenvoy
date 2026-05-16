@@ -24,10 +24,11 @@ History, summaries, and config flags live in ToriiDB (`DBSessionHist`, `DBSessio
 | `cli-*` | Permanent (created by `agen session new` / `make cli`) |
 | `http-*` | Permanent (created by `POST /v1/send` with `persist=true`) |
 | `dc-*` | Permanent (Discord channels) |
+| `tg-*` | Permanent (Telegram chats — per-chat, shared across users in that chat) |
 | `temp-*` | Reaped after 1 h idle (default for `POST /v1/send`) |
 | `temp-sub-*` | Reaped after 1 h idle (subagent default) |
 
-`runApp` startup runs `CleanupSessions()` against the `temp-*` whitelist only — `cli-*`, `http-*`, and `dc-*` are never auto-reaped.
+`runApp` startup runs `CleanupSessions()` against the `temp-*` whitelist only — `cli-*`, `http-*`, `dc-*`, and `tg-*` are never auto-reaped.
 
 ## bot.md — Agent Persona
 
@@ -56,7 +57,7 @@ Three ways decide which agent handles a task:
 :mobile-builder build me a SwiftUI login screen
 ```
 
-Resolution order in `exec.Run`: `:bot` → `MatchExternal` (`/claude` etc.) → `MatchSkillCall` (`/skill-name`) → `Execute`. The `:name` override is parsed only in `exec.Run` (CLI/TUI); HTTP `POST /v1/send` and Discord do not interpret the prefix.
+Resolution order in `exec.Run`: `:bot` → `MatchExternal` (`/claude` etc.) → `MatchSkillCall` (`/skill-name`) → `Execute`. The `:name` override is parsed in `exec.Run` (CLI/TUI) and in the Telegram runtime (which strips the prefix and falls back with a metadata note if the name is not found); HTTP `POST /v1/send` and Discord do not interpret the prefix.
 
 **3. `invoke_subagent` tool** — An agent calls another agent in-process (no HTTP) during execution, inheriting `AllowAll` and `WorkDir` from the parent ctx. The forced-exclude set is `{invoke_subagent, invoke_external_agent, cross_review_with_external_agents, review_result}`; `ask_user` is **not** excluded — subagents can ask the user via the shared pending registry.
 
@@ -87,9 +88,9 @@ Concurrent-tagged tools: `fetch_page`, `invoke_subagent`, `calculator`, `send_ht
 
 ## Pending registry
 
-The `internal/pending` package is a global confirm/ask registry shared by the main agent and any in-process subagents. Producers (`toolCall` confirm, `ask_user` handler, `store_secret` handler) call `Ask(ctx, req)` and block on a per-entry buffered=1 reply channel; the CLI consumer (`cli.RunPendingConsumer`) drains entries via `PickNext()` and writes back through `Resolve(id, reply)`. ctx cancellation removes the entry so a stale producer never wastes a human interaction.
+`internal/runtime/pending.go` is the prefix-routed confirm/ask listener registry shared by the main agent and any in-process subagents. Producers (`toolCall` confirm, `ask_user` handler, `store_secret` handler) call `Ask(ctx, req)` and block on a per-entry buffered=1 reply channel; each runtime registers a listener via `pending.RegisterListener(prefix)` (TUI/CLI use `""` to match all, the Telegram daemon listener uses `"tg-"`) and only claims matching entries through `PickNextFor(prefix)`. ctx cancellation removes the entry so a stale producer never wastes a human interaction.
 
-`pending.Active atomic.Bool` gates whether the registry is in use. When no consumer is running (e.g., `runApp` TUI mode currently — popup consumer pending), tool confirms fall back through their non-interactive paths.
+The gate `pending.HasListener(sessionID)` checks whether a listener with a matching prefix is registered for that session. This replaces the old global `pending.Active atomic.Bool` so Telegram, Discord, and CLI confirm flows can run side by side without blocking each other.
 
 ## Circuit breaker
 

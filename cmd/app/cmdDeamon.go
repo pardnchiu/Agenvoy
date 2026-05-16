@@ -25,6 +25,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	discordTypes "github.com/pardnchiu/agenvoy/internal/runtime/discord/types"
+	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
@@ -39,6 +40,11 @@ var (
 	lastDiscordEnabled bool
 	lastDiscordToken   string
 	lastDiscordGuild   string
+
+	telegramMu          sync.Mutex
+	telegramBot         *telegram.Bot
+	lastTelegramEnabled bool
+	lastTelegramToken   string
 )
 
 func reloadDiscord() {
@@ -82,6 +88,45 @@ func reloadDiscord() {
 	}
 	discordBot = bot
 	slog.Info("discord reloaded")
+}
+
+func reloadTelegram() {
+	newToken := keychain.Get(telegram.Key)
+	newEnabled := false
+	if cfg, err := session.Load(); err == nil && cfg != nil {
+		newEnabled = cfg.TelegramEnabled
+	}
+
+	telegramMu.Lock()
+	defer telegramMu.Unlock()
+
+	if newEnabled == lastTelegramEnabled && newToken == lastTelegramToken {
+		return
+	}
+
+	if telegramBot != nil {
+		_ = telegram.Close(telegramBot)
+		telegramBot = nil
+	}
+	lastTelegramEnabled = newEnabled
+	lastTelegramToken = newToken
+
+	if !newEnabled {
+		slog.Info("telegram disabled, skipped")
+		return
+	}
+	if newToken == "" {
+		slog.Info("telegram enabled but token missing, run `/telegram enable` in TUI")
+		return
+	}
+
+	bot, err := telegram.New()
+	if err != nil {
+		slog.Error("telegram.New",
+			slog.String("error", err.Error()))
+		return
+	}
+	telegramBot = bot
 }
 
 func cmdDaemon() {
@@ -151,6 +196,7 @@ func cmdDaemon() {
 			slog.String("fallback", selectorBot.Name()))
 
 		reloadDiscord()
+		reloadTelegram()
 
 		route := routes.New()
 		port := go_pkg_utils.GetWithDefault("PORT", "17989")
@@ -165,12 +211,10 @@ func cmdDaemon() {
 					slog.String("error", err.Error()))
 			}
 		}()
-		slog.Info("server started",
-			slog.String("port", port))
 
 		go setSummaryCron()
 	} else {
-		slog.Warn("no agents configured, server and discord disabled")
+		slog.Warn("no agents configured, server, discord, and telegram disabled")
 	}
 
 	quit := make(chan os.Signal, 1)
@@ -184,6 +228,12 @@ func cmdDaemon() {
 		discordBot = nil
 	}
 	discordMu.Unlock()
+	telegramMu.Lock()
+	if telegramBot != nil {
+		_ = telegram.Close(telegramBot)
+		telegramBot = nil
+	}
+	telegramMu.Unlock()
 	if server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		_ = server.Shutdown(ctx)
@@ -244,6 +294,7 @@ func watchConfig(ctx context.Context) func() {
 					slog.Info("host reloaded from config change")
 				}
 				reloadDiscord()
+				reloadTelegram()
 			case err, ok := <-w.Errors:
 				if !ok {
 					return

@@ -44,7 +44,8 @@ configs/
     ├── summary_prompt.md             Summary generation prompt
     ├── summary_merge_prompt.md       Summary merge prompt
     ├── summary_context.md            Summary context injection
-    └── discord_system_prompt.md      Discord interface system prompt
+    ├── discord_system_prompt.md      Discord interface system prompt
+    └── telegram_system_prompt.md     Telegram interface system prompt
 ```
 
 `compat` provider entries live alongside the static catalogs once added through `agen model add`.
@@ -91,6 +92,7 @@ The active permission mode (`single-confirm` vs `always-allow`) is decided by en
 | `agen cli` | `single-confirm` (`AllowAll=false`) |
 | `agen run` | `always-allow` (`AllowAll=true`) |
 | Discord / REST | `always-allow` |
+| Telegram | `single-confirm` (`AllowAll=false`; confirm gate uses Telegram inline-keyboard SendSelect) |
 | Subagent | Inherits parent ctx |
 
 The mode is rendered into the system prompt under `## Permission Mode`. There is no global env var to override it.

@@ -30,6 +30,9 @@ var WebModeSystemPrompt string
 //go:embed prompts/discord_system_prompt.md
 var DiscordSystemPrompt string
 
+//go:embed prompts/telegram_system_prompt.md
+var TelegramSystemPrompt string
+
 //go:embed prompts/default_session_prompt.md
 var DefaultSessionPrompt string
 

@@ -14,7 +14,7 @@ import (
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func PushDiscordResult(ctx context.Context, payload exec.DiscordPayload) {
+func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	id := strings.TrimSpace(payload.SessionID)
 	text := strings.TrimSpace(payload.Text)
 	if id == "" || text == "" || !strings.HasPrefix(id, "dc-") {

@@ -9,7 +9,7 @@ Agenvoy 各部分的高階全景。模組級圖、sequence 流程、tool dispatc
 ```mermaid
 graph TB
     subgraph Entry["Entry · cmd/app"]
-        App["agen model · session · mcp · stop · update<br/>make app · TUI + Discord + REST<br/>make cli / run · 單次"]
+        App["agen model · session · mcp · stop · update<br/>make app · TUI + Discord + Telegram + REST<br/>make cli / run · 單次"]
     end
 
     subgraph Engine["Engine · internal/agents/exec"]
@@ -18,8 +18,8 @@ graph TB
         Sub["ExecWithSubagent<br/>in-process · ctx 繼承"]
     end
 
-    subgraph Pending["Pending · internal/pending"]
-        Reg["全域 confirm/ask registry<br/>per-entry buffered=1 reply ch"]
+    subgraph Pending["Pending · internal/runtime"]
+        Reg["前綴路由 listener registry<br/>per-entry buffered=1 reply ch<br/>TUI/CLI 監聽 '' · Telegram 監聽 'tg-'"]
     end
 
     subgraph Providers["LLM Providers · 7"]
@@ -73,7 +73,7 @@ graph TB
 | Sandbox | `go-pkg/sandbox` | OS-native 隔離，單一入口 `Wrap()` |
 | Filesystem | `go-pkg/filesystem`（含 `reader/`）+ `internal/filesystem` | policy-aware 寫入；ToriiDB pathing |
 | Session | `internal/session` | bot.md / status.json / action.log / fsnotify observer |
-| Pending | `internal/pending` | 全域 confirm/ask registry |
+| Pending | `internal/runtime/pending.go` | 前綴路由 confirm/ask listener registry；各 runtime 透過 `RegisterListener(prefix)` 註冊、`PickNextFor(prefix)` 取對應條目 |
 | Memory | ToriiDB（`DBSessionHist` / `DBSessionSummary` / `error_memory`） | 語意搜尋 + 90 天 TTL |
 | Scheduler | `internal/runtime/scheduler.go`（+ `runtime.SchedulerWatcher` fsnotify） | scheduler skill 綁定 cron／one-shot；`{tasks,crons}.json` 變動熱重載 |
 | TUI | `internal/runtime/tui` | bubbletea inline-chat 前端；單一 package 設計 |

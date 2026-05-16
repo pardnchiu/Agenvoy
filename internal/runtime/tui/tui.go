@@ -48,6 +48,9 @@ func Run(ctx context.Context) error {
 		tools.WorkDirChangeHook = nil
 	}()
 
+	restoreSlog := installSlogTUI(ctx)
+	defer restoreSlog()
+
 	go newPendingChannel(ctx)
 	go fetchProjectRelease(ctx)
 

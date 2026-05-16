@@ -57,13 +57,13 @@ func SaveBotFull(sessionID, name, body string) error {
 
 	dir := filepath.Join(filesystem.SessionsDir, sessionID)
 	if err := go_pkg_filesystem.CheckDir(dir, true); err != nil {
-		return fmt.Errorf("CheckDir: %w", err)
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
 	}
 
 	content := fmt.Sprintf("---\nname: %s\n---\n%s", name, body)
 	path := filepath.Join(dir, "bot.md")
 	if err := go_pkg_filesystem.WriteFile(path, content, 0644); err != nil {
-		return fmt.Errorf("WriteFile: %w", err)
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteFile: %w", err)
 	}
 	return nil
 }
@@ -80,7 +80,7 @@ func GetSessionIDByName(name string) string {
 
 	for _, dir := range dirs {
 		sid := dir.Name
-		if !strings.HasPrefix(sid, "cli-") && !strings.HasPrefix(sid, "http-") && !strings.HasPrefix(sid, "dc-") {
+		if strings.HasPrefix(sid, "temp-") {
 			continue
 		}
 

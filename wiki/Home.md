@@ -16,7 +16,7 @@
 - **Skill system** — Loadable markdown skill packs, triggered by `/skill-name` or `activate_skill`
 - **OS sandbox** — Linux bubblewrap / macOS sandbox-exec; tools execute in isolation
 - **MCP client** — stdio + HTTP/SSE; tools auto-inject as `mcp__<server>__<tool>`
-- **Interactive surfaces** — TUI (with co-work dashboard), CLI, Discord bot, REST API + SSE log stream
+- **Interactive surfaces** — TUI (with co-work dashboard), CLI, Discord bot, Telegram bot, REST API + SSE log stream
 
 ## Pages
 

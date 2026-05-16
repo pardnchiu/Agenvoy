@@ -25,74 +25,26 @@ func NewID(parts ...string) string {
 	return hex.EncodeToString(h[:])[:8]
 }
 
-func EventLog(tag string, event agentTypes.Event, sessionID string, input string) {
+func EventLog(tag string, event agentTypes.Event, sessionID string, _ string) {
+	if event.Type != agentTypes.EventError && event.Type != agentTypes.EventExecError {
+		return
+	}
+	errText := event.Text
+	if event.Err != nil {
+		errText = event.Err.Error()
+	}
+	if errText == "" {
+		errText = "unknown error"
+	}
 	sessionLog := sessionID
 	if len(sessionLog) > 16 {
 		sessionLog = sessionLog[:13] + "…"
 	}
-
-	if input != "" {
-		inputLog := input
-		if len(inputLog) > 32 {
-			inputLog = inputLog[:31] + "…"
-		}
-		slog.Info(tag,
-			slog.String("session", sessionLog),
-			slog.String("input", inputLog))
-		return
-	}
-
-	switch event.Type {
-	case agentTypes.EventAgentSelect:
-		slog.Info(tag,
-			slog.String("session", sessionLog),
-			slog.String("event", event.Type.String()))
-
-	case agentTypes.EventSkillResult:
-		slog.Info(tag,
-			slog.String("session", sessionLog),
-			slog.String("event", event.Type.String()),
-			slog.String("skill", event.Text))
-
-	case agentTypes.EventAgentResult:
-		slog.Info(tag,
-			slog.String("session", sessionLog),
-			slog.String("event", event.Type.String()),
-			slog.String("agent", event.Text))
-
-	case agentTypes.EventToolCall:
-		slog.Info(tag,
-			slog.String("session", sessionLog),
-			slog.String("event", event.Type.String()),
-			slog.String("tool", event.ToolName))
-
-	case agentTypes.EventText:
-		text := event.Text
-		if len(text) > 32 {
-			text = text[:31] + "…"
-		}
-		slog.Info(tag,
-			slog.String("session", sessionLog),
-			slog.String("event", event.Type.String()),
-			slog.String("output", text))
-
-	case agentTypes.EventError, agentTypes.EventExecError:
-		errText := event.Text
-		if event.Err != nil {
-			errText = event.Err.Error()
-		}
-		if errText == "" {
-			errText = "unknown error"
-		}
-		slog.Error(tag,
-			slog.String("session", sessionLog),
-			slog.String("event", event.Type.String()),
-			slog.String("tool", event.ToolName),
-			slog.String("error", errText))
-
-	default:
-		break
-	}
+	slog.Error(tag,
+		slog.String("session", sessionLog),
+		slog.String("event", event.Type.String()),
+		slog.String("tool", event.ToolName),
+		slog.String("error", errText))
 }
 
 func FormatInt(number int) string {

@@ -69,7 +69,7 @@ func (t TUI) runCommandSwitch(id string) (TUI, tea.Cmd) {
 
 	seq := []tea.Cmd{
 		tea.ClearScreen,
-		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.discordStatus)),
+		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 	}
 	seq = append(seq, loadSessionTail(id)...)
 	seq = append(seq, switchBlock)
@@ -85,7 +85,7 @@ func listSessions() []Session {
 	results := make([]Session, 0, len(dirs))
 	for _, dir := range dirs {
 		sid := dir.Name
-		if !strings.HasPrefix(sid, "cli-") && !strings.HasPrefix(sid, "http-") && !strings.HasPrefix(sid, "dc-") {
+		if strings.HasPrefix(sid, "temp-") {
 			continue
 		}
 		name, _ := session.GetBot(sid)
@@ -134,24 +134,25 @@ func popupSwitch(sid string) *Popup {
 	sids = append(sids, "")
 
 	return &Popup{
-		kind:    popupSingleSelect,
-		title:   "Switch session",
-		options: names,
-		values:  sids,
-		cursor:  cursor,
+		kind:       popupSingleSelect,
+		title:      "Switch session",
+		options:    names,
+		values:     sids,
+		cursor:     cursor,
+		maxVisible: cmdSelectorMaxVisible,
 	}
 }
 
 func changeSession(target string) error {
 	cfg, err := session.Load()
 	if err != nil {
-		return fmt.Errorf("session.Load: %w", err)
+		return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session Load: %w", err)
 	}
 
 	cfg.SessionID = target
 
 	if err := session.Save(cfg); err != nil {
-		return fmt.Errorf("session.Save: %w", err)
+		return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session Save: %w", err)
 	}
 	return nil
 }

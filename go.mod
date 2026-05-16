@@ -12,6 +12,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pardnchiu/ToriiDB v0.5.1
+	github.com/pardnchiu/go-bot v0.2.0
 	github.com/pardnchiu/go-pkg v0.12.2
 	github.com/pardnchiu/go-scheduler v1.2.0
 )
@@ -38,6 +39,7 @@ require (
 	github.com/go-playground/validator/v10 v10.30.1 // indirect
 	github.com/go-rod/rod v0.116.2 // indirect
 	github.com/go-shiori/go-readability v0.0.0-20251205110129-5db1dc9836f0 // indirect
+	github.com/go-telegram/bot v1.20.0 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

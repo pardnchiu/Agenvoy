@@ -44,7 +44,8 @@ configs/
     ├── summary_prompt.md             Summary 生成 prompt
     ├── summary_merge_prompt.md       Summary 合併 prompt
     ├── summary_context.md            Summary context 注入
-    └── discord_system_prompt.md      Discord 介面 system prompt
+    ├── discord_system_prompt.md      Discord 介面 system prompt
+    └── telegram_system_prompt.md     Telegram 介面 system prompt
 ```
 
 `compat` provider entry 在使用者透過 `agen model add` 新增後與靜態 catalog 並列。
@@ -91,6 +92,7 @@ body 每輪渲染進 system prompt 的 `## Bot Persona` 區段。frontmatter `na
 | `agen cli` | `single-confirm`（`AllowAll=false`） |
 | `agen run` | `always-allow`（`AllowAll=true`） |
 | Discord / REST | `always-allow` |
+| Telegram | `single-confirm`（`AllowAll=false`；confirm gate 走 Telegram inline-keyboard SendSelect） |
 | Subagent | 繼承父 ctx |
 
 模式渲染進 system prompt 的 `## Permission Mode` 區段。**沒有**全域 env var override。

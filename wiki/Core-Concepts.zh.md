@@ -24,10 +24,11 @@ Session 是 Agenvoy 的核心單元，每個 session 對應獨立的對話上下
 | `cli-*` | 永久（`agen session new` / `make cli` 建立） |
 | `http-*` | 永久（`POST /v1/send` 帶 `persist=true`） |
 | `dc-*` | 永久（Discord 頻道） |
+| `tg-*` | 永久（Telegram chat —— per-chat 共享，不分 user） |
 | `temp-*` | 1h idle reap（`POST /v1/send` 預設） |
 | `temp-sub-*` | 1h idle reap（subagent 預設） |
 
-`runApp` 啟動時 `CleanupSessions()` 只清 `temp-*` 白名單；`cli-*`、`http-*`、`dc-*` 永遠不會被自動清掉。
+`runApp` 啟動時 `CleanupSessions()` 只清 `temp-*` 白名單；`cli-*`、`http-*`、`dc-*`、`tg-*` 永遠不會被自動清掉。
 
 ## bot.md — Agent Persona
 
@@ -56,7 +57,7 @@ frontmatter `name` 也是 lookup key（`GetSessionIDByName`）；body 在每輪 
 :mobile-builder 幫我做 SwiftUI 登入畫面
 ```
 
-`exec.Run` 解析順序：`:bot` → `MatchExternal`（`/claude` 等） → `MatchSkillCall`（`/skill-name`） → `Execute`。`:name` 只在 `exec.Run`（CLI／TUI）解析；HTTP `POST /v1/send` 與 Discord 不解析此前綴。
+`exec.Run` 解析順序：`:bot` → `MatchExternal`（`/claude` 等） → `MatchSkillCall`（`/skill-name`） → `Execute`。`:name` 在 `exec.Run`（CLI／TUI）與 Telegram runtime 解析（Telegram 命中即一次性覆寫、未命中則 strip prefix 並在 metadata 加 `備註` 行 fallback）；HTTP `POST /v1/send` 與 Discord 不解析此前綴。
 
 **3. `invoke_subagent` 工具** —— agent 在執行中 in-process 呼叫另一個 agent（不走 HTTP），繼承父 ctx 的 `AllowAll`／`WorkDir`。強制排除集 `{invoke_subagent, invoke_external_agent, cross_review_with_external_agents, review_result}`；`ask_user` **不**排除 —— subagent 可透過共用 pending registry 向使用者提問。
 
@@ -87,9 +88,9 @@ Concurrent 標記：`fetch_page`、`invoke_subagent`、`calculator`、`send_http
 
 ## Pending Registry
 
-`internal/pending` package 是主 agent 與 in-process subagent 共用的全域 confirm／ask 註冊表。Producer（`toolCall` confirm、`ask_user` handler、`store_secret` handler）呼叫 `Ask(ctx, req)` 阻塞在 per-entry buffered=1 reply channel；CLI consumer（`cli.RunPendingConsumer`）透過 `PickNext()` 取出後 `Resolve(id, reply)` 寫回。ctx cancel 即從 registry 移除，避免浪費使用者一次互動。
+`internal/runtime/pending.go` 是主 agent 與 in-process subagent 共用的前綴路由 confirm／ask listener registry。Producer（`toolCall` confirm、`ask_user` handler、`store_secret` handler）呼叫 `Ask(ctx, req)` 阻塞在 per-entry buffered=1 reply channel；各 runtime 透過 `pending.RegisterListener(prefix)` 註冊監聽器（TUI／CLI 用 `""` match all，Telegram daemon listener 用 `"tg-"`），並以 `PickNextFor(prefix)` 取對應條目。ctx cancel 即從 registry 移除，避免浪費使用者一次互動。
 
-`pending.Active atomic.Bool` 控制 registry 是否啟用。沒有 consumer 時（例如目前 `runApp` TUI 模式 —— popup consumer 待實作），tool confirm 走 non-interactive fallback。
+`pending.HasListener(sessionID)` 檢查該 session 是否有匹配 prefix 的 listener。這取代了舊版全域 `pending.Active atomic.Bool`，讓 Telegram、Discord、CLI 各自的 confirm 流程能並行不互阻塞。
 
 ## Circuit Breaker
 

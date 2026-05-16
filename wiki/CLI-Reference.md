@@ -55,10 +55,9 @@ Always-overwrite update to the latest release. Downloads `https://cloud.agenvoy.
 
 ```bash
 make build                      # Compile and install to /usr/local/bin/agen
-make app                        # Full stack (TUI + Discord + REST API)
+make app                        # Full stack (TUI + Discord + Telegram + REST API)
 make stop                       # Stop the running daemon
 make update                     # = agen update
-make discord                    # Legacy Discord-only server
 make cli <input...>             # agen cli <input...>
 make run <input...>             # agen run <input...>
 make model   [add|remove|list|planner|reasoning]
@@ -91,7 +90,8 @@ The TUI auto-tails the active session's `action.log` (foreign-process writes pre
 | `/mcp [add\|remove]` | Chained popup form for MCP server config; restart daemon to apply. |
 | `/planner` | Pick the planner model from `cfg.Models`. |
 | `/reasoning [global\|session]` | `low` / `medium` / `high`. |
-| `/discord [enable\|disable]` | Toggle Discord bot connection (gateway-validated on enable via CLI subprocess). |
+| `/discord [enable\|disable]` | Toggle Discord bot connection (in-TUI popup chain: token entry → verification → keychain write → daemon fsnotify reload). |
+| `/telegram [enable\|disable]` | Toggle Telegram bot connection (same in-TUI popup chain as `/discord`; first chat to message the bot must pass an in-chat code stored in `~/.config/agenvoy/.telegram`). |
 | `/cron [add\|remove\|edit]` | Recurring schedules. `add` → multiline requirement → dispatches `/scheduler-skill-creator <requirement>` (skill asks for missing when/what via `ask_user`). `remove` → list → confirm → `runtime.RemoveCron` + trashes skill dir. `edit` → list → requirement → agent picks `patch_cron` or rewrites SKILL body. |
 | `/task [add\|remove\|edit]` | One-shot tasks (mirrors `/cron`; uses `add_task` / `patch_task` / `remove_task`). |
 | `/sched-<name>` | Surfaced in the slash picker after regular skills (warn-purple label) — picks an existing scheduler skill and dispatches its body with an explicit "execute, do NOT activate scheduler-skill-creator" preamble. |
@@ -102,7 +102,7 @@ The TUI auto-tails the active session's `action.log` (foreign-process writes pre
 
 ## Input prefixes
 
-Resolution order in `exec.Run()` (CLI / TUI only — Discord and HTTP do not parse `:name`):
+Resolution order in `exec.Run()` (CLI / TUI / Telegram only — Discord and HTTP do not parse `:name`):
 
 1. **`:name`** — session override (one-shot routing without changing primary pointer)
 2. **`MatchExternal`** — external CLI agent dispatch (`/claude`, `/codex`, etc.)

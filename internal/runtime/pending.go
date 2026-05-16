@@ -1,10 +1,10 @@
-package pending
+package runtime
 
 import (
 	"context"
 	"slices"
+	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
@@ -59,9 +59,43 @@ var (
 	entries = map[string]*entry{}
 	notify  = make(chan struct{}, 1)
 
-	Active atomic.Bool
+	listenerMu sync.RWMutex
+	listeners  []string
+
 	Notify <-chan struct{} = notify
 )
+
+func RegisterListener(prefix string) func() {
+	listenerMu.Lock()
+	listeners = append(listeners, prefix)
+	listenerMu.Unlock()
+	signal()
+
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			listenerMu.Lock()
+			for i, p := range listeners {
+				if p == prefix {
+					listeners = slices.Delete(listeners, i, i+1)
+					break
+				}
+			}
+			listenerMu.Unlock()
+		})
+	}
+}
+
+func HasListener(sessionID string) bool {
+	listenerMu.RLock()
+	defer listenerMu.RUnlock()
+	for _, p := range listeners {
+		if strings.HasPrefix(sessionID, p) {
+			return true
+		}
+	}
+	return false
+}
 
 func Ask(ctx context.Context, req Request) (Reply, error) {
 	if req.ID == "" {
@@ -94,7 +128,7 @@ func Ask(ctx context.Context, req Request) (Reply, error) {
 	}
 }
 
-func PickNext() (id string, req Request, ok bool) {
+func PickNext(prefix string) (id string, req Request, ok bool) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -102,6 +136,9 @@ func PickNext() (id string, req Request, ok bool) {
 	var chosenID string
 	for entryID, e := range entries {
 		if e.claimed {
+			continue
+		}
+		if prefix != "" && !strings.HasPrefix(e.req.SessionID, prefix) {
 			continue
 		}
 		if e.req.Ctx != nil && e.req.Ctx.Err() != nil {

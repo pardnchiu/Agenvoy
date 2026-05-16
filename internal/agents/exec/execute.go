@@ -128,7 +128,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		teed := make(chan agentTypes.Event, 64)
 		done := make(chan struct{})
 		sid := session.ID
-		isDcPush := strings.HasPrefix(sid, "dc-") && !isDcPushSuppressed(ctx) && ResultHook != nil
+		pushHook, hasPush := lookupPushHook(sid)
+		isDcPush := hasPush && !isDcPushSuppressed(ctx)
 		var pushTextBuf strings.Builder
 		var pushDoneEv agentTypes.Event
 		go func() {
@@ -159,7 +160,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			if isDcPush {
 				text := strings.TrimSpace(pushTextBuf.String())
 				if text != "" {
-					ResultHook(ctx, DiscordPayload{
+					pushHook(ctx, PushPayload{
 						SessionID: sid,
 						Text:      text,
 						Model:     pushDoneEv.Model,
@@ -419,15 +420,24 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.Sk
 	return strings.NewReplacer(
 		"{{.SystemOS}}", systemOS,
 		"{{.WorkPath}}", workDir,
-		// "{{.SkillPath}}", skillPath,
-		// "{{.SkillExt}}", skillExt,
-		// "{{.Content}}", content,
 		"{{.BotPersona}}", personaSection,
 		"{{.PermissionMode}}", buildPermissionModeSection(allowAll),
 		"{{.AvailableSkills}}", skillsSection,
 		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
 		"{{.ExtraSystemPrompt}}", extraSection,
 	).Replace(template)
+}
+
+func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *skill.SkillScanner, sessionID string, allowAll, webMode bool) []agentTypes.Message {
+	var prompts []agentTypes.Message
+	switch {
+	case strings.HasPrefix(sessionID, "tg-"):
+		prompts = append(prompts, agentTypes.Message{Role: "system", Content: configs.TelegramSystemPrompt})
+	case strings.HasPrefix(sessionID, "dc-"):
+		prompts = append(prompts, agentTypes.Message{Role: "system", Content: configs.DiscordSystemPrompt})
+	}
+	prompts = append(prompts, agentTypes.Message{Role: "system", Content: GetSystemPrompt(workDir, extraSystemPrompt, scanner, sessionID, allowAll, webMode)})
+	return prompts
 }
 
 func buildPermissionModeSection(allowAll bool) string {

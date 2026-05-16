@@ -41,7 +41,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 | 指令 | 描述 |
 |---|---|
-| `agen` | Attach 互動式 TUI；daemon（HTTP + Discord + scheduler + summary cron）未跑時 fork-exec 一份。 |
+| `agen` | Attach 互動式 TUI；daemon（HTTP + Discord + Telegram + scheduler + summary cron）未跑時 fork-exec 一份。 |
 | `agen cli <input>` | One-shot 跑一次 agent，每個 tool call 都會問確認。 |
 | `agen run <input>` | One-shot 跑一次 agent，自動放行所有 tool。 |
 | `agen stop` | 停止 daemon（SIGTERM 5s 寬限 → SIGKILL → 清 `runtime.uid`）。 |
@@ -49,7 +49,6 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `agen model {add\|remove\|list\|planner\|reasoning}` | 管理 provider／worker model、選 planner、設 reasoning level。 |
 | `agen mcp {list\|add\|remove}` | 管理 MCP server（stdio／HTTP），global 與 per-session scope。 |
 | `agen session {new\|switch\|config} [name]` | 管理 CLI session；裸 `switch`／`config` 開互動 picker。 |
-| `agen discord {enable\|disable}` | 啟用／停用 Discord bot；`enable` 會問 token、驗證連線後寫入 keychain。 |
 
 ## TUI 指令
 
@@ -64,7 +63,8 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `/mcp [add\|remove]` | Action picker；`add` 走串接 popup 表單（name → transport → command/args/env 或 url/headers → scope → optional session pick），`remove` 列出 global 與 session 兩 scope 全部已設定的 server。修改後須重啟 daemon 才會載入。Inline arg 跳過 action popup。 |
 | `/planner` | popup 從 `cfg.Models` 挑 planner model。不支援 inline arg。 |
 | `/reasoning [global\|session]` | 選 `low`／`medium`／`high`，套到 planner（global）或當前 session。Inline arg 跳過 scope popup。 |
-| `/discord [enable\|disable]` | 切換 Discord bot 啟用／停用。Inline arg 直接切換、不彈 popup。 |
+| `/discord [enable\|disable]` | 切換 Discord bot 啟用／停用（token 輸入、驗證、keychain 寫入、daemon reload 全在 TUI popup chain 內完成）。Inline arg 直接切換、不彈 popup。 |
+| `/telegram [enable\|disable]` | 切換 Telegram bot 啟用／停用（與 `/discord` 同模式的 in-TUI popup chain；首次與 bot 對話的 chat 必須通過 in-chat 驗證碼）。Inline arg 直接切換、不彈 popup。 |
 | `/cron [add\|remove\|edit]` | 週期性排程管理。`add` 開 multiline textarea 取需求 → 派 `/scheduler-skill-creator <需求>`（缺 when/what 由 skill 透過 `ask_user` 補問）。`remove` 列出 crons → 確認 popup → `runtime.RemoveCron` + 將 skill 目錄移至 .Trash。`edit` 列出 crons → textarea 取需求 → 由 agent 自選走 `patch_cron` 或重寫 SKILL.md body。Inline arg 跳過 action popup。 |
 | `/task [add\|remove\|edit]` | 一次性排程（鏡像 `/cron`；使用 `add_task` / `patch_task` / `remove_task`）。Picker 顯示 `<YYYY-MM-DD HH:MM>  <skill>`。 |
 | `/sched-<name>` | 立即執行已存在的 scheduler skill body（手動 trigger）。顯示於 `/` picker 最末段（一般 skill 之後），label 套 warn-purple 標示為呼叫類。Dispatch 會加 `[執行已存在 scheduler skill: <name> · 此為手動 trigger，不是建立新 schedule]` preamble 並明示禁止 activate `scheduler-skill-creator` 或跑 init script。 |

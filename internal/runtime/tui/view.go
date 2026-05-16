@@ -87,7 +87,14 @@ func (t TUI) viewPopup() string {
 
 	switch p.kind {
 	case popupConfirm, popupSingleSelect:
-		for i, opt := range p.options {
+		total := len(p.options)
+		start, end := 0, total
+		windowed := p.maxVisible > 0 && total > p.maxVisible
+		if windowed {
+			start, end = windowRange(p.cursor, total, p.maxVisible)
+		}
+		for i := start; i < end; i++ {
+			opt := p.options[i]
 			marker := "  "
 			line := opt
 			if i == p.cursor {
@@ -95,6 +102,9 @@ func (t TUI) viewPopup() string {
 				line = systemStyle.Render(opt)
 			}
 			body = append(body, marker+line)
+		}
+		if windowed {
+			body = append(body, hintStyle.Render(fmt.Sprintf("  %d/%d", p.cursor+1, total)))
 		}
 		body = append(body, "")
 		body = append(body, hintStyle.Render("↑/↓ select · enter confirm · esc cancel"))

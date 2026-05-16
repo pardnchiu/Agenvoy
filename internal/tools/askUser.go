@@ -12,7 +12,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"golang.org/x/term"
 
-	"github.com/pardnchiu/agenvoy/internal/pending"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -75,25 +75,25 @@ func registAskUser() {
 				return "", fmt.Errorf("ask_user requires at least one question in 'questions'")
 			}
 
-			if pending.Active.Load() {
-				questions := make([]pending.Question, 0, len(params.Questions))
+			if runtime.HasListener(e.SessionID) {
+				questions := make([]runtime.Question, 0, len(params.Questions))
 				for i, q := range params.Questions {
 					q.Question = strings.TrimSpace(q.Question)
 					if q.Question == "" {
 						return "", fmt.Errorf("question #%d is empty", i+1)
 					}
-					questions = append(questions, pending.Question{
+					questions = append(questions, runtime.Question{
 						Question:    q.Question,
 						Options:     q.Options,
 						MultiSelect: q.MultiSelect,
 						Secret:      q.Secret,
 					})
 				}
-				reply, err := pending.Ask(ctx, pending.Request{
-					Kind:      pending.KindAskUser,
+				reply, err := runtime.Ask(ctx, runtime.Request{
+					Kind:      runtime.KindAskUser,
 					SessionID: e.SessionID,
 					ToolName:  "ask_user",
-					AskUser:   &pending.UserPayload{Questions: questions},
+					AskUser:   &runtime.UserPayload{Questions: questions},
 				})
 				if err != nil {
 					return "", fmt.Errorf("pending.Ask: %w", err)

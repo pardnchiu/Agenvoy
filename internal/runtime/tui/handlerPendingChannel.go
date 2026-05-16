@@ -3,40 +3,40 @@ package tui
 import (
 	"context"
 
-	"github.com/pardnchiu/agenvoy/internal/pending"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 )
 
 type Pending struct {
 	id      string
-	request pending.Request
+	request runtime.Request
 }
 
 func newPendingChannel(ctx context.Context) {
-	pending.Active.Store(true)
-	defer pending.Active.Store(false)
+	unregister := runtime.RegisterListener("")
+	defer unregister()
 
 	for {
 		for {
-			id, req, ok := pending.PickNext()
+			id, next, ok := runtime.PickNext("")
 			if !ok {
 				break
 			}
-			if req.Ctx != nil {
-				if err := req.Ctx.Err(); err != nil {
-					pending.Resolve(id, pending.Reply{Error: err})
+			if next.Ctx != nil {
+				if err := next.Ctx.Err(); err != nil {
+					runtime.Resolve(id, runtime.Reply{Error: err})
 					continue
 				}
 			}
 			send(Pending{
 				id:      id,
-				request: req,
+				request: next,
 			})
 		}
 
 		select {
 		case <-ctx.Done():
 			return
-		case <-pending.Notify:
+		case <-runtime.Notify:
 		}
 	}
 }
