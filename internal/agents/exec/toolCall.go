@@ -11,7 +11,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/errorMemory"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/errorMemory/toolError"
-	"github.com/pardnchiu/agenvoy/internal/pending"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -95,9 +95,9 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		if !allowAll && !toolRegister.IsReadOnly(toolName) {
 			proceed := true
 			reason := ""
-			if pending.Active.Load() && !matchAllowList(getAllowList(ctx), toolName, toolArg) {
-				reply, err := pending.Ask(ctx, pending.Request{
-					Kind:      pending.KindToolConfirm,
+			if runtime.HasListener(sessionData.ID) && !matchAllowList(getAllowList(ctx), toolName, toolArg) {
+				reply, err := runtime.Ask(ctx, runtime.Request{
+					Kind:      runtime.KindToolConfirm,
 					SessionID: sessionData.ID,
 					ToolName:  toolName,
 					ToolArgs:  toolArg,

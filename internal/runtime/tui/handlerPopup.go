@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/pardnchiu/agenvoy/internal/pending"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -36,7 +36,7 @@ type Popup struct {
 	multiline      bool
 	skipWithReason bool
 
-	questions   []pending.Question
+	questions   []runtime.Question
 	questionIdx int
 	answers     []any
 
@@ -52,7 +52,7 @@ func (t TUI) closePopup() TUI {
 			t.popup = ps
 			return t
 		}
-		pending.Resolve(next.id, pending.Reply{
+		runtime.Resolve(next.id, runtime.Reply{
 			Error: fmt.Errorf("invalid pending request"),
 		})
 	}
@@ -86,7 +86,7 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		p.cursor = (p.cursor + 1) % len(p.options)
 
 	case tea.KeyEsc:
-		pending.Resolve(p.pendingId, pending.Reply{
+		runtime.Resolve(p.pendingId, runtime.Reply{
 			Approve: false,
 			Error:   fmt.Errorf("user stopped"),
 		})
@@ -100,32 +100,32 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			p.input = ""
 			return t, nil
 		}
-		var reply pending.Reply
+		var reply runtime.Reply
 		switch p.cursor {
 		case 0:
-			reply = pending.Reply{
+			reply = runtime.Reply{
 				Approve: true,
 			}
 
 		case 1:
-			reply = pending.Reply{
+			reply = runtime.Reply{
 				Approve:  true,
 				Remember: true,
 			}
 
 		case 2:
-			reply = pending.Reply{
+			reply = runtime.Reply{
 				Approve: false,
 				Skip:    true,
 			}
 
 		case 4:
-			reply = pending.Reply{
+			reply = runtime.Reply{
 				Approve: false,
 				Error:   fmt.Errorf("user stopped"),
 			}
 		}
-		pending.Resolve(p.pendingId, reply)
+		runtime.Resolve(p.pendingId, reply)
 		t = t.closePopup()
 	}
 	return t, nil
@@ -144,7 +144,7 @@ func (t TUI) updateSingleSelectPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if p.pendingId == "" {
 			t = t.closePopup()
 		} else {
-			pending.Resolve(p.pendingId, pending.Reply{
+			runtime.Resolve(p.pendingId, runtime.Reply{
 				Error: fmt.Errorf("user cancelled"),
 			})
 			t = t.closePopup()
@@ -166,7 +166,7 @@ func (t TUI) updateSingleSelectPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		resolved, reply := p.advanceOrResolve(chosen)
 		if resolved {
-			pending.Resolve(p.pendingId, reply)
+			runtime.Resolve(p.pendingId, reply)
 			t = t.closePopup()
 		}
 	}
@@ -186,7 +186,7 @@ func (t TUI) updateMultiSelectPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		p.multi[p.cursor] = !p.multi[p.cursor]
 
 	case tea.KeyEsc:
-		pending.Resolve(p.pendingId, pending.Reply{
+		runtime.Resolve(p.pendingId, runtime.Reply{
 			Error: fmt.Errorf("user cancelled"),
 		})
 		t = t.closePopup()
@@ -201,7 +201,7 @@ func (t TUI) updateMultiSelectPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		resolved, reply := p.advanceOrResolve(selected)
 		if resolved {
-			pending.Resolve(p.pendingId, reply)
+			runtime.Resolve(p.pendingId, reply)
 			t = t.closePopup()
 		}
 	}
@@ -221,7 +221,7 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return t, func() tea.Msg { return cb(value) }
 		}
 		if p.skipWithReason {
-			pending.Resolve(p.pendingId, pending.Reply{
+			runtime.Resolve(p.pendingId, runtime.Reply{
 				Approve: false,
 				Skip:    true,
 				Reason:  strings.TrimSpace(p.input),
@@ -231,7 +231,7 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		resolved, reply := p.advanceOrResolve(p.input)
 		if resolved {
-			pending.Resolve(p.pendingId, reply)
+			runtime.Resolve(p.pendingId, reply)
 			t = t.closePopup()
 		}
 		return t, nil
@@ -243,7 +243,7 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			t = t.closePopup()
 			return t, nil
 		}
-		pending.Resolve(p.pendingId, pending.Reply{
+		runtime.Resolve(p.pendingId, runtime.Reply{
 			Error: fmt.Errorf("user cancelled"),
 		})
 		t = t.closePopup()
@@ -273,9 +273,9 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return t, nil
 }
 
-func newPopup(id string, req pending.Request) *Popup {
+func newPopup(id string, req runtime.Request) *Popup {
 	switch req.Kind {
-	case pending.KindToolConfirm:
+	case runtime.KindToolConfirm:
 		display := utils.FormatTool(req.ToolName, req.ToolArgs)
 		if display == "" {
 			display = req.ToolArgs
@@ -293,7 +293,7 @@ func newPopup(id string, req pending.Request) *Popup {
 				"Stop",
 			},
 		}
-	case pending.KindAskUser:
+	case runtime.KindAskUser:
 		if req.AskUser == nil || len(req.AskUser.Questions) == 0 {
 			return nil
 		}
@@ -332,14 +332,14 @@ func (p *Popup) loadCurrentQuestion() {
 	}
 }
 
-func (p *Popup) advanceOrResolve(answer any) (resolved bool, reply pending.Reply) {
+func (p *Popup) advanceOrResolve(answer any) (resolved bool, reply runtime.Reply) {
 	p.answers = append(p.answers, answer)
 	p.questionIdx++
 	if p.questionIdx >= len(p.questions) {
-		return true, pending.Reply{Answers: p.answers}
+		return true, runtime.Reply{Answers: p.answers}
 	}
 	p.loadCurrentQuestion()
-	return false, pending.Reply{}
+	return false, runtime.Reply{}
 }
 
 func truncate(s string, max int) string {

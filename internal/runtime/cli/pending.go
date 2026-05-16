@@ -11,53 +11,53 @@ import (
 	"github.com/manifoldco/promptui"
 	"golang.org/x/term"
 
-	"github.com/pardnchiu/agenvoy/internal/pending"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func NewPending(ctx context.Context) {
-	pending.Active.Store(true)
-	defer pending.Active.Store(false)
+	unregister := runtime.RegisterListener("")
+	defer unregister()
 
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
 		for {
-			id, req, ok := pending.PickNext()
+			id, next, ok := runtime.PickNext("")
 			if !ok {
 				break
 			}
 
-			process(id, req, reader)
+			process(id, next, reader)
 		}
 
 		select {
 		case <-ctx.Done():
 			return
-		case <-pending.Notify:
+		case <-runtime.Notify:
 		}
 	}
 }
 
-func process(id string, req pending.Request, reader *bufio.Reader) {
+func process(id string, req runtime.Request, reader *bufio.Reader) {
 	if req.Ctx != nil {
 		if err := req.Ctx.Err(); err != nil {
-			pending.Resolve(id, pending.Reply{Error: err})
+			runtime.Resolve(id, runtime.Reply{Error: err})
 			return
 		}
 	}
 
 	switch req.Kind {
-	case pending.KindToolConfirm:
-		pending.Resolve(id, runToolConfirm(req, reader))
-	case pending.KindAskUser:
-		pending.Resolve(id, runAskUser(req, reader))
+	case runtime.KindToolConfirm:
+		runtime.Resolve(id, runToolConfirm(req, reader))
+	case runtime.KindAskUser:
+		runtime.Resolve(id, runAskUser(req, reader))
 	default:
-		pending.Resolve(id, pending.Reply{Error: fmt.Errorf("unknown pending kind: %s", req.Kind)})
+		runtime.Resolve(id, runtime.Reply{Error: fmt.Errorf("unknown pending kind: %s", req.Kind)})
 	}
 }
 
-func runToolConfirm(req pending.Request, reader *bufio.Reader) pending.Reply {
+func runToolConfirm(req runtime.Request, reader *bufio.Reader) runtime.Reply {
 	display := utils.FormatTool(req.ToolName, req.ToolArgs)
 	if display == "" {
 		display = req.ToolArgs
@@ -73,66 +73,66 @@ func runToolConfirm(req pending.Request, reader *bufio.Reader) pending.Reply {
 	idx, _, err := prompt.Run()
 	switch {
 	case err != nil || idx == 4:
-		return pending.Reply{Approve: false, Error: fmt.Errorf("user stopped")}
+		return runtime.Reply{Approve: false, Error: fmt.Errorf("user stopped")}
 	case idx == 3:
 		reason, readErr := askInput(reader, "Reason (Enter to skip without reason)")
 		if readErr != nil {
-			return pending.Reply{Approve: false, Skip: true}
+			return runtime.Reply{Approve: false, Skip: true}
 		}
-		return pending.Reply{Approve: false, Skip: true, Reason: strings.TrimSpace(reason)}
+		return runtime.Reply{Approve: false, Skip: true, Reason: strings.TrimSpace(reason)}
 	case idx == 2:
-		return pending.Reply{Approve: false, Skip: true}
+		return runtime.Reply{Approve: false, Skip: true}
 	case idx == 1:
-		return pending.Reply{Approve: true, Remember: true}
+		return runtime.Reply{Approve: true, Remember: true}
 	default:
-		return pending.Reply{Approve: true}
+		return runtime.Reply{Approve: true}
 	}
 }
 
-func runAskUser(req pending.Request, reader *bufio.Reader) pending.Reply {
+func runAskUser(req runtime.Request, reader *bufio.Reader) runtime.Reply {
 	if req.AskUser == nil || len(req.AskUser.Questions) == 0 {
-		return pending.Reply{Error: fmt.Errorf("ask_user with no questions")}
+		return runtime.Reply{Error: fmt.Errorf("ask_user with no questions")}
 	}
 
 	answers := make([]any, 0, len(req.AskUser.Questions))
 	for i, q := range req.AskUser.Questions {
 		question := strings.TrimSpace(q.Question)
 		if question == "" {
-			return pending.Reply{Error: fmt.Errorf("question #%d is empty", i+1)}
+			return runtime.Reply{Error: fmt.Errorf("question #%d is empty", i+1)}
 		}
 
 		switch {
 		case len(q.Options) == 0 && q.Secret:
 			ans, err := askSecretInput(question)
 			if err != nil {
-				return pending.Reply{Error: err}
+				return runtime.Reply{Error: err}
 			}
 			answers = append(answers, ans)
 
 		case len(q.Options) == 0:
 			ans, err := askInput(reader, question)
 			if err != nil {
-				return pending.Reply{Error: err}
+				return runtime.Reply{Error: err}
 			}
 			answers = append(answers, ans)
 
 		case q.MultiSelect:
 			ans, err := askMultiSelect(reader, question, q.Options, i+1)
 			if err != nil {
-				return pending.Reply{Error: err}
+				return runtime.Reply{Error: err}
 			}
 			answers = append(answers, ans)
 
 		default:
 			ans, err := askSingleSelect(question, q.Options)
 			if err != nil {
-				return pending.Reply{Error: err}
+				return runtime.Reply{Error: err}
 			}
 			answers = append(answers, ans)
 		}
 	}
 
-	return pending.Reply{Answers: answers}
+	return runtime.Reply{Answers: answers}
 }
 
 func askInput(reader *bufio.Reader, question string) (string, error) {

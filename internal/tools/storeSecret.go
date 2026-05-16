@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/pardnchiu/agenvoy/internal/pending"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -78,13 +78,13 @@ func registStoreSecret() {
 }
 
 func readSecretValue(ctx context.Context, sessionID, question string) (string, error) {
-	if pending.Active.Load() {
-		reply, err := pending.Ask(ctx, pending.Request{
-			Kind:      pending.KindAskUser,
+	if runtime.HasListener(sessionID) {
+		reply, err := runtime.Ask(ctx, runtime.Request{
+			Kind:      runtime.KindAskUser,
 			SessionID: sessionID,
 			ToolName:  "store_secret",
-			AskUser: &pending.UserPayload{
-				Questions: []pending.Question{{Question: question, Secret: true}},
+			AskUser: &runtime.UserPayload{
+				Questions: []runtime.Question{{Question: question, Secret: true}},
 			},
 		})
 		if err != nil {

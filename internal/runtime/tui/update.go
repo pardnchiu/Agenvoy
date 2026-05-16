@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
-	"github.com/pardnchiu/agenvoy/internal/pending"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
 
@@ -165,7 +165,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case Pending:
 		popup := newPopup(msg.id, msg.request)
 		if popup == nil {
-			pending.Resolve(msg.id, pending.Reply{Error: fmt.Errorf("invalid pending request")})
+			runtime.Resolve(msg.id, runtime.Reply{Error: fmt.Errorf("invalid pending request")})
 			return t, nil
 		}
 
