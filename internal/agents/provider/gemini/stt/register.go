@@ -1,4 +1,4 @@
-package youtube
+package stt
 
 import (
 	"context"
@@ -18,18 +18,18 @@ func Register() {
 	}
 
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "fetch_youtube_transcript",
+		Name:        "transcribe_media",
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `[system-default]
-Transcribe YouTube video with timestamps.
-Video to text for analysis, summarization, quote extraction.`,
+Transcribe a local audio or video file to text via Gemini.
+Supports ogg / mp3 / wav / m4a / flac / aac / mp4 / mov / webm / mpeg / 3gp.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"url": map[string]any{
+				"path": map[string]any{
 					"type":        "string",
-					"description": "YouTube URL (watch / shorts / youtu.be).",
+					"description": "Absolute path to a local audio or video file.",
 				},
 				"prompt": map[string]any{
 					"type":        "string",
@@ -37,21 +37,21 @@ Video to text for analysis, summarization, quote extraction.`,
 					"default":     "",
 				},
 			},
-			"required": []string{"url"},
+			"required": []string{"path"},
 		},
 		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
-				URL    string `json:"url"`
+				Path   string `json:"path"`
 				Prompt string `json:"prompt"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			url := strings.TrimSpace(params.URL)
-			if url == "" {
-				return "", fmt.Errorf("url is required")
+			path := strings.TrimSpace(params.Path)
+			if path == "" {
+				return "", fmt.Errorf("path is required")
 			}
-			return handler(ctx, url, strings.TrimSpace(params.Prompt))
+			return handler(ctx, path, strings.TrimSpace(params.Prompt))
 		},
 	})
 }

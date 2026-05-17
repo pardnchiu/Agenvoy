@@ -1,4 +1,4 @@
-package fileReader
+package filesystem
 
 import (
 	"bufio"
@@ -10,6 +10,11 @@ import (
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/parser"
+)
+
+const (
+	maxReadSize  = 1 << 20
+	maxImageSize = 10 << 20
 )
 
 var imageExts = map[string]bool{
@@ -43,10 +48,18 @@ func ReadFile(ctx context.Context, path string, offset, limit int) (string, erro
 		}
 		return sliceLines(text, path, offset, limit), nil
 	case ".csv", ".tsv":
-		return getCSV(path, offset, limit)
+		return parser.CSV(ctx, path, offset, limit)
 	}
 	if imageExts[ext] {
-		return getImage(path)
+		// * os.Stat retained: FileInfo.Size() needed for the > 10MB guard before parser.Image reads + decodes (raw + RGBA buffer can balloon)
+		info, err := os.Stat(path)
+		if err != nil {
+			return "", fmt.Errorf("os.Stat: %w", err)
+		}
+		if info.Size() > maxImageSize {
+			return "", fmt.Errorf("image too large (%d bytes, max 10 MB)", info.Size())
+		}
+		return parser.Image(ctx, path)
 	}
 
 	// * os.Stat retained: FileInfo.Size() needed for the > 1MB guard before reading

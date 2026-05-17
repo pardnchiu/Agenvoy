@@ -10,6 +10,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
+	geminiStt "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/stt"
 	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
 	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -39,6 +40,7 @@ func newTUI() {
 
 	codexImage2.Register()
 	geminiYoutube.Register()
+	geminiStt.Register()
 
 	modelCheck()
 

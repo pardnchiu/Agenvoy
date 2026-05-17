@@ -47,7 +47,12 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	if content == "" {
 		content = strings.TrimSpace(in.Caption)
 	}
-	if !isCallback && content == "" {
+	hasAttachment := len(in.Photo) > 0 || in.Document != nil
+	if !hasAttachment && in.Raw != nil && in.Raw.Message != nil {
+		m := in.Raw.Message
+		hasAttachment = m.Voice != nil || m.Audio != nil || m.Video != nil || m.VideoNote != nil
+	}
+	if !isCallback && content == "" && !hasAttachment {
 		return nil
 	}
 	if content == "/start" || strings.HasPrefix(content, "/start ") || strings.HasPrefix(content, "/start@") {
@@ -112,6 +117,25 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	}
 
 	if b.listener != nil && b.listener.onText(ctx, in.ChatID, in.MessageID, in.Text) {
+		return nil
+	}
+
+	if hasAttachment {
+		paths := saveAttachments(ctx, b, in)
+		if len(paths) > 0 {
+			var lines []string
+			if content != "" {
+				lines = append(lines, content)
+			}
+			lines = append(lines, "[Telegram attachments]")
+			for _, p := range paths {
+				lines = append(lines, "- "+p)
+			}
+			content = strings.Join(lines, "\n")
+		}
+	}
+
+	if content == "" {
 		return nil
 	}
 

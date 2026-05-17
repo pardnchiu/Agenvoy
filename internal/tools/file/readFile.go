@@ -8,7 +8,6 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/fileReader"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -20,9 +19,9 @@ const (
 
 func registReadFile() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "read_file",
-		AlwaysAllow:   true,
-		Concurrent: true,
+		Name:        "read_file",
+		AlwaysAllow: true,
+		Concurrent:  true,
 		Description: `
 Read a text, PDF, DOCX, PPTX, CSV/TSV, or image file.
 Inspect source, config, notes, slides, documents, tabular data, or screenshots.`,
@@ -76,7 +75,7 @@ Inspect source, config, notes, slides, documents, tabular data, or screenshots.`
 			if limit == 0 {
 				limit = defaultReadLimit
 			}
-			return fileReader.ReadFile(ctx, absPath, offset, limit)
+			return filesystem.ReadFile(ctx, absPath, offset, limit)
 		},
 	})
 }

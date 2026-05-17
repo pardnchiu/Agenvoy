@@ -1,28 +1,12 @@
 package image2
 
 import (
-	"strings"
-
-	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
-
-	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 )
 
 func Register() {
-	cfg, err := go_pkg_filesystem.ReadJSON[exec.AgentConfig](filesystem.ConfigPath)
-	if err != nil {
-		return
-	}
-	hasCodex := false
-	for _, m := range cfg.Models {
-		if strings.HasPrefix(m.Name, "codex@") {
-			hasCodex = true
-			break
-		}
-	}
-	if !hasCodex {
+	if !openaicodex.HasToken() {
 		return
 	}
 
