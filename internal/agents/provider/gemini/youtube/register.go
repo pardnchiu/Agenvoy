@@ -6,15 +6,34 @@ import (
 	"fmt"
 	"strings"
 
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+
+	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
 func Register() {
+	cfg, err := go_pkg_filesystem.ReadJSON[exec.AgentConfig](filesystem.ConfigPath)
+	if err != nil {
+		return
+	}
+	hasGemini := false
+	for _, m := range cfg.Models {
+		if strings.HasPrefix(m.Name, "gemini@") {
+			hasGemini = true
+			break
+		}
+	}
+	if !hasGemini {
+		return
+	}
+
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "fetch_youtube_transcript",
-		AlwaysAllow:   true,
-		Concurrent: true,
+		Name:        "fetch_youtube_transcript",
+		AlwaysAllow: true,
+		Concurrent:  true,
 		Description: `[system-default]
 Transcribe YouTube video with timestamps.
 Video to text for analysis, summarization, quote extraction.`,
@@ -31,9 +50,7 @@ Video to text for analysis, summarization, quote extraction.`,
 					"default":     "",
 				},
 			},
-			"required": []string{
-				"url",
-			},
+			"required": []string{"url"},
 		},
 		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -43,14 +60,11 @@ Video to text for analysis, summarization, quote extraction.`,
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-
 			url := strings.TrimSpace(params.URL)
 			if url == "" {
 				return "", fmt.Errorf("url is required")
 			}
-
-			prompt := strings.TrimSpace(params.Prompt)
-			return handler(ctx, url, prompt)
+			return handler(ctx, url, strings.TrimSpace(params.Prompt))
 		},
 	})
 }

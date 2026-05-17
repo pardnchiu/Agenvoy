@@ -6,7 +6,6 @@ import (
 	"html"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -22,10 +21,8 @@ import (
 )
 
 var (
-	fileMarkerRegex  = regexp.MustCompile(`\[SEND_FILE:([^\]]+)\]`)
 	voiceMarkerRegex = regexp.MustCompile(`\[SEND_VOICE:([^\]]+)\]`)
 	tsPrefixRegex    = regexp.MustCompile(`^ts:\d+\n`)
-	imageExts        = map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".webp": true}
 )
 
 func truncateStatus(s string) string {
@@ -256,11 +253,8 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		return fmt.Errorf("no reply")
 	}
 
-	var filePaths []string
-	for _, match := range fileMarkerRegex.FindAllStringSubmatch(replyText, -1) {
-		filePaths = append(filePaths, strings.TrimSpace(match[1]))
-	}
-	replyText = strings.TrimSpace(fileMarkerRegex.ReplaceAllString(replyText, ""))
+	cleanText, photoPaths, docPaths := extractFileMarkers(replyText)
+	replyText = cleanText
 
 	var voiceTexts []string
 	for _, match := range voiceMarkerRegex.FindAllStringSubmatch(replyText, -1) {
@@ -293,16 +287,6 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	if sendErr != nil {
 		slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.Send",
 			slog.String("error", sendErr.Error()))
-	}
-
-	var photoPaths []string
-	var docPaths []string
-	for _, path := range filePaths {
-		if imageExts[strings.ToLower(filepath.Ext(path))] {
-			photoPaths = append(photoPaths, path)
-			continue
-		}
-		docPaths = append(docPaths, path)
 	}
 
 	if len(photoPaths) == 0 && len(docPaths) == 0 && len(voiceTexts) == 0 {
@@ -340,23 +324,8 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	}
 	sendStatus("sending…")
 
-	for start := 0; start < len(photoPaths); start += 10 {
-		end := start + 10
-		end = min(end, len(photoPaths))
-		if _, err := b.client.SendPhoto(ctx, in.ChatID, photoPaths[start:end]); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendPhoto",
-				slog.Int("count", end-start),
-				slog.String("error", err.Error()))
-			sendFailure("SendPhoto", strings.Join(photoPaths[start:end], ", "), err.Error())
-		}
-	}
-	for _, path := range docPaths {
-		if _, err := b.client.SendFile(ctx, in.ChatID, go_bot_telegram.TypeDocument, path); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendFile",
-				slog.String("path", path),
-				slog.String("error", err.Error()))
-			sendFailure("SendFile", path, err.Error())
-		}
+	if len(photoPaths) > 0 || len(docPaths) > 0 {
+		sendAttachments(ctx, in.ChatID, replyToID, photoPaths, docPaths)
 	}
 
 	if len(voiceTexts) > 0 {

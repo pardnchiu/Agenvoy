@@ -9,7 +9,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/external/googleRSS"
 	"github.com/pardnchiu/agenvoy/internal/tools/external/searchWeb"
 	"github.com/pardnchiu/agenvoy/internal/tools/external/yahooFinance"
-	"github.com/pardnchiu/agenvoy/internal/tools/external/youtube"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -18,7 +17,6 @@ func Register() {
 	googleRSS.Register()
 	searchWeb.Register()
 	yahooFinance.Register()
-	youtube.Register()
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "send_http_request",
 		AlwaysAllow: true,

@@ -19,6 +19,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
+	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
+	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	"github.com/pardnchiu/agenvoy/internal/routes"
@@ -143,6 +145,9 @@ func cmdDaemon() {
 		return
 	}
 	defer torii.Close()
+
+	codexImage2.Register()
+	geminiYoutube.Register()
 
 	if _, err := runtime.Init(); err != nil {
 		if errors.Is(err, runtime.ErrAlreadyRunning) {
