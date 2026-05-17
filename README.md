@@ -35,7 +35,16 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 
-## CLI commands
+Running the daemon on a MacBook? Run `sudo pmset -c sleep 0` to keep the system awake while plugged in — prevents the daemon from being suspended on AC power.
+
+## What makes it different
+
+- **Planner-based intelligent routing** — a planner model routes every task to the best-fit worker (Claude for coding, Gemini for video, GPT for research), instead of forcing one model to do everything.
+- **Agent that builds and persists its own tools** — when a tool is missing the agent writes a script or API into `extensions/` and loads it as a native tool on the next run; MCP servers are supported alongside.
+- **One runtime across every channel** — Telegram, Discord, TUI, Web, and cron all attach to the same daemon; sessions, memory, and the tool set are shared, not rebuilt per surface.
+
+<details>
+<summary><strong>CLI commands</strong></summary>
 
 > Run as `agen <sub>`. `make <sub>` wrappers exist in the repo Makefile for development.
 
@@ -50,7 +59,10 @@ One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 | `agen mcp {list\|add\|remove}` | Manage MCP servers (stdio / HTTP) across global and per-session scope. |
 | `agen session {new\|switch\|config} [name]` | Manage CLI sessions; bare `switch` / `config` opens an interactive picker. |
 
-## TUI slash commands
+</details>
+
+<details>
+<summary><strong>TUI slash commands</strong></summary>
 
 > Available inside `agen`'s TUI prompt. Type `/` to filter; popup commands transition cleanly back to the prompt.
 
@@ -75,7 +87,10 @@ One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 | `/clear` | Clear the current window display only — like terminal `clear`; conversation memory is untouched. |
 | `/exit`, `/quit` | Exit TUI (daemon keeps running; re-attach with `agen`). |
 
-## Built-in tools
+</details>
+
+<details>
+<summary><strong>Built-in tools</strong></summary>
 
 > Tools auto-load on demand; stub names appear first, full schema activates on use. See [Tools wiki](https://github.com/pardnchiu/agenvoy/wiki/Tools) for parameters and routing.
 
@@ -94,12 +109,13 @@ One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 | `search_web` | Search the web via DuckDuckGo Lite; returns top 10 results. |
 | `fetch_google_rss` | Search Google News RSS and return article titles, summaries, links. |
 | `fetch_yahoo_finance` | Query Yahoo Finance quotes and K-line (OHLCV). |
-| `fetch_youtube_transcript` | Transcribe a YouTube video with timestamps. |
+| `fetch_youtube_transcript` | Transcribe a YouTube video with timestamps. *(gemini needed)* |
 | `send_http_request` | Send an HTTP request to a specified URL. |
 | **Shell** |  |
 | `run_command` | Run a binary with argv; returns combined stdout/stderr. |
 | **Render** |  |
 | `update_page` | Overwrite the rendered HTML page for the current session; tabs auto-reload. |
+| `generate_image` | Generate an image via gpt-image-2 (size & quality picked by user). *(codex needed)* |
 | **Calc** |  |
 | `calculate` | Evaluate a mathematical expression and return the exact result. |
 | **Discovery** |  |
@@ -128,6 +144,8 @@ One line. Single binary at `/usr/local/bin/agen`. macOS / Linux.
 | `skill_git_commit` / `skill_git_log` / `skill_git_rollback` | Commit, list, or roll back the `~/.config/agenvoy/skills` git history. |
 
 Dynamic tool families (auto-registered, not listed above): `mcp__<server>__<tool>` from configured MCP servers, `api_<name>` from `extensions/apis/*.json`, `script_<name>` from `extensions/scripts/<name>/`.
+
+</details>
 
 ## Wiki
 

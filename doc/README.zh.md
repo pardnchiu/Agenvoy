@@ -35,7 +35,16 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 一行指令、單一 binary 落在 `/usr/local/bin/agen`，macOS／Linux 通用。
 
-## CLI 指令
+想在 MacBook 上跑 daemon 的話，接電源時跑 `sudo pmset -c sleep 0` 維持系統喚醒，避免 AC 模式下 daemon 被休眠中斷。
+
+## 特點
+
+- **Planner-based 智能路由** —— Planner model 把每個任務派給最合適的 worker（寫程式找 Claude、看影片找 Gemini、查資料找 GPT），不是同一個 model 硬扛。
+- **Agent 自造工具並持久化** —— 缺工具，agent 自己寫 script / API 存進 `extensions/`，下次以原生 tool 形式自動載入；同時相容 MCP server。
+- **多通道共用 runtime** —— Telegram、Discord、TUI、Web、cron 都接同一個 daemon，session、記憶、工具集打通，不必各自重建。
+
+<details>
+<summary><strong>CLI 指令</strong></summary>
 
 > 直接以 `agen <sub>` 執行；repo Makefile 提供 `make <sub>` wrapper 供開發使用。
 
@@ -50,7 +59,10 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `agen mcp {list\|add\|remove}` | 管理 MCP server（stdio／HTTP），global 與 per-session scope。 |
 | `agen session {new\|switch\|config} [name]` | 管理 CLI session；裸 `switch`／`config` 開互動 picker。 |
 
-## TUI 指令
+</details>
+
+<details>
+<summary><strong>TUI 指令</strong></summary>
 
 > 在 `agen` 的 TUI prompt 輸入；輸入 `/` 即時過濾，popup 結束會回到 prompt。
 
@@ -75,7 +87,10 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `/clear` | 僅清除當前視窗顯示，等同 terminal `clear`；對話記憶不動。 |
 | `/exit`, `/quit` | 退出 TUI（daemon 仍在跑，重 `agen` 即可 attach）。 |
 
-## 內建工具
+</details>
+
+<details>
+<summary><strong>內建工具</strong></summary>
 
 > Tool 以 stub 形式 lazy load，首次呼叫才展開完整 schema。參數與分派細節見 [Tools wiki](https://github.com/pardnchiu/agenvoy/wiki/工具系統)。
 
@@ -94,12 +109,13 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `search_web` | 走 DuckDuckGo Lite 搜尋，回前 10 筆結果。 |
 | `fetch_google_rss` | 搜尋 Google News RSS，回標題／摘要／連結。 |
 | `fetch_yahoo_finance` | 查 Yahoo Finance 報價與 K 線（OHLCV）。 |
-| `fetch_youtube_transcript` | 抓 YouTube 影片逐字稿含時間戳。 |
+| `fetch_youtube_transcript` | 抓 YouTube 影片逐字稿含時間戳。*(gemini needed)* |
 | `send_http_request` | 對指定 URL 發 HTTP 請求。 |
 | **Shell** |  |
 | `run_command` | 以 argv 執行 binary，回 stdout/stderr 合併輸出。 |
 | **渲染** |  |
 | `update_page` | 覆寫當前 session 的 HTML 頁面，瀏覽器分頁自動 reload。 |
+| `generate_image` | 透過 gpt-image-2 生圖（尺寸與品質由 user 互動選擇）。*(codex needed)* |
 | **計算** |  |
 | `calculate` | 計算數學表達式，回精確結果。 |
 | **探索** |  |
@@ -128,6 +144,8 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `skill_git_commit` / `skill_git_log` / `skill_git_rollback` | Commit／列出／回滾 `~/.config/agenvoy/skills` 的 git 歷史。 |
 
 動態 tool 群（自動註冊、上表不列）：MCP server 注入的 `mcp__<server>__<tool>`、`extensions/apis/*.json` 註冊的 `api_<name>`、`extensions/scripts/<name>/` 註冊的 `script_<name>`。
+
+</details>
 
 ## Wiki
 

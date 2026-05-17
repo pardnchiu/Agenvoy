@@ -19,6 +19,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
+	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
+	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/agents/summary"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
@@ -118,6 +120,8 @@ func initCLI() {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
 	subagent.Register()
+	codexImage2.Register()
+	geminiYoutube.Register()
 }
 
 func modelCheck() {

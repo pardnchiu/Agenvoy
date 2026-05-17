@@ -55,15 +55,21 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 		return
 	}
 
-	message := text + buildPushFooter(payload.Model, payload.Usage)
-	if prefix := strings.TrimSpace(payload.Prefix); prefix != "" {
-		message = fmt.Sprintf("<blockquote>%s</blockquote>\n\n%s", html.EscapeString(prefix), message)
+	cleanText, photoPaths, docPaths := extractFileMarkers(text)
+
+	if strings.TrimSpace(cleanText) != "" {
+		message := cleanText + buildPushFooter(payload.Model, payload.Usage)
+		if prefix := strings.TrimSpace(payload.Prefix); prefix != "" {
+			message = fmt.Sprintf("<blockquote>%s</blockquote>\n\n%s", html.EscapeString(prefix), message)
+		}
+		if _, err := client.Send(ctx, chatID, 0, message, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
+			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.Send",
+				slog.Int64("chat", chatID),
+				slog.String("error", err.Error()))
+		}
 	}
-	if _, err := client.Send(ctx, chatID, 0, message, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
-		slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.Send",
-			slog.Int64("chat", chatID),
-			slog.String("error", err.Error()))
-	}
+
+	sendAttachments(ctx, chatID, 0, photoPaths, docPaths)
 }
 
 func buildPushFooter(model string, usage *agentTypes.Usage) string {
