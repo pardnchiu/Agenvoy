@@ -30,8 +30,21 @@ import (
 
 var timestampHeaderRegex = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
 
+var summaryLeakMarkerRegex = regexp.MustCompile(`(?mi)^\s*(?:[#*>\-]+\s*)?(?:Prior Conversation Context|Prior summary \(reference only\)|background summary of prior discussion|Strict rules:)`)
+
 func StripModelResponse(text string) string {
 	text = timestampHeaderRegex.ReplaceAllString(text, "")
+	if loc := summaryLeakMarkerRegex.FindStringIndex(text); loc != nil {
+		dropped := strings.TrimSpace(text[loc[0]:])
+		head := dropped
+		if len(head) > 120 {
+			head = head[:120]
+		}
+		text = text[:loc[0]]
+		slog.Warn("StripModelResponse summary leak stripped",
+			slog.Int("dropped_chars", len(dropped)),
+			slog.String("dropped_head", head))
+	}
 	lines := strings.Split(text, "\n")
 	inFence := false
 	for i, line := range lines {

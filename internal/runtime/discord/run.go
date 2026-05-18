@@ -26,6 +26,12 @@ func channelName(in go_bot_discord.Input) string {
 }
 
 func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
+	if b.listener != nil && b.listener.IsAwaitingPrompt(in.ChannelID, in.MessageID) {
+		if b.listener.OnCallback(ctx, in.ChannelID, in.MessageID, in.Text, in.CallbackPicks) {
+			return nil
+		}
+	}
+
 	content := strings.TrimSpace(in.Text)
 	if content == "" {
 		return nil

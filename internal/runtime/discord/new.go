@@ -12,6 +12,7 @@ import (
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -20,8 +21,9 @@ import (
 const Key = "DISCORD_TOKEN"
 
 type Bot struct {
-	client *go_bot_discord.Bot
-	cancel context.CancelFunc
+	client   *go_bot_discord.Bot
+	cancel   context.CancelFunc
+	listener *runtime.Listener[string, string]
 }
 
 var current atomic.Pointer[Bot]
@@ -69,6 +71,7 @@ func New() (*Bot, error) {
 		return nil, fmt.Errorf("github.com/pardnchiu/go-bot/discord Start: %w", err)
 	}
 	bot.cancel = cancel
+	bot.listener = newPendingListener(bot)
 	current.Store(bot)
 
 	username := client.Status().Username
@@ -88,6 +91,10 @@ func Close(b *Bot) error {
 		return nil
 	}
 	current.CompareAndSwap(b, nil)
+	if b.listener != nil {
+		b.listener.Stop()
+		b.listener = nil
+	}
 	if b.cancel != nil {
 		b.cancel()
 	}

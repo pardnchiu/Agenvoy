@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	"github.com/pardnchiu/go-bot/telegram"
@@ -25,7 +26,7 @@ const Key = "TELEGRAM_TOKEN"
 type Bot struct {
 	client   *telegram.Bot
 	cancel   context.CancelFunc
-	listener *pendingListener
+	listener *runtime.Listener[int64, int]
 }
 
 var current atomic.Pointer[Bot]
@@ -96,7 +97,7 @@ func Close(b *Bot) error {
 	}
 	current.CompareAndSwap(b, nil)
 	if b.listener != nil {
-		b.listener.stop()
+		b.listener.Stop()
 		b.listener = nil
 	}
 	if b.cancel != nil {

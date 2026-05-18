@@ -54,7 +54,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	}
 
 	if isCallback {
-		if b.listener != nil && b.listener.onCallback(ctx, in.ChatID, in.MessageID, in.CallbackData, in.CallbackPicks) {
+		if b.listener != nil && b.listener.OnCallback(ctx, in.ChatID, in.MessageID, in.CallbackData, in.CallbackPicks) {
 			return nil
 		}
 		return nil
@@ -62,7 +62,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 
 	isPrivate := in.Raw == nil || in.Raw.Message == nil || in.Raw.Message.Chat.Type == models.ChatTypePrivate
 	_, hasVerifyPending := pending.Get(in.ChatID)
-	hasListenerAwait := b.listener != nil && b.listener.isAwaiting(in.ChatID)
+	hasListenerAwait := b.listener != nil && b.listener.IsAwaitingChat(in.ChatID)
 	if !isPrivate && !hasVerifyPending && !hasListenerAwait {
 		botUsername := strings.TrimSpace(b.client.Status().Username)
 		if botUsername == "" {
@@ -127,7 +127,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		return nil
 	}
 
-	if b.listener != nil && b.listener.onText(ctx, in.ChatID, in.MessageID, in.Text) {
+	if b.listener != nil && b.listener.OnText(ctx, in.ChatID, in.MessageID, in.Text) {
 		return nil
 	}
 
