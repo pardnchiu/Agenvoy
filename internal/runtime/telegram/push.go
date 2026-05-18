@@ -13,7 +13,9 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
@@ -55,6 +57,7 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 		return
 	}
 
+	chatName := utils.LookupChatName(filesystem.TelegramAuthPath, strconv.FormatInt(chatID, 10))
 	cleanText, photoPaths, docPaths := extractFileMarkers(text)
 
 	if strings.TrimSpace(cleanText) != "" {
@@ -64,12 +67,12 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 		}
 		if _, err := client.Send(ctx, chatID, 0, message, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.Send",
-				slog.Int64("chat", chatID),
+				slog.String("chat", chatName),
 				slog.String("error", err.Error()))
 		}
 	}
 
-	sendAttachments(ctx, chatID, 0, photoPaths, docPaths)
+	sendAttachments(ctx, chatID, chatName, 0, photoPaths, docPaths)
 }
 
 func buildPushFooter(model string, usage *agentTypes.Usage) string {

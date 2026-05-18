@@ -33,13 +33,13 @@ func saveAttachments(ctx context.Context, b *Bot, in go_bot_telegram.Input) []st
 		if err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.Save",
 				slog.String("kind", kind),
-				slog.Int64("chat", in.ChatID),
+				slog.String("chat", chatName(in)),
 				slog.String("error", err.Error()))
 			return
 		}
 		slog.Info("attachment saved",
 			slog.String("kind", kind),
-			slog.Int64("chat", in.ChatID),
+			slog.String("chat", chatName(in)),
 			slog.String("path", path))
 		paths = append(paths, path)
 	}

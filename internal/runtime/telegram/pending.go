@@ -11,8 +11,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
 )
 
@@ -31,6 +33,7 @@ const (
 type active struct {
 	pendingID string
 	chatID    int64
+	chatName  string
 	message   int
 	kind      questionType
 	questions []runtime.Question
@@ -167,6 +170,7 @@ func (l *pendingListener) startConfirm(ctx context.Context, id string, chatID in
 	l.cur = &active{
 		pendingID: id,
 		chatID:    chatID,
+		chatName:  utils.LookupChatName(filesystem.TelegramAuthPath, strconv.FormatInt(chatID, 10)),
 		message:   msg.ID,
 		kind:      typeToolConfirm,
 	}
@@ -181,6 +185,7 @@ func (l *pendingListener) startAskUser(ctx context.Context, id string, chatID in
 	state := &active{
 		pendingID: id,
 		chatID:    chatID,
+		chatName:  utils.LookupChatName(filesystem.TelegramAuthPath, strconv.FormatInt(chatID, 10)),
 		questions: req.AskUser.Questions,
 		answers:   make([]any, 0, len(req.AskUser.Questions)),
 	}
@@ -286,7 +291,7 @@ func (l *pendingListener) onText(ctx context.Context, chatID int64, msgID int, t
 
 	if err := l.bot.client.Delete(ctx, chatID, msgID); err != nil {
 		slog.Warn("pendingListener.Delete user reply",
-			slog.Int64("chat", chatID),
+			slog.String("chat", state.chatName),
 			slog.Int("msg", msgID),
 			slog.Bool("secret", state.kind == typeAskSecret),
 			slog.String("error", err.Error()))
@@ -303,7 +308,7 @@ func (l *pendingListener) deletePrompt(ctx context.Context, state *active) {
 	}
 	if err := l.bot.client.Delete(ctx, state.chatID, state.message); err != nil {
 		slog.Warn("pendingListener.Delete prompt",
-			slog.Int64("chat", state.chatID),
+			slog.String("chat", state.chatName),
 			slog.Int("msg", state.message),
 			slog.String("error", err.Error()))
 	}

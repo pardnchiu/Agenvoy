@@ -4,12 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
+	"strings"
 	"sync/atomic"
 
 	go_bot_discord "github.com/pardnchiu/go-bot/discord"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/utils"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 )
 
 const Key = "DISCORD_TOKEN"
@@ -49,6 +54,15 @@ func New() (*Bot, error) {
 
 	bot := &Bot{client: client}
 
+	client.Reply(func(ctx context.Context, in go_bot_discord.Input) string {
+		if err := run(ctx, bot, in); err != nil {
+			slog.Warn("run",
+				slog.String("channel", channelName(in)),
+				slog.String("error", err.Error()))
+		}
+		return ""
+	})
+
 	ctx, cancel := context.WithCancel(context.Background())
 	if err := client.Start(ctx); err != nil {
 		cancel()
@@ -78,4 +92,21 @@ func Close(b *Bot) error {
 		b.cancel()
 	}
 	return b.client.Close()
+}
+
+var pending = utils.NewPendingRegistry[string, string]()
+
+func authorizeChannel(in go_bot_discord.Input) error {
+	path := filesystem.DiscordAuthPath
+	if err := go_pkg_filesystem.CheckDir(filepath.Dir(path), true); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
+	}
+	line := in.ChannelID
+	if name := strings.TrimSpace(strings.NewReplacer("\n", " ", "\r", " ", "\t", " ").Replace(channelName(in))); name != "" {
+		line = in.ChannelID + "-" + name
+	}
+	if err := go_pkg_filesystem.AppendText(path, line+"\n"); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem AppendText: %w", err)
+	}
+	return nil
 }

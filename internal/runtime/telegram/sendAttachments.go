@@ -15,7 +15,7 @@ import (
 
 const attachmentSendTimeout = 10 * time.Minute
 
-func sendAttachments(ctx context.Context, chatID int64, replyToID int, photoPaths, docPaths []string) {
+func sendAttachments(ctx context.Context, chatID int64, chatName string, replyToID int, photoPaths, docPaths []string) {
 	if len(photoPaths) == 0 && len(docPaths) == 0 {
 		return
 	}
@@ -23,7 +23,7 @@ func sendAttachments(ctx context.Context, chatID int64, replyToID int, photoPath
 	token := strings.TrimSpace(keychain.Get(Key))
 	if token == "" {
 		slog.Warn("github.com/pardnchiu/go-pkg/filesystem/keychain Get",
-			slog.Int64("chat", chatID),
+			slog.String("chat", chatName),
 			slog.String("key", Key))
 		return
 	}
@@ -32,7 +32,7 @@ func sendAttachments(ctx context.Context, chatID int64, replyToID int, photoPath
 		go_bot_telegram.WithHTTPClient(&http.Client{Timeout: attachmentSendTimeout}))
 	if err != nil {
 		slog.Warn("github.com/pardnchiu/go-bot/telegram New",
-			slog.Int64("chat", chatID),
+			slog.String("chat", chatName),
 			slog.String("error", err.Error()))
 		return
 	}
@@ -55,7 +55,7 @@ func sendAttachments(ctx context.Context, chatID int64, replyToID int, photoPath
 		end = min(end, len(photoPaths))
 		if _, err := client.SendPhoto(ctx, chatID, photoPaths[start:end]); err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.SendPhoto",
-				slog.Int64("chat", chatID),
+				slog.String("chat", chatName),
 				slog.Int("count", end-start),
 				slog.String("error", err.Error()))
 			notifyFailure("SendPhoto", strings.Join(photoPaths[start:end], ", "), err.Error())
@@ -64,7 +64,7 @@ func sendAttachments(ctx context.Context, chatID int64, replyToID int, photoPath
 	for _, path := range docPaths {
 		if _, err := client.SendFile(ctx, chatID, go_bot_telegram.TypeDocument, path); err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.SendFile",
-				slog.Int64("chat", chatID),
+				slog.String("chat", chatName),
 				slog.String("path", path),
 				slog.String("error", err.Error()))
 			notifyFailure("SendFile", path, err.Error())
