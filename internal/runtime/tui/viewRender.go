@@ -32,7 +32,7 @@ var (
 			Padding(0, 1)
 )
 
-func headerBlock(cwd, daemon, http, discord, telegram string) string {
+func headerBlock(cwd, daemon, http, telegram string) string {
 	logo := textStyle.Bold(true).Render("✻ Agenvoy ") + hintStyle.Render(projectVersion)
 	cwdStyle := textStyle
 	displayCwd := cwd
@@ -56,7 +56,6 @@ func headerBlock(cwd, daemon, http, discord, telegram string) string {
 		cwdStyle.Render("cwd:      " + displayCwd),
 		daemon,
 		http,
-		discord,
 		telegram,
 	}, "\n")
 	return headerStyle.Render(body)

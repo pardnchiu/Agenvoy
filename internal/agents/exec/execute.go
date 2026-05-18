@@ -430,11 +430,8 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.Sk
 
 func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *skill.SkillScanner, sessionID string, allowAll, webMode bool) []agentTypes.Message {
 	var prompts []agentTypes.Message
-	switch {
-	case strings.HasPrefix(sessionID, "tg-"):
+	if strings.HasPrefix(sessionID, "tg-") {
 		prompts = append(prompts, agentTypes.Message{Role: "system", Content: configs.TelegramSystemPrompt})
-	case strings.HasPrefix(sessionID, "dc-"):
-		prompts = append(prompts, agentTypes.Message{Role: "system", Content: configs.DiscordSystemPrompt})
 	}
 	prompts = append(prompts, agentTypes.Message{Role: "system", Content: GetSystemPrompt(workDir, extraSystemPrompt, scanner, sessionID, allowAll, webMode)})
 	return prompts
