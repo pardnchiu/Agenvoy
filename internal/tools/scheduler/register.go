@@ -7,4 +7,6 @@ func Register() {
 	registPatchCron()
 	registRemoveTask()
 	registRemoveCron()
+	registListTask()
+	registListCron()
 }
