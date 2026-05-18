@@ -30,7 +30,7 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 		t.lastOut = 0
 		return t, tea.Sequence(
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		), true
 
 	case "/switch":
@@ -53,6 +53,9 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 
 	case "/reasoning":
 		return t.commandReasoning(parts)
+
+	case "/discord":
+		return t.commandDiscord(parts)
 
 	case "/telegram":
 		return t.commandTelegram(parts)
@@ -88,7 +91,7 @@ func (t TUI) commandHistory() (TUI, tea.Cmd, bool) {
 	}
 	seq := []tea.Cmd{
 		tea.ClearScreen,
-		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.telegramStatus)),
+		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 	}
 	tail := loadSessionTail(sid)
 	if len(tail) == 0 {

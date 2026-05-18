@@ -58,7 +58,7 @@ func (t TUI) commandNew(parts []string) (TUI, tea.Cmd, bool) {
 
 	return t, tea.Sequence(
 		tea.ClearScreen,
-		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.telegramStatus)),
+		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		tea.Println(strings.Join(lines, "\n")+"\n"),
 	), true
 }
