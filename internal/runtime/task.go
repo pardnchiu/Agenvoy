@@ -70,6 +70,40 @@ func RemoveTask(name string) (int, error) {
 	return removed, SaveTasks(filtered)
 }
 
+func RemoveTaskByTimeSkill(at time.Time, skill string) (int, error) {
+	existing, err := LoadTasks()
+	if err != nil {
+		return 0, err
+	}
+	target := at.UnixNano()
+	filtered := make([]TaskEntry, 0, len(existing))
+	removed := 0
+	for _, e := range existing {
+		if e.Skill == skill && e.At.UnixNano() == target {
+			removed++
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+	if removed == 0 {
+		return 0, nil
+	}
+	return removed, SaveTasks(filtered)
+}
+
+func HasTaskForSkill(skill string) (bool, error) {
+	existing, err := LoadTasks()
+	if err != nil {
+		return false, err
+	}
+	for _, e := range existing {
+		if e.Skill == skill {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func PatchTask(skillName string, newAt time.Time) (int, error) {
 	existing, err := LoadTasks()
 	if err != nil {

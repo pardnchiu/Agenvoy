@@ -143,8 +143,8 @@ func reload() error {
 		}
 		if !entry.At.After(now) {
 			go func(e TaskEntry) {
-				if _, err := RemoveTask(e.Skill); err != nil {
-					slog.Warn("RemoveTask",
+				if _, err := RemoveTaskByTimeSkill(e.At, e.Skill); err != nil {
+					slog.Warn("RemoveTaskByTimeSkill",
 						slog.String("error", err.Error()))
 				}
 			}(entry)
@@ -158,9 +158,19 @@ func reload() error {
 			st.mu.Lock()
 			delete(st.timers, keyCopy)
 			st.mu.Unlock()
-			if _, err := RemoveTask(entryCopy.Skill); err != nil {
-				slog.Warn("RemoveTask",
+			if _, err := RemoveTaskByTimeSkill(entryCopy.At, entryCopy.Skill); err != nil {
+				slog.Warn("RemoveTaskByTimeSkill",
 					slog.String("error", err.Error()))
+				return
+			}
+			hasMore, err := HasTaskForSkill(entryCopy.Skill)
+			if err != nil {
+				slog.Warn("HasTaskForSkill",
+					slog.String("error", err.Error()))
+				return
+			}
+			if hasMore {
+				return
 			}
 			if err := filesystem.TrashScheduleSkill(entryCopy.Skill); err != nil {
 				slog.Warn("filesystem.TrashScheduleSkill",
