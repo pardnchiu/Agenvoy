@@ -26,6 +26,8 @@ var (
 	ErrorsDir       string
 	TasksPath       string
 	CronsPath       string
+	TelegramAuthPath string
+	DiscordAuthPath  string
 	SkillsDir            string
 	SystemSkillsDir      string
 	ScheduleSkillsDir    string
@@ -74,6 +76,8 @@ func Init() error {
 		ErrorsDir = filepath.Join(AgenvoyDir, "errors")
 		TasksPath = filepath.Join(AgenvoyDir, "tasks.json")
 		CronsPath = filepath.Join(AgenvoyDir, "crons.json")
+		TelegramAuthPath = filepath.Join(AgenvoyDir, ".telegram")
+		DiscordAuthPath = filepath.Join(AgenvoyDir, ".discord")
 
 		SkillsDir = filepath.Join(AgenvoyDir, "skills")
 		SystemSkillsDir = filepath.Join(SkillsDir, ".system")

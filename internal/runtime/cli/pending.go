@@ -16,7 +16,7 @@ import (
 )
 
 func NewPending(ctx context.Context) {
-	unregister := runtime.RegisterListener("")
+	notify, unregister := runtime.RegisterListener("")
 	defer unregister()
 
 	reader := bufio.NewReader(os.Stdin)
@@ -34,7 +34,7 @@ func NewPending(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-runtime.Notify:
+		case <-notify:
 		}
 	}
 }

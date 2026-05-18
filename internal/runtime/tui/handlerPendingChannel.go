@@ -12,7 +12,7 @@ type Pending struct {
 }
 
 func newPendingChannel(ctx context.Context) {
-	unregister := runtime.RegisterListener("")
+	notify, unregister := runtime.RegisterListener("")
 	defer unregister()
 
 	for {
@@ -36,7 +36,7 @@ func newPendingChannel(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-runtime.Notify:
+		case <-notify:
 		}
 	}
 }

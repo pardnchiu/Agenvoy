@@ -54,29 +54,38 @@ type entry struct {
 	claimed bool
 }
 
+type listenerEntry struct {
+	prefix string
+	notify chan struct{}
+}
+
 var (
 	mu      sync.Mutex
 	entries = map[string]*entry{}
-	notify  = make(chan struct{}, 1)
 
 	listenerMu sync.RWMutex
-	listeners  []string
-
-	Notify <-chan struct{} = notify
+	listeners  []*listenerEntry
 )
 
-func RegisterListener(prefix string) func() {
+func RegisterListener(prefix string) (<-chan struct{}, func()) {
+	ch := make(chan struct{}, 1)
+	le := &listenerEntry{prefix: prefix, notify: ch}
+
 	listenerMu.Lock()
-	listeners = append(listeners, prefix)
+	listeners = append(listeners, le)
 	listenerMu.Unlock()
-	signal()
+
+	select {
+	case ch <- struct{}{}:
+	default:
+	}
 
 	var once sync.Once
-	return func() {
+	return ch, func() {
 		once.Do(func() {
 			listenerMu.Lock()
-			for i, p := range listeners {
-				if p == prefix {
+			for i, l := range listeners {
+				if l == le {
 					listeners = slices.Delete(listeners, i, i+1)
 					break
 				}
@@ -89,8 +98,8 @@ func RegisterListener(prefix string) func() {
 func HasListener(sessionID string) bool {
 	listenerMu.RLock()
 	defer listenerMu.RUnlock()
-	for _, p := range listeners {
-		if strings.HasPrefix(sessionID, p) {
+	for _, l := range listeners {
+		if l.prefix == "" || strings.HasPrefix(sessionID, l.prefix) {
 			return true
 		}
 	}
@@ -112,7 +121,7 @@ func Ask(ctx context.Context, req Request) (Reply, error) {
 	mu.Lock()
 	entries[req.ID] = e
 	mu.Unlock()
-	signal()
+	signalFor(req.SessionID)
 
 	defer func() {
 		mu.Lock()
@@ -129,6 +138,10 @@ func Ask(ctx context.Context, req Request) (Reply, error) {
 }
 
 func PickNext(prefix string) (id string, req Request, ok bool) {
+	return PickNextMatch(prefix, nil)
+}
+
+func PickNextMatch(prefix string, accept func(Request) bool) (id string, req Request, ok bool) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -142,6 +155,9 @@ func PickNext(prefix string) (id string, req Request, ok bool) {
 			continue
 		}
 		if e.req.Ctx != nil && e.req.Ctx.Err() != nil {
+			continue
+		}
+		if accept != nil && !accept(e.req) {
 			continue
 		}
 		if chosen == nil || e.req.EnqueueAt.Before(chosen.req.EnqueueAt) {
@@ -189,9 +205,16 @@ func Snapshot() []Request {
 	return out
 }
 
-func signal() {
-	select {
-	case notify <- struct{}{}:
-	default:
+func signalFor(sessionID string) {
+	listenerMu.RLock()
+	defer listenerMu.RUnlock()
+	for _, l := range listeners {
+		if l.prefix != "" && !strings.HasPrefix(sessionID, l.prefix) {
+			continue
+		}
+		select {
+		case l.notify <- struct{}{}:
+		default:
+		}
 	}
 }

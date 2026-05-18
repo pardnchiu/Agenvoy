@@ -72,3 +72,77 @@ func ShortenSessionID(sid string) string {
 	sid = sha256ShortRegex.ReplaceAllString(sid, "$1")
 	return sid
 }
+
+func TruncateStatus(s string) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	r := []rune(s)
+	if len(r) > 80 {
+		return string(r[:80]) + "…"
+	}
+	return string(r)
+}
+
+func FormatUsage(n int) string {
+	if n > 1000 {
+		return fmt.Sprintf("%dk", n/1000)
+	}
+	return fmt.Sprintf("%d", n)
+}
+
+type AgentEventResult struct {
+	ReplyText  string
+	ExecErrors []string
+	Done       agentTypes.Event
+}
+
+func FormatAgentEventMessage(
+	events <-chan agentTypes.Event,
+	tag, sessionID string,
+	markStatus func(text string),
+	execErrFmt func(toolName, text string) string,
+) AgentEventResult {
+	var r AgentEventResult
+	for e := range events {
+		EventLog(tag, e, sessionID, "")
+		switch e.Type {
+		case agentTypes.EventAgentSelect:
+			markStatus("selecting agent…")
+
+		case agentTypes.EventAgentResult:
+			if t := strings.TrimSpace(e.Text); t != "" {
+				markStatus("(agent) " + TruncateStatus(t))
+			}
+
+		case agentTypes.EventSkillResult:
+			if t := strings.TrimSpace(e.Text); t != "" {
+				markStatus("(skill) " + TruncateStatus(t))
+			}
+
+		case agentTypes.EventToolCall:
+			if e.ToolName != "" {
+				markStatus("(tool) " + e.ToolName)
+			}
+
+		case agentTypes.EventToolSkipped:
+			if e.ToolName != "" {
+				markStatus("(tool skipped) " + e.ToolName)
+			}
+
+		case agentTypes.EventSummaryGenerate:
+			markStatus("summarizing…")
+
+		case agentTypes.EventText:
+			if r.ReplyText != "" {
+				r.ReplyText += "\n"
+			}
+			r.ReplyText += e.Text
+
+		case agentTypes.EventExecError:
+			r.ExecErrors = append(r.ExecErrors, execErrFmt(e.ToolName, e.Text))
+
+		case agentTypes.EventDone:
+			r.Done = e
+		}
+	}
+	return r
+}

@@ -92,8 +92,14 @@ func renderLogLine(e Log) string {
 	body = strings.TrimSpace(body)
 	if strings.HasPrefix(e.Msg, "Telegram Verification Code") {
 		code := extractField(body, "code=")
-		username := extractField(body, "username=")
+		username := extractField(body, "name=")
 		line := fmt.Sprintf("$ Telegram Verification Code: %s (%s)", code, username)
+		return systemStyle.Render(line) + "\n"
+	}
+	if strings.HasPrefix(e.Msg, "Discord Verification Code") {
+		code := extractField(body, "code=")
+		username := extractField(body, "name=")
+		line := fmt.Sprintf("$ Discord Verification Code: %s (%s)", code, username)
 		return systemStyle.Render(line) + "\n"
 	}
 	line := "$ [" + e.Source + "] " + body + " - " + e.Time.Format("15:04:05")

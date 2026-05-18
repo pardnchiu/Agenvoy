@@ -204,7 +204,7 @@ func newModel(ctx context.Context) TUI {
 func getDiscordStatus() string {
 	cfg, err := session.Load()
 	if err != nil || cfg == nil || !cfg.DiscordEnabled || keychain.Get(discord.Key) == "" {
-		return hintStyle.Render("discord:  disabled")
+		return textStyle.Render("discord:  ") + hintStyle.Render("disable")
 	}
 	name := cfg.DiscordUsername
 	if name == "" {

@@ -1,14 +1,16 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/bwmarrin/discordgo"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	go_bot_discord "github.com/pardnchiu/go-bot/discord"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -59,7 +61,7 @@ func (t TUI) openDiscordTokenPrompt() (TUI, tea.Cmd) {
 	t.popup = &Popup{
 		kind:     popupText,
 		title:    "Discord Bot Token",
-		subtitle: "from Developer Portal · Enter to submit · Esc to cancel",
+		subtitle: "from Discord Developer Portal · Enter to submit · Esc to cancel",
 		onConfirm: func(value string) any {
 			return DiscordTokenSubmit{token: strings.TrimSpace(value)}
 		},
@@ -72,19 +74,19 @@ func enableDiscord(token string) tea.Cmd {
 		if token == "" {
 			return DiscordDone{action: "enable", err: fmt.Errorf("token is required")}
 		}
-		if err := verifyDiscord(token); err != nil {
+		username, err := verifyDiscord(token)
+		if err != nil {
 			return DiscordDone{action: "enable", err: err}
 		}
 		if err := keychain.Set(discord.Key, token); err != nil {
 			return DiscordDone{action: "enable", err: fmt.Errorf("keychain.Set: %w", err)}
 		}
-
 		cfg, err := session.Load()
 		if err != nil {
 			return DiscordDone{action: "enable", err: fmt.Errorf("session.Load: %w", err)}
 		}
-
 		cfg.DiscordEnabled = true
+		cfg.DiscordUsername = username
 		if err := session.Save(cfg); err != nil {
 			return DiscordDone{action: "enable", err: fmt.Errorf("session.Save: %w", err)}
 		}
@@ -110,13 +112,18 @@ func disableDiscord() tea.Cmd {
 	}
 }
 
-func verifyDiscord(token string) error {
-	s, err := discordgo.New("Bot " + token)
+func verifyDiscord(token string) (string, error) {
+	client, err := go_bot_discord.New(token)
 	if err != nil {
-		return fmt.Errorf("github.com/bwmarrin/discordgo New: %w", err)
+		return "", fmt.Errorf("github.com/pardnchiu/go-bot/discord New: %w", err)
 	}
-	if err := s.Open(); err != nil {
-		return fmt.Errorf("open gateway: %w", err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := client.Start(ctx); err != nil {
+		return "", fmt.Errorf("github.com/pardnchiu/go-bot/discord Start: %w", err)
 	}
-	return s.Close()
+	username := client.Status().Username
+	_ = client.Close()
+	return username, nil
 }

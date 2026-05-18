@@ -369,7 +369,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case DiscordTokenSubmit:
 		return t, tea.Sequence(
-			tea.Println(hintStyle.Render("⎯ discord verifying token")+"\n"),
+			tea.Println(hintStyle.Render("⎯ discord verifying token (≤10s)")+"\n"),
 			enableDiscord(msg.token),
 		)
 

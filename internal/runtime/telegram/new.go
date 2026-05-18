@@ -5,11 +5,19 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	"github.com/pardnchiu/go-bot/telegram"
+	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -18,7 +26,7 @@ const Key = "TELEGRAM_TOKEN"
 type Bot struct {
 	client   *telegram.Bot
 	cancel   context.CancelFunc
-	listener *pendingListener
+	listener *runtime.Listener[int64, int]
 }
 
 var current atomic.Pointer[Bot]
@@ -56,7 +64,7 @@ func New() (*Bot, error) {
 	client.Reply(func(ctx context.Context, in telegram.Input) string {
 		if err := run(ctx, bot, in); err != nil {
 			slog.Warn("run",
-				slog.Int64("chat", in.ChatID),
+				slog.String("chat", chatName(in)),
 				slog.String("error", err.Error()))
 		}
 		return ""
@@ -89,11 +97,28 @@ func Close(b *Bot) error {
 	}
 	current.CompareAndSwap(b, nil)
 	if b.listener != nil {
-		b.listener.stop()
+		b.listener.Stop()
 		b.listener = nil
 	}
 	if b.cancel != nil {
 		b.cancel()
 	}
 	return b.client.Close()
+}
+
+var pending = utils.NewPendingRegistry[int64, int]()
+
+func authorizeChat(in go_bot_telegram.Input) error {
+	path := filesystem.TelegramAuthPath
+	if err := go_pkg_filesystem.CheckDir(filepath.Dir(path), true); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
+	}
+	line := strconv.FormatInt(in.ChatID, 10)
+	if name := strings.TrimSpace(strings.NewReplacer("\n", " ", "\r", " ", "\t", " ").Replace(chatName(in))); name != "" {
+		line = line + "-" + name
+	}
+	if err := go_pkg_filesystem.AppendText(path, line+"\n"); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem AppendText: %w", err)
+	}
+	return nil
 }

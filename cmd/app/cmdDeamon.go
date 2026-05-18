@@ -27,7 +27,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/routes"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
-	discordTypes "github.com/pardnchiu/agenvoy/internal/runtime/discord/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
@@ -39,10 +38,9 @@ import (
 
 var (
 	discordMu          sync.Mutex
-	discordBot         *discordTypes.DiscordBot
+	discordBot         *discord.Bot
 	lastDiscordEnabled bool
 	lastDiscordToken   string
-	lastDiscordGuild   string
 
 	telegramMu          sync.Mutex
 	telegramBot         *telegram.Bot
@@ -53,16 +51,14 @@ var (
 func reloadDiscord() {
 	newToken := keychain.Get(discord.Key)
 	newEnabled := false
-	newGuild := ""
 	if cfg, err := session.Load(); err == nil && cfg != nil {
 		newEnabled = cfg.DiscordEnabled
-		newGuild = cfg.DiscordGuildID
 	}
 
 	discordMu.Lock()
 	defer discordMu.Unlock()
 
-	if newEnabled == lastDiscordEnabled && newToken == lastDiscordToken && newGuild == lastDiscordGuild {
+	if newEnabled == lastDiscordEnabled && newToken == lastDiscordToken {
 		return
 	}
 
@@ -72,14 +68,13 @@ func reloadDiscord() {
 	}
 	lastDiscordEnabled = newEnabled
 	lastDiscordToken = newToken
-	lastDiscordGuild = newGuild
 
 	if !newEnabled {
 		slog.Info("discord disabled, skipped")
 		return
 	}
 	if newToken == "" {
-		slog.Info("discord enabled but token missing, run `agen discord enable`")
+		slog.Info("discord enabled but token missing")
 		return
 	}
 
@@ -90,7 +85,6 @@ func reloadDiscord() {
 		return
 	}
 	discordBot = bot
-	slog.Info("discord reloaded")
 }
 
 func reloadTelegram() {
