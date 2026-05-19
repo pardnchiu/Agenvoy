@@ -36,7 +36,7 @@ help:
 
 build:
 	@git fetch --tags --force 2>/dev/null || true
-	go build -ldflags "-X github.com/pardnchiu/agenvoy/internal/tui.projectVersion=$$(git describe --tags --abbrev=0 2>/dev/null || echo dev)" -o agen ./cmd/app/ && sudo mv agen /usr/local/bin/agen
+	go build -ldflags "-X github.com/pardnchiu/agenvoy/internal/runtime/tui.projectVersion=$$(git describe --tags --abbrev=0 2>/dev/null || echo dev)" -o agen ./cmd/app/ && sudo mv agen /usr/local/bin/agen
 	@rm -rf "$$HOME/.config/agenvoy/skills/.system" "$$HOME/.config/agenvoy/tools/.system"
 	@mkdir -p "$$HOME/.config/agenvoy/skills/.system" "$$HOME/.config/agenvoy/tools/.system"
 	@[ -d extensions/skills ] && cp -R extensions/skills/. "$$HOME/.config/agenvoy/skills/.system/" || true
