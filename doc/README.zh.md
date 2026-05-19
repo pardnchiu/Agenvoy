@@ -44,6 +44,176 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 - **多通道共用 runtime** —— Telegram、Discord、TUI、Web、cron 都接同一個 daemon，session、記憶、工具集打通，不必各自重建。
 
 <details>
+<summary><strong>Agenvoy 與主流產品：完整功能對比</strong></summary>
+
+### 1. 概觀
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| **語言** | Go | TypeScript | TypeScript | TypeScript | TypeScript | Python |
+| **授權** | Apache 2.0 | Proprietary | Apache 2.0 | Apache 2.0 | MIT | MIT |
+| **作者** | 個人（pardnchiu） | Anthropic | OpenAI | Google | 社群 | NousResearch |
+| **主要定位** | 跨平台 AI Agent 框架 | 終端機 coding 助手 | 終端機 coding 助手 | 終端機 coding 助手 | 跨平台 AI Agent | 跨平台 AI Agent |
+| **架構** | Daemon + TUI + Chat | CLI session | CLI session | CLI session | Daemon + TUI + Chat | Daemon + TUI + Chat |
+
+---
+
+### 2. AI Provider 支援
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| Claude | ✅ | ✅ 僅此 | ❌ | ❌ | ✅ | ✅ |
+| OpenAI / GPT | ✅ | ❌ | ✅ 僅此 | ❌ | ✅ | ✅ |
+| Gemini | ✅ | ❌ | ❌ | ✅ 僅此 | ✅ | ✅ |
+| Codex (OpenAI OAuth) | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| GitHub Copilot | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Nvidia NIM | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| OpenAI-compat | ✅ | ❌ | ❌ | ❌ | ✅ Ollama/LM Studio | ✅ OpenRouter 200+ |
+| DeepSeek / Mistral / xAI | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Planner 路由 | ✅ 專屬 planner model | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+---
+
+### 3. Runtime 與前端
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| TUI | ✅ bubbletea | ✅ ink | ✅ | ✅ | ✅ `openclaw tui` | ✅ React Ink |
+| CLI | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| HTTP API / Web UI | ✅ gin | ❌ | ❌ | ❌ | ❌ | ✅ Web Dashboard |
+| Daemon 模式 | ✅ 原生 `--daemon` | ❌ | ❌ | ❌ | ✅ systemd/launchd | ✅ gateway daemon |
+| Session Canvas（HTML+SSE） | ✅ `update_page` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 具名 session | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ session picker |
+
+---
+
+### 4. 聊天平台整合
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| Telegram | ✅ 原生 daemon | ⚠️ Channels MCP（需 active session） | ❌ | ❌ | ✅ 原生 daemon | ✅ 原生 daemon |
+| Discord | ✅ 原生 daemon | ⚠️ Channels MCP（需 active session） | ❌ | ❌ | ✅ 原生 daemon | ✅ 原生 daemon |
+| iMessage | ❌ | ⚠️ Channels MCP（僅 macOS） | ❌ | ❌ | ✅ BlueBubbles | ✅ BlueBubbles |
+| WhatsApp / Slack / LINE | ❌ | ❌ | ❌ | ❌ | ✅ 50+ 平台 | ✅ 20+ 平台 |
+| 常駐接收（無需 session） | ✅ daemon | ❌ | ❌ | ❌ | ✅ | ✅ |
+| 跨 session 發送（任一 session → chat） | ✅ `send_to_telegram_chat` / `send_to_discord_channel` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| OTP 驗證 | ✅ 6 碼 crypto/rand | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 平台原生 UI（按鈕／選單／modal） | ✅ inline keyboard / select menu / modal | ❌ | ❌ | ❌ | ⚠️ 純文字選項 | ⚠️ 純文字選項 |
+
+> **平台層**：Agenvoy 的 Telegram 與 Discord 整合都建構在 [pardnchiu/go-bot](https://github.com/pardnchiu/go-bot) 之上，獨立維護且開源。go-bot 封裝兩個平台的 bot 協定細節 —— Agenvoy 只實作業務邏輯，平台 API 層完全交給 go-bot。
+
+> **關鍵差異**：Claude Code Channels 需要 active session。OpenClaw 與 Hermes 雖有 daemon 但 in-chat 確認皆為純文字。Agenvoy 走平台原生 UI —— Telegram inline keyboard 與 Discord select menu / modal。另外 Agenvoy 的跨 session 發送工具讓任何 session 類型（CLI／TUI／HTTP／排程腳本）都能推訊息到 Telegram/Discord —— 無競品提供此能力。
+
+---
+
+### 5. Telegram 功能對比
+
+| 功能 | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code Channels** |
+|---------|-------------|-------------|------------------|--------------------------|
+| 文字回覆 | ✅ | ✅ | ✅ | ✅ |
+| 語音輸出（TTS） | ✅ Gemini TTS → OGG | ✅ ElevenLabs/Hume | ✅ Edge TTS/ElevenLabs | ❌ |
+| 檔案附件輸出 | ✅ `[SEND_FILE:]` | ✅ | ✅ | ❌ |
+| 接收使用者附件 | ✅ photo/doc/voice/video | ✅ | ✅ | ❌ |
+| 語音轉文字（STT） | ✅ Gemini，14 種格式 | ✅ Whisper/Gemini | ✅ faster-whisper（本地） | ❌ |
+| Tool 確認（互動式） | ✅ 原生 inline keyboard | ⚠️ 文字 approve prompt | ⚠️ 文字選項 | ❌ |
+| ask_user（picker） | ✅ 原生 button/modal | ⚠️ `/models` picker | ⚠️ 文字選項，上限 4 | ❌ |
+| 排版參考（lazy-load tool） | ✅ `telegram_format` | ❌ | ❌ | ❌ |
+| Scheduler 輸出推送 | ✅ | ✅ | ✅ | ❌ |
+| 跨 session 推送（任一 session） | ✅ `send_to_telegram_chat` | ❌ | ❌ | ❌ |
+| 離線接收（daemon） | ✅ | ✅ | ✅ | ❌ |
+
+---
+
+### 6. Discord 功能對比
+
+| 功能 | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code Channels** |
+|---------|-------------|-------------|------------------|--------------------------|
+| 文字回覆 | ✅ | ✅ | ✅ | ✅ |
+| 語音輸出（TTS） | ✅ Gemini TTS → OGG/OPUS | ✅ | ✅ | ❌ |
+| 檔案附件輸出 | ✅ 每訊息 10 個批次 | ✅ | ✅ | ❌ |
+| 接收使用者附件 | ✅ photo/doc/voice/video | ✅ | ✅ | ❌ |
+| Tool 確認（互動式） | ✅ select menu button | ✅ `/model` picker | ⚠️ 文字選項 | ❌ |
+| ask_user（modal） | ✅ select / multi-select / modal | ⚠️ 受限 | ⚠️ 文字選項 | ❌ |
+| 排版參考（lazy-load tool） | ✅ `discord_format` | ❌ | ❌ | ❌ |
+| Guild mention 守門 | ✅ | ✅ | ✅ | ❌ |
+| Discord Markdown 規格遵循 | ✅ 完整規格 lazy-load tool | ⚠️ 部分 | ⚠️ 部分 | ❌ |
+| 字元上限敏感 | ✅ prompt 內硬限 1600 | ❌ | ❌ | ❌ |
+| 跨 session 推送（任一 session） | ✅ `send_to_discord_channel` | ❌ | ❌ | ❌ |
+
+---
+
+### 7. Scheduler
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| Cron 任務 | ✅ SKILL.md + cron | ✅ cloud-assisted cron/task | ❌ | ❌ | ✅ 內建 | ✅ 內建 |
+| 一次性任務 | ✅ | ✅ cloud-assisted | ❌ | ❌ | ✅ `at` 格式 | ✅ 自然語言 |
+| TUI CRUD | ✅ | ❌ | ❌ | ❌ | ✅ `openclaw cron` | ✅ `cronjob` tool |
+| fsnotify 熱更新 | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 推送輸出到 Telegram/Discord | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| AI tool 管理（add/list/remove） | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ `cronjob` tool |
+| 本地執行（不需雲端） | ✅ | ❌ 依賴雲端 | ❌ | ❌ | ✅ | ✅ |
+
+> **Scheduler 層**：Agenvoy 的 scheduler 建構在 [pardnchiu/go-scheduler](https://github.com/pardnchiu/go-scheduler)，自家維護的生態套件，提供 cron 表達式解析、一次性任務、fsnotify 熱更新、輸出回送到聊天平台。
+
+---
+
+### 8. Tool 生態
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| MCP 支援 | ✅ client | ✅ client | ❌ | ✅ client | ✅ client | ✅ client + server |
+| 自製 tool（script-tool-add） | ✅ AI 生成 | ❌ | ❌ | ❌ | ❌ | ✅ 自動建立 skill |
+| API tool 探索（search-api → add） | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Skill 系統 | ✅ SKILL.md lazy-load | ✅ CLAUDE.md | ❌ | ❌ | ✅ SKILL.md 5400+ 社群 | ✅ SKILL.md agentskills.io |
+| 排版參考為 lazy-load tool | ✅ `telegram_format` / `discord_format` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 圖片生成 | ✅ DALL-E/Codex Image | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 媒體轉錄 STT | ✅ Gemini，14 種格式 | ❌ | ❌ | ❌ | ✅ Whisper/Gemini | ✅ faster-whisper（本地） |
+| TTS 語音輸出 | ✅ Gemini TTS | ❌ | ❌ | ❌ | ✅ ElevenLabs/Hume/MS | ✅ Edge TTS/ElevenLabs/OpenAI |
+| Computer use / 瀏覽器 | ✅ go-rod + Playwright MCP | ✅ beta | ❌ | ❌ | ✅ Chrome CDP | ✅ Playwright（Chromium/Firefox） |
+
+> **Tool sandbox 架構**：Agenvoy 的 Python／JavaScript／API 自製 tool 介面建構在 [pardnchiu/go-faas](https://github.com/pardnchiu/go-faas)（Function as a Service）概念之上。每個 AI 生成的 tool 都以隔離的 function unit 執行，有獨立生命週期與安全邊界。為所有受比較產品中唯一的 FaaS 等級 tool 擴展沙箱設計。
+
+---
+
+### 9. 記憶系統
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| 指令檔系統 | ✅ SKILL.md | ✅ CLAUDE.md | ❌ | ❌ | ✅ SKILL.md | ✅ SKILL.md |
+| 對話歷史搜尋 | ✅ ToriiDB 向量搜尋 | ❌ | ❌ | ❌ | ✅ SQLite 向量 | ✅ SQLite FTS5 |
+| Error memory | ✅ ToriiDB | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Action log | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 長期持久記憶 | ⚠️ ToriiDB 基礎已就緒 | ⚠️ CLAUDE.md 手動 | ❌ | ❌ | ✅ Wiki 風格 MEMORY.md | ✅ MEMORY.md + USER.md |
+| 跨 session 記憶 | ⚠️ 預設 session-isolated，可外掛外部記憶擴展 | ⚠️ 預設 session-isolated，可外掛外部記憶擴展 | ⚠️ 預設 session-isolated | ⚠️ 預設 session-isolated | ✅ 內建跨 session | ✅ 內建跨 session |
+
+> **ToriiDB** 為 Agenvoy 生態自製的 embedded 向量資料庫（[pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)）。不需外部服務、in-process 執行。Agenvoy 以 ToriiDB 作為記憶基礎設施，目前支撐語意對話歷史搜尋與 error memory，並作為未來長期跨 session 記憶擴展的基礎。
+
+---
+
+### 10. 相依與部署
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| 直接外部相依 | **12** | 50+ | 40+ | 40+ | 龐大（pnpm monorepo） | 30–40 核心 + 60+ 選用 |
+| 自家生態套件 | 5（go-bot / go-pkg / go-scheduler / ToriiDB / go-faas） | 0 | 0 | 0 | 0 | 0 |
+| Runtime | Go（靜態 binary） | Node.js | Node.js | Node.js | Node.js | Python |
+| 部署 | **單一 binary** | npm install | npm install | npm install | npm install | pip + docker/VPS |
+
+---
+
+### Agenvoy 的位置
+
+| 面向 | 細節 |
+|-----------|--------|
+| **明顯優勢** | 單一 Go binary、12 個相依、自家生態（pardnchiu universe）、planner model 路由、Session Canvas、平台原生 UI（真正按鈕／modal）、OTP 驗證、任一 session 跨頻道發送至 Telegram/Discord、API tool 自動探索、圖片生成、排版參考 lazy-load tool、純本地 scheduler（不需雲端） |
+| **與競品持平** | Telegram/Discord daemon、TTS/STT、scheduler 輸出推送、Skill 系統、MCP、瀏覽器自動化、進站附件處理 |
+| **競品領先處** | OpenClaw 50+ 平台、Hermes MCP server 模式、Hermes 本地 STT、OpenClaw/Hermes 內建跨 session 記憶、Claude Code Computer Use beta、Claude Code 雲端 cron/task |
+| **Codex CLI** | 功能最少 —— 僅 CLI + TUI + OpenAI OAuth，無 daemon、無聊天平台、無 scheduler |
+
+</details>
+
+<details>
 <summary><strong>CLI 指令</strong></summary>
 
 > 直接以 `agen <sub>` 執行；repo Makefile 提供 `make <sub>` wrapper 供開發使用。
@@ -117,6 +287,13 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | **渲染** |  |
 | `update_page` | 覆寫當前 session 的 HTML 頁面，瀏覽器分頁自動 reload。 |
 | `generate_image` | 透過 gpt-image-2 生圖（尺寸與品質由 user 互動選擇）。*(codex needed)* |
+| **頻道** |  |
+| `list_telegram_chat` | 列出已授權的 Telegram chat（id + name）。*(telegram needed)* |
+| `send_to_telegram_chat` | 以 chat_id 將 HTML 格式訊息送到已授權的 Telegram chat。*(telegram needed)* |
+| `telegram_format` | 回傳 Telegram HTML 排版參考（允許 tag、escape 規則、檔案／語音 marker）。*(telegram needed)* |
+| `list_discord_channel` | 列出已授權的 Discord channel（id + name）。*(discord needed)* |
+| `send_to_discord_channel` | 以 channel_id 將 markdown 格式訊息送到已授權的 Discord channel。*(discord needed)* |
+| `discord_format` | 回傳 Discord markdown 排版參考（允許 markdown、特殊 token、檔案／語音 marker）。*(discord needed)* |
 | **計算** |  |
 | `calculate` | 計算數學表達式，回精確結果。 |
 | **探索** |  |
