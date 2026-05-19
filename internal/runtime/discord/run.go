@@ -249,6 +249,9 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	if doneEvent.Usage != nil {
 		footer = fmt.Sprintf("%s | in:%s out:%s", footer, utils.FormatUsage(doneEvent.Usage.Input), utils.FormatUsage(doneEvent.Usage.Output))
 	}
+	if len(attachmentPaths) > 0 || len(voiceTexts) > 0 {
+		footer = "🔗 " + footer
+	}
 	replyText = fmt.Sprintf("%s\n-# ⎿ %s", replyText, footer)
 	if len(execErrors) > 0 {
 		replyText = fmt.Sprintf("%s\n-# ⎿ ⚠️ %s", replyText, strings.Join(execErrors, ", "))
@@ -279,43 +282,37 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	}
 
 	if len(voiceTexts) > 0 {
-		sendFailure := func(label, detail, errMsg string) {
-			text := fmt.Sprintf("-# ⎿ ⚠️ %s failed", label)
-			if detail != "" {
-				text = fmt.Sprintf("%s: `%s`", text, detail)
-			}
-			text = fmt.Sprintf("%s\n-# ⎿ `%s`", text, errMsg)
-			if _, err := b.client.Send(ctx, in.ChannelID, replyToID, text); err != nil {
-				slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.Send (notify)",
-					slog.String("label", label),
-					slog.String("error", err.Error()))
-			}
-		}
-		if err := b.client.SendStatus(ctx, in.ChannelID, replyToID, "sending…",
-			go_bot_discord.WithStatusEmoji("⚡")); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.SendStatus",
-				slog.String("channel", channelName(in)),
-				slog.String("error", err.Error()))
-		}
-		apiKey := strings.TrimSpace(keychain.Get("GEMINI_API_KEY"))
-		if apiKey == "" {
-			slog.Warn("keychain.Get GEMINI_API_KEY missing",
-				slog.String("channel", channelName(in)))
-			sendFailure("SendVoice", "", "GEMINI_API_KEY missing")
-		} else {
-			for _, text := range voiceTexts {
-				if _, err := b.client.SendVoice(ctx, in.ChannelID, replyToID, text, apiKey); err != nil {
-					slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.SendVoice",
+		bgCtx := context.WithoutCancel(ctx)
+		channel := channelName(in)
+		channelID := in.ChannelID
+		reply := replyToID
+		client := b.client
+		texts := voiceTexts
+		go func() {
+			sendFailure := func(errMsg string) {
+				text := fmt.Sprintf("-# ⎿ ⚠️ SendVoice failed (background)\n-# ⎿ `%s`", errMsg)
+				if _, err := client.Send(bgCtx, channelID, reply, text); err != nil {
+					slog.Error("github.com/pardnchiu/go-bot/discord Bot.client.Send (notify)",
+						slog.String("channel", channel),
 						slog.String("error", err.Error()))
-					sendFailure("SendVoice", "", err.Error())
 				}
 			}
-		}
-		if err := b.client.FinishStatus(ctx, in.ChannelID); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.FinishStatus",
-				slog.String("channel", channelName(in)),
-				slog.String("error", err.Error()))
-		}
+			apiKey := strings.TrimSpace(keychain.Get("GEMINI_API_KEY"))
+			if apiKey == "" {
+				slog.Error("keychain.Get GEMINI_API_KEY missing",
+					slog.String("channel", channel))
+				sendFailure("GEMINI_API_KEY missing")
+				return
+			}
+			for _, text := range texts {
+				if _, err := client.SendVoice(bgCtx, channelID, reply, text, apiKey); err != nil {
+					slog.Error("github.com/pardnchiu/go-bot/discord Bot.client.SendVoice",
+						slog.String("channel", channel),
+						slog.String("error", err.Error()))
+					sendFailure(err.Error())
+				}
+			}
+		}()
 	}
 
 	return nil
