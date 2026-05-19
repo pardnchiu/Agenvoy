@@ -18,4 +18,6 @@ func Register() {
 		return
 	}
 	registDiscordFormat()
+	registListDiscordChannel()
+	registSendToDiscordChannel()
 }

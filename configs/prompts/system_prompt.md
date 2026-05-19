@@ -289,6 +289,8 @@ The work directory above is the authoritative starting point for this turn. Any 
 
 {{.ExternalAgents}}
 
+{{.CrossChannelSending}}
+
 {{.AvailableSkills}}
 
 Execution rules (must follow):

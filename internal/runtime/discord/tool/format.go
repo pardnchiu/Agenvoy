@@ -15,12 +15,7 @@ func registDiscordFormat() {
 		AlwaysLoad:  true,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `[system-default]
-Return the complete Discord markdown formatting reference (inline/block markdown, code-block languages, special tokens, image formats, file/voice markers, limits).
-Call this BEFORE composing any content that will be delivered to Discord:
-- you are in a dc- session (foreground reply, scheduling ack, skill result, push)
-- you are about to call send_to_discord_channel from any session
-- you are authoring a script whose stdout will be forwarded to a Discord channel`,
+		Description: `[system-default] Return the complete Discord markdown formatting reference (allowed markdown, special tokens, image formats, file/voice markers).`,
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},
