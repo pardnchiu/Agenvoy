@@ -1,7 +1,6 @@
-package skill
+package runtime
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -23,22 +22,12 @@ type SkillScanner struct {
 }
 
 type SkillList struct {
-	ByName map[string]*Skill
-	ByPath map[string]*Skill
+	ByName map[string]*filesystem.Skill
+	ByPath map[string]*filesystem.Skill
 	Paths  []string
 }
 
-type Skill struct {
-	Name        string
-	Description string
-	AbsPath     string
-	Path        string
-	Content     string
-	Body        string
-	Hash        string
-}
-
-func NewScanner() *SkillScanner {
+func NewSkillScanner() *SkillScanner {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		home = "."
@@ -56,18 +45,15 @@ func NewScanner() *SkillScanner {
 		filesystem.SystemSkillsDir,
 	}
 
-	scanner := &SkillScanner{
-		paths: paths,
-	}
+	scanner := &SkillScanner{paths: paths}
 	scanner.Scan()
-
 	return scanner
 }
 
 func (s *SkillScanner) Scan() {
 	list := &SkillList{
-		ByName: make(map[string]*Skill),
-		ByPath: make(map[string]*Skill),
+		ByName: make(map[string]*filesystem.Skill),
+		ByPath: make(map[string]*filesystem.Skill),
 		Paths:  s.paths,
 	}
 
@@ -99,15 +85,12 @@ func (s *SkillScanner) scan(root string, list *SkillList) error {
 			continue
 		}
 
-		// ~/.claude/skills/
-		// └── {skill_name}/
-		//     └── SKILL.md
 		path := filepath.Join(root, dir.Name, "SKILL.md")
 		if !go_pkg_filesystem_reader.Exists(path) {
 			continue
 		}
 
-		skill, err := parser(path)
+		skill, err := filesystem.ParseSkill(path)
 		if err != nil {
 			slog.Warn("failed to parse skill",
 				slog.String("path", path),
@@ -145,37 +128,18 @@ func (s *SkillScanner) LoadFS(fsys fs.FS, dir string) {
 			continue
 		}
 
-		hash := fmt.Sprintf("%x", sha256.Sum256(data))
-		skill := &Skill{
-			Name:    entry.Name(),
-			AbsPath: skillPath,
-			Path:    fmt.Sprintf("%s/%s", dir, entry.Name()),
-			Content: string(data),
-			Body:    string(data),
-			Hash:    hash,
+		folderPath := fmt.Sprintf("%s/%s", dir, entry.Name())
+		skill := filesystem.ParseSkillBytes(skillPath, folderPath, data)
+		if skill.Name == "" {
+			skill.Name = entry.Name()
 		}
 
-		header, body, err := extractHeader(data)
-		if err == nil {
-			skill.Body = body
-			if m := nameRegex.FindSubmatch(header); m != nil {
-				skill.Name = strings.TrimSpace(string(m[1]))
-			}
-			if m := descRegex.FindSubmatch(header); m != nil {
-				skill.Description = strings.TrimSpace(string(m[1]))
-			}
-		}
-
-		// * embedded skills is lower than user-defined
 		if _, exists := s.Skills.ByName[skill.Name]; exists {
-			slog.Info("user-defined exists",
-				slog.String("name", skill.Name))
 			continue
 		}
 
 		s.Skills.ByName[skill.Name] = skill
 		s.Skills.ByPath[skill.AbsPath] = skill
-		slog.Info("embedded skill loaded", slog.String("name", skill.Name))
 	}
 }
 
@@ -190,7 +154,19 @@ func (s *SkillScanner) List() []string {
 	return names
 }
 
-func (s *SkillScanner) MatchSkillCall(input string) (*Skill, string) {
+func (s *SkillScanner) Lookup(name string) *filesystem.Skill {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.Skills == nil {
+		return nil
+	}
+	return s.Skills.ByName[name]
+}
+
+func MatchSkill(scanner *SkillScanner, input string) (*filesystem.Skill, string) {
+	if scanner == nil {
+		return nil, input
+	}
 	trimmed := strings.TrimLeft(input, " \t\r\n")
 	if !strings.HasPrefix(trimmed, "/") {
 		return nil, input
@@ -205,18 +181,12 @@ func (s *SkillScanner) MatchSkillCall(input string) (*Skill, string) {
 	if token == "" {
 		return nil, input
 	}
-
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.Skills == nil {
-		return nil, input
-	}
-	skill, ok := s.Skills.ByName[token]
-	if !ok {
+	s := scanner.Lookup(token)
+	if s == nil {
 		return nil, input
 	}
 	if tail == "" {
 		tail = trimmed
 	}
-	return skill, tail
+	return s, tail
 }

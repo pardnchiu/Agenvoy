@@ -16,8 +16,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	geminiStt "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/stt"
 	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
@@ -31,7 +31,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/session"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -76,7 +75,7 @@ func reloadDiscord() {
 		return
 	}
 	if newToken == "" {
-		slog.Info("discord enabled but token missing")
+		slog.Info("discord enabled but token missing, run `/discord enable` in TUI")
 		return
 	}
 
@@ -174,11 +173,11 @@ func cmdDaemon() {
 	defer mcpManager.Close()
 
 	registry := buildAgentRegistry()
-	scanner := skill.NewScanner()
+	scanner := runtime.NewSkillScanner()
 	selectorBot := plannerSelector(registry)
 
-	host.Set(selectorBot, registry, scanner)
-	host.SetRefresher(refreshHost)
+	agents.Set(selectorBot, registry, scanner)
+	agents.SetRefresher(refreshHost)
 
 	runtime.SetRunner(runSkill)
 	if err := runtime.NewScheduler(); err != nil {
@@ -196,10 +195,6 @@ func cmdDaemon() {
 	var server *http.Server
 
 	if selectorBot != nil {
-		slog.Info("agent registry built",
-			slog.Int("entries", len(registry.Entries)),
-			slog.String("fallback", selectorBot.Name()))
-
 		reloadDiscord()
 		reloadTelegram()
 
@@ -295,7 +290,7 @@ func watchConfig(ctx context.Context) func() {
 				if cfg, err := session.Load(); err == nil {
 					provider.SetReasoningLevel(cfg.ReasoningLevel)
 				}
-				if host.Reload() {
+				if agents.Reload() {
 					slog.Info("host reloaded from config change")
 				}
 				reloadDiscord()

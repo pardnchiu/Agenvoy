@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 )
@@ -47,6 +47,7 @@ var commands = []Command{
 	{"history", "reload visible transcript · last 100 entries from action.log"},
 	{"log", "open / view raw action.log via $PAGER (less)"},
 	{"cmd", "run / exec shell command directly in cwd · sh -c"},
+	{"allow-skill", "toggle / mark skill as always-allow · global or project scope"},
 	{"clear", "clear visible transcript / history · memory untouched"},
 	{"exit", "exit / quit TUI · daemon keeps running"},
 }
@@ -59,7 +60,7 @@ func (t TUI) refreshCmdSelector() TUI {
 	}
 
 	if t.selector == nil {
-		if scanner := host.Scanner(); scanner != nil {
+		if scanner := agents.Scanner(); scanner != nil {
 			scanner.Scan()
 		}
 	}
@@ -111,7 +112,7 @@ func getCmdSelectorItems(query string) []CmdSelectorItem {
 		}
 	}
 
-	if scanner := host.Scanner(); scanner != nil {
+	if scanner := agents.Scanner(); scanner != nil {
 		for _, name := range scanner.List() {
 			if name == "" {
 				continue

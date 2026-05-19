@@ -9,7 +9,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/skill"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
@@ -18,7 +18,7 @@ const (
 	messagesAPI = "https://api.anthropic.com/v1/messages"
 )
 
-func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
+func (a *Agent) Execute(ctx context.Context, skill *filesystem.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
 	data := exec.ExecData{
 		Agent:   a,
 		WorkDir: a.workDir,

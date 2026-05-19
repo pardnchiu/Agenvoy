@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	allowTool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/errorMemory"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/errorMemory/toolError"
@@ -95,7 +96,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		if !allowAll && !toolRegister.IsReadOnly(toolName) {
 			proceed := true
 			reason := ""
-			if runtime.HasListener(sessionData.ID) && !matchAllowList(getAllowList(ctx), toolName, toolArg) {
+			if runtime.HasListener(sessionData.ID) && !allowTool.Match(getAllowList(ctx), toolName, toolArg) {
 				reply, err := runtime.Ask(ctx, runtime.Request{
 					Kind:      runtime.KindToolConfirm,
 					SessionID: sessionData.ID,
@@ -108,7 +109,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 					proceed = reply.Approve
 					reason = reply.Reason
 					if reply.Approve && reply.Remember {
-						if err = appendAllowListRule(exec.WorkDir, toolName, toolArg); err != nil {
+						if err = allowTool.Append(exec.WorkDir, toolName, toolArg); err != nil {
 							slog.Warn("appendAllowListRule",
 								slog.String("error", err.Error()))
 						}

@@ -1,10 +1,10 @@
-package host
+package agents
 
 import (
 	"sync"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/skill"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 )
 
 type RefreshFunc func() (agentTypes.Agent, agentTypes.AgentRegistry)
@@ -13,11 +13,11 @@ var (
 	mu        sync.RWMutex
 	planner   agentTypes.Agent
 	registry  agentTypes.AgentRegistry
-	scanner   *skill.SkillScanner
+	scanner   *runtime.SkillScanner
 	refresher RefreshFunc
 )
 
-func Set(p agentTypes.Agent, r agentTypes.AgentRegistry, s *skill.SkillScanner) {
+func Set(p agentTypes.Agent, r agentTypes.AgentRegistry, s *runtime.SkillScanner) {
 	mu.Lock()
 	defer mu.Unlock()
 	planner = p
@@ -58,7 +58,7 @@ func Registry() agentTypes.AgentRegistry {
 	return registry
 }
 
-func Scanner() *skill.SkillScanner {
+func Scanner() *runtime.SkillScanner {
 	mu.RLock()
 	defer mu.RUnlock()
 	return scanner

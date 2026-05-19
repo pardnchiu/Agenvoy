@@ -124,9 +124,6 @@ func saveAttachments(ctx context.Context, b *Bot, in go_bot_telegram.Input) []st
 				slog.String("error", err.Error()))
 			continue
 		}
-		slog.Info("attachment saved",
-			slog.String("chat", chatName(in)),
-			slog.String("path", path))
 		paths = append(paths, path)
 	}
 	return paths

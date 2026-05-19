@@ -118,8 +118,8 @@ github.com/muesli/termenv v0.16.0 h1:S5AlUN9dENB57rsbnkPyfdGuWIlkmzJjbFf0Tf5FWUc
 github.com/muesli/termenv v0.16.0/go.mod h1:ZRfOIKPFDYQoDFF4Olj7/QJbW60Ol/kL1pU3VfY/Cnk=
 github.com/pardnchiu/ToriiDB v0.5.1 h1:+jEtX4L1Pb1CZMYk485f6ulkR0w6I3jvz69fzmge0Ho=
 github.com/pardnchiu/ToriiDB v0.5.1/go.mod h1:0p0IsrySqXyXvKIJswKKG1Zi6wQ2TD/LdKcKx4It/EA=
-github.com/pardnchiu/go-bot v0.3.4 h1:1Dq9PvuNn8M+RT71dw10abI+1kd3ThT/vJV8NW2Vz14=
-github.com/pardnchiu/go-bot v0.3.4/go.mod h1:OtqtjyXnlRFlh6AEgxNE6Tykqic8rUWQqmco/TAvNF4=
+github.com/pardnchiu/go-bot v0.3.5 h1:VpYKUrNFERrZPCzIn5hzk4U5QiIctQmq8w1cmkmiuo0=
+github.com/pardnchiu/go-bot v0.3.5/go.mod h1:OtqtjyXnlRFlh6AEgxNE6Tykqic8rUWQqmco/TAvNF4=
 github.com/pardnchiu/go-pkg v0.12.3 h1:AHPMuOPf+nkYt2XtINdF19vAyTp2TzCzUS8FEORygAQ=
 github.com/pardnchiu/go-pkg v0.12.3/go.mod h1:GvipswsQHxvDNaVI34pANoS+/VCD8ApUSEbadVpHSJg=
 github.com/pardnchiu/go-scheduler v1.2.0 h1:DBmFWOPjGUzQEKYHZNeLS9v9PmJrKk/VwxQeVO754Ns=

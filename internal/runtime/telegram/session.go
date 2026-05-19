@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
@@ -31,7 +31,7 @@ func getSession(chatID int64, username, content string, data exec.ExecData, over
 	oldHistory, maxHistory := sessionManager.GetHistory(histSessionID)
 	sess.Histories = oldHistory
 
-	sess.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, host.Scanner(), chatSessionID, data.AllowAll, false)
+	sess.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, agents.Scanner(), chatSessionID, data.AllowAll, false)
 	if summary := sessionManager.GetSummaryPrompt(histSessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
 		sess.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}

@@ -10,7 +10,8 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/configs"
-	"github.com/pardnchiu/agenvoy/internal/skill"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -46,7 +47,7 @@ func registSelectSkill() {
 	})
 }
 
-func ListBlock(scanner *skill.SkillScanner) string {
+func ListBlock(scanner *runtime.SkillScanner) string {
 	if scanner == nil {
 		return ""
 	}
@@ -97,7 +98,7 @@ func handle(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (str
 	return RenderReference(s), nil
 }
 
-func RenderActivation(s *skill.Skill) string {
+func RenderActivation(s *filesystem.Skill) string {
 	content := resolveSkillPaths(s)
 
 	var b strings.Builder
@@ -113,7 +114,7 @@ func RenderActivation(s *skill.Skill) string {
 // RenderReference returns the skill body without the skill_execution.md
 // preamble. Used by the `activate_skill` tool path so the LLM receives the
 // skill content as ordinary reference material rather than binding directives.
-func RenderReference(s *skill.Skill) string {
+func RenderReference(s *filesystem.Skill) string {
 	content := resolveSkillPaths(s)
 
 	var b strings.Builder
@@ -122,7 +123,7 @@ func RenderReference(s *skill.Skill) string {
 	return b.String()
 }
 
-func resolveSkillPaths(s *skill.Skill) string {
+func resolveSkillPaths(s *filesystem.Skill) string {
 	content := s.Content
 	for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
 		resolved := filepath.Join(s.Path, prefix)
@@ -133,7 +134,7 @@ func resolveSkillPaths(s *skill.Skill) string {
 	return content
 }
 
-func availableList(scanner *skill.SkillScanner, reason string) string {
+func availableList(scanner *runtime.SkillScanner, reason string) string {
 	names := scanner.List()
 	if len(names) == 0 {
 		return reason + "; no skills available on this host"

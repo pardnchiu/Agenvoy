@@ -9,20 +9,22 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
-	"runtime"
+	goRuntime "runtime"
 	"strings"
 	"time"
 
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/agents"
+	allowSkill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
+	allowTool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -84,8 +86,8 @@ func hashPayload(parts ...any) string {
 type ExecData struct {
 	Agent             agentTypes.Agent
 	WorkDir           string
-	Skill             *skill.Skill
-	SkillScanner      *skill.SkillScanner
+	Skill             *filesystem.Skill
+	SkillScanner      *runtime.SkillScanner
 	Content           string
 	SessionID         string
 	ImageInputs       []string
@@ -103,17 +105,22 @@ type (
 	parentWorkDirKey  struct{}
 )
 
-func getAllowList(ctx context.Context) []allowListRule {
-	rules, _ := ctx.Value(allowListRulesKey{}).([]allowListRule)
+func getAllowList(ctx context.Context) []allowTool.ToolRule {
+	rules, _ := ctx.Value(allowListRulesKey{}).([]allowTool.ToolRule)
 	return rules
 }
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
 	executeStart := time.Now()
+
+	if !allowAll && data.Skill != nil && strings.TrimSpace(data.Skill.Content) != "" && allowSkill.Match(data.WorkDir, data.Skill.Name) {
+		allowAll = true
+	}
+
 	ctx = context.WithValue(ctx, allowAllCtxKey{}, allowAll)
 
 	if !allowAll {
-		ctx = context.WithValue(ctx, allowListRulesKey{}, loadAllowList(data.WorkDir))
+		ctx = context.WithValue(ctx, allowListRulesKey{}, allowTool.List(data.WorkDir))
 	}
 
 	if events != nil {
@@ -193,7 +200,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 	scanner := data.SkillScanner
 	if scanner == nil {
-		scanner = host.Scanner()
+		scanner = agents.Scanner()
 	}
 
 	exec, err := tools.NewExecutor(data.WorkDir, session.ID, scanner)
@@ -377,8 +384,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	return nil
 }
 
-func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.SkillScanner, sessionID string, allowAll bool, webMode bool) string {
-	systemOS := runtime.GOOS
+func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.SkillScanner, sessionID string, allowAll bool, webMode bool) string {
+	systemOS := goRuntime.GOOS
 	// var skillPath string
 	// var skillExt string
 	// var content string
@@ -442,7 +449,7 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.Sk
 	).Replace(template)
 }
 
-func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *skill.SkillScanner, sessionID string, allowAll, webMode bool) []agentTypes.Message {
+func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *runtime.SkillScanner, sessionID string, allowAll, webMode bool) []agentTypes.Message {
 	var prompts []agentTypes.Message
 	switch {
 	case strings.HasPrefix(sessionID, "tg-"):
@@ -535,7 +542,7 @@ func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
 	}
 }
 
-func assignBindingSkill(session *agentTypes.AgentSession, s *skill.Skill) {
+func assignBindingSkill(session *agentTypes.AgentSession, s *filesystem.Skill) {
 	id := "skill-assign-" + utils.NewID("skill", s.Name)
 	argsJSON, _ := json.Marshal(map[string]string{"skill": s.Name})
 	call := agentTypes.ToolCall{

@@ -10,12 +10,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pardnchiu/go-pkg/utils"
 
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
 type Request struct {
@@ -57,7 +58,7 @@ func Send() gin.HandlerFunc {
 		go func() {
 			defer close(events)
 
-			scanner := host.Scanner()
+			scanner := agents.Scanner()
 			if scanner != nil {
 				scanner.Scan()
 			}
@@ -68,10 +69,10 @@ func Send() gin.HandlerFunc {
 				trimContent = strings.TrimSpace(externalEffective)
 			}
 
-			var matchedSkill *skill.Skill
+			var matchedSkill *filesystem.Skill
 			var skillResult agentTypes.Event
 			if externalAgent == "" && scanner != nil {
-				if m, effective := scanner.MatchSkillCall(trimContent); m != nil {
+				if m, effective := runtime.MatchSkill(scanner, trimContent); m != nil {
 					matchedSkill = m
 					trimContent = strings.TrimSpace(effective)
 					skillResult = agentTypes.Event{Type: agentTypes.EventSkillResult, Text: strings.TrimSpace(m.Name)}
@@ -88,14 +89,14 @@ func Send() gin.HandlerFunc {
 			if externalAgent != "" {
 				agentResult = agentTypes.Event{Type: agentTypes.EventAgentResult, Text: "external:" + externalAgent}
 			} else {
-				registry := host.Registry()
+				registry := agents.Registry()
 				if req.Model != "" {
 					if a, ok := registry.Registry[req.Model]; ok {
 						agent = a
 					}
 				}
 				if agent == nil {
-					agent = exec.SelectAgent(ctx, host.Planner(), registry, trimContent, false, sessionID)
+					agent = exec.SelectAgent(ctx, agents.Planner(), registry, trimContent, false, sessionID)
 				}
 				agentResult = agentTypes.Event{Type: agentTypes.EventAgentResult, Text: agent.Name()}
 			}
@@ -153,7 +154,7 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 
 	scanner := data.SkillScanner
 	if scanner == nil {
-		scanner = host.Scanner()
+		scanner = agents.Scanner()
 	}
 	session.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, scanner, sessionID, data.AllowAll, false)
 

@@ -69,9 +69,6 @@ func saveAttachments(ctx context.Context, b *Bot, in go_bot_discord.Input) []str
 				slog.String("error", err.Error()))
 			continue
 		}
-		slog.Info("attachment saved",
-			slog.String("channel", channelName(in)),
-			slog.String("path", path))
 		paths = append(paths, path)
 	}
 	return paths

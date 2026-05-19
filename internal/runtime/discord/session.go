@@ -7,8 +7,8 @@ import (
 
 	go_bot_discord "github.com/pardnchiu/go-bot/discord"
 
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
@@ -28,7 +28,7 @@ func getSession(in go_bot_discord.Input, content string, data exec.ExecData) (*a
 	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 	sess.Histories = oldHistory
 
-	sess.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, host.Scanner(), sessionID, data.AllowAll, false)
+	sess.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, agents.Scanner(), sessionID, data.AllowAll, false)
 	if summary := sessionManager.GetSummaryPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
 		sess.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}

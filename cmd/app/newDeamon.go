@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -45,10 +44,6 @@ func newDaemon() error {
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		if r, err := runtime.Read(); err == nil && r != nil && runtime.IsAlive(r.PID) {
-			slog.Info("daemon started",
-				slog.Int("pid", r.PID),
-				slog.String("uid", r.UID),
-				slog.String("log", logPath))
 			return nil
 		}
 		time.Sleep(100 * time.Millisecond)

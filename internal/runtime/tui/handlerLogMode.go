@@ -153,6 +153,10 @@ func drainNew(path string, lastSize int64) int64 {
 			foreign: true,
 		})
 	}
+	if err := scanner.Err(); err != nil {
+		slog.Warn("scanner error in drainNew",
+			slog.String("error", err.Error()))
+	}
 	return current
 }
 

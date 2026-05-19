@@ -21,7 +21,7 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
@@ -71,7 +71,7 @@ func buildContent(content string, imageInputs []string, fileInputs []string) any
 func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	scanner := execData.SkillScanner
 	if scanner == nil {
-		scanner = host.Scanner()
+		scanner = agents.Scanner()
 	}
 	trimInput := strings.TrimSpace(execData.Content)
 	session := agentTypes.AgentSession{

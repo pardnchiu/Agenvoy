@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	geminiStt "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/stt"
 	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
@@ -20,7 +20,6 @@ import (
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/tui"
 	"github.com/pardnchiu/agenvoy/internal/session"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 )
@@ -53,8 +52,6 @@ func newTUI() {
 			slog.Warn("daemon launch failed; running TUI without server",
 				slog.String("error", err.Error()))
 		}
-	} else {
-		slog.Info("daemon already running, attaching TUI")
 	}
 
 	if err := go_pkg_sandbox.CheckDependence(); err != nil {
@@ -71,11 +68,11 @@ func newTUI() {
 	defer mcpManager.Close()
 
 	registry := buildAgentRegistry()
-	scanner := skill.NewScanner()
+	scanner := runtime.NewSkillScanner()
 	selectorBot := plannerSelector(registry)
 
-	host.Set(selectorBot, registry, scanner)
-	host.SetRefresher(refreshHost)
+	agents.Set(selectorBot, registry, scanner)
+	agents.SetRefresher(refreshHost)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

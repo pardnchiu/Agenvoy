@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
@@ -39,7 +39,7 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 	ch := make(chan agentTypes.Event, 16)
 	done := make(chan error, 1)
 
-	scanner := host.Scanner()
+	scanner := agents.Scanner()
 	if scanner != nil {
 		scanner.Scan()
 	}
@@ -47,8 +47,8 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 	go func() {
 		err := exec.Run(
 			ctx,
-			host.Planner(),
-			host.Registry(),
+			agents.Planner(),
+			agents.Registry(),
 			scanner,
 			input,
 			nil,
