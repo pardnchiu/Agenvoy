@@ -292,38 +292,40 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	if replyMsg != nil {
 		replyToID = replyMsg.ID
 	}
-	sendStatus := func(text string) {
-		wrapped := fmt.Sprintf("<blockquote expandable>%s</blockquote>", html.EscapeString(text))
-		if err := b.client.SendStatus(ctx, in.ChatID, replyToID, wrapped,
-			go_bot_telegram.WithStatusEmoji("⚡"),
-			go_bot_telegram.WithStatusSendType(go_bot_telegram.TypeHTML),
-		); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendStatus",
-				slog.String("text", text),
-				slog.String("chat", chatName(in)),
-				slog.Int("replyTo", replyToID),
-				slog.String("error", err.Error()))
-		}
-	}
-	sendFailure := func(label, detail, errMsg string) {
-		body := fmt.Sprintf("<code>%s</code>", html.EscapeString(errMsg))
-		if detail != "" {
-			body = fmt.Sprintf("<code>%s</code>: %s", html.EscapeString(detail), body)
-		}
-		text := fmt.Sprintf("⚠️ %s failed\n%s", label, body)
-		if _, err := b.client.Send(ctx, in.ChatID, replyToID, text, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.Send (notify)",
-				slog.String("label", label),
-				slog.String("error", err.Error()))
-		}
-	}
-	sendStatus("sending…")
 
 	if len(photoPaths) > 0 || len(docPaths) > 0 {
-		sendAttachments(ctx, in.ChatID, chatName(in), replyToID, photoPaths, docPaths)
+		bgCtx := context.WithoutCancel(ctx)
+		chat := chatName(in)
+		go sendAttachments(bgCtx, in.ChatID, chat, replyToID, photoPaths, docPaths)
 	}
 
 	if len(voiceTexts) > 0 {
+		sendStatus := func(text string) {
+			wrapped := fmt.Sprintf("<blockquote expandable>%s</blockquote>", html.EscapeString(text))
+			if err := b.client.SendStatus(ctx, in.ChatID, replyToID, wrapped,
+				go_bot_telegram.WithStatusEmoji("⚡"),
+				go_bot_telegram.WithStatusSendType(go_bot_telegram.TypeHTML),
+			); err != nil {
+				slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendStatus",
+					slog.String("text", text),
+					slog.String("chat", chatName(in)),
+					slog.Int("replyTo", replyToID),
+					slog.String("error", err.Error()))
+			}
+		}
+		sendFailure := func(label, detail, errMsg string) {
+			body := fmt.Sprintf("<code>%s</code>", html.EscapeString(errMsg))
+			if detail != "" {
+				body = fmt.Sprintf("<code>%s</code>: %s", html.EscapeString(detail), body)
+			}
+			text := fmt.Sprintf("⚠️ %s failed\n%s", label, body)
+			if _, err := b.client.Send(ctx, in.ChatID, replyToID, text, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
+				slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.Send (notify)",
+					slog.String("label", label),
+					slog.String("error", err.Error()))
+			}
+		}
+		sendStatus("sending…")
 		apiKey := strings.TrimSpace(keychain.Get("GEMINI_API_KEY"))
 		if apiKey == "" {
 			slog.Warn("keychain.Get GEMINI_API_KEY missing",
@@ -338,12 +340,11 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 				}
 			}
 		}
-	}
-
-	if err := b.client.FinishStatus(ctx, in.ChatID); err != nil {
-		slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.FinishStatus",
-			slog.String("chat", chatName(in)),
-			slog.String("error", err.Error()))
+		if err := b.client.FinishStatus(ctx, in.ChatID); err != nil {
+			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.FinishStatus",
+				slog.String("chat", chatName(in)),
+				slog.String("error", err.Error()))
+		}
 	}
 
 	return nil

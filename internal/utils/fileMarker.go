@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"os"
 	"regexp"
 	"strings"
 )
@@ -12,13 +13,14 @@ var (
 
 func ExtractFileMarkers(text string) (cleanText string, paths []string) {
 	seen := map[string]bool{}
+	var raw []string
 	collect := func(path string) {
 		path = strings.TrimSpace(path)
 		if path == "" || seen[path] {
 			return
 		}
 		seen[path] = true
-		paths = append(paths, path)
+		raw = append(raw, path)
 	}
 
 	for _, m := range fileMarkerRegex.FindAllStringSubmatch(text, -1) {
@@ -30,6 +32,14 @@ func ExtractFileMarkers(text string) (cleanText string, paths []string) {
 		collect(m[1])
 	}
 	text = fileLineRegex.ReplaceAllString(text, "")
+
+	for _, p := range raw {
+		info, err := os.Stat(p)
+		if err != nil || info.IsDir() {
+			continue
+		}
+		paths = append(paths, p)
+	}
 
 	cleanText = strings.TrimSpace(text)
 	return

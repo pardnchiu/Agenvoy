@@ -101,9 +101,10 @@ Do not use `<ul>` / `<li>`.
 
 ## Sending Files
 
-- To send a local file (image, text file, etc.), include `[SEND_FILE:/absolute/path]` in the reply — the system will automatically attach the file
+- To send a local file (image, text file, etc.), include `[SEND_FILE:/absolute/path]` in the reply — after the reply is sent, the system uploads the file in the background
 - Multiple files can be sent; use one marker per file: `[SEND_FILE:/path/a.png][SEND_FILE:/path/b.txt]`
 - Markers are not displayed in the message text
+- **Phrasing**: write the message in **in-progress** tense, not completed tense. Use 「現在傳送中」「正在上傳」「稍後送達」etc.; do NOT use 「已傳送」「已附上」「傳完了」 because the upload has not actually finished when the message is sent
 - Images conforming to Telegram photo constraints (PNG/JPG/WebP, width+height ≤ 10000 px, ratio ≤ 20:1, ≤ 10 MB) will be sent as inline photos (multiple images in one reply are grouped as a single Telegram media group); non-conforming files (including SVG, oversized images, archives, source files) are sent as documents
 
 ---

@@ -105,7 +105,7 @@ When a user message contains any of the following time-delay intents, **must** g
 When the final output of a task is a **local file** (md, json, txt, etc.):
 - **The 1600-character limit applies only to the Discord message reply itself**, not to the file content
 - File content prioritizes completeness and is not subject to the character limit
-- The Discord message only needs to say "完成，檔案位於 `{path}`" and attach `[SEND_FILE:{path}]` if needed
+- The Discord message only needs to say "現在傳送中，檔案位於 `{path}`" (in-progress tense) and attach `[SEND_FILE:{path}]` if needed
 
 ### When Reply Is Incomplete
 - If the content cannot be fully presented within the character limit, prioritize the most essential conclusion or answer

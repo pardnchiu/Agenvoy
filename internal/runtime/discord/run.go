@@ -269,31 +269,34 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	if replyMsg != nil {
 		replyToID = replyMsg.ID
 	}
-	sendFailure := func(label, detail, errMsg string) {
-		text := fmt.Sprintf("-# ⎿ ⚠️ %s failed", label)
-		if detail != "" {
-			text = fmt.Sprintf("%s: `%s`", text, detail)
-		}
-		text = fmt.Sprintf("%s\n-# ⎿ `%s`", text, errMsg)
-		if _, err := b.client.Send(ctx, in.ChannelID, replyToID, text); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.Send (notify)",
-				slog.String("label", label),
-				slog.String("error", err.Error()))
-		}
-	}
-
-	if err := b.client.SendStatus(ctx, in.ChannelID, replyToID, "sending…",
-		go_bot_discord.WithStatusEmoji("⚡")); err != nil {
-		slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.SendStatus",
-			slog.String("channel", channelName(in)),
-			slog.String("error", err.Error()))
-	}
 
 	if len(attachmentPaths) > 0 {
-		sendAttachments(ctx, b.client, in.ChannelID, channelName(in), replyToID, attachmentPaths)
+		bgCtx := context.WithoutCancel(ctx)
+		channel := channelName(in)
+		client := b.client
+		paths := attachmentPaths
+		go sendAttachments(bgCtx, client, in.ChannelID, channel, replyToID, paths)
 	}
 
 	if len(voiceTexts) > 0 {
+		sendFailure := func(label, detail, errMsg string) {
+			text := fmt.Sprintf("-# ⎿ ⚠️ %s failed", label)
+			if detail != "" {
+				text = fmt.Sprintf("%s: `%s`", text, detail)
+			}
+			text = fmt.Sprintf("%s\n-# ⎿ `%s`", text, errMsg)
+			if _, err := b.client.Send(ctx, in.ChannelID, replyToID, text); err != nil {
+				slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.Send (notify)",
+					slog.String("label", label),
+					slog.String("error", err.Error()))
+			}
+		}
+		if err := b.client.SendStatus(ctx, in.ChannelID, replyToID, "sending…",
+			go_bot_discord.WithStatusEmoji("⚡")); err != nil {
+			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.SendStatus",
+				slog.String("channel", channelName(in)),
+				slog.String("error", err.Error()))
+		}
 		apiKey := strings.TrimSpace(keychain.Get("GEMINI_API_KEY"))
 		if apiKey == "" {
 			slog.Warn("keychain.Get GEMINI_API_KEY missing",
@@ -308,12 +311,11 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 				}
 			}
 		}
-	}
-
-	if err := b.client.FinishStatus(ctx, in.ChannelID); err != nil {
-		slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.FinishStatus",
-			slog.String("channel", channelName(in)),
-			slog.String("error", err.Error()))
+		if err := b.client.FinishStatus(ctx, in.ChannelID); err != nil {
+			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.FinishStatus",
+				slog.String("channel", channelName(in)),
+				slog.String("error", err.Error()))
+		}
 	}
 
 	return nil
