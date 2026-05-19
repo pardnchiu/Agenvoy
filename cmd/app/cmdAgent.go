@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
@@ -44,7 +44,7 @@ func cmdAgent(allowAll bool) {
 		selectorBot = registry.Fallback
 	}
 
-	host.Set(selectorBot, registry, scanner)
+	agents.Set(selectorBot, registry, scanner)
 
 	go cli.NewPending(ctx)
 

@@ -16,8 +16,8 @@ import (
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	geminiStt "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/stt"
 	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
@@ -247,7 +247,7 @@ func setSummaryCron() {
 				continue
 			}
 			bgCtx := context.Background()
-			summaryAgent := exec.SelectAgent(bgCtx, host.Planner(), host.Registry(), "[summary] background summary cron", false, sid)
+			summaryAgent := exec.SelectAgent(bgCtx, agents.Planner(), agents.Registry(), "[summary] background summary cron", false, sid)
 			summary.Generate(bgCtx, summaryAgent, sid, summaryHistories)
 		}
 	}

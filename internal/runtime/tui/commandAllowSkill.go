@@ -6,8 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	allowSkill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
@@ -45,7 +45,7 @@ func (t TUI) commandAllowSkill(parts []string) (TUI, tea.Cmd, bool) {
 }
 
 func (t TUI) openAllowSkillPickerPopup(scope string) (TUI, tea.Cmd) {
-	scanner := host.Scanner()
+	scanner := agents.Scanner()
 	if scanner == nil {
 		return t, tea.Println(errorStyle.Render("[!] skill scanner unavailable") + "\n")
 	}

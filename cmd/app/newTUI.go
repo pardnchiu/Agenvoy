@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	geminiStt "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/stt"
 	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
@@ -71,8 +71,8 @@ func newTUI() {
 	scanner := runtime.NewSkillScanner()
 	selectorBot := plannerSelector(registry)
 
-	host.Set(selectorBot, registry, scanner)
-	host.SetRefresher(refreshHost)
+	agents.Set(selectorBot, registry, scanner)
+	agents.SetRefresher(refreshHost)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

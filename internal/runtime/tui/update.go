@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
 )
@@ -317,7 +317,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ModelRemove:
 		next, cmd := t.runModelRemove(msg.name)
-		host.Reload()
+		agents.Reload()
 		return next, cmd
 
 	case BotNameSubmit:
@@ -357,7 +357,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] add-model: %v", msg.err))+"\n"))
 		} else {
-			host.Reload()
+			agents.Reload()
 			seq = append(seq, tea.Println(hintStyle.Render("⎯ model added · registry reloaded")+"\n"))
 		}
 		return t, tea.Sequence(seq...)
@@ -506,7 +506,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PlannerSelect:
 		next, cmd := t.runPlannerSelect(msg.name)
-		host.Reload()
+		agents.Reload()
 		return next, cmd
 
 	case ReasoningSelect:

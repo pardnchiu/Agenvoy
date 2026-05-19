@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 )
@@ -60,7 +60,7 @@ func (t TUI) refreshCmdSelector() TUI {
 	}
 
 	if t.selector == nil {
-		if scanner := host.Scanner(); scanner != nil {
+		if scanner := agents.Scanner(); scanner != nil {
 			scanner.Scan()
 		}
 	}
@@ -112,7 +112,7 @@ func getCmdSelectorItems(query string) []CmdSelectorItem {
 		}
 	}
 
-	if scanner := host.Scanner(); scanner != nil {
+	if scanner := agents.Scanner(); scanner != nil {
 		for _, name := range scanner.List() {
 			if name == "" {
 				continue

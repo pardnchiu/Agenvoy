@@ -16,10 +16,10 @@ import (
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	allowSkill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
 	allowTool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
@@ -200,7 +200,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 	scanner := data.SkillScanner
 	if scanner == nil {
-		scanner = host.Scanner()
+		scanner = agents.Scanner()
 	}
 
 	exec, err := tools.NewExecutor(data.WorkDir, session.ID, scanner)

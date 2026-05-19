@@ -11,9 +11,9 @@ import (
 	go_bot_discord "github.com/pardnchiu/go-bot/discord"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
@@ -146,7 +146,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		return fmt.Errorf("os.UserHomeDir: %w", err)
 	}
 
-	scanner := host.Scanner()
+	scanner := agents.Scanner()
 	if scanner != nil {
 		scanner.Scan()
 	}
@@ -166,7 +166,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 
 	var agent agentTypes.Agent
 	if externalAgent == "" {
-		agent = exec.SelectAgent(ctx, host.Planner(), host.Registry(), content, matchedSkill != nil, "")
+		agent = exec.SelectAgent(ctx, agents.Planner(), agents.Registry(), content, matchedSkill != nil, "")
 	}
 
 	execData := exec.ExecData{

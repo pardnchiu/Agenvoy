@@ -12,7 +12,7 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
-	"github.com/pardnchiu/agenvoy/internal/agents/host"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
@@ -28,8 +28,8 @@ var SubagentTimeoutMin = max(defaultSubagentTimeoutMin,
 		go_pkg_utils.GetWithDefaultInt("MAX_SUBAGENT_TIMEOUT_MIN", defaultSubagentTimeoutMin)))
 
 func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPrompt string, excludedTools []string) (string, error) {
-	registry := host.Registry()
-	planner := host.Planner()
+	registry := agents.Registry()
+	planner := agents.Planner()
 	if planner == nil || len(registry.Registry) == 0 {
 		return "", fmt.Errorf("subagent host not initialized")
 	}
@@ -90,7 +90,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 
 	session := &agentTypes.AgentSession{
 		ID:            sessionID,
-		SystemPrompts: BuildSystemPrompts(execData.WorkDir, execData.ExtraSystemPrompt, host.Scanner(), sessionID, execData.AllowAll, false),
+		SystemPrompts: BuildSystemPrompts(execData.WorkDir, execData.ExtraSystemPrompt, agents.Scanner(), sessionID, execData.AllowAll, false),
 		OldHistories:  maxHistory,
 		ToolHistories: []agentTypes.Message{},
 		Tools:         []agentTypes.Message{},
