@@ -16,6 +16,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
+	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/tui"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
@@ -41,6 +43,8 @@ func newTUI() {
 	codexImage2.Register()
 	geminiYoutube.Register()
 	geminiStt.Register()
+	telegramTool.Register()
+	discordTool.Register()
 
 	modelCheck()
 

@@ -27,7 +27,9 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/routes"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
+	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
+	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
@@ -144,6 +146,8 @@ func cmdDaemon() {
 	codexImage2.Register()
 	geminiYoutube.Register()
 	geminiStt.Register()
+	telegramTool.Register()
+	discordTool.Register()
 
 	if _, err := runtime.Init(); err != nil {
 		if errors.Is(err, runtime.ErrAlreadyRunning) {

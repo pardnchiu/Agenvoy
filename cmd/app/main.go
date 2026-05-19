@@ -28,7 +28,9 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/cli"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
+	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
+	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
@@ -124,6 +126,8 @@ func initCLI() {
 	codexImage2.Register()
 	geminiYoutube.Register()
 	geminiStt.Register()
+	telegramTool.Register()
+	discordTool.Register()
 }
 
 func modelCheck() {
