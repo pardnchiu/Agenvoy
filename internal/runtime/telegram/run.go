@@ -16,8 +16,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -187,9 +187,9 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		content = strings.TrimSpace(externalEffective)
 	}
 
-	var matchedSkill *skill.Skill
+	var matchedSkill *filesystem.Skill
 	if externalAgent == "" && scanner != nil {
-		if m, effective := scanner.MatchSkillCall(content); m != nil {
+		if m, effective := runtime.MatchSkill(scanner, content); m != nil {
 			matchedSkill = m
 			content = strings.TrimSpace(effective)
 		}

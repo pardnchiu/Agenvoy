@@ -8,11 +8,12 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
-func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *skill.SkillScanner, userInput string, imageInputs []string, fileInputs []string, events chan<- agentTypes.Event, allowAll bool, workDir, sessionID string, webMode bool) error {
+func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *runtime.SkillScanner, userInput string, imageInputs []string, fileInputs []string, events chan<- agentTypes.Event, allowAll bool, workDir, sessionID string, webMode bool) error {
 	if strings.TrimSpace(workDir) == "" {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -39,10 +40,10 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		trimInput = strings.TrimSpace(externalEffective)
 	}
 
-	var matchedSkill *skill.Skill
+	var matchedSkill *filesystem.Skill
 	var skillResult agentTypes.Event
 	if externalAgent == "" && scanner != nil {
-		if m, effective := scanner.MatchSkillCall(trimInput); m != nil {
+		if m, effective := runtime.MatchSkill(scanner, trimInput); m != nil {
 			matchedSkill = m
 			trimInput = strings.TrimSpace(effective)
 			skillResult = agentTypes.Event{Type: agentTypes.EventSkillResult, Text: strings.TrimSpace(m.Name)}

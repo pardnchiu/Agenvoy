@@ -13,7 +13,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/cli"
 	"github.com/pardnchiu/agenvoy/internal/session"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
 func cmdAgent(allowAll bool) {
@@ -34,7 +33,7 @@ func cmdAgent(allowAll bool) {
 
 	registry := buildAgentRegistry()
 	ctx, cancel := context.WithCancel(context.Background())
-	scanner := skill.NewScanner()
+	scanner := runtime.NewSkillScanner()
 	defer cancel()
 
 	var selectorBot agentTypes.Agent

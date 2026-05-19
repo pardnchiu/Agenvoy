@@ -14,8 +14,9 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 )
 
 type Request struct {
@@ -68,10 +69,10 @@ func Send() gin.HandlerFunc {
 				trimContent = strings.TrimSpace(externalEffective)
 			}
 
-			var matchedSkill *skill.Skill
+			var matchedSkill *filesystem.Skill
 			var skillResult agentTypes.Event
 			if externalAgent == "" && scanner != nil {
-				if m, effective := scanner.MatchSkillCall(trimContent); m != nil {
+				if m, effective := runtime.MatchSkill(scanner, trimContent); m != nil {
 					matchedSkill = m
 					trimContent = strings.TrimSpace(effective)
 					skillResult = agentTypes.Event{Type: agentTypes.EventSkillResult, Text: strings.TrimSpace(m.Name)}

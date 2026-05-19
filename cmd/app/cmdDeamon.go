@@ -31,7 +31,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/session"
-	"github.com/pardnchiu/agenvoy/internal/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -174,7 +173,7 @@ func cmdDaemon() {
 	defer mcpManager.Close()
 
 	registry := buildAgentRegistry()
-	scanner := skill.NewScanner()
+	scanner := runtime.NewSkillScanner()
 	selectorBot := plannerSelector(registry)
 
 	host.Set(selectorBot, registry, scanner)

@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	allowSkill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
 	"github.com/pardnchiu/agenvoy/internal/agents/host"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -57,9 +58,9 @@ func (t TUI) openAllowSkillPickerPopup(scope string) (TUI, tea.Cmd) {
 	var current map[string]bool
 	switch scope {
 	case "global":
-		current = filesystem.LoadAllowSkillGlobal()
+		current = allowSkill.LoadGlobal()
 	case "project":
-		current = filesystem.LoadAllowSkillEffective(t.cwd)
+		current = allowSkill.LoadEffective(t.cwd)
 	default:
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] unknown scope: %s", scope)) + "\n")
 	}
@@ -99,10 +100,10 @@ func (t TUI) runAllowSkillToggle(scope, name string) (TUI, tea.Cmd) {
 	var pathLabel string
 	switch scope {
 	case "global":
-		added, err = filesystem.ToggleAllowSkillGlobal(name)
+		added, err = allowSkill.ToggleGlobal(name)
 		pathLabel = filesystem.AllowSkillGlobalPath()
 	case "project":
-		added, err = filesystem.ToggleAllowSkillProject(t.cwd, name)
+		added, err = allowSkill.ToggleProject(t.cwd, name)
 		pathLabel = filesystem.AllowSkillProjectPath(t.cwd)
 	default:
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] unknown scope: %s", scope)) + "\n")
