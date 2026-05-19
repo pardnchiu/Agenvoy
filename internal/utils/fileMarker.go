@@ -1,4 +1,4 @@
-package discord
+package utils
 
 import (
 	"regexp"
@@ -10,7 +10,7 @@ var (
 	fileLineRegex   = regexp.MustCompile(`(?m)^FILE:\s+(\S+)\s*$`)
 )
 
-func extractFileMarkers(text string) (cleanText string, paths []string) {
+func ExtractFileMarkers(text string) (cleanText string, paths []string) {
 	seen := map[string]bool{}
 	collect := func(path string) {
 		path = strings.TrimSpace(path)
