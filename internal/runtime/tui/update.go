@@ -307,6 +307,14 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return t, nil
 
+	case AllowSkillScopeSelect:
+		next, cmd := t.openAllowSkillPickerPopup(msg.scope)
+		return next, cmd
+
+	case AllowSkillPick:
+		next, cmd := t.runAllowSkillToggle(msg.scope, msg.name)
+		return next, cmd
+
 	case ModelRemove:
 		next, cmd := t.runModelRemove(msg.name)
 		host.Reload()

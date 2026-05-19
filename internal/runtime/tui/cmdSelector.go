@@ -47,6 +47,7 @@ var commands = []Command{
 	{"history", "reload visible transcript · last 100 entries from action.log"},
 	{"log", "open / view raw action.log via $PAGER (less)"},
 	{"cmd", "run / exec shell command directly in cwd · sh -c"},
+	{"allow-skill", "toggle / mark skill as always-allow · global or project scope"},
 	{"clear", "clear visible transcript / history · memory untouched"},
 	{"exit", "exit / quit TUI · daemon keeps running"},
 }

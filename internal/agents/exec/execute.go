@@ -110,6 +110,11 @@ func getAllowList(ctx context.Context) []allowListRule {
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
 	executeStart := time.Now()
+
+	if !allowAll && data.Skill != nil && strings.TrimSpace(data.Skill.Content) != "" && filesystem.IsSkillAllowed(data.WorkDir, data.Skill.Name) {
+		allowAll = true
+	}
+
 	ctx = context.WithValue(ctx, allowAllCtxKey{}, allowAll)
 
 	if !allowAll {
