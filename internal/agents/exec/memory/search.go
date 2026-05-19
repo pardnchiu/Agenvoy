@@ -1,4 +1,4 @@
-package errorMemory
+package memory
 
 import (
 	"context"
@@ -9,7 +9,8 @@ import (
 	"strings"
 
 	toriidb "github.com/pardnchiu/ToriiDB/core/store"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
+
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 )
 
 func Search(ctx context.Context, tool, keyword string, limit int) string {
@@ -56,7 +57,7 @@ func vectorSearch(ctx context.Context, db *toriidb.Session, pattern, keyword str
 			continue
 		}
 		if err := db.Expire(key, ttlSeconds); err != nil {
-			slog.Warn("errorMemory.Expire",
+			slog.Warn("memory.Expire",
 				slog.String("key", key),
 				slog.String("error", err.Error()))
 		}
@@ -116,7 +117,7 @@ func scanWithFilter(db *toriidb.Session, pattern string, match func(Record) bool
 			continue
 		}
 		if err := db.Expire(keys[i], ttlSeconds); err != nil {
-			slog.Warn("errorMemory.Expire",
+			slog.Warn("memory.Expire",
 				slog.String("key", keys[i]),
 				slog.String("error", err.Error()))
 		}

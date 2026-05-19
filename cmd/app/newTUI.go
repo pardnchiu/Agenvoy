@@ -8,13 +8,15 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	geminiStt "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/stt"
 	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
 	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
@@ -25,6 +27,8 @@ import (
 )
 
 func newTUI() {
+	lipgloss.SetHasDarkBackground(true)
+
 	session.SetHash(session.Hash())
 
 	if err := filesystem.Init(); err != nil {

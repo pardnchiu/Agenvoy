@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 )
 
 //go:embed embed/skipped.md

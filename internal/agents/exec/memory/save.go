@@ -1,4 +1,4 @@
-package errorMemory
+package memory
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/torii"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 )
 
 const ttlSeconds int64 = 90 * 24 * 3600

@@ -5,6 +5,7 @@ import "path/filepath"
 const (
 	AllowSkillRelPath  = ".agenvoy/allow_skill"
 	AllowSkillFileName = "allow_skill"
+	AllowToolRelPath   = ".agenvoy/allow_list"
 )
 
 func AllowSkillProjectPath(workDir string) string {
@@ -17,4 +18,8 @@ func AllowSkillProjectDir(workDir string) string {
 
 func AllowSkillGlobalPath() string {
 	return filepath.Join(AgenvoyDir, AllowSkillFileName)
+}
+
+func AllowToolPath(workDir string) string {
+	return filepath.Join(workDir, AllowToolRelPath)
 }

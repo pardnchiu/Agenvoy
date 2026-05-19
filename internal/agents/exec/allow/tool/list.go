@@ -20,7 +20,7 @@ func List(workDir string) []ToolRule {
 	if strings.TrimSpace(workDir) == "" {
 		return nil
 	}
-	path := filesystem.AllowListPath(workDir)
+	path := filesystem.AllowToolPath(workDir)
 	if !go_pkg_filesystem_reader.Exists(path) {
 		return nil
 	}

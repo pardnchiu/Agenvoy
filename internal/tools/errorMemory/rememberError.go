@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/errorMemory"
+	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -98,7 +98,7 @@ Call after resolving or abandoning the error.`,
 			if outcome == "" {
 				return "", fmt.Errorf("outcome is required")
 			}
-			return errorMemory.Save(e.SessionID, errorMemory.Record{
+			return memory.Save(e.SessionID, memory.Record{
 				ToolName: toolName,
 				Keywords: keywords,
 				Symptom:  symptom,

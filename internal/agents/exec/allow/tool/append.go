@@ -2,6 +2,7 @@ package allowTool
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -23,10 +24,10 @@ func Append(workDir, toolName, toolArgs string) error {
 	} else {
 		entry = toolName + "(" + escapeGlob(canonical) + ")"
 	}
-	if err := go_pkg_filesystem.CheckDir(filesystem.AllowListDir(workDir), true); err != nil {
+	path := filesystem.AllowToolPath(workDir)
+	if err := go_pkg_filesystem.CheckDir(filepath.Dir(path), true); err != nil {
 		return fmt.Errorf("CheckDir: %w", err)
 	}
-	path := filesystem.AllowListPath(workDir)
 	if go_pkg_filesystem_reader.Exists(path) {
 		text, err := go_pkg_filesystem.ReadText(path)
 		if err == nil {

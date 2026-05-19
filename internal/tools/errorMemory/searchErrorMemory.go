@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/errorMemory"
+	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -52,7 +52,7 @@ Call first when a tool behaves unexpectedly.`,
 			}
 
 			limit := max(1, min(params.Limit, 16))
-			return errorMemory.Search(ctx, "", keyword, limit), nil
+			return memory.Search(ctx, "", keyword, limit), nil
 		},
 	})
 }
