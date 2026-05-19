@@ -37,7 +37,8 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	}
 
 	content := strings.TrimSpace(in.Text)
-	if content == "" {
+	hasAttachment := len(in.Attachments) > 0
+	if content == "" && !hasAttachment {
 		return nil
 	}
 
@@ -59,7 +60,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		content = strings.ReplaceAll(content, fmt.Sprintf("<@%s>", botID), "")
 		content = strings.ReplaceAll(content, fmt.Sprintf("<@!%s>", botID), "")
 		content = strings.TrimSpace(content)
-		if content == "" {
+		if content == "" && !hasAttachment {
 			return nil
 		}
 	}
@@ -118,6 +119,25 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 			promptID = prompt.ID
 		}
 		pending.Set(in.ChannelID, code, promptID)
+		return nil
+	}
+
+	if hasAttachment {
+		paths := saveAttachments(ctx, b, in)
+		if len(paths) > 0 {
+			var lines []string
+			if content != "" {
+				lines = append(lines, content)
+			}
+			lines = append(lines, "[Discord attachments]")
+			for _, p := range paths {
+				lines = append(lines, "- "+p)
+			}
+			content = strings.Join(lines, "\n")
+		}
+	}
+
+	if content == "" {
 		return nil
 	}
 
@@ -208,7 +228,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		return fmt.Errorf("no reply")
 	}
 
-	cleanText, attachmentPaths := extractFileMarkers(replyText)
+	cleanText, attachmentPaths := utils.ExtractFileMarkers(replyText)
 	replyText = cleanText
 
 	var voiceTexts []string

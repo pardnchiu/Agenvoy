@@ -113,3 +113,29 @@ func LookupChatName(path, target string) string {
 	}
 	return ""
 }
+
+type ChatEntry struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func ListChats(path string) []ChatEntry {
+	if !go_pkg_filesystem_reader.Exists(path) {
+		return nil
+	}
+	text, err := go_pkg_filesystem.ReadText(path)
+	if err != nil {
+		return nil
+	}
+	seen := make(map[string]bool)
+	var out []ChatEntry
+	for line := range strings.SplitSeq(text, "\n") {
+		id := ParseChatID(line)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		out = append(out, ChatEntry{ID: id, Name: ParseChatName(line)})
+	}
+	return out
+}

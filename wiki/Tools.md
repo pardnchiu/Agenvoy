@@ -25,7 +25,8 @@
 | `search_web` | | DuckDuckGo lite endpoint, package-level rate limit (2 s gap) |
 | `fetch_google_rss` | ✓ | Google News RSS |
 | `fetch_yahoo_finance` | ✓ | Stock and financial data |
-| `fetch_youtube_transcript` | ✓ | YouTube subtitle fetch |
+| `fetch_youtube_transcript` | ✓ | YouTube subtitle fetch (Gemini-backed) |
+| `transcribe_media` | ✓ | Local audio / video transcription via Gemini `inline_data` (ogg, mp3, wav, m4a, flac, aac, mp4, mov, webm, mpeg, 3gp); 20 MiB / request cap aligned with Telegram `Bot.Save` |
 | `send_http_request` | ✓ | Raw HTTP request, returns status + headers + body |
 | `calculator` | ✓ | Math expression evaluator |
 

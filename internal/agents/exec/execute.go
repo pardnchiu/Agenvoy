@@ -437,6 +437,7 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *skill.Sk
 		"{{.PermissionMode}}", buildPermissionModeSection(allowAll),
 		"{{.AvailableSkills}}", skillsSection,
 		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
+		"{{.CrossChannelSending}}", buildCrossChannelPrompt(),
 		"{{.ExtraSystemPrompt}}", extraSection,
 	).Replace(template)
 }
@@ -555,6 +556,28 @@ func assignBindingSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 			ToolCallID: id,
 		},
 	)
+}
+
+func buildCrossChannelPrompt() string {
+	cfg, err := sessionManager.Load()
+	if err != nil || cfg == nil {
+		return ""
+	}
+	if !cfg.TelegramEnabled && !cfg.DiscordEnabled {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString("## Cross-channel Sending\n\n")
+	sb.WriteString("When sending via `send_to_telegram_chat` / `send_to_discord_channel` from any session (including TUI / CLI / cron):\n\n")
+	if cfg.TelegramEnabled {
+		sb.WriteString("- **Telegram** — if the user did not name a specific chat, `list_telegram_chat` → `ask_user(options=[names])` → map chosen name → chat_id → send. Never fabricate chat_id; group ids carrying `-` prefix are especially prone to LLM hallucination and may target chats the bot was kicked from (→ 403 forbidden).\n")
+		sb.WriteString("- Before composing the message argument, call `telegram_format` (HTML mode only — markdown leaks render literally).\n")
+	}
+	if cfg.DiscordEnabled {
+		sb.WriteString("- **Discord** — if the user did not name a specific channel, `list_discord_channel` → `ask_user(options=[names])` → map chosen name → channel_id → send. Never fabricate channel_id.\n")
+		sb.WriteString("- Before composing the message argument, call `discord_format` (Discord markdown only — HTML / LaTeX / tables render literally).\n")
+	}
+	return strings.TrimRight(sb.String(), "\n")
 }
 
 func buildExternalAgentsPrompt() string {

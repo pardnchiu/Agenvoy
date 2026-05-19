@@ -84,7 +84,7 @@ frontmatter `name` 也是 lookup key（`GetSessionIDByName`）；body 在每輪 
 | 2 · 執行 | `IsConcurrent` 標記者併發；其餘序列 | `tools.Execute` |
 | 3 · commit | 序列 | 落地 `sessionData.Tools`／`ToolHistories`、更新 cache、發 `EventToolResult`、處理 review tool |
 
-Concurrent 標記：`fetch_page`、`invoke_subagent`、`calculator`、`send_http_request`、`fetch_google_rss`、`fetch_yahoo_finance`、`fetch_youtube_transcript`。`search_web`／寫入類／`api_*`／MCP 一律序列。
+Concurrent 標記：`fetch_page`、`invoke_subagent`、`calculator`、`send_http_request`、`fetch_google_rss`、`fetch_yahoo_finance`、`fetch_youtube_transcript`、`transcribe_media`。`search_web`／寫入類／`api_*`／MCP 一律序列。
 
 ## Pending Registry
 

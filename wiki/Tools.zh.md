@@ -25,7 +25,8 @@
 | `search_web` | | DuckDuckGo lite endpoint，package 層 rate limit（2 s gap） |
 | `fetch_google_rss` | ✓ | Google News RSS |
 | `fetch_yahoo_finance` | ✓ | 股票／財務數據 |
-| `fetch_youtube_transcript` | ✓ | YouTube 字幕 |
+| `fetch_youtube_transcript` | ✓ | YouTube 字幕（Gemini 後端） |
+| `transcribe_media` | ✓ | 本地音訊／影片轉逐字稿，走 Gemini `inline_data`（ogg、mp3、wav、m4a、flac、aac、mp4、mov、webm、mpeg、3gp）；單檔上限 20 MiB，與 Telegram `Bot.Save` 對齊 |
 | `send_http_request` | ✓ | 原始 HTTP 請求，回 status + headers + body |
 | `calculator` | ✓ | 數學表達式求值 |
 

@@ -44,6 +44,176 @@ Running the daemon on a MacBook? Run `sudo pmset -c sleep 0` to keep the system 
 - **One runtime across every channel** — Telegram, Discord, TUI, Web, and cron all attach to the same daemon; sessions, memory, and the tool set are shared, not rebuilt per surface.
 
 <details>
+<summary><strong>Agenvoy vs Mainstream Products: Full Detailed Comparison</strong></summary>
+
+### 1. Overview
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| **Language** | Go | TypeScript | TypeScript | TypeScript | TypeScript | Python |
+| **License** | Apache 2.0 | Proprietary | Apache 2.0 | Apache 2.0 | MIT | MIT |
+| **Author** | Individual (pardnchiu) | Anthropic | OpenAI | Google | Community | NousResearch |
+| **Primary use** | Multi-platform AI Agent framework | Terminal coding assistant | Terminal coding assistant | Terminal coding assistant | Multi-platform AI Agent | Multi-platform AI Agent |
+| **Architecture** | Daemon + TUI + Chat | CLI session | CLI session | CLI session | Daemon + TUI + Chat | Daemon + TUI + Chat |
+
+---
+
+### 2. AI Provider Support
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| Claude | ✅ | ✅ only | ❌ | ❌ | ✅ | ✅ |
+| OpenAI / GPT | ✅ | ❌ | ✅ only | ❌ | ✅ | ✅ |
+| Gemini | ✅ | ❌ | ❌ | ✅ only | ✅ | ✅ |
+| Codex (OpenAI OAuth) | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| GitHub Copilot | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Nvidia NIM | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| OpenAI-compat | ✅ | ❌ | ❌ | ❌ | ✅ Ollama/LM Studio | ✅ OpenRouter 200+ |
+| DeepSeek / Mistral / xAI | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Planner routing | ✅ dedicated planner model | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+---
+
+### 3. Runtime & Frontend
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| TUI | ✅ bubbletea | ✅ ink | ✅ | ✅ | ✅ `openclaw tui` | ✅ React Ink |
+| CLI | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| HTTP API / Web UI | ✅ gin | ❌ | ❌ | ❌ | ❌ | ✅ Web Dashboard |
+| Daemon mode | ✅ native `--daemon` | ❌ | ❌ | ❌ | ✅ systemd/launchd | ✅ gateway daemon |
+| Session Canvas (HTML+SSE) | ✅ `update_page` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Named sessions | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ session picker |
+
+---
+
+### 4. Chat Platform Integration
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| Telegram | ✅ native daemon | ⚠️ Channels MCP (requires active session) | ❌ | ❌ | ✅ native daemon | ✅ native daemon |
+| Discord | ✅ native daemon | ⚠️ Channels MCP (requires active session) | ❌ | ❌ | ✅ native daemon | ✅ native daemon |
+| iMessage | ❌ | ⚠️ Channels MCP (macOS only) | ❌ | ❌ | ✅ BlueBubbles | ✅ BlueBubbles |
+| WhatsApp / Slack / LINE | ❌ | ❌ | ❌ | ❌ | ✅ 50+ platforms | ✅ 20+ platforms |
+| Always-on receiving (no session needed) | ✅ daemon | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Cross-session send (any session → chat) | ✅ `send_to_telegram_chat` / `send_to_discord_channel` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| OTP verification | ✅ 6-digit crypto/rand | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Native platform UI (buttons / menus / modals) | ✅ inline keyboard / select menu / modal | ❌ | ❌ | ❌ | ⚠️ text-based options | ⚠️ text-based options |
+
+> **Platform layer**: Agenvoy's Telegram and Discord integrations are both built on [pardnchiu/go-bot](https://github.com/pardnchiu/go-bot), independently maintained and open source. go-bot encapsulates the bot protocol details for both platforms — Agenvoy only implements business logic, while the platform API layer is entirely handled by go-bot.
+
+> **Key difference**: Claude Code Channels requires an active session. OpenClaw and Hermes have daemons but their in-chat confirmations are text-based. Agenvoy uses native platform UI — Telegram inline keyboards and Discord select menus / modals. Additionally, Agenvoy's cross-session send tools allow any session type (CLI, TUI, HTTP, scheduled script) to push messages to Telegram/Discord — no competitor exposes this capability.
+
+---
+
+### 5. Telegram Feature Comparison
+
+| Feature | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code Channels** |
+|---------|-------------|-------------|------------------|--------------------------|
+| Send text reply | ✅ | ✅ | ✅ | ✅ |
+| Send voice (TTS) | ✅ Gemini TTS → OGG | ✅ ElevenLabs/Hume | ✅ Edge TTS/ElevenLabs | ❌ |
+| Send file attachments | ✅ `[SEND_FILE:]` | ✅ | ✅ | ❌ |
+| Receive user attachments | ✅ photo/doc/voice/video | ✅ | ✅ | ❌ |
+| Voice-to-text (STT) | ✅ Gemini, 14 formats | ✅ Whisper/Gemini | ✅ faster-whisper (local) | ❌ |
+| Tool confirm (interactive) | ✅ native inline keyboard | ⚠️ text approval prompt | ⚠️ text options | ❌ |
+| ask_user (picker) | ✅ native button/modal | ⚠️ `/models` picker | ⚠️ text options, up to 4 | ❌ |
+| Format reference (lazy-load tool) | ✅ `telegram_format` | ❌ | ❌ | ❌ |
+| Scheduler output push | ✅ | ✅ | ✅ | ❌ |
+| Cross-session push (from any session) | ✅ `send_to_telegram_chat` | ❌ | ❌ | ❌ |
+| Offline receiving (daemon) | ✅ | ✅ | ✅ | ❌ |
+
+---
+
+### 6. Discord Feature Comparison
+
+| Feature | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code Channels** |
+|---------|-------------|-------------|------------------|--------------------------|
+| Send text reply | ✅ | ✅ | ✅ | ✅ |
+| Send voice (TTS) | ✅ Gemini TTS → OGG/OPUS | ✅ | ✅ | ❌ |
+| Send file attachments | ✅ batch 10/message | ✅ | ✅ | ❌ |
+| Receive user attachments | ✅ photo/doc/voice/video | ✅ | ✅ | ❌ |
+| Tool confirm (interactive) | ✅ select menu button | ✅ `/model` picker | ⚠️ text options | ❌ |
+| ask_user (modal) | ✅ select/multi-select/modal | ⚠️ limited | ⚠️ text options | ❌ |
+| Format reference (lazy-load tool) | ✅ `discord_format` | ❌ | ❌ | ❌ |
+| Guild mention guard | ✅ | ✅ | ✅ | ❌ |
+| Discord Markdown aware | ✅ full spec as lazy-load tool | ⚠️ partial | ⚠️ partial | ❌ |
+| Character limit aware | ✅ 1600 char hard limit in prompt | ❌ | ❌ | ❌ |
+| Cross-session push (from any session) | ✅ `send_to_discord_channel` | ❌ | ❌ | ❌ |
+
+---
+
+### 7. Scheduler
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| Cron jobs | ✅ SKILL.md + cron | ✅ cloud-assisted cron/task | ❌ | ❌ | ✅ built-in | ✅ built-in |
+| One-shot tasks | ✅ | ✅ cloud-assisted | ❌ | ❌ | ✅ `at` format | ✅ natural language |
+| TUI CRUD | ✅ | ❌ | ❌ | ❌ | ✅ `openclaw cron` | ✅ `cronjob` tool |
+| fsnotify hot-reload | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Push output to Telegram/Discord | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| AI tool management (add/list/remove) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ `cronjob` tool |
+| Local execution (no cloud required) | ✅ | ❌ cloud-dependent | ❌ | ❌ | ✅ | ✅ |
+
+> **Scheduler layer**: Agenvoy's scheduler is built on [pardnchiu/go-scheduler](https://github.com/pardnchiu/go-scheduler), a self-maintained ecosystem package providing cron expression parsing, one-shot tasks, fsnotify hot-reload, and full output routing back to chat platforms.
+
+---
+
+### 8. Tool Ecosystem
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| MCP support | ✅ client | ✅ client | ❌ | ✅ client | ✅ client | ✅ client + server |
+| Custom tools (script-tool-add) | ✅ AI-generated | ❌ | ❌ | ❌ | ❌ | ✅ auto-creates skill |
+| API tool discovery (search-api → add) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Skill system | ✅ SKILL.md lazy-load | ✅ CLAUDE.md | ❌ | ❌ | ✅ SKILL.md 5400+ community | ✅ SKILL.md agentskills.io |
+| Format reference as lazy-load tool | ✅ `telegram_format` / `discord_format` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Image generation | ✅ DALL-E/Codex Image | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Media transcription STT | ✅ Gemini, 14 formats | ❌ | ❌ | ❌ | ✅ Whisper/Gemini | ✅ faster-whisper (local) |
+| TTS voice output | ✅ Gemini TTS | ❌ | ❌ | ❌ | ✅ ElevenLabs/Hume/MS | ✅ Edge TTS/ElevenLabs/OpenAI |
+| Computer use / browser | ✅ go-rod + Playwright MCP | ✅ beta | ❌ | ❌ | ✅ Chrome CDP | ✅ Playwright (Chromium/Firefox) |
+
+> **Tool sandbox architecture**: Agenvoy's Python/JavaScript/API custom tool interfaces are built on the [pardnchiu/go-faas](https://github.com/pardnchiu/go-faas) (Function as a Service) concept. Each AI-generated tool runs as an isolated function unit with its own lifecycle and security boundary. This is the only FaaS-level sandbox design for tool extension among all compared products.
+
+---
+
+### 9. Memory System
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| Instruction file system | ✅ SKILL.md | ✅ CLAUDE.md | ❌ | ❌ | ✅ SKILL.md | ✅ SKILL.md |
+| Conversation history search | ✅ ToriiDB vector search | ❌ | ❌ | ❌ | ✅ SQLite vector | ✅ SQLite FTS5 |
+| Error memory | ✅ ToriiDB | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Action log | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Long-term persistent memory | ⚠️ ToriiDB foundation in place | ⚠️ CLAUDE.md manual | ❌ | ❌ | ✅ Wiki-style MEMORY.md | ✅ MEMORY.md + USER.md |
+| Cross-session memory | ⚠️ session-isolated by default, extensible with external memory | ⚠️ session-isolated by default, extensible with external memory | ⚠️ session-isolated by default | ⚠️ session-isolated by default | ✅ built-in cross-session | ✅ built-in cross-session |
+
+> **ToriiDB** is a self-developed embedded vector database ([pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)) in the Agenvoy ecosystem. It requires no external service and runs in-process. Agenvoy uses ToriiDB as its memory infrastructure, currently powering semantic conversation history search and error memory, and serving as the foundation for future long-term cross-session memory expansion.
+
+---
+
+### 10. Dependencies & Deployment
+
+| | **Agenvoy** | **Claude Code** | **Codex CLI** | **Gemini CLI** | **OpenClaw** | **Hermes Agent** |
+|--|--|--|--|--|--|--|
+| Direct external dependencies | **12** | 50+ | 40+ | 40+ | large (pnpm monorepo) | 30–40 core + 60+ optional |
+| Self-maintained ecosystem packages | 5 (go-bot / go-pkg / go-scheduler / ToriiDB / go-faas) | 0 | 0 | 0 | 0 | 0 |
+| Runtime | Go (static binary) | Node.js | Node.js | Node.js | Node.js | Python |
+| Deployment | **single binary** | npm install | npm install | npm install | npm install | pip + docker/VPS |
+
+---
+
+### Where Agenvoy Stands
+
+| Dimension | Detail |
+|-----------|--------|
+| **Clear advantages** | Single Go binary, 12 dependencies, self-maintained ecosystem (pardnchiu universe), planner model routing, Session Canvas, native platform UI (real buttons/modals), OTP verification, cross-session send to Telegram/Discord from any session, API tool auto-discovery, image generation, format reference as lazy-load tool, local-only scheduler (no cloud required) |
+| **On par with competitors** | Telegram/Discord daemon, TTS/STT, scheduler output push, Skill system, MCP, browser automation, inbound attachment handling |
+| **Where competitors lead** | OpenClaw 50+ platforms, Hermes MCP server mode, Hermes local STT, OpenClaw/Hermes built-in cross-session memory, Claude Code Computer Use beta, Claude Code cloud cron/task |
+| **Codex CLI** | Fewest features — CLI + TUI + OpenAI OAuth only, no daemon, no chat platforms, no scheduler |
+
+</details>
+
+<details>
 <summary><strong>CLI commands</strong></summary>
 
 > Run as `agen <sub>`. `make <sub>` wrappers exist in the repo Makefile for development.
@@ -110,12 +280,20 @@ Running the daemon on a MacBook? Run `sudo pmset -c sleep 0` to keep the system 
 | `fetch_google_rss` | Search Google News RSS and return article titles, summaries, links. |
 | `fetch_yahoo_finance` | Query Yahoo Finance quotes and K-line (OHLCV). |
 | `fetch_youtube_transcript` | Transcribe a YouTube video with timestamps. *(gemini needed)* |
+| `transcribe_media` | Transcribe a local audio / video file (ogg, mp3, wav, m4a, flac, aac, mp4, mov, webm, mpeg, 3gp, …) up to 20 MiB. *(gemini needed)* |
 | `send_http_request` | Send an HTTP request to a specified URL. |
 | **Shell** |  |
 | `run_command` | Run a binary with argv; returns combined stdout/stderr. |
 | **Render** |  |
 | `update_page` | Overwrite the rendered HTML page for the current session; tabs auto-reload. |
 | `generate_image` | Generate an image via gpt-image-2 (size & quality picked by user). *(codex needed)* |
+| **Channel** |  |
+| `list_telegram_chat` | List authorized Telegram chats (id + name). *(telegram needed)* |
+| `send_to_telegram_chat` | Send an HTML-formatted message to an authorized Telegram chat by chat_id. *(telegram needed)* |
+| `telegram_format` | Return the Telegram HTML formatting reference (allowed tags, escape rules, file/voice markers). *(telegram needed)* |
+| `list_discord_channel` | List authorized Discord channels (id + name). *(discord needed)* |
+| `send_to_discord_channel` | Send a markdown-formatted message to an authorized Discord channel by channel_id. *(discord needed)* |
+| `discord_format` | Return the Discord markdown formatting reference (allowed markdown, special tokens, file/voice markers). *(discord needed)* |
 | **Calc** |  |
 | `calculate` | Evaluate a mathematical expression and return the exact result. |
 | **Discovery** |  |

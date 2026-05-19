@@ -84,7 +84,7 @@ There is **no inter-round delay** — rate-limit protection comes from provider 
 | 2 — execute | Concurrent for `IsConcurrent`-tagged tools; serial otherwise | `tools.Execute` |
 | 3 — commit | Serial | Land `sessionData.Tools` and `ToolHistories`, update cache, emit `EventToolResult`, handle review tools |
 
-Concurrent-tagged tools: `fetch_page`, `invoke_subagent`, `calculator`, `send_http_request`, `fetch_google_rss`, `fetch_yahoo_finance`, `fetch_youtube_transcript`. `search_web`, write-class tools, `api_*`, and MCP tools always run serially.
+Concurrent-tagged tools: `fetch_page`, `invoke_subagent`, `calculator`, `send_http_request`, `fetch_google_rss`, `fetch_yahoo_finance`, `fetch_youtube_transcript`, `transcribe_media`. `search_web`, write-class tools, `api_*`, and MCP tools always run serially.
 
 ## Pending registry
 

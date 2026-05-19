@@ -49,7 +49,7 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	}
 
 	chanName := utils.LookupChatName(filesystem.DiscordAuthPath, channelID)
-	cleanText, attachmentPaths := extractFileMarkers(text)
+	cleanText, attachmentPaths := utils.ExtractFileMarkers(text)
 
 	if strings.TrimSpace(cleanText) != "" {
 		message := cleanText + buildPushFooter(payload.Model, payload.Usage)
