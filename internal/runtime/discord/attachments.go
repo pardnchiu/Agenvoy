@@ -17,14 +17,14 @@ func sendAttachments(ctx context.Context, client *go_bot_discord.Bot, channelID,
 		return
 	}
 
-	notifyFailure := func(label, detail, errMsg string) {
-		text := fmt.Sprintf("-# ⎿ ⚠️ %s failed", label)
+	sendFailure := func(label, detail, errMsg string) {
+		text := fmt.Sprintf("-# ⎿ ⚠️ %s failed (background upload)", label)
 		if detail != "" {
 			text = fmt.Sprintf("%s: `%s`", text, detail)
 		}
 		text = fmt.Sprintf("%s\n-# ⎿ `%s`", text, errMsg)
 		if _, err := client.Send(ctx, channelID, replyTo, text); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.Send (notify)",
+			slog.Error("github.com/pardnchiu/go-bot/discord Bot.Send (notify)",
 				slog.String("label", label),
 				slog.String("error", err.Error()))
 		}
@@ -34,11 +34,12 @@ func sendAttachments(ctx context.Context, client *go_bot_discord.Bot, channelID,
 		end := min(start+10, len(paths))
 		batch := paths[start:end]
 		if _, err := client.SendFiles(ctx, channelID, replyTo, batch); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.SendFiles",
+			slog.Error("github.com/pardnchiu/go-bot/discord Bot.SendFiles",
 				slog.String("channel", channelName),
 				slog.Int("count", len(batch)),
+				slog.String("paths", strings.Join(batch, ", ")),
 				slog.String("error", err.Error()))
-			notifyFailure("SendFiles", strings.Join(batch, ", "), err.Error())
+			sendFailure("SendFiles", strings.Join(batch, ", "), err.Error())
 		}
 	}
 }

@@ -72,7 +72,7 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 		}
 	}
 
-	sendAttachments(ctx, chatID, chatName, 0, photoPaths, docPaths)
+	sendAttachments(ctx, chatID, chatName, photoPaths, docPaths)
 }
 
 func buildPushFooter(model string, usage *agentTypes.Usage) string {

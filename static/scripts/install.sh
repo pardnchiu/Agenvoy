@@ -16,6 +16,7 @@ SUDO=""
 
 SRC_DIR=""
 GO_TMP_DIR=""
+INSTALLED_TAG=""
 cleanup() {
   if [ -n "$SRC_DIR" ] && [ -d "$SRC_DIR" ]; then
     rm -rf "$SRC_DIR"
@@ -106,8 +107,7 @@ confirm_overwrite_agen() {
   log "agen already installed at: $existing"
 
   if [ ! -e /dev/tty ] || [ ! -r /dev/tty ]; then
-    log "Non-interactive shell; launching existing agen"
-    launch_agen
+    log "Non-interactive shell; keeping existing agen"
     exit 0
   fi
 
@@ -117,8 +117,7 @@ confirm_overwrite_agen() {
   case "$ans" in
     y|Y|yes|YES|Yes) ok "Proceeding with reinstall" ;;
     *)
-      ok "Keeping existing agen; launching"
-      launch_agen
+      ok "Keeping existing agen"
       exit 0
       ;;
   esac
@@ -216,6 +215,7 @@ clone_repo() {
   SRC_DIR="$(mktemp -d "${TMPDIR:-/tmp}/agenvoy-install.XXXXXX")"
   log "Cloning agenvoy@${tag} -> ${SRC_DIR}"
   git clone --depth 1 --branch "$tag" "$REPO_URL" "$SRC_DIR"
+  INSTALLED_TAG="$tag"
   ok "Cloned $tag"
 }
 
@@ -252,12 +252,41 @@ stop_daemon() {
   agen stop || true
 }
 
-launch_agen() {
-  if [ -e /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ]; then
-    log "Launching agen..."
-    exec </dev/tty >/dev/tty 2>/dev/tty agen
-  fi
-  warn "Non-interactive shell detected; run 'agen' manually to start."
+print_done() {
+  local tag="${1:-installed}"
+  local lines=(
+    "Agenvoy ${tag} installed"
+    ""
+    "Next: run 'agen' to attach the new build"
+  )
+
+  local max=0 line len
+  for line in "${lines[@]}"; do
+    len=${#line}
+    [ "$len" -gt "$max" ] && max=$len
+  done
+
+  local pad_each=2
+  local inner=$((max + pad_each * 2))
+
+  local border="" rpad=""
+  local i=0
+  while [ $i -lt $inner ]; do
+    border="${border}─"
+    i=$((i + 1))
+  done
+
+  printf '\n%s╭%s╮%s\n' "$C_GRN" "$border" "$C_RST"
+  for line in "${lines[@]}"; do
+    rpad=""
+    i=0
+    while [ $i -lt $((max - ${#line})) ]; do
+      rpad="${rpad} "
+      i=$((i + 1))
+    done
+    printf '%s│%s  %s%s  %s│%s\n' "$C_GRN" "$C_RST" "$line" "$rpad" "$C_GRN" "$C_RST"
+  done
+  printf '%s╰%s╯%s\n\n' "$C_GRN" "$border" "$C_RST"
 }
 
 main() {
@@ -281,7 +310,7 @@ main() {
   build_and_install
   seed_mcp_config
   stop_daemon
-  launch_agen
+  print_done "$INSTALLED_TAG"
 }
 
 main "$@"
