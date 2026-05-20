@@ -30,5 +30,9 @@
   "gemini-3.1-pro-preview-customtools": {
     "description": "Tool-first variant optimized for agentic workflows and custom tool integration",
     "thinking_config": "level"
+  },
+  "gemini-3.5-flash": {
+    "description": "Top-tier Flash with cutting-edge agentic and coding performance at scale",
+    "thinking_config": "level"
   }
 }

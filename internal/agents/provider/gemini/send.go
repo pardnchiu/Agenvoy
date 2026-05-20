@@ -33,6 +33,8 @@ func (a *Agent) Execute(ctx context.Context, skill *filesystem.Skill, userInput 
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {
+	messages = rewriteSyntheticActivations(messages)
+
 	var systemPrompt string
 	var newMessages []Content
 
@@ -60,6 +62,34 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	}
 
 	return a.convertToOutput(&result), nil
+}
+
+// rewriteSyntheticActivations folds the synthetic activate_skill call/response
+// pair (injected by exec.assignBindingSkill for slash-bound skills) into a
+// single user text message. Gemini 3+ requires a real thoughtSignature on
+// every functionCall part; synthetic calls never had one and would 400.
+func rewriteSyntheticActivations(messages []agentTypes.Message) []agentTypes.Message {
+	out := make([]agentTypes.Message, 0, len(messages))
+	for i := 0; i < len(messages); i++ {
+		msg := messages[i]
+		if msg.Role == "assistant" && len(msg.ToolCalls) == 1 {
+			tc := msg.ToolCalls[0]
+			if tc.Function.Name == "activate_skill" && tc.ThoughtSignature == "" && i+1 < len(messages) {
+				next := messages[i+1]
+				if next.Role == "tool" && next.ToolCallID == tc.ID {
+					activation, _ := next.Content.(string)
+					out = append(out, agentTypes.Message{
+						Role:    "user",
+						Content: activation,
+					})
+					i++
+					continue
+				}
+			}
+		}
+		out = append(out, msg)
+	}
+	return out
 }
 
 func (a *Agent) convertToContent(message agentTypes.Message) Content {
