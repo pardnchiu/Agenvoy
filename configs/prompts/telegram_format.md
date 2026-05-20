@@ -15,12 +15,6 @@ If a single character of markdown (`**`, `__`, `` ` ``, leading `-` / `*` / `#`)
 
 ---
 
-## Character Limit
-
-Telegram message text limit is 4096 characters — keep every response strictly within **3500 characters** (hard limit; reserves headroom for escape expansion).
-
----
-
 ## HTML Format (Telegram rendering — strictly follow)
 
 **Allowed inline tags**

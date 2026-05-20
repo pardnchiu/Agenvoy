@@ -13,12 +13,6 @@ Discord does **not** support HTML, LaTeX, or tables — emitting any of these re
 
 ---
 
-## Character Limit
-
-Discord per-message limit is 2000 characters (Nitro 4000). Keep every response strictly within **1600 characters** (hard limit, must not exceed) to leave headroom for prefix/footer.
-
----
-
 ## Markdown Format (Discord rendering — strictly follow)
 
 **Inline**
@@ -73,7 +67,6 @@ go, js, ts, py, rs, java, c, cpp, cs, php, rb, swift, kt, sh, bash, sql, json, y
 
 **Limits**
 
-- Message text: 2000 (Nitro 4000)
 - Attachments per message: 10
 - Attachment size: 10 MB (Nitro Basic 50 MB / Nitro 500 MB)
 
