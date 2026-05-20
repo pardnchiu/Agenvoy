@@ -185,6 +185,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 						Text:      text,
 						Model:     pushDoneEv.Model,
 						Usage:     pushDoneEv.Usage,
+						Duration:  pushDoneEv.Duration,
 						Prefix:    dcPushPrefix(ctx),
 					})
 				}

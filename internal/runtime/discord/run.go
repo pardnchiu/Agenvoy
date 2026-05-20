@@ -243,13 +243,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	if model == "" && agent != nil {
 		model = agent.Name()
 	}
-	if _, after, ok := strings.Cut(model, "@"); ok {
-		model = after
-	}
-	footer := model
-	if doneEvent.Usage != nil {
-		footer = fmt.Sprintf("%s | in:%s out:%s", footer, utils.FormatUsage(doneEvent.Usage.Input), utils.FormatUsage(doneEvent.Usage.Output))
-	}
+	footer := utils.FormatFooter(doneEvent.Duration, model, doneEvent.Usage)
 	if len(attachmentPaths) > 0 || len(voiceTexts) > 0 {
 		footer = "🔗 " + footer
 	}

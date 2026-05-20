@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
@@ -13,6 +14,7 @@ type PushPayload struct {
 	Text      string
 	Model     string
 	Usage     *agentTypes.Usage
+	Duration  time.Duration
 	Prefix    string
 }
 

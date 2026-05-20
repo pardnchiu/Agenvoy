@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -61,7 +62,7 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	cleanText, photoPaths, docPaths := extractFileMarkers(text)
 
 	if strings.TrimSpace(cleanText) != "" {
-		message := cleanText + buildPushFooter(payload.Model, payload.Usage)
+		message := cleanText + buildPushFooter(payload.Duration, payload.Model, payload.Usage)
 		if prefix := strings.TrimSpace(payload.Prefix); prefix != "" {
 			message = fmt.Sprintf("<blockquote>%s</blockquote>\n\n%s", html.EscapeString(prefix), message)
 		}
@@ -78,21 +79,10 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	sendAttachments(ctx, chatID, chatName, photoPaths, docPaths)
 }
 
-func buildPushFooter(model string, usage *agentTypes.Usage) string {
-	model = strings.TrimSpace(model)
-	if model == "" && usage == nil {
+func buildPushFooter(duration time.Duration, model string, usage *agentTypes.Usage) string {
+	footer := utils.FormatFooter(duration, model, usage)
+	if footer == "" {
 		return ""
-	}
-	if _, after, ok := strings.Cut(model, "@"); ok {
-		model = after
-	}
-	footer := model
-	if usage != nil {
-		if footer != "" {
-			footer = fmt.Sprintf("%s | in:%s out:%s", footer, utils.FormatUsage(usage.Input), utils.FormatUsage(usage.Output))
-		} else {
-			footer = fmt.Sprintf("in:%s out:%s", utils.FormatUsage(usage.Input), utils.FormatUsage(usage.Output))
-		}
 	}
 	return "\n\n<blockquote expandable>" + footer + "</blockquote>"
 }
