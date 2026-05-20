@@ -28,9 +28,9 @@ func Config(name string) {
 		if sid, ok := pickSession("Select session to edit"); ok {
 			sessionID = sid
 		} else {
-			id, err := getSessionID()
+			id, err := ResolveSession()
 			if err != nil {
-				slog.Error("getSessionID",
+				slog.Error("ResolveSession",
 					slog.String("error", err.Error()))
 				os.Exit(1)
 			}
@@ -67,28 +67,4 @@ func Config(name string) {
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-}
-
-func getSessionID() (string, error) {
-	cfg, err := session.Load()
-	if err != nil {
-		return "", fmt.Errorf("session.Load: %w", err)
-	}
-
-	if sid := strings.TrimSpace(cfg.SessionID); sid != "" {
-		if go_pkg_filesystem_reader.Exists(filepath.Join(filesystem.SessionsDir, sid)) {
-			return sid, nil
-		}
-	}
-
-	id, err := session.CreateSession("cli-")
-	if err != nil {
-		return "", fmt.Errorf("session.CreateSession: %w", err)
-	}
-
-	cfg.SessionID = id
-	if err := session.Save(cfg); err != nil {
-		return "", fmt.Errorf("session.Save: %w", err)
-	}
-	return id, nil
 }

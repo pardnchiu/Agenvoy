@@ -23,12 +23,11 @@ type ModelEntry struct {
 }
 
 type Config struct {
-	SessionID      string        `json:"session_id,omitempty"`
-	PlannerModel   string        `json:"planner_model,omitempty"`
-	ReasoningLevel string        `json:"reasoning_level,omitempty"`
-	Models         []ModelEntry  `json:"models,omitempty"`
-	Compats        []CompatEntry `json:"compats,omitempty"`
-	Keys           []string      `json:"keys,omitempty"`
+	PlannerModel     string        `json:"planner_model,omitempty"`
+	ReasoningLevel   string        `json:"reasoning_level,omitempty"`
+	Models           []ModelEntry  `json:"models,omitempty"`
+	Compats          []CompatEntry `json:"compats,omitempty"`
+	Keys             []string      `json:"keys,omitempty"`
 	DiscordGuildID   string        `json:"discord_guild_id,omitempty"`
 	DiscordEnabled   bool          `json:"discord_enabled,omitempty"`
 	DiscordUsername  string        `json:"discord_username,omitempty"`

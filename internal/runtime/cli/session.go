@@ -9,7 +9,6 @@ import (
 
 	"github.com/manifoldco/promptui"
 
-	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -23,18 +22,16 @@ func Session(args []string) {
 		name = strings.TrimSpace(args[1])
 	}
 	if sub == "" {
-		sub = Pick("Select session action", []string{"new", "switch", "config"})
+		sub = Pick("Select session action", []string{"new", "config"})
 	}
 
 	switch sub {
 	case "new":
 		NewSession(name)
-	case "switch":
-		Switch(name)
 	case "config":
 		Config(name)
 	default:
-		fmt.Fprintf(os.Stderr, "Usage: agen session [new|switch|config] [name]\n")
+		fmt.Fprintf(os.Stderr, "Usage: agen session [new|config] [name]\n")
 		os.Exit(1)
 	}
 }
@@ -45,18 +42,7 @@ func pickSession(label string) (sid string, hasSessions bool) {
 		return "", false
 	}
 
-	current := ""
-	if cfg, err := session.Load(); err == nil {
-		current = strings.TrimSpace(cfg.SessionID)
-	}
-
 	sort.SliceStable(sessions, func(i, j int) bool {
-		if sessions[i].id == current && sessions[j].id != current {
-			return true
-		}
-		if sessions[j].id == current && sessions[i].id != current {
-			return false
-		}
 		return sessions[i].id < sessions[j].id
 	})
 
@@ -66,9 +52,6 @@ func pickSession(label string) (sid string, hasSessions bool) {
 		entry := short
 		if s.name != "" && s.name != s.id {
 			entry = fmt.Sprintf("%s (%s)", short, s.name)
-		}
-		if s.id == current {
-			entry += " [current]"
 		}
 		labels[i] = entry
 	}

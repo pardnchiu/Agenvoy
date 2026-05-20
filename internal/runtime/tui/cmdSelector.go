@@ -37,6 +37,7 @@ var commands = []Command{
 	{"reasoning", "set reasoning depth · global (planner) / session"},
 	{"switch", "switch / change current session via picker"},
 	{"new", "create / add new session · name conflict-checked"},
+	{"remove-session", "delete / purge current session · double-confirm · torii + sessions/ wiped"},
 	{"bot", "edit / rename current session · name / description (persona)"},
 	{"discord", "enable / disable Discord bot · gateway validated on enable"},
 	{"telegram", "enable / disable Telegram bot · getMe validated on enable"},

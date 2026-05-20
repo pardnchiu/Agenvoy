@@ -19,14 +19,6 @@ func NewSession(name string) {
 		}
 	}
 
-	cfg, err := session.Load()
-	if err != nil {
-		slog.Error("session.Load",
-			slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-	previous := strings.TrimSpace(cfg.SessionID)
-
 	newID, err := session.CreateSession("cli-")
 	if err != nil {
 		slog.Error("session.CreateSession",
@@ -38,19 +30,9 @@ func NewSession(name string) {
 		session.SaveBot(newID, name, true)
 	}
 
-	cfg.SessionID = newID
-	if err := session.Save(cfg); err != nil {
-		slog.Error("session.Save",
-			slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-
 	if name != "" {
 		fmt.Printf("New session: %s (name=%s)\n", utils.ShortenSessionID(newID), name)
 	} else {
 		fmt.Printf("New session: %s\n", utils.ShortenSessionID(newID))
-	}
-	if previous != "" && previous != newID {
-		fmt.Printf("Previous: %s\n", utils.ShortenSessionID(previous))
 	}
 }

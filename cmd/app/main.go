@@ -253,12 +253,8 @@ func setSummaryCron() {
 	}
 }
 
-func initMCP(ctx context.Context) *mcp.MCP {
-	sessionID := ""
-	if cfg, err := session.Load(); err == nil {
-		sessionID = strings.TrimSpace(cfg.SessionID)
-	}
-	manager, err := mcp.New(ctx, sessionID)
+func initMCP(ctx context.Context, sessionID string) *mcp.MCP {
+	manager, err := mcp.New(ctx, strings.TrimSpace(sessionID))
 	if err != nil {
 		slog.Warn("mcp.New",
 			slog.String("error", err.Error()))
@@ -268,20 +264,6 @@ func initMCP(ctx context.Context) *mcp.MCP {
 	return manager
 }
 
-func clearSession() {
-	idx, err := go_pkg_filesystem.ReadJSON[struct {
-		SessionID string `json:"session_id"`
-	}](filesystem.ConfigPath)
-	if err != nil {
-		return
-	}
-	sid := strings.TrimSpace(idx.SessionID)
-	if sid == "" {
-		return
-	}
-	session.ClearTask(sid)
-}
-
 func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  agen                                            Attach TUI; spawn server daemon if not running")
@@ -289,7 +271,7 @@ func printUsage() {
 	fmt.Println("  agen update                                     Update agen to the latest release")
 	fmt.Println("  agen model [add|remove|list|planner|reasoning]  Manage providers/models, planner, reasoning")
 	fmt.Println("  agen mcp [list|add|remove]                      Manage MCP servers")
-	fmt.Println("  agen session [new|switch|config] [name]         Manage CLI sessions (interactive picker if no name)")
+	fmt.Println("  agen session [new|config] [name]                Manage CLI sessions (interactive picker if no name)")
 	fmt.Println("  agen cli <input...>                             Run agent (requires tool confirmation)")
 	fmt.Println("  agen run <input...>                             Run agent (allow all tools)")
 }

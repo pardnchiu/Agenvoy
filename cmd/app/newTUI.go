@@ -68,7 +68,7 @@ func newTUI() {
 	}
 	subagent.Register()
 
-	mcpManager := initMCP(context.Background())
+	mcpManager := initMCP(context.Background(), "")
 	defer mcpManager.Close()
 
 	registry := buildAgentRegistry()

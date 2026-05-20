@@ -31,10 +31,6 @@ func (t TUI) commandNew(parts []string) (TUI, tea.Cmd, bool) {
 		session.SaveBot(id, name, true)
 	}
 
-	if err := changeSession(id); err != nil {
-		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] switch failed: %v", err)) + "\n"), true
-	}
-
 	previous := t.currentSessionID
 	t.currentSessionID = id
 	t.currentSessionName, _ = session.GetBot(id)

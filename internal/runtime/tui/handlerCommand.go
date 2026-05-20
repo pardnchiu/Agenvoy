@@ -39,6 +39,9 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 	case "/new":
 		return t.commandNew(parts)
 
+	case "/remove-session":
+		return t.commandRemoveSession()
+
 	case "/bot":
 		return t.commandBot(parts)
 

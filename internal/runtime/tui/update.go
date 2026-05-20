@@ -470,6 +470,20 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd := t.runTaskRemove(msg.skill)
 		return next, cmd
 
+	case RemoveSessionConfirm1:
+		if !msg.yes {
+			return t, tea.Println(hintStyle.Render("⎯ remove-session cancelled") + "\n")
+		}
+		next, cmd := t.openRemoveSessionConfirm2(msg.id)
+		return next, cmd
+
+	case RemoveSessionConfirm2:
+		if !msg.yes {
+			return t, tea.Println(hintStyle.Render("⎯ remove-session cancelled") + "\n")
+		}
+		next, cmd := t.runRemoveSession(msg.id)
+		return next, cmd
+
 	case TaskEditSelect:
 		next, cmd := t.openTaskEditRequirement(msg.skill, msg.at)
 		return next, cmd
@@ -552,6 +566,21 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			tea.ClearScreen,
 			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		)
+
+	case StartupSelectSession:
+		popup := popupSwitch("")
+		if popup == nil {
+			return t, nil
+		}
+		popup.title = "Pick session to attach"
+		popup.onConfirm = func(chosen string) any {
+			if chosen == "" {
+				return SessionNew{}
+			}
+			return SessionSelect{id: chosen}
+		}
+		t.popup = popup
+		return t, nil
 
 	case LoadHistoryCheck:
 		sid := msg.id
