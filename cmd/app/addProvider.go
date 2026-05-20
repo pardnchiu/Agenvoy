@@ -360,7 +360,7 @@ func runReasoning() {
 	fmt.Printf("[*] reasoning level set to %q\n", level)
 }
 
-func runPlanner() {
+func runDispatcher() {
 	cfg, err := session.Load()
 	if err != nil {
 		slog.Error("session.Load",
@@ -380,7 +380,7 @@ func runPlanner() {
 	items[len(cfg.Models)] = "exit"
 
 	selector := promptui.Select{
-		Label:        "Select planner model",
+		Label:        "Select dispatcher model",
 		Items:        items,
 		HideSelected: true,
 	}
@@ -392,13 +392,13 @@ func runPlanner() {
 		os.Exit(0)
 	}
 
-	cfg.PlannerModel = cfg.Models[idx].Name
+	cfg.DispatcherModel = cfg.Models[idx].Name
 	if err := session.Save(cfg); err != nil {
 		slog.Error("session.Save",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	fmt.Printf("[*] set %q as planner model\n", cfg.PlannerModel)
+	fmt.Printf("[*] set %q as dispatcher model\n", cfg.DispatcherModel)
 }
 
 func upsertModel(name, defaultDesc string) {
@@ -444,8 +444,8 @@ func upsertModel(name, defaultDesc string) {
 		})
 	}
 
-	if cfg.PlannerModel == "" {
-		cfg.PlannerModel = name
+	if cfg.DispatcherModel == "" {
+		cfg.DispatcherModel = name
 	}
 
 	if err := session.Save(cfg); err != nil {
@@ -456,8 +456,8 @@ func upsertModel(name, defaultDesc string) {
 
 	fmt.Printf("[*] %q added\n", name)
 
-	if cfg.PlannerModel == name {
-		fmt.Printf("[*] set %q as planner model\n", name)
+	if cfg.DispatcherModel == name {
+		fmt.Printf("[*] set %q as dispatcher model\n", name)
 	}
 }
 
@@ -554,10 +554,10 @@ func removeModel(name string) error {
 		}
 	}
 	cfg.Models = out
-	if cfg.PlannerModel == name {
-		cfg.PlannerModel = ""
+	if cfg.DispatcherModel == name {
+		cfg.DispatcherModel = ""
 		if len(out) > 0 {
-			cfg.PlannerModel = out[0].Name
+			cfg.DispatcherModel = out[0].Name
 		}
 	}
 	if err := session.Save(cfg); err != nil {

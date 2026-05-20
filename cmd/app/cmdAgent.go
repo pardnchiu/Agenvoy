@@ -44,8 +44,8 @@ func cmdAgent(allowAll bool) {
 	defer cancel()
 
 	var selectorBot agentTypes.Agent
-	if cfg, err := session.Load(); err == nil && cfg.PlannerModel != "" {
-		selectorBot = cli.SelectAgent(cfg.PlannerModel)
+	if cfg, err := session.Load(); err == nil && cfg.DispatcherModel != "" {
+		selectorBot = cli.SelectAgent(cfg.DispatcherModel)
 	}
 	if selectorBot == nil {
 		selectorBot = registry.Fallback

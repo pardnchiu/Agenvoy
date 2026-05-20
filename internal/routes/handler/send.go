@@ -96,7 +96,7 @@ func Send() gin.HandlerFunc {
 					}
 				}
 				if agent == nil {
-					agent = exec.SelectAgent(ctx, agents.Planner(), registry, trimContent, false, sessionID)
+					agent = exec.SelectAgent(ctx, agents.Dispatcher(), registry, trimContent, false, sessionID)
 				}
 				agentResult = agentTypes.Event{Type: agentTypes.EventAgentResult, Text: agent.Name()}
 			}

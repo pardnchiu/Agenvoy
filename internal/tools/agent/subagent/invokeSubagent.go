@@ -41,12 +41,12 @@ func registInvokeSubagent() {
 				},
 				"session_id": map[string]any{
 					"type":        "string",
-					"description": "Persistent session id to thread multi-turn subagent calls (e.g. 'researcher', 'planner-2'). Blank uses an ephemeral temp-sub session. Ignored when name resolves successfully.",
+					"description": "Persistent session id to thread multi-turn subagent calls (e.g. 'researcher', 'dispatcher-2'). Blank uses an ephemeral temp-sub session. Ignored when name resolves successfully.",
 					"default":     "",
 				},
 				"model": map[string]any{
 					"type":        "string",
-					"description": "Worker model name. Leave blank for planner auto-select.",
+					"description": "Worker model name. Leave blank for dispatcher auto-select.",
 					"default":     "",
 					"enum":        models,
 				},

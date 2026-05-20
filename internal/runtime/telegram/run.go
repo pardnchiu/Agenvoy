@@ -197,7 +197,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 
 	var agent agentTypes.Agent
 	if externalAgent == "" {
-		agent = exec.SelectAgent(ctx, agents.Planner(), agents.Registry(), content, matchedSkill != nil, "")
+		agent = exec.SelectAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, "")
 	}
 
 	execData := exec.ExecData{

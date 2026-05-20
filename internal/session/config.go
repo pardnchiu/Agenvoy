@@ -1,6 +1,7 @@
 package session
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -23,7 +24,7 @@ type ModelEntry struct {
 }
 
 type Config struct {
-	PlannerModel     string        `json:"planner_model,omitempty"`
+	DispatcherModel  string        `json:"dispatcher_model,omitempty"`
 	ReasoningLevel   string        `json:"reasoning_level,omitempty"`
 	Models           []ModelEntry  `json:"models,omitempty"`
 	Compats          []CompatEntry `json:"compats,omitempty"`
@@ -33,6 +34,21 @@ type Config struct {
 	DiscordUsername  string        `json:"discord_username,omitempty"`
 	TelegramEnabled  bool          `json:"telegram_enabled,omitempty"`
 	TelegramUsername string        `json:"telegram_username,omitempty"`
+}
+
+func (c *Config) UnmarshalJSON(data []byte) error {
+	type alias Config
+	aux := struct {
+		*alias
+		LegacyPlannerModel string `json:"planner_model,omitempty"`
+	}{alias: (*alias)(c)}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if c.DispatcherModel == "" && aux.LegacyPlannerModel != "" {
+		c.DispatcherModel = aux.LegacyPlannerModel
+	}
+	return nil
 }
 
 func Load() (*Config, error) {

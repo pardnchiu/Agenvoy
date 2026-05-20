@@ -174,7 +174,7 @@ func cmdDaemon() {
 
 	registry := buildAgentRegistry()
 	scanner := runtime.NewSkillScanner()
-	selectorBot := plannerSelector(registry)
+	selectorBot := dispatcherSelector(registry)
 
 	agents.Set(selectorBot, registry, scanner)
 	agents.SetRefresher(refreshHost)

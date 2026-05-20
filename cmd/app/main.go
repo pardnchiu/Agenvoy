@@ -163,7 +163,7 @@ func runModel(args []string) {
 		sub = strings.ToLower(strings.TrimSpace(args[0]))
 	}
 	if sub == "" {
-		sub = cli.Pick("Select model action", []string{"add", "remove", "list", "planner", "reasoning"})
+		sub = cli.Pick("Select model action", []string{"add", "remove", "list", "dispatcher", "reasoning"})
 	}
 	switch sub {
 	case "add":
@@ -172,12 +172,12 @@ func runModel(args []string) {
 		cli.RunRemove()
 	case "list":
 		runModelList()
-	case "planner":
-		runPlanner()
+	case "dispatcher":
+		runDispatcher()
 	case "reasoning":
 		runReasoning()
 	default:
-		fmt.Fprintf(os.Stderr, "Usage: agen model [add|remove|list|planner|reasoning]\n")
+		fmt.Fprintf(os.Stderr, "Usage: agen model [add|remove|list|dispatcher|reasoning]\n")
 		os.Exit(1)
 	}
 }
@@ -247,7 +247,7 @@ func setSummaryCron() {
 				continue
 			}
 			bgCtx := context.Background()
-			summaryAgent := exec.SelectAgent(bgCtx, agents.Planner(), agents.Registry(), "[summary] background summary cron", false, sid)
+			summaryAgent := exec.SelectAgent(bgCtx, agents.Dispatcher(), agents.Registry(), "[summary] background summary cron", false, sid)
 			summary.Generate(bgCtx, summaryAgent, sid, summaryHistories)
 		}
 	}
@@ -269,7 +269,7 @@ func printUsage() {
 	fmt.Println("  agen                                            Attach TUI; spawn server daemon if not running")
 	fmt.Println("  agen stop                                       Stop the running server daemon")
 	fmt.Println("  agen update                                     Update agen to the latest release")
-	fmt.Println("  agen model [add|remove|list|planner|reasoning]  Manage providers/models, planner, reasoning")
+	fmt.Println("  agen model [add|remove|list|dispatcher|reasoning]  Manage providers/models, dispatcher, reasoning")
 	fmt.Println("  agen mcp [list|add|remove]                      Manage MCP servers")
 	fmt.Println("  agen session [new|config] [name]                Manage CLI sessions (interactive picker if no name)")
 	fmt.Println("  agen cli <input...>                             Run agent (requires tool confirmation)")

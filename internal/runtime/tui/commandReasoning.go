@@ -57,7 +57,7 @@ func (t TUI) openReasoningGlobalPopup() (TUI, tea.Cmd) {
 
 	t.popup = &Popup{
 		kind:    popupSingleSelect,
-		title:   "Reasoning · global (planner)",
+		title:   "Reasoning · global (dispatcher)",
 		options: options,
 		values:  reasoningLevels,
 		cursor:  cursor,

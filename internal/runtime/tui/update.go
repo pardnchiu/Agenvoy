@@ -518,8 +518,8 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return t, tea.Sequence(seq...)
 
-	case PlannerSelect:
-		next, cmd := t.runPlannerSelect(msg.name)
+	case DispatcherSelect:
+		next, cmd := t.runDispatcherSelect(msg.name)
 		agents.Reload()
 		return next, cmd
 
