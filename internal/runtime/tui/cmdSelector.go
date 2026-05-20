@@ -66,7 +66,7 @@ func (t TUI) refreshCmdSelector() TUI {
 		}
 	}
 
-	items := getCmdSelectorItems(query)
+	items := getCmdSelectorItems(query, strings.TrimSpace(t.currentSessionID))
 	if len(items) == 0 {
 		t.selector = nil
 		return t
@@ -96,7 +96,7 @@ func queryCmdSelector(content string) (query string, ok bool) {
 	return rest, true
 }
 
-func getCmdSelectorItems(query string) []CmdSelectorItem {
+func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 	query = strings.ToLower(query)
 	var cmdNameItems, cmdDescItems, skillItems []CmdSelectorItem
 
@@ -151,10 +151,21 @@ func getCmdSelectorItems(query string) []CmdSelectorItem {
 
 	var schedulerItems []CmdSelectorItem
 	cronByName := make(map[string]string)
+	skillBoundToSession := make(map[string]bool)
 	if crons, err := runtime.LoadCrons(); err == nil {
 		for _, c := range crons {
 			if _, exists := cronByName[c.Skill]; !exists {
 				cronByName[c.Skill] = c.Expression
+			}
+			if strings.TrimSpace(c.SessionID) == sessionID {
+				skillBoundToSession[c.Skill] = true
+			}
+		}
+	}
+	if tasks, err := runtime.LoadTasks(); err == nil {
+		for _, t := range tasks {
+			if strings.TrimSpace(t.SessionID) == sessionID {
+				skillBoundToSession[t.Skill] = true
 			}
 		}
 	}
@@ -162,6 +173,9 @@ func getCmdSelectorItems(query string) []CmdSelectorItem {
 		for _, d := range dirs {
 			name := d.Name
 			if name == "" || name[0] == '.' {
+				continue
+			}
+			if !skillBoundToSession[name] {
 				continue
 			}
 			label := "/sched-" + name
