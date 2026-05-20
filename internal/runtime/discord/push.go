@@ -57,10 +57,13 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 			quoted := strings.ReplaceAll(prefix, "\n", "\n> ")
 			message = fmt.Sprintf("> %s\n%s", quoted, message)
 		}
-		if _, err := client.Send(ctx, channelID, "", message); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.Send",
-				slog.String("channel", chanName),
-				slog.String("error", err.Error()))
+		for _, part := range chunk(message) {
+			if _, err := client.Send(ctx, channelID, "", part); err != nil {
+				slog.Warn("github.com/pardnchiu/go-bot/discord Bot.Send",
+					slog.String("channel", chanName),
+					slog.String("error", err.Error()))
+				break
+			}
 		}
 	}
 

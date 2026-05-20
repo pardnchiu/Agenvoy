@@ -65,10 +65,13 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 		if prefix := strings.TrimSpace(payload.Prefix); prefix != "" {
 			message = fmt.Sprintf("<blockquote>%s</blockquote>\n\n%s", html.EscapeString(prefix), message)
 		}
-		if _, err := client.Send(ctx, chatID, 0, message, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.Send",
-				slog.String("chat", chatName),
-				slog.String("error", err.Error()))
+		for _, chunk := range chunk(message) {
+			if _, err := client.Send(ctx, chatID, 0, chunk, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
+				slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.Send",
+					slog.String("chat", chatName),
+					slog.String("error", err.Error()))
+				break
+			}
 		}
 	}
 

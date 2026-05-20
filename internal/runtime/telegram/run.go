@@ -281,10 +281,16 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	if in.MessageID != 0 {
 		replyText = "​\n" + replyText
 	}
-	_, sendErr := b.client.Send(ctx, in.ChatID, in.MessageID, replyText, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
-	if sendErr != nil {
-		slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.Send",
-			slog.String("error", sendErr.Error()))
+	chunks := chunk(replyText)
+	replyTo := in.MessageID
+	for _, chunk := range chunks {
+		_, sendErr := b.client.Send(ctx, in.ChatID, replyTo, chunk, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
+		if sendErr != nil {
+			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.Send",
+				slog.String("error", sendErr.Error()))
+			break
+		}
+		replyTo = 0
 	}
 
 	if len(photoPaths) == 0 && len(docPaths) == 0 && len(voiceTexts) == 0 {

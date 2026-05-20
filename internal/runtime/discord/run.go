@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/bwmarrin/discordgo"
 	go_bot_discord "github.com/pardnchiu/go-bot/discord"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
@@ -257,11 +258,19 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		replyText = fmt.Sprintf("%s\n-# ⎿ ⚠️ %s", replyText, strings.Join(execErrors, ", "))
 	}
 
-	replyMsg, sendErr := b.client.Send(ctx, in.ChannelID, in.MessageID, replyText)
-	if sendErr != nil {
-		slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.Send",
-			slog.String("channel", channelName(in)),
-			slog.String("error", sendErr.Error()))
+	chunks := chunk(replyText)
+	replyTo := in.MessageID
+	var replyMsg *discordgo.Message
+	for _, part := range chunks {
+		msg, sendErr := b.client.Send(ctx, in.ChannelID, replyTo, part)
+		if sendErr != nil {
+			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.Send",
+				slog.String("channel", channelName(in)),
+				slog.String("error", sendErr.Error()))
+			break
+		}
+		replyMsg = msg
+		replyTo = ""
 	}
 
 	if len(voiceTexts) == 0 && len(attachmentPaths) == 0 {
