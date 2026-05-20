@@ -13,7 +13,8 @@ require (
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pardnchiu/ToriiDB v0.5.1
 	github.com/pardnchiu/go-bot v0.3.5
-	github.com/pardnchiu/go-pkg v0.12.3
+	github.com/pardnchiu/go-browser v0.1.3
+	github.com/pardnchiu/go-pkg v0.13.0
 	github.com/pardnchiu/go-scheduler v1.2.0
 )
 
@@ -64,11 +65,11 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	golang.org/x/arch v0.22.0 // indirect
-	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/net v0.54.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )
 
-require golang.org/x/term v0.42.0 // direct
+require golang.org/x/term v0.43.0 // direct
 
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
@@ -82,8 +83,8 @@ require (
 	github.com/ysmood/got v0.40.0 // indirect
 	github.com/ysmood/gson v0.7.3 // indirect
 	github.com/ysmood/leakless v0.9.0 // indirect
-	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
 	golang.org/x/image v0.37.0 // direct
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 )

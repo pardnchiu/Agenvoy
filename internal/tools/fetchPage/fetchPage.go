@@ -9,12 +9,14 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
+	go_browser "github.com/pardnchiu/go-browser"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
-	go_pkg_rod "github.com/pardnchiu/go-pkg/rod"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -24,9 +26,53 @@ import (
 const (
 	cacheExpired      = 1 * time.Hour
 	skippedExpired    = 12 * time.Hour
-	fetchTimeout      = 5 * time.Second
 	maxMarkdownLength = 100 << 10
+	defaultScroll     = 3
 )
+
+func currentProfile() string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return "Default"
+	}
+	var paths []string
+	switch runtime.GOOS {
+	case "darwin":
+		paths = []string{filepath.Join(home, "Library", "Application Support", "Google", "Chrome", "Local State")}
+	case "linux":
+		paths = []string{filepath.Join(home, ".config", "google-chrome", "Local State")}
+	default:
+		return "Default"
+	}
+	type localState struct {
+		Profile struct {
+			LastUsed string `json:"last_used"`
+		} `json:"profile"`
+	}
+	for _, p := range paths {
+		ls, err := go_pkg_filesystem.ReadJSON[localState](p)
+		if err != nil {
+			continue
+		}
+		if ls.Profile.LastUsed != "" {
+			return ls.Profile.LastUsed
+		}
+	}
+	return "Default"
+}
+
+func parseOutputType(s string) (int, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "", "markdown":
+		return go_browser.TypeMarkdown, nil
+	case "html":
+		return go_browser.TypeHTML, nil
+	case "json":
+		return go_browser.TypeJSON, nil
+	default:
+		return 0, fmt.Errorf("invalid type %q: want markdown|html|json", s)
+	}
+}
 
 func registFetchPage() {
 	toolRegister.Regist(toolRegister.Def{
@@ -34,17 +80,38 @@ func registFetchPage() {
 		Name:        "fetch_page",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: "[system-default] Fetch a web page and return its content as Markdown without saving it locally.",
+		Description: "[system-default] Fetch a web page and return its content without saving it locally.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"link": map[string]any{
 					"type":        "string",
-					"description": "The full URL of the page to fetch (must include https://)",
+					"description": "The full URL of the page to fetch (must include https://).",
 				},
 				"keep_links": map[string]any{
 					"type":        "boolean",
-					"description": "Keep hyperlinks from the same domain (useful for document research tasks that require recursively following subpages).",
+					"description": "Keep hyperlinks from the same domain. Set true for document research tasks that require recursively following subpages (docs sites, multi-page articles).",
+					"default":     false,
+				},
+				"same_session": map[string]any{
+					"type":        "boolean",
+					"description": "Reuse the persistent Chrome profile so cookies and login state are sent. Default false (anonymous). Set true when the site requires membership/login (social platforms like x.com / threads / linkedin, paywall services like bloomberg / wsj / ft, any logged-in dashboard) or when the user explicitly says \"用 user session\" / \"保留登入\" / \"用我的帳號\".",
+					"default":     false,
+				},
+				"type": map[string]any{
+					"type":        "string",
+					"enum":        []string{"markdown", "html", "json"},
+					"description": "Output format. Default \"markdown\" (best for natural reading and summarisation). Switch to \"json\" when the user asks for structured analysis, data extraction, comparison across multiple items, or when feeding the output to another tool. Switch to \"html\" only when raw DOM is needed for downstream parsing.",
+					"default":     "markdown",
+				},
+				"cache": map[string]any{
+					"type":        "boolean",
+					"description": "Whether to write the fetched result into the local cache. Default true. Set false for one-off pages that won't be revisited (search result URLs, throwaway tokens in querystring) so the cache stays useful.",
+					"default":     true,
+				},
+				"force": map[string]any{
+					"type":        "boolean",
+					"description": "Ignore any existing cache entry and refetch live. Default false. Set true when the user explicitly asks for the latest version (\"重新抓\" / \"最新\" / \"refresh\") or when the previously cached content is known stale.",
 					"default":     false,
 				},
 			},
@@ -54,8 +121,12 @@ func registFetchPage() {
 		},
 		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
-				Link      string `json:"link"`
-				KeepLinks bool   `json:"keep_links"`
+				Link        string `json:"link"`
+				KeepLinks   bool   `json:"keep_links"`
+				SameSession bool   `json:"same_session"`
+				Type        string `json:"type"`
+				Cache       *bool  `json:"cache"`
+				Force       bool   `json:"force"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
@@ -65,12 +136,20 @@ func registFetchPage() {
 			if link == "" {
 				return "", fmt.Errorf("link is required")
 			}
-			return handler(link, params.KeepLinks, nil)
+			outType, err := parseOutputType(params.Type)
+			if err != nil {
+				return "", err
+			}
+			useCache := true
+			if params.Cache != nil {
+				useCache = *params.Cache
+			}
+			return handler(link, params.KeepLinks, params.SameSession, outType, useCache, params.Force, nil)
 		},
 	})
 }
 
-func handler(link string, keepLinks bool, saveTo *string) (string, error) {
+func handler(link string, keepLinks, sameSession bool, outType int, useCache, force bool, saveTo *string) (string, error) {
 	parsed, err := url.Parse(link)
 	if err != nil {
 		return "", fmt.Errorf("url.Parse: %w", err)
@@ -87,31 +166,38 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 		return skippedMessage(link, status, title), nil
 	}
 
-	cacheVariant := "|text"
-	if keepLinks {
-		cacheVariant = "|links"
-	}
+	cacheVariant := fmt.Sprintf("|type=%d|links=%t|session=%t", outType, keepLinks, sameSession)
 	hash := sha256.Sum256([]byte(link + cacheVariant))
 	cacheKey := "page:" + hex.EncodeToString(hash[:])
 	db := torii.DB(torii.DBToolCache)
 	var full string
-	if entry, ok := db.Get(cacheKey); ok {
-		if saveTo == nil {
-			return truncateResult(entry.Value()), nil
+	cacheHit := false
+	if !force {
+		if entry, ok := db.Get(cacheKey); ok {
+			full = entry.Value()
+			cacheHit = true
 		}
-		full = entry.Value()
+	}
+	if cacheHit {
+		if saveTo == nil {
+			return truncateResult(full), nil
+		}
 	} else {
-		ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
-		defer cancel()
-
-		result, err := go_pkg_rod.Fetch(ctx, link, fetchTimeout, &go_pkg_rod.FetchOption{
-			MaxLength: maxMarkdownLength,
-			KeepLinks: keepLinks,
-		})
+		opt := &go_browser.Option{
+			MaxLength:   maxMarkdownLength,
+			KeepLinks:   keepLinks,
+			SameSession: sameSession,
+			Type:        outType,
+			ScrollCount: defaultScroll,
+		}
+		if sameSession {
+			opt.Profile = currentProfile()
+		}
+		result, err := go_browser.Fetch(context.Background(), link, 0, opt)
 		if err != nil {
 			status := 503
 			title := ""
-			var fe *go_pkg_rod.FetchError
+			var fe *go_browser.Error
 			if errors.As(err, &fe) {
 				status = fe.Status
 			}
@@ -127,15 +213,35 @@ func handler(link string, keepLinks bool, saveTo *string) (string, error) {
 			return skippedMessage(link, 404, result.Title), nil
 		}
 
-		if strings.TrimSpace(result.Markdown) == "" {
-			addToSkippedMap(link, 0, result.Title)
-			return skippedMessage(link, 0, result.Title), nil
+		switch outType {
+		case go_browser.TypeMarkdown:
+			if strings.TrimSpace(result.Content) == "" {
+				addToSkippedMap(link, 0, result.Title)
+				return skippedMessage(link, 0, result.Title), nil
+			}
+			full = buildFrontmatter(result)
+		case go_browser.TypeJSON:
+			if len(result.Tree) == 0 {
+				addToSkippedMap(link, 0, result.Title)
+				return skippedMessage(link, 0, result.Title), nil
+			}
+			b, err := json.Marshal(result.Tree)
+			if err != nil {
+				return "", fmt.Errorf("json.Marshal tree: %w", err)
+			}
+			full = string(b)
+		default:
+			if strings.TrimSpace(result.Content) == "" {
+				addToSkippedMap(link, 0, result.Title)
+				return skippedMessage(link, 0, result.Title), nil
+			}
+			full = result.Content
 		}
-
-		full = buildFrontmatter(result)
-		if err = db.Set(cacheKey, full, torii.SetDefault, torii.TTL(int64(cacheExpired.Seconds()))); err != nil {
-			slog.Warn("db.Set",
-				slog.String("error", err.Error()))
+		if useCache {
+			if err = db.Set(cacheKey, full, torii.SetDefault, torii.TTL(int64(cacheExpired.Seconds()))); err != nil {
+				slog.Warn("db.Set",
+					slog.String("error", err.Error()))
+			}
 		}
 	}
 
@@ -178,7 +284,7 @@ func truncateResult(result string) string {
 	return fmt.Sprintf("Web page content:\n---\n%s\n---", result)
 }
 
-func buildFrontmatter(r *go_pkg_rod.FetchResult) string {
+func buildFrontmatter(r *go_browser.Result) string {
 	var sb strings.Builder
 	sb.WriteString("---\n")
 	writeField(&sb, "title", r.Title)
@@ -193,7 +299,7 @@ func buildFrontmatter(r *go_pkg_rod.FetchResult) string {
 		writeField(&sb, "excerpt", r.Excerpt)
 	}
 	sb.WriteString("---\n")
-	sb.WriteString(r.Markdown)
+	sb.WriteString(r.Content)
 	return sb.String()
 }
 

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	go_browser "github.com/pardnchiu/go-browser"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -66,7 +67,7 @@ func registSavePageToFile() {
 				}
 				saveTo = abs
 			}
-			return handler(link, params.KeepLinks, &saveTo)
+			return handler(link, params.KeepLinks, false, go_browser.TypeMarkdown, true, false, &saveTo)
 		},
 	})
 }
