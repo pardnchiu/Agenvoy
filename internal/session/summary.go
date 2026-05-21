@@ -19,6 +19,30 @@ func SummaryPath(sessionID string) string {
 	return filepath.Join(filesystem.SessionsDir, sessionID, "summary.json")
 }
 
+func SummaryMetaPath(sessionID string) string {
+	return filepath.Join(filesystem.SessionsDir, sessionID, "summary.meta.json")
+}
+
+type SummaryMeta struct {
+	LastMessageTime string `json:"last_message_time"`
+}
+
+func GetSummaryMeta(sessionID string) SummaryMeta {
+	meta, err := go_pkg_filesystem.ReadJSON[SummaryMeta](SummaryMetaPath(sessionID))
+	if err != nil {
+		return SummaryMeta{}
+	}
+	return meta
+}
+
+func SaveSummaryMeta(sessionID string, lastTime string) {
+	meta := SummaryMeta{LastMessageTime: lastTime}
+	if err := go_pkg_filesystem.WriteJSON(SummaryMetaPath(sessionID), meta, false); err != nil {
+		slog.Warn("WriteJSON summary meta",
+			slog.String("error", err.Error()))
+	}
+}
+
 func GetSummary(sessionID string) ([]byte, map[string]any) {
 	text, err := go_pkg_filesystem.ReadText(SummaryPath(sessionID))
 	if err != nil {

@@ -13,17 +13,69 @@ import (
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, histories []agentTypes.Message) {
-	raw, _ := sessionManager.EnsureSummary(sessionID)
+func extractMessageTime(msg agentTypes.Message) string {
+	s, ok := msg.Content.(string)
+	if !ok {
+		return ""
+	}
+	m := regexp.MustCompile(`當前時間:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})`).FindStringSubmatch(s)
+	if len(m) < 2 {
+		return ""
+	}
+	return m[1]
+}
 
-	var oldSummary string
-	if raw != nil {
-		oldSummary = string(raw)
-	} else {
+func latestMessageTime(messages []agentTypes.Message) string {
+	var latest string
+	for _, m := range messages {
+		t := extractMessageTime(m)
+		if t > latest {
+			latest = t
+		}
+	}
+	return latest
+}
+
+func filterAfterTime(messages []agentTypes.Message, cursor string) []agentTypes.Message {
+	if cursor == "" {
+		return messages
+	}
+	out := make([]agentTypes.Message, 0, len(messages))
+	for _, m := range messages {
+		t := extractMessageTime(m)
+		if t == "" || t > cursor {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, histories []agentTypes.Message) {
+	raw, summaryMap := sessionManager.EnsureSummary(sessionID)
+	meta := sessionManager.GetSummaryMeta(sessionID)
+
+	if meta.LastMessageTime == "" && len(summaryMap) > 0 {
+		latest := latestMessageTime(histories)
+		sessionManager.SaveSummaryMeta(sessionID, latest)
+		sessionManager.SaveSummary(sessionID, summaryMap)
+		slog.Info("summary meta initialized from existing summary",
+			slog.String("session", sessionID),
+			slog.String("cursor", latest))
+		return
+	}
+
+	newHistories := filterAfterTime(histories, meta.LastMessageTime)
+	if len(newHistories) == 0 {
+		return
+	}
+
+	oldSummary := string(raw)
+	if oldSummary == "" {
 		oldSummary = "{}"
 	}
 
-	chunks := chunkMessages(histories, 16)
+	chunks := chunkMessages(newHistories, 16)
+	cursor := meta.LastMessageTime
 
 	for i, chunk := range chunks {
 		newMap := generatePass(ctx, agent, oldSummary, chunk)
@@ -31,17 +83,7 @@ func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, his
 			slog.Warn("summary generatePass returned nil",
 				slog.String("session", sessionID),
 				slog.Int("chunk", i+1))
-			continue
-		}
-
-		if oldSummary != "{}" {
-			newJSON, err := json.Marshal(newMap)
-			if err == nil {
-				merged := mergePass(ctx, agent, oldSummary, string(newJSON))
-				if merged != nil {
-					newMap = merged
-				}
-			}
+			return
 		}
 
 		if b, err := json.Marshal(newMap); err == nil {
@@ -49,6 +91,10 @@ func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, his
 		}
 
 		sessionManager.SaveSummary(sessionID, newMap)
+		if chunkLatest := latestMessageTime(chunk); chunkLatest > cursor {
+			cursor = chunkLatest
+		}
+		sessionManager.SaveSummaryMeta(sessionID, cursor)
 	}
 }
 
@@ -93,20 +139,6 @@ func generatePass(ctx context.Context, agent agentTypes.Agent, oldSummary string
 	}
 
 	return sendAndParse(ctx, agent, messages, "generatePass")
-}
-
-func mergePass(ctx context.Context, agent agentTypes.Agent, oldSummary, newSummary string) map[string]any {
-	prompt := strings.NewReplacer(
-		"{{.OldSummary}}", oldSummary,
-		"{{.NewSummary}}", newSummary,
-	).Replace(strings.TrimSpace(configs.SummaryMergePrompt))
-
-	messages := []agentTypes.Message{
-		{Role: "system", Content: prompt},
-		{Role: "user", Content: "Merge the two summaries now per the rules above. Output raw JSON only."},
-	}
-
-	return sendAndParse(ctx, agent, messages, "mergePass")
 }
 
 func sendAndParse(ctx context.Context, agent agentTypes.Agent, messages []agentTypes.Message, label string) map[string]any {
