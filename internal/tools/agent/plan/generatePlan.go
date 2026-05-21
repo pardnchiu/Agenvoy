@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -73,7 +74,7 @@ func registGeneratePlan() {
 			},
 			"required": []string{"requirement"},
 		},
-		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Requirement string `json:"requirement"`
 				Context     string `json:"context,omitempty"`
@@ -88,8 +89,18 @@ func registGeneratePlan() {
 			}
 
 			dispatcher := agents.Dispatcher()
-			if dispatcher == nil {
-				return "", fmt.Errorf("dispatcher unavailable")
+			registry := agents.Registry()
+			if dispatcher == nil || len(registry.Registry) == 0 {
+				return "", fmt.Errorf("planner host not initialized")
+			}
+
+			sessionID := ""
+			if e != nil {
+				sessionID = e.SessionID
+			}
+			agent := exec.SelectAgent(ctx, dispatcher, registry, "[plan] "+requirement, false, sessionID)
+			if agent == nil {
+				return "", fmt.Errorf("no agent available")
 			}
 
 			var userBuilder strings.Builder
@@ -105,9 +116,9 @@ func registGeneratePlan() {
 				{Role: "user", Content: userBuilder.String()},
 			}
 
-			resp, err := dispatcher.Send(ctx, messages, nil)
+			resp, err := agent.Send(ctx, messages, nil)
 			if err != nil {
-				return "", fmt.Errorf("dispatcher.Send: %w", err)
+				return "", fmt.Errorf("agent.Send: %w", err)
 			}
 			if resp == nil || len(resp.Choices) == 0 {
 				return "", fmt.Errorf("planner returned no choices")

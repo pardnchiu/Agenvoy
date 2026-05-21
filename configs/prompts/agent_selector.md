@@ -29,6 +29,10 @@ Request contains "use <name>", "用 <名稱>", "指定 <名稱>", "select <name>
 Request begins with `[summary]` prefix → pure JSON output task, no dense system prompt.
 → Apply summary chain (see below) directly.
 
+### P0.6: Planning task routing
+Request begins with `[plan]` prefix → text-only execution plan generation, no tool calls (toolDefs=nil).
+→ Apply the "Dense routing / multi-step planning / task decomposition / subagent dispatch / complexity evaluation" chain directly: `claude-opus > codex-pro > codex > claude-sonnet > openai-pro > openai > gemini-pro > codex-mini > openai-mini > claude-haiku > gemini-flash > codex-nano > openai-nano > gemini-flash-lite`.
+
 ### P1: Task-type chain matching
 
 Identify which task scenario the request belongs to, then apply the corresponding preference chain. Scan from left to right; return the first `name` in the available list that matches a node. Within a node, prefer the highest-version variant.
