@@ -23,12 +23,19 @@ func cmdAgent(allowAll bool) {
 	modelCheck()
 
 	if !runtime.IsCurrent() {
-		clearSession()
+		session.CleanAllTask()
+	}
+
+	sessionID, err := cli.ResolveSession()
+	if err != nil {
+		slog.Error("cli.ResolveSession",
+			slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
 	userInput := strings.TrimSpace(strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n"))
 
-	mcpManager := initMCP(context.Background())
+	mcpManager := initMCP(context.Background(), sessionID)
 	defer mcpManager.Close()
 
 	registry := buildAgentRegistry()
@@ -37,8 +44,8 @@ func cmdAgent(allowAll bool) {
 	defer cancel()
 
 	var selectorBot agentTypes.Agent
-	if cfg, err := session.Load(); err == nil && cfg.PlannerModel != "" {
-		selectorBot = cli.SelectAgent(cfg.PlannerModel)
+	if cfg, err := session.Load(); err == nil && cfg.DispatcherModel != "" {
+		selectorBot = cli.SelectAgent(cfg.DispatcherModel)
 	}
 	if selectorBot == nil {
 		selectorBot = registry.Fallback
@@ -49,7 +56,7 @@ func cmdAgent(allowAll bool) {
 	go cli.NewPending(ctx)
 
 	if err := cli.Run(func(ch chan<- agentTypes.Event) error {
-		return exec.Run(ctx, selectorBot, registry, scanner, userInput, nil, nil, ch, allowAll, "", "", false)
+		return exec.Run(ctx, selectorBot, registry, scanner, userInput, nil, nil, ch, allowAll, "", sessionID, false)
 	}); err != nil && ctx.Err() == nil {
 		slog.Error("failed to execute",
 			slog.String("error", err.Error()))

@@ -317,6 +317,24 @@ python3 scripts/init_skill.py my-skill --path skills/public --resources scripts 
 
 撰寫使用 Skill 及其打包資源的指令。
 
+##### Secret／API Key
+
+若 Skill 需要 token、API key 或其他 secret：
+
+- **命名格式**：`{品牌}_API_KEY`（SCREAMING_SNAKE_CASE），例 `OPENAI_API_KEY`、`CODEX_API_KEY`、`POLYGON_API_KEY`、`STAGING_API_KEY`
+- **儲存位置**：macOS keychain 中 **service = `agenvoy`**、**account = key 名**，組合識別 `agenvoy.{key}`（例 `agenvoy.OPENAI_API_KEY`）
+- **取值方式**：
+  - Go 內部：`keychain.Get("<KEY_NAME>")`（只傳 key 名，無 `agenvoy.` 前綴）
+  - Script tool：`GET http://localhost:17989/v1/key?key=<KEY_NAME>`
+  - API tool（registry）：`auth.env: "<KEY_NAME>"`
+- **落地動作**：建立 Skill 時若需要新 key，呼叫 `store_secret({ key: "<KEY_NAME>", prompt: "..." })`；該 tool 內部走遮罩輸入 + `keychain.Set`，**Skill 全程不見明文**
+
+**禁止**：
+- 在 SKILL.md frontmatter／body／scripts／assets 任何位置寫死 token 值
+- 在 Skill 參數 schema 暴露 plaintext secret 欄位讓 LLM 收明文
+- 走 `ask_user` 取 plaintext 再轉手 `store_secret`（會把 value 帶進 LLM context／history／action.log）
+- 指導使用者用 `export ENV=value` 之類 shell 環境變數路徑取代 keychain
+
 ### 步驟五：打包 Skill
 
 Skill 開發完成後，必須打包為可分發的 .skill 檔案。打包過程會自動先驗證 Skill，確保符合所有要求：

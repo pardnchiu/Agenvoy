@@ -10,17 +10,17 @@ import (
 type RefreshFunc func() (agentTypes.Agent, agentTypes.AgentRegistry)
 
 var (
-	mu        sync.RWMutex
-	planner   agentTypes.Agent
-	registry  agentTypes.AgentRegistry
-	scanner   *runtime.SkillScanner
-	refresher RefreshFunc
+	mu         sync.RWMutex
+	dispatcher agentTypes.Agent
+	registry   agentTypes.AgentRegistry
+	scanner    *runtime.SkillScanner
+	refresher  RefreshFunc
 )
 
-func Set(p agentTypes.Agent, r agentTypes.AgentRegistry, s *runtime.SkillScanner) {
+func Set(d agentTypes.Agent, r agentTypes.AgentRegistry, s *runtime.SkillScanner) {
 	mu.Lock()
 	defer mu.Unlock()
-	planner = p
+	dispatcher = d
 	registry = r
 	scanner = s
 }
@@ -38,18 +38,18 @@ func Reload() bool {
 	if fn == nil {
 		return false
 	}
-	p, r := fn()
+	d, r := fn()
 	mu.Lock()
-	planner = p
+	dispatcher = d
 	registry = r
 	mu.Unlock()
 	return true
 }
 
-func Planner() agentTypes.Agent {
+func Dispatcher() agentTypes.Agent {
 	mu.RLock()
 	defer mu.RUnlock()
-	return planner
+	return dispatcher
 }
 
 func Registry() agentTypes.AgentRegistry {

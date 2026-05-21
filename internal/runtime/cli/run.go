@@ -125,20 +125,14 @@ func Run(fn func(chan<- agentTypes.Event) error) error {
 			writeStdoutLine(colorize(ev, soruce+"[*] Generating summary…"))
 
 		case agentTypes.EventDone:
-			var sb strings.Builder
-			sb.WriteString(fmt.Sprintf(" (%s)", time.Since(start).Round(time.Millisecond)))
-			if ev.Model != "" {
-				modelDisplay := ev.Model
-				if _, after, ok := strings.Cut(ev.Model, "@"); ok {
-					modelDisplay = after
-				}
-				sb.WriteString(fmt.Sprintf(" [%s", modelDisplay))
-				if ev.Usage != nil {
-					sb.WriteString(fmt.Sprintf(" | in:%d out:%d", ev.Usage.Input, ev.Usage.Output))
-				}
-				sb.WriteString("]")
+			duration := ev.Duration
+			if duration == 0 {
+				duration = time.Since(start)
 			}
-			writeStdoutLine(sb.String())
+			footer := utils.FormatFooter(duration, ev.Model, ev.Usage)
+			if footer != "" {
+				writeStdoutLine("  ⎿ " + footer)
+			}
 		}
 	}
 

@@ -242,6 +242,20 @@ scheduler 觸發後，runtime 會把 subagent 產出的最終文字自動送回 
 
 **所以 skill body 不需要、也禁止**寫「推送到 channel」「呼叫 `send_http_request` 發 Discord webhook」「呼叫 MCP discord tool」之類的 notify 指令。寫了會在觸發時造成多餘的 token 與認證錯誤（subagent 沒 `DISCORD_BOT_TOKEN` 互動環境）。
 
+## Secret／API Key（skill body 引用 token 時必看）
+
+被觸發的 scheduler skill 跑在獨立 subagent，**不持有任何明文 secret**。若 body 內呼叫的 tool（如 `send_http_request`、自製 api_tool、script_tool）需要 API token：
+
+- **命名格式**：`{品牌}_API_KEY`（SCREAMING_SNAKE_CASE），例 `OPENAI_API_KEY`、`CODEX_API_KEY`、`POLYGON_API_KEY`、`STAGING_API_KEY`
+- **儲存位置**：macOS keychain 中 **service = `agenvoy`**、**account = key 名**，組合識別 `agenvoy.{key}`（例 `agenvoy.OPENAI_API_KEY`）
+- **取值方式**：
+  - api_tool：`auth.env: "<KEY_NAME>"`（schema 只記 key 名，無 `agenvoy.` 前綴）
+  - script_tool：`GET http://localhost:17989/v1/key?key=<KEY_NAME>`（同樣不帶前綴）
+  - skill body 純文字：直接引用 tool，**不**在 SKILL.md 寫明文 token、**不**寫 `export ENV=value` 之類指令
+- **缺 key 處置**：若觸發時 keychain 無對應 key，subagent 會在 tool 端拿到 401／空值錯誤；skill body 不負責「補登」，請使用者預先用 `store_secret` 或 `/api-tool-add`／`/script-tool-add` 流程落地
+
+**禁止**在 scheduler skill 的 SKILL.md frontmatter／body 任何位置寫死 token 值或要求使用者在 cron 觸發時互動輸入 — subagent 無對話環境，不可能收 plaintext。
+
 ## 時間敏感性提醒（寫入 skill body 時注意）
 
 被觸發的 skill 跑在獨立 subagent session，**沒有當下對話上下文**。skill body 必須：

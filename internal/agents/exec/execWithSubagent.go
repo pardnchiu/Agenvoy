@@ -29,8 +29,8 @@ var SubagentTimeoutMin = max(defaultSubagentTimeoutMin,
 
 func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPrompt string, excludedTools []string) (string, error) {
 	registry := agents.Registry()
-	planner := agents.Planner()
-	if planner == nil || len(registry.Registry) == 0 {
+	dispatcher := agents.Dispatcher()
+	if dispatcher == nil || len(registry.Registry) == 0 {
 		return "", fmt.Errorf("subagent host not initialized")
 	}
 
@@ -38,7 +38,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 	if model != "" {
 		agent = registry.Registry[model]
 	} else {
-		agent = SelectAgent(ctx, planner, registry, task, false, sessionIDInput)
+		agent = SelectAgent(ctx, dispatcher, registry, task, false, sessionIDInput)
 	}
 	if agent == nil {
 		return "", fmt.Errorf("no agent available")

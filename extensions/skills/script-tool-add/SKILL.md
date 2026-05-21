@@ -152,7 +152,7 @@ GET http://localhost:17989/v1/key?key=<key_name>
 → 404 / empty value → key 不存在
 ```
 
-`<key_name>` 命名慣例：`agenvoy.<provider>.<purpose>`，例 `agenvoy.openai.api_key`、`agenvoy.polygon.token`。
+`<key_name>` 命名慣例：**`{品牌}_API_KEY`**（SCREAMING_SNAKE_CASE，與 providers 同 keychain pool），例 `OPENAI_API_KEY`、`CODEX_API_KEY`、`POLYGON_API_KEY`。底層儲存位置：macOS keychain 中 **service = `agenvoy`**、**account = key 名**，組合識別 `agenvoy.{key}`（例 `agenvoy.OPENAI_API_KEY`）；`/v1/key?key=` 參數**只填 key 名**，不帶 `agenvoy.` 前綴。
 
 Script 端範本（Python）：
 
@@ -178,7 +178,7 @@ def get_key(name):
 question: "此 tool 需要哪個 secret？keychain key 名稱用什麼？"
 header: "Secret"
 options:
-  - label: "<推薦命名>" description: "例：agenvoy.<provider>.api_key"
+  - label: "<推薦命名>" description: "格式 {品牌}_API_KEY；例 OPENAI_API_KEY、POLYGON_API_KEY、STAGING_API_KEY"
   - label: "自訂"      description: "free-text 輸入"
 multiSelect: false
 ```

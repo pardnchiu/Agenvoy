@@ -127,7 +127,7 @@ TUI 全部放在單一 package（`internal/tui`），**不拆 subpackage**。`in
 | 主題 | 頁 |
 |---|---|
 | 迭代迴圈、三段式派發細節 | [核心概念](https://github.com/agenvoy/Agenvoy/wiki/核心概念) |
-| Provider 路由與 planner | [Provider 設定](https://github.com/agenvoy/Agenvoy/wiki/Provider-設定) |
+| Provider 路由與 dispatcher | [Provider 設定](https://github.com/agenvoy/Agenvoy/wiki/Provider-設定) |
 | 工具 registry、擴展路徑 | [工具系統](https://github.com/agenvoy/Agenvoy/wiki/工具系統) |
 | 記憶層級與語意搜尋 | [記憶系統](https://github.com/agenvoy/Agenvoy/wiki/記憶系統) |
 | 沙箱 policy、permission mode | [安全與沙箱](https://github.com/agenvoy/Agenvoy/wiki/安全與沙箱) |

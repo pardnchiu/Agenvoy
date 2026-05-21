@@ -19,7 +19,6 @@ import (
 type AgentConfig struct {
 	SessionID    string                  `json:"session_id"`
 	DefaultModel string                  `json:"default_model"`
-	PlannerModel string                  `json:"planner_model"`
 	Models       []agentTypes.AgentEntry `json:"models"`
 }
 

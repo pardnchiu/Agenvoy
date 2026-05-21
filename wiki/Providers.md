@@ -24,17 +24,17 @@ Agenvoy supports seven LLM providers behind a unified `Agent.Send()` interface.
 agen model add          # Interactive provider/model add
 agen model remove       # Interactive provider/model remove
 agen model list         # List registered models
-agen model planner      # Choose the planner model
-agen model reasoning    # Set planner reasoning effort: low / medium / high / xhigh
+agen model dispatcher   # Choose the dispatcher model
+agen model reasoning    # Set dispatcher reasoning effort: low / medium / high / xhigh
 ```
 
 Credentials (API keys, OAuth tokens) are stored in the OS keychain under service `agenvoy`, never in plain JSON.
 
-## Planner model
+## Dispatcher model
 
-The planner LLM decides which worker model handles each task. It is invoked through `SelectAgent()` before `Execute()` enters its iteration loop, receiving the user input plus a hint about any matched skill.
+The dispatcher LLM decides which worker model handles each task. It is invoked through `SelectAgent()` before `Execute()` enters its iteration loop, receiving the user input plus a hint about any matched skill.
 
-Configure via `agen model planner` (model selection) and `agen model reasoning` (reasoning effort).
+Configure via `agen model dispatcher` (model selection) and `agen model reasoning` (reasoning effort).
 
 ## Streaming
 

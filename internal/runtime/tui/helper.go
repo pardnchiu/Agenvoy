@@ -8,16 +8,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
-func compactNumber(n int) string {
-	switch {
-	case n >= 1_000_000:
-		return fmt.Sprintf("%.1fM", float64(n)/1_000_000)
-	case n >= 1_000:
-		return fmt.Sprintf("%.1fK", float64(n)/1_000)
-	}
-	return fmt.Sprintf("%d", n)
-}
-
 func activityVerb(activity string) string {
 	switch {
 	case activity == "":

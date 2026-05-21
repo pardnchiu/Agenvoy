@@ -22,6 +22,7 @@ import (
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/tui"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/tools/agent/plan"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 )
@@ -67,13 +68,14 @@ func newTUI() {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
 	subagent.Register()
+	plan.Register()
 
-	mcpManager := initMCP(context.Background())
+	mcpManager := initMCP(context.Background(), "")
 	defer mcpManager.Close()
 
 	registry := buildAgentRegistry()
 	scanner := runtime.NewSkillScanner()
-	selectorBot := plannerSelector(registry)
+	selectorBot := dispatcherSelector(registry)
 
 	agents.Set(selectorBot, registry, scanner)
 	agents.SetRefresher(refreshHost)

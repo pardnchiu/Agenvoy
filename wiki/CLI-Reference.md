@@ -8,7 +8,7 @@
 
 ```bash
 agen                                           # Attach TUI; spawn daemon if not running
-agen model   {add|remove|list|planner|reasoning}
+agen model   {add|remove|list|dispatcher|reasoning}
 agen session {new|switch|config} [name]
 agen mcp     {list|add|remove}
 agen cli     <input...>                        # one-shot, requires per-tool confirm
@@ -24,8 +24,8 @@ agen update                                    # Download latest release & rebui
 | `add` | Interactive provider/model add (writes credentials to keychain) |
 | `remove` (alias `rm`) | Interactive provider/model remove |
 | `list` | List registered models |
-| `planner` | Choose the planner model |
-| `reasoning` | Set planner reasoning effort: `low` / `medium` / `high` / `xhigh` |
+| `dispatcher` | Choose the dispatcher model |
+| `reasoning` | Set dispatcher reasoning effort: `low` / `medium` / `high` / `xhigh` |
 
 ### `agen session`
 
@@ -60,7 +60,7 @@ make stop                       # Stop the running daemon
 make update                     # = agen update
 make cli <input...>             # agen cli <input...>
 make run <input...>             # agen run <input...>
-make model   [add|remove|list|planner|reasoning]
+make model   [add|remove|list|dispatcher|reasoning]
 make session [new|switch|config] [name]
 make mcp     [list|add|remove]
 ```
@@ -88,7 +88,7 @@ The TUI auto-tails the active session's `action.log` (foreign-process writes pre
 | `/bot [name body...]` | Edit bot persona — two-popup form (name then multiline body), or inline `parts≥3` for fast path. |
 | `/model [global\|session]` | `global` → add / remove from registry, `session` → pick from `cfg.Models`. |
 | `/mcp [add\|remove]` | Chained popup form for MCP server config; restart daemon to apply. |
-| `/planner` | Pick the planner model from `cfg.Models`. |
+| `/dispatcher` | Pick the dispatcher model from `cfg.Models`. |
 | `/reasoning [global\|session]` | `low` / `medium` / `high`. |
 | `/discord [enable\|disable]` | Toggle Discord bot connection (in-TUI popup chain: token entry → verification → keychain write → daemon fsnotify reload). |
 | `/telegram [enable\|disable]` | Toggle Telegram bot connection (same in-TUI popup chain as `/discord`; first chat to message the bot must pass an in-chat code stored in `~/.config/agenvoy/.telegram`). |

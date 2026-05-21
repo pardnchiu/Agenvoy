@@ -1,12 +1,12 @@
 <!--
 
-    Copyright 2026 Pardn Ltd 帕登國際有限公司.
+    Copyright 2024 Pardn Ltd 帕登國際有限公司.
     Created by Pardn Chiu 邱敬幃.
     Email: dev@pardn.io
 
 -->
 <!doctype html>
-<html lang="en">
+<html lang="zh-Hant-TW">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -14,82 +14,132 @@
     <meta name="theme-color" content="#ffffff" />
     <meta name="robots" content="index, follow" />
 
-    <title>AGENVOY — Agentic AI platform — 邱敬幃 Pardn Chiu</title>
-    <meta name="title" content="AGENVOY — Agentic AI platform — 邱敬幃 Pardn Chiu" />
+    <!-- SEO 標題與描述 -->
+    <title>Agenvoy - Go-native 多模型 AI Agent OS - 邱敬幃</title>
+    <meta name="title" content="Agenvoy - Go-native 多模型 AI Agent OS - 邱敬幃" />
     <meta
       name="description"
-      content="A Go agentic AI platform with multi-provider dispatch, extensible API tools, skill routing, and Discord bot integration"
+      content="Agenvoy 是以 Go 打造的多模型 AI Agent 框架，內建 Dispatcher 智慧路由將每個任務分派給最適合的模型，跨介面共用同一 daemon、session 與 tool 集，並能自動生成 script／API 擴充自身能力。"
     />
-    <meta name="keywords" content="go, golang, agentic-ai, openclaw, 小龍蝦, pardnchiu, 邱敬幃" />
+    <meta
+      name="keywords"
+      content="ai-agent, agent-framework, go, golang, multi-model, dispatcher, claude, gpt, gemini, codex, copilot, mcp, telegram-bot, discord-bot, tui, automation, agenvoy, 邱敬幃"
+    />
     <meta name="author" content="邱敬幃 Pardn Chiu" />
-    <link rel="author" href="https://pardn.io" />
+    <link rel="author" href="https://pardn.io/" />
     <link rel="canonical" href="https://agenvoy.com/" />
 
     <!-- Favicon -->
-    <!--<link rel="icon" href="https://quickui.pardn.io/static/image/logo.png" type="image/x-icon" />-->
+    <link rel="icon" href="https://agenvoy.com/static/logo-min.svg" type="image/svg+xml" />
 
     <!-- Open Graph -->
-    <meta property="og:title" content="AGENVOY — Agentic AI platform — 邱敬幃 Pardn Chiu" />
+    <meta property="og:title" content="Agenvoy - Go-native 多模型 AI Agent OS - 邱敬幃" />
     <meta
       property="og:description"
-      content="A Go agentic AI platform with multi-provider dispatch, extensible API tools, skill routing, and Discord bot integration"
+      content="一條指令、多個模型，每個模型發揮自身強項。Dispatcher 智慧路由、Subagent 同進程協作、跨介面共用 daemon 與 session，並能自動擴充 tool 集。"
     />
-    <meta property="og:image" content="https://agenvoy.com/doc/cover.png" />
+    <meta property="og:image" content="https://agenvoy.com/static/logo-min.svg" />
     <meta property="og:url" content="https://agenvoy.com/" />
-    <meta property="og:site_name" content="AGENVOY" />
+    <meta property="og:site_name" content="Agenvoy" />
     <meta property="og:type" content="website" />
-    <meta property="og:locale" content="en" />
+    <meta property="og:locale" content="zh_TW" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta property="twitter:title" content="AGENVOY — Intelligent skill and agent selection — 邱敬幃 Pardn Chiu" />
+    <meta property="twitter:title" content="Agenvoy - Go-native 多模型 AI Agent OS - 邱敬幃" />
     <meta
       property="twitter:description"
-      content="A Go agentic AI platform with multi-provider dispatch, extensible API tools, skill routing, and Discord bot integration"
+      content="一條指令、多個模型，每個模型發揮自身強項。Dispatcher 智慧路由、Subagent 同進程協作、跨介面共用 daemon 與 session，並能自動擴充 tool 集。"
     />
-    <meta property="twitter:image" content="https://agenvoy.com/doc/cover.png" />
+    <meta property="twitter:image" content="https://agenvoy.com/static/logo-min.svg" />
     <meta property="twitter:url" content="https://agenvoy.com/" />
+
+    <!-- Google Verification -->
+    <meta name="google-site-verification" content="YQQ2f6AchR8dcb55Az2BYd_mw4TrP0J1RApD-v2v65Y" />
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-L5VYEZPVXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-L5VYEZPVXX");
+    </script>
 
     <!-- Preload and Preconnect -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@pardnchiu/quickui@0.6.2/dist/QuickUI.js" as="script" />
+    <script src="https://cdn.jsdelivr.net/npm/@pardnchiu/quickui@0.6.2/dist/QuickUI.js" copyright="Pardn Ltd"></script>
 
     <link
       rel="preload"
-      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.1/css/all.min.css"
+      href="https://cdn.jsdelivr.net/npm/code-prettify@0.1.0/loader/run_prettify.min.js"
+      as="script"
+      crossorigin="anonymous"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/code-prettify@0.1.0/loader/run_prettify.min.js"></script>
+
+    <link
+      rel="preload"
+      href="https://cdn.jsdelivr.net/npm/code-prettify@0.1.0/styles/desert.min.css"
+      as="style"
+      crossorigin="anonymous"
+    />
+    <link href="https://cdn.jsdelivr.net/npm/code-prettify@0.1.0/styles/desert.min.css" rel="stylesheet" />
+
+    <link
+      rel="preload"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
       as="style"
     />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.1/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" />
 
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/@pardnchiu/quickui@latest/dist/QuickUI.js" as="script" />
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap"
+      as="style"
+      crossorigin="anonymous"
+    />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="static/css/index.css?v=2603012035" />
-    <script src="https://cdn.jsdelivr.net/npm/@pardnchiu/quickui@latest/dist/QuickUI.js"></script>
+    <!-- Local Resources -->
+    <link rel="stylesheet" href="./static/css/index.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@pardnchiu/flexplyr@v2.2.8/dist/FlexPlyr.js"></script>
+    <script src="./static/index.js"></script>
 
     <!-- JSON-LD Schema -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebPage",
-        "datePublished": "2026-03-01",
-        "dateModified": "2026-03-01",
+        "@type": "SoftwareApplication",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS, Linux",
+        "datePublished": "2024-11-29",
+        "dateModified": "2026-05-21",
         "inLanguage": "zh-TW",
         "name": {
           "@language": "zh-TW",
-          "@value": "AGENVOY — Agentic AI platform — 邱敬幃 Pardn Chiu"
+          "@value": "Agenvoy - Go-native 多模型 AI Agent OS - 邱敬幃"
         },
         "alternateName": {
           "@language": "en",
-          "@value": "AGENVOY — Agentic AI platform — 邱敬幃 Pardn Chiu"
+          "@value": "Agenvoy - Go-native Multi-model AI Agent OS - Pardn Chiu"
         },
         "description": {
           "@language": "zh-TW",
-          "@value": "以 Go 打造的 AI Agent 平台，支援多模型智能調度、可擴充 API 工具、Skill 路由與 Discord Bot 整合"
+          "@value": "Agenvoy 是以 Go 打造的多模型 AI Agent 框架，內建 Dispatcher 智慧路由將每個任務分派給最適合的模型，跨介面共用同一 daemon、session 與 tool 集，並能自動生成 script／API 擴充自身能力。"
         },
         "alternateDescription": {
           "@language": "en",
-          "@value": "A Go agentic AI platform with multi-provider dispatch, extensible API tools, skill routing, and Discord bot integration"
+          "@value": "Agenvoy is a Go-native multi-model AI agent framework. A dedicated dispatcher routes every step to the best-fit worker, subagents collaborate in a single process, and every surface attaches to the same daemon — sharing sessions, memory and an auto-extending tool set."
         },
-        "url": ["https://agenvoy.com/"],
+        "url": ["https://agenvoy.com/", "https://agenvoy.com/?lang=zh", "https://agenvoy.com/?lang=en"],
+        "sameAs": ["https://github.com/pardnchiu/agenvoy"],
         "creator": {
           "@type": "Person",
           "name": [
@@ -105,131 +155,125 @@
           "url": "https://pardn.io/",
           "sameAs": ["https://github.com/pardnchiu"],
           "email": "dev@pardn.io"
-        }
-        // "image": "https://quickui.pardn.io/static/image/website.jpg"
+        },
+        "image": "https://agenvoy.com/static/logo-min.svg"
       }
     </script>
   </head>
-  <body>
-    <section id="app">
-      <header>
+
+  <body id="page">
+    <!--  -->
+    <nav>
+      <section>
+        <!--  -->
         <section>
-          <img src="static/logo.svg" alt="AGENVOY_LOGO" width="128" />
+          <a :href="./index.html?lang={{ lang }}">
+            <img src="./static/logo-text.svg" alt="" style="width: auto; height: 3rem" />
+          </a>
+        </section>
+        <!--  -->
+        <section></section>
+        <!--  -->
+        <section></section>
+      </section>
+    </nav>
+    <!--  -->
+    <header>
+      <section>
+        <section class="logo">
+          <img src="./static/logo-min.svg" alt="" />
           <section>
-            <h1>AGENVOY <span></span></h1>
-            <p>
-              STATUS: ALPHA<br />
-              RELEASE: <a :href="releaseUrl">{{release}}</a><br />
-              MAINTAINER: <a href="https://linkedin.com/in/pardnchiu" target="_blank">邱敬幃 PARDN CHIU</a><br />
-              LAST_UPDATED: {{updatedAt}}
-            </p>
+            <h1>AGEN<b style="color: #2e5fd5">VOY</b></h1>
+            <h2>{{ i18n.title }}</h2>
           </section>
         </section>
-        <section class="links">
-          <a href="https://github.com/pardnchiu/agenvoy" target="_blank">
+
+        <section :display="flex" :gap="0.5rem" :justify-content="center" :width="100%">
+          <img
+            src="https://img.shields.io/github/v/tag/pardnchiu/agenvoy?include_prereleases&style=for-the-badge"
+            alt=""
+          />
+          <img
+            src="https://img.shields.io/github/license/pardnchiu/agenvoy?include_prereleases&style=for-the-badge"
+            alt=""
+          />
+        </section>
+        <section class="button">
+          <a href="https://github.com/pardnchiu/Agenvoy" title="GitHub" target="_blank">
             <i class="fa-brands fa-github"></i>
-            SOURCE
+            GitHub
           </a>
-          <a href="https://github.com/pardnchiu/agenvoy/issues" target="_blank">
-            <i class="fa-solid fa-bug"></i>
-            REPORT
-          </a>
-          <a href="mailto:dev@pardn.io" target="_blank">
-            <i class="fa-regular fa-envelope"></i>
-            EMAIL
+          <span></span>
+          <a :href="./agreement.html?lang={{ lang }}">
+            <i class="fa-solid fa-scale-balanced"></i>
+            LICENSE
           </a>
         </section>
-      </header>
-
-      <section>
-        <strong>DESCRIPTION</strong>
-        <p>{{description}}</p>
       </section>
-
       <section>
-        <strong>RELEASE_HISTORY</strong>
-        <section class="timeline">
-          <div :for="e in releases">
-            <a :href="e.href" target="_blank">
-              <strong>{{e.tag}}</strong>
-              <span class="date">{{e.date}}</span>
-            </a>
-            <p>{{e.content}}</p>
-          </div>
+        <section>
+          <div id="header-video"></div>
         </section>
       </section>
+    </header>
 
-      <section>
-        <strong>COMMIT_HISTORY</strong>
-        <section class="timeline">
-          <div :for="e in commits">
-            <p :data-tag="e.tag">
-              {{e.date}}
-              <span class="tag">{{e.tag}}</span>
-            </p>
-            <p>{{e.message}}</p>
-          </div>
-        </section>
-      </section>
-
-      <footer>&copy; 2026 AGENVOY</footer>
+    <section>
+      <h2>{{ i18n.one_command_title }}</h2>
+      <p>{{ i18n.one_command }}</p>
+      <code>curl -fsSL https://cloud.agenvoy.com/install.sh | bash</code>
+      <p>{{ i18n.one_command_footer }}</p>
     </section>
 
-    <script>
-      document.addEventListener("DOMContentLoaded", async (_) => {
-        const url = new URL(location.href);
+    <section>
+      <section>
+        <h2>{{ i18n.scheduler_title }}</h2>
+        <p>{{ i18n.scheduler_content }}</p>
+      </section>
+      <section>
+        <section id="demo-scheduler"></section>
+      </section>
+    </section>
 
-        const app = new QUI({
-          id: "app",
-          data: {
-            release: "-",
-            releaseUrl: "-",
-            description: "-",
-            updatedAt: "-",
-            releases: [],
-            commits: [],
-          },
-          event: {
-            toLocalDate: (date) => {
-              const newDate = new Date(date);
-              return `${newDate.getFullYear()}/${String(newDate.getMonth() + 1).padStart(2, "0")}/${String(newDate.getDate()).padStart(2, "0")}-${String(newDate.getHours()).padStart(2, "0")}:${String(newDate.getMinutes()).padStart(2, "0")}:${String(newDate.getSeconds()).padStart(2, "0")}`;
-            },
-          },
-          when: {
-            rendered: async function () {
-              try {
-                let request = await fetch("https://guthub-agenvoy.pardn.workers.dev/");
-                let json = await request.json();
+    <section>
+      <section>
+        <section id="demo-co-work"></section>
+      </section>
+      <section>
+        <h2>{{ i18n.co_work_title }}</h2>
+        <p>{{ i18n.co_work_content }}</p>
+      </section>
+    </section>
 
-                app.data.description = json.repo.description;
-                app.data.updatedAt = app.event.toLocalDate(json.repo.updated_at);
-                app.data.releases = json.releases.slice(0, 3).map((e) => {
-                  let content = e.body.split("\r\n")[4];
-                  return {
-                    date: app.event.toLocalDate(e.published_at),
-                    tag: e.tag_name,
-                    content: content,
-                    href: e.html_url,
-                  };
-                });
+    <section>
+      <section>
+        <h2>{{ i18n.tool_generator_title }}</h2>
+        <p>{{ i18n.tool_generator_content }}</p>
+      </section>
+      <section>
+        <section id="demo-tool-generator"></section>
+      </section>
+    </section>
 
-                app.data.release = app.data.releases[0].tag;
-                app.data.releaseUrl = app.data.releases[0].href;
+    <section>
+      <section>
+        <section id="demo-plan-mode"></section>
+      </section>
+      <section>
+        <h2>{{ i18n.plan_mode_title }}</h2>
+        <p>{{ i18n.plan_mode_content }}</p>
+      </section>
+    </section>
 
-                app.data.commits = json.commits.map((e) => {
-                  return {
-                    date: app.event.toLocalDate(e.commit.committer.date),
-                    message: e.commit.message.split(":")[1].trim(),
-                    tag: e.commit.message.split(":")[0].toUpperCase(),
-                  };
-                });
-              } catch (err) {
-                console.error("Failed to fetch:", err);
-              }
-            },
-          },
-        });
-      });
-    </script>
+    <footer>
+      <p>Created by <a href="https://github.com/pardnchiu" target="_blank">邱敬幃 Pardn Chiu</a></p>
+      <p><a href="https://github.com/pardnchiu/Agenvoy" target="_blank">Agenvoy</a> on GitHub</p>
+      <p>Render by <a href="https://quickui.pardn.io" target="_blank">QuickUI</a></p>
+      <p>&copy; 2026</p>
+    </footer>
+
+    <a :href="./index.html?lang={{ change }}" class="lang">
+      <i class="fa-solid fa-globe"></i>
+      <span>{{ change }}</span>
+    </a>
   </body>
 </html>

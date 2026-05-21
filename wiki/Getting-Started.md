@@ -56,6 +56,6 @@ make run "use playwright to open example.com and screenshot"
 ## Next steps
 
 - [Core Concepts](https://github.com/agenvoy/Agenvoy/wiki/Core-Concepts) — sessions, agent routing, the iteration loop, and three-pass tool dispatch
-- [Providers](https://github.com/agenvoy/Agenvoy/wiki/Providers) — supported LLM backends and the planner model
+- [Providers](https://github.com/agenvoy/Agenvoy/wiki/Providers) — supported LLM backends and the dispatcher model
 - [MCP Integration](https://github.com/agenvoy/Agenvoy/wiki/MCP-Integration) — plug in external tool servers
 - [CLI Reference](https://github.com/agenvoy/Agenvoy/wiki/CLI-Reference) — full command list

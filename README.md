@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  Go-native dispatcher · Planner routes each step to the best-fit model · Subagents collaborate in one process
+  Go-native runtime · Dispatcher routes each step to the best-fit model · Subagents collaborate in one process
 </p>
 
 <p align="center">
@@ -39,7 +39,7 @@ Running the daemon on a MacBook? Run `sudo pmset -c sleep 0` to keep the system 
 
 ## What makes it different
 
-- **Planner-based intelligent routing** — a planner model routes every task to the best-fit worker (Claude for coding, Gemini for video, GPT for research), instead of forcing one model to do everything.
+- **Dispatcher-based intelligent routing** — a dispatcher model routes every task to the best-fit worker (Claude for coding, Gemini for video, GPT for research), instead of forcing one model to do everything.
 - **Agent that builds and persists its own tools** — when a tool is missing the agent writes a script or API into `extensions/` and loads it as a native tool on the next run; MCP servers are supported alongside.
 - **One runtime across every channel** — Telegram, Discord, TUI, Web, and cron all attach to the same daemon; sessions, memory, and the tool set are shared, not rebuilt per surface.
 
@@ -70,7 +70,7 @@ Running the daemon on a MacBook? Run `sudo pmset -c sleep 0` to keep the system 
 | Nvidia NIM | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | OpenAI-compat | ✅ | ❌ | ❌ | ❌ | ✅ Ollama/LM Studio | ✅ OpenRouter 200+ |
 | DeepSeek / Mistral / xAI | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Planner routing | ✅ dedicated planner model | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Dispatcher routing | ✅ dedicated dispatcher model | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ---
 
@@ -206,7 +206,7 @@ Running the daemon on a MacBook? Run `sudo pmset -c sleep 0` to keep the system 
 
 | Dimension | Detail |
 |-----------|--------|
-| **Clear advantages** | Single Go binary, 12 dependencies, self-maintained ecosystem (pardnchiu universe), planner model routing, Session Canvas, native platform UI (real buttons/modals), OTP verification, cross-session send to Telegram/Discord from any session, API tool auto-discovery, image generation, format reference as lazy-load tool, local-only scheduler (no cloud required) |
+| **Clear advantages** | Single Go binary, 12 dependencies, self-maintained ecosystem (pardnchiu universe), dispatcher model routing, Session Canvas, native platform UI (real buttons/modals), OTP verification, cross-session send to Telegram/Discord from any session, API tool auto-discovery, image generation, format reference as lazy-load tool, local-only scheduler (no cloud required) |
 | **On par with competitors** | Telegram/Discord daemon, TTS/STT, scheduler output push, Skill system, MCP, browser automation, inbound attachment handling |
 | **Where competitors lead** | OpenClaw 50+ platforms, Hermes MCP server mode, Hermes local STT, OpenClaw/Hermes built-in cross-session memory, Claude Code Computer Use beta, Claude Code cloud cron/task |
 | **Codex CLI** | Fewest features — CLI + TUI + OpenAI OAuth only, no daemon, no chat platforms, no scheduler |
@@ -225,7 +225,7 @@ Running the daemon on a MacBook? Run `sudo pmset -c sleep 0` to keep the system 
 | `agen run <input>` | One-shot agent run; auto-approves every tool call. |
 | `agen stop` | Stop the running daemon (SIGTERM 5s grace → SIGKILL → clear `runtime.uid`). |
 | `agen update` | Fetch latest release, rebuild, stop daemon — re-attach to load the new binary. |
-| `agen model {add\|remove\|list\|planner\|reasoning}` | Manage providers / worker models, pick planner model, set reasoning level. |
+| `agen model {add\|remove\|list\|dispatcher\|reasoning}` | Manage providers / worker models, pick dispatcher model, set reasoning level. |
 | `agen mcp {list\|add\|remove}` | Manage MCP servers (stdio / HTTP) across global and per-session scope. |
 | `agen session {new\|switch\|config} [name]` | Manage CLI sessions; bare `switch` / `config` opens an interactive picker. |
 
@@ -243,8 +243,8 @@ Running the daemon on a MacBook? Run `sudo pmset -c sleep 0` to keep the system 
 | `/bot` | Edit the current session's bot via two sequential popups: name textfield (conflict-checked against other sessions; abort on conflict) → description textarea (`Ctrl+S` confirms, `Enter` newline, `Esc` cancels). |
 | `/model [global\|session]` | Scope picker; `global` → `[add, remove]` (registry), `session` → pick a configured model. Inline arg skips the scope popup. |
 | `/mcp [add\|remove]` | Action picker; `add` walks a chained popup form (name → transport → command/args/env or url/headers → scope → optional session pick), `remove` lists configured servers across global and session scopes. Restart the daemon to apply changes. Inline arg skips the action popup. |
-| `/planner` | Pick the planner model from `cfg.Models` via popup. No inline arg. |
-| `/reasoning [global\|session]` | Pick `low` / `medium` / `high` for the planner (global) or the active session. Inline arg skips the scope popup. |
+| `/dispatcher` | Pick the dispatcher model from `cfg.Models` via popup. No inline arg. |
+| `/reasoning [global\|session]` | Pick `low` / `medium` / `high` for the dispatcher (global) or the active session. Inline arg skips the scope popup. |
 | `/discord [enable\|disable]` | Toggle Discord bot connection (token entry, verification, keychain write, daemon reload all happen in-TUI). Inline arg switches without the popup. |
 | `/telegram [enable\|disable]` | Toggle Telegram bot connection (same in-TUI popup chain as `/discord`; first chat to message the bot must pass an in-chat verification code). Inline arg switches without the popup. |
 | `/cron [add\|remove\|edit]` | Manage recurring schedules. `add` opens a multiline requirement textarea → dispatches `/scheduler-skill-creator <requirement>` (asks for missing when/what via `ask_user`). `remove` lists crons → confirm popup → `runtime.RemoveCron` + trashes the skill dir. `edit` lists crons → requirement textarea → agent picks `patch_cron` or rewrites the SKILL.md body. Inline arg skips the action popup. |

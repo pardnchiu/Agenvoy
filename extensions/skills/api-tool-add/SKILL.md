@@ -102,7 +102,7 @@ multiSelect: false
 
 選擇非「不需要」→ 後續詢問：
 
-1. **Keychain key 名稱**（free-text）：例 `EXAMPLE_API_KEY`、`OPENAI_API_KEY`。轉換為 SCREAMING_SNAKE_CASE。runtime 透過 `keychain.Get(<name>)` 取值（與 providers 同 keychain pool）。
+1. **Keychain key 名稱**（free-text）：命名格式 **`{品牌}_API_KEY`**（SCREAMING_SNAKE_CASE，與既有 provider 慣例對齊），例 `OPENAI_API_KEY`、`CODEX_API_KEY`、`STAGING_API_KEY`、`POLYGON_API_KEY`。儲存位置：macOS keychain 中 **service = `agenvoy`**、**account = key 名**，組合識別 `agenvoy.{key}`（例 `agenvoy.OPENAI_API_KEY`）；runtime 透過 `keychain.Get(<KEY_NAME>)` 取值（**只傳 key 名，無 `agenvoy.` 前綴**；與 providers 同 keychain pool）。
 2. **API Key 類型額外問**：自訂 header 名稱（預設 `X-API-Key`，可直接 Enter 採預設）。
 3. **主動呼叫 `store_secret`** 填入該 key：
    ```

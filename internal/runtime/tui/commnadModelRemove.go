@@ -28,8 +28,8 @@ func (t TUI) commandModelRemove() (TUI, tea.Cmd, bool) {
 		if m.Description != "" {
 			label = fmt.Sprintf("%s  %s", m.Name, hintStyle.Render(m.Description))
 		}
-		if cfg.PlannerModel != "" && m.Name == cfg.PlannerModel {
-			label += "  " + warnStyle.Render("[planner]")
+		if cfg.DispatcherModel != "" && m.Name == cfg.DispatcherModel {
+			label += "  " + warnStyle.Render("[dispatcher]")
 		}
 		options[i] = label
 		values[i] = m.Name
@@ -65,10 +65,10 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 	}
 
 	cfg.Models = append(cfg.Models[:idx], cfg.Models[idx+1:]...)
-	clearedPlanner := false
-	if cfg.PlannerModel == name {
-		cfg.PlannerModel = ""
-		clearedPlanner = true
+	clearedDispatcher := false
+	if cfg.DispatcherModel == name {
+		cfg.DispatcherModel = ""
+		clearedDispatcher = true
 	}
 
 	if err := session.Save(cfg); err != nil {
@@ -76,8 +76,8 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 	}
 
 	lines := []string{hintStyle.Render(fmt.Sprintf("⎯ removed: %s", name))}
-	if clearedPlanner {
-		lines = append(lines, warnStyle.Render("planner cleared · run /model or set a new planner"))
+	if clearedDispatcher {
+		lines = append(lines, warnStyle.Render("dispatcher cleared · run /model or set a new dispatcher"))
 	}
 	return t, tea.Println(strings.Join(lines, "\n") + "\n")
 }

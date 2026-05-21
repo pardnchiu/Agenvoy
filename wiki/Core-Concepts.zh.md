@@ -49,7 +49,7 @@ frontmatter `name` 也是 lookup key（`GetSessionIDByName`）；body 在每輪 
 
 三種方式決定任務交給哪個 agent：
 
-**1. 自動選擇** —— planner LLM 分析輸入後 `SelectAgent()` 挑最適 provider。
+**1. 自動選擇** —— dispatcher LLM 分析輸入後 `SelectAgent()` 挑最適 provider。
 
 **2. `:name` 一次性 override**（CLI／TUI） —— 在輸入前加 `:session-name` 對指定 session 下指令、**不換主指標**：
 

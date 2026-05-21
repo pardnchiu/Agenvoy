@@ -47,7 +47,7 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 	go func() {
 		err := exec.Run(
 			ctx,
-			agents.Planner(),
+			agents.Dispatcher(),
 			agents.Registry(),
 			scanner,
 			input,

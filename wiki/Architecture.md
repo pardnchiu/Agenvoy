@@ -127,7 +127,7 @@ Switch to per-domain widget packages when **any one** of:
 | Topic | Page |
 |---|---|
 | Iteration loop, three-pass dispatch in detail | [Core Concepts](https://github.com/agenvoy/Agenvoy/wiki/Core-Concepts) |
-| Provider routing and planner | [Providers](https://github.com/agenvoy/Agenvoy/wiki/Providers) |
+| Provider routing and dispatcher | [Providers](https://github.com/agenvoy/Agenvoy/wiki/Providers) |
 | Tool registry, extension paths | [Tools](https://github.com/agenvoy/Agenvoy/wiki/Tools) |
 | Memory tiers and semantic search | [Memory System](https://github.com/agenvoy/Agenvoy/wiki/Memory-System) |
 | Sandbox policy, permission modes | [Security and Sandbox](https://github.com/agenvoy/Agenvoy/wiki/Security-and-Sandbox) |

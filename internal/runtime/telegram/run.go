@@ -197,7 +197,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 
 	var agent agentTypes.Agent
 	if externalAgent == "" {
-		agent = exec.SelectAgent(ctx, agents.Planner(), agents.Registry(), content, matchedSkill != nil, "")
+		agent = exec.SelectAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, "")
 	}
 
 	execData := exec.ExecData{
@@ -263,13 +263,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	if model == "" && agent != nil {
 		model = agent.Name()
 	}
-	if _, after, ok := strings.Cut(model, "@"); ok {
-		model = after
-	}
-	footer := model
-	if doneEvent.Usage != nil {
-		footer = fmt.Sprintf("%s | in:%s out:%s", footer, utils.FormatUsage(doneEvent.Usage.Input), utils.FormatUsage(doneEvent.Usage.Output))
-	}
+	footer := utils.FormatFooter(doneEvent.Duration, model, doneEvent.Usage)
 	if len(photoPaths) > 0 || len(docPaths) > 0 || len(voiceTexts) > 0 {
 		footer = "🔗 " + footer
 	}

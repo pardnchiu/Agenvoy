@@ -56,6 +56,6 @@ make run "用 playwright 打開 example.com 截圖"
 ## 下一步
 
 - [核心概念](https://github.com/agenvoy/Agenvoy/wiki/核心概念) —— session、agent routing、iteration loop、三段式 tool dispatch
-- [Provider 設定](https://github.com/agenvoy/Agenvoy/wiki/Provider-設定) —— 支援的 LLM 後端與 planner model
+- [Provider 設定](https://github.com/agenvoy/Agenvoy/wiki/Provider-設定) —— 支援的 LLM 後端與 dispatcher model
 - [MCP 整合](https://github.com/agenvoy/Agenvoy/wiki/MCP-整合) —— 接入外部工具 server
 - [命令列參考](https://github.com/agenvoy/Agenvoy/wiki/命令列參考) —— 完整指令清單

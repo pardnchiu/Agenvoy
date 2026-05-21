@@ -60,9 +60,9 @@ func buildAgentRegistry() agentTypes.AgentRegistry {
 	return registry
 }
 
-func plannerSelector(registry agentTypes.AgentRegistry) agentTypes.Agent {
-	if cfg, err := session.Load(); err == nil && cfg.PlannerModel != "" {
-		if a, ok := registry.Registry[cfg.PlannerModel]; ok {
+func dispatcherSelector(registry agentTypes.AgentRegistry) agentTypes.Agent {
+	if cfg, err := session.Load(); err == nil && cfg.DispatcherModel != "" {
+		if a, ok := registry.Registry[cfg.DispatcherModel]; ok {
 			return a
 		}
 	}
@@ -71,5 +71,5 @@ func plannerSelector(registry agentTypes.AgentRegistry) agentTypes.Agent {
 
 func refreshHost() (agentTypes.Agent, agentTypes.AgentRegistry) {
 	registry := buildAgentRegistry()
-	return plannerSelector(registry), registry
+	return dispatcherSelector(registry), registry
 }

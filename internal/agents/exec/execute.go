@@ -185,6 +185,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 						Text:      text,
 						Model:     pushDoneEv.Model,
 						Usage:     pushDoneEv.Usage,
+						Duration:  pushDoneEv.Duration,
 						Prefix:    dcPushPrefix(ctx),
 					})
 				}
@@ -417,7 +418,10 @@ func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.
 
 	skillsSection := ""
 	if list := toolSearcher.ListBlock(scanner); list != "" {
-		skillsSection = "## Skills\n\nThe following skills can be fetched via `activate_skill`. Treat the result as reference material — consult it, integrate parts that fit the user's request, ignore parts that don't. Consider activating a skill when its description matches the user's intent on each turn, even without an explicit `/<name>` invocation. Slash invocations (`/<name>`) are user-explicit and execute the skill's full procedure under binding semantics; the `activate_skill` tool path does not carry that binding.\n\n" + list
+		skillsSection = "## Skills\n\n" +
+			"**Slash invocations (`/<name>`) are STRICT EXECUTION.** The user has explicitly authorized the skill's full procedure; every step in SKILL.md is binding and must complete via tool calls in order. The FIRST step (often `ask_user` for requirement gathering) must run before any other tool call — no exceptions, no \"the user input looks complete so I'll skip ahead\".\n\n" +
+			"The `activate_skill` tool path is advisory — consult, integrate parts that fit, ignore parts that don't. Consider activating a skill when its description matches the user's intent on each turn, even without an explicit `/<name>` invocation.\n\n" +
+			list
 	}
 
 	personaSection := ""
@@ -563,6 +567,15 @@ func assignBindingSkill(session *agentTypes.AgentSession, s *filesystem.Skill) {
 			ToolCallID: id,
 		},
 	)
+
+	bindingHeader := fmt.Sprintf(
+		"## BINDING SKILL EXECUTION — /%s\n\nThe user invoked /%s. Execute the procedure below by making the tool calls SKILL.md prescribes, in order.\n\n### How to obey\n\n- **When SKILL.md says «ask_user», invoke the `ask_user` tool** with JSON arguments matching the template SKILL.md gives. Writing a text question and waiting for a chat reply is NOT the same action and does not satisfy the step.\n- **The text following `/%s` is the user's INPUT to gather around, not a set of pre-filled answers.** Even if it looks complete, your next action is still `ask_user` to verify direction. Treat it like a topic, not a finished spec.\n- **After one tool call's result arrives, immediately make the next tool call SKILL.md prescribes**, in the same turn. Do not insert text like «下一步要不要繼續» between steps — the user already authorized the full procedure by typing `/%s`.\n- **Tool calls beat chat text.** If you find yourself writing instructions to the user («再丟一句…», «直接回我…»), stop and make the corresponding tool call instead.\n\n### Quick self-check before each turn\n\n1. What does SKILL.md say the next step is? (e.g. «呼叫 ask_user 問三維度之一»)\n2. Have I made that exact tool call in this turn? If no → make it now. If yes and result is back → make the step-after's tool call.\n\n---\n\n",
+		s.Name, s.Name, s.Name, s.Name,
+	)
+	session.SystemPrompts = append(session.SystemPrompts, agentTypes.Message{
+		Role:    "system",
+		Content: bindingHeader + toolSearcher.RenderActivation(s),
+	})
 }
 
 func buildCrossChannelPrompt() string {

@@ -47,12 +47,11 @@ func (t TUI) runCommandSwitch(id string) (TUI, tea.Cmd) {
 	if id == t.currentSessionID {
 		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ already on: %s", utils.ShortenSessionID(id))) + "\n")
 	}
-	if err := changeSession(id); err != nil {
-		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] switch failed: %v", err)) + "\n")
-	}
 	previous := t.currentSessionID
 	t.currentSessionID = id
 	t.currentSessionName, _ = session.GetBot(id)
+	t.inputHistory = loadInputHistory(id)
+	t.inputHistoryIdx = -1
 	t = t.restartTailer()
 
 	t.tokens = 0
@@ -143,16 +142,3 @@ func popupSwitch(sid string) *Popup {
 	}
 }
 
-func changeSession(target string) error {
-	cfg, err := session.Load()
-	if err != nil {
-		return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session Load: %w", err)
-	}
-
-	cfg.SessionID = target
-
-	if err := session.Save(cfg); err != nil {
-		return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session Save: %w", err)
-	}
-	return nil
-}

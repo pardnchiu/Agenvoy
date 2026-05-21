@@ -231,7 +231,7 @@ func parseSSEStream(resp *http.Response) (*agentTypes.Output, error) {
 					Output:    ev.Response.Usage.OutputTokens,
 					CacheRead: ev.Response.Usage.InputTokensDetails.CachedTokens,
 				}
-				if len(toolCalls) == 0 {
+				if len(pending) == 0 {
 					out := copilotResponse.ConvertOutput(*ev.Response)
 					if len(out.Choices) > 0 {
 						toolCalls = out.Choices[0].Message.ToolCalls

@@ -24,8 +24,47 @@ type Skill struct {
 var (
 	skillFrontmatterRegex = regexp.MustCompile(`(?s)^---\n(.*?)\n---\n?(.*)$`)
 	skillNameRegex        = regexp.MustCompile(`(?m)^name:\s*(.+)$`)
-	skillDescRegex        = regexp.MustCompile(`(?m)^description:\s*(.+)$`)
 )
+
+func parseDescriptionField(header []byte) string {
+	lines := strings.Split(string(header), "\n")
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "description:") {
+			continue
+		}
+		rest := strings.TrimSpace(strings.TrimPrefix(trimmed, "description:"))
+		switch rest {
+		case "|", "|-", "|+", ">", ">-", ">+":
+			fold := rest == ">" || rest == ">-" || rest == ">+"
+			var sb strings.Builder
+			for j := i + 1; j < len(lines); j++ {
+				l := lines[j]
+				if strings.TrimSpace(l) == "" {
+					if sb.Len() > 0 && !fold {
+						sb.WriteString("\n")
+					}
+					continue
+				}
+				if !strings.HasPrefix(l, " ") && !strings.HasPrefix(l, "\t") {
+					break
+				}
+				if sb.Len() > 0 {
+					if fold {
+						sb.WriteString(" ")
+					} else {
+						sb.WriteString("\n")
+					}
+				}
+				sb.WriteString(strings.TrimSpace(l))
+			}
+			return strings.TrimSpace(sb.String())
+		default:
+			return rest
+		}
+	}
+	return ""
+}
 
 func ParseSkill(path string) (*Skill, error) {
 	absPath, err := filepath.Abs(path)
@@ -59,9 +98,7 @@ func ParseSkill(path string) (*Skill, error) {
 	if matches := skillNameRegex.FindSubmatch(header); matches != nil {
 		skill.Name = strings.TrimSpace(string(matches[1]))
 	}
-	if matches := skillDescRegex.FindSubmatch(header); matches != nil {
-		skill.Description = strings.TrimSpace(string(matches[1]))
-	}
+	skill.Description = parseDescriptionField(header)
 
 	return skill, nil
 }
@@ -85,9 +122,7 @@ func ParseSkillBytes(absPath, folderPath string, data []byte) *Skill {
 	if matches := skillNameRegex.FindSubmatch(header); matches != nil {
 		skill.Name = strings.TrimSpace(string(matches[1]))
 	}
-	if matches := skillDescRegex.FindSubmatch(header); matches != nil {
-		skill.Description = strings.TrimSpace(string(matches[1]))
-	}
+	skill.Description = parseDescriptionField(header)
 	return skill
 }
 

@@ -24,17 +24,17 @@ Agenvoy 透過統一的 `Agent.Send()` 介面支援 7 家 LLM provider。
 agen model add          # 互動式新增 provider／model
 agen model remove       # 互動式移除 provider／model
 agen model list         # 列出已註冊 model
-agen model planner      # 選 planner model
-agen model reasoning    # 設 planner 推理層級：low / medium / high / xhigh
+agen model dispatcher   # 選 dispatcher model
+agen model reasoning    # 設 dispatcher 推理層級：low / medium / high / xhigh
 ```
 
 憑證（API key、OAuth token）放 OS keychain（service `agenvoy`），絕不寫進 JSON。
 
-## Planner Model
+## Dispatcher Model
 
-Planner LLM 決定每個任務派分給哪個 worker model。`Execute()` 進入迭代迴圈前由 `SelectAgent()` 呼叫 planner，輸入是 user message + skill 命中提示。
+Dispatcher LLM 決定每個任務派分給哪個 worker model。`Execute()` 進入迭代迴圈前由 `SelectAgent()` 呼叫 dispatcher，輸入是 user message + skill 命中提示。
 
-設定：`agen model planner`（選 model）與 `agen model reasoning`（reasoning effort）。
+設定：`agen model dispatcher`（選 model）與 `agen model reasoning`（reasoning effort）。
 
 ## 串流
 

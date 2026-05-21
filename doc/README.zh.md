@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-Go-native dispatcher · Planner 將每個步驟派給最適合的模型 · Subagent 在同一 process 內協作
+Go-native runtime · Dispatcher 將每個步驟派給最適合的模型 · Subagent 在同一 process 內協作
 </p>
 
 <p align="center">
@@ -39,7 +39,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 ## 特點
 
-- **Planner-based 智能路由** —— Planner model 把每個任務派給最合適的 worker（寫程式找 Claude、看影片找 Gemini、查資料找 GPT），不是同一個 model 硬扛。
+- **Dispatcher-based 智能路由** —— Dispatcher model 把每個任務派給最合適的 worker（寫程式找 Claude、看影片找 Gemini、查資料找 GPT），不是同一個 model 硬扛。
 - **Agent 自造工具並持久化** —— 缺工具，agent 自己寫 script / API 存進 `extensions/`，下次以原生 tool 形式自動載入；同時相容 MCP server。
 - **多通道共用 runtime** —— Telegram、Discord、TUI、Web、cron 都接同一個 daemon，session、記憶、工具集打通，不必各自重建。
 
@@ -70,7 +70,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | Nvidia NIM | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | OpenAI-compat | ✅ | ❌ | ❌ | ❌ | ✅ Ollama/LM Studio | ✅ OpenRouter 200+ |
 | DeepSeek / Mistral / xAI | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Planner 路由 | ✅ 專屬 planner model | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Dispatcher 路由 | ✅ 專屬 dispatcher model | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ---
 
@@ -206,7 +206,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 | 面向 | 細節 |
 |-----------|--------|
-| **明顯優勢** | 單一 Go binary、12 個相依、自家生態（pardnchiu universe）、planner model 路由、Session Canvas、平台原生 UI（真正按鈕／modal）、OTP 驗證、任一 session 跨頻道發送至 Telegram/Discord、API tool 自動探索、圖片生成、排版參考 lazy-load tool、純本地 scheduler（不需雲端） |
+| **明顯優勢** | 單一 Go binary、12 個相依、自家生態（pardnchiu universe）、dispatcher model 路由、Session Canvas、平台原生 UI（真正按鈕／modal）、OTP 驗證、任一 session 跨頻道發送至 Telegram/Discord、API tool 自動探索、圖片生成、排版參考 lazy-load tool、純本地 scheduler（不需雲端） |
 | **與競品持平** | Telegram/Discord daemon、TTS/STT、scheduler 輸出推送、Skill 系統、MCP、瀏覽器自動化、進站附件處理 |
 | **競品領先處** | OpenClaw 50+ 平台、Hermes MCP server 模式、Hermes 本地 STT、OpenClaw/Hermes 內建跨 session 記憶、Claude Code Computer Use beta、Claude Code 雲端 cron/task |
 | **Codex CLI** | 功能最少 —— 僅 CLI + TUI + OpenAI OAuth，無 daemon、無聊天平台、無 scheduler |
@@ -225,7 +225,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `agen run <input>` | One-shot 跑一次 agent，自動放行所有 tool。 |
 | `agen stop` | 停止 daemon（SIGTERM 5s 寬限 → SIGKILL → 清 `runtime.uid`）。 |
 | `agen update` | 抓最新 release、重編、停 daemon；重新 attach 載入新 binary。 |
-| `agen model {add\|remove\|list\|planner\|reasoning}` | 管理 provider／worker model、選 planner、設 reasoning level。 |
+| `agen model {add\|remove\|list\|dispatcher\|reasoning}` | 管理 provider／worker model、選 dispatcher、設 reasoning level。 |
 | `agen mcp {list\|add\|remove}` | 管理 MCP server（stdio／HTTP），global 與 per-session scope。 |
 | `agen session {new\|switch\|config} [name]` | 管理 CLI session；裸 `switch`／`config` 開互動 picker。 |
 
@@ -243,8 +243,8 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `/bot` | 依序兩段 popup 編輯當前 session 的 bot：name textfield（比對其他 session，重複則中止回饋）→ description textarea（`Ctrl+S` 確認、`Enter` 換行、`Esc` 取消）。 |
 | `/model [global\|session]` | Scope picker；`global` → `[add, remove]`（管理註冊表），`session` → 從已註冊 model 挑一個套到當前 session。Inline arg 跳過 scope popup。 |
 | `/mcp [add\|remove]` | Action picker；`add` 走串接 popup 表單（name → transport → command/args/env 或 url/headers → scope → optional session pick），`remove` 列出 global 與 session 兩 scope 全部已設定的 server。修改後須重啟 daemon 才會載入。Inline arg 跳過 action popup。 |
-| `/planner` | popup 從 `cfg.Models` 挑 planner model。不支援 inline arg。 |
-| `/reasoning [global\|session]` | 選 `low`／`medium`／`high`，套到 planner（global）或當前 session。Inline arg 跳過 scope popup。 |
+| `/dispatcher` | popup 從 `cfg.Models` 挑 dispatcher model。不支援 inline arg。 |
+| `/reasoning [global\|session]` | 選 `low`／`medium`／`high`，套到 dispatcher（global）或當前 session。Inline arg 跳過 scope popup。 |
 | `/discord [enable\|disable]` | 切換 Discord bot 啟用／停用（token 輸入、驗證、keychain 寫入、daemon reload 全在 TUI popup chain 內完成）。Inline arg 直接切換、不彈 popup。 |
 | `/telegram [enable\|disable]` | 切換 Telegram bot 啟用／停用（與 `/discord` 同模式的 in-TUI popup chain；首次與 bot 對話的 chat 必須通過 in-chat 驗證碼）。Inline arg 直接切換、不彈 popup。 |
 | `/cron [add\|remove\|edit]` | 週期性排程管理。`add` 開 multiline textarea 取需求 → 派 `/scheduler-skill-creator <需求>`（缺 when/what 由 skill 透過 `ask_user` 補問）。`remove` 列出 crons → 確認 popup → `runtime.RemoveCron` + 將 skill 目錄移至 .Trash。`edit` 列出 crons → textarea 取需求 → 由 agent 自選走 `patch_cron` 或重寫 SKILL.md body。Inline arg 跳過 action popup。 |

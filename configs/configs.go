@@ -18,9 +18,6 @@ var SummaryPrompt string
 //go:embed prompts/summary_context.md
 var SummaryContext string
 
-//go:embed prompts/summary_merge_prompt.md
-var SummaryMergePrompt string
-
 //go:embed prompts/system_prompt.md
 var SystemPrompt string
 

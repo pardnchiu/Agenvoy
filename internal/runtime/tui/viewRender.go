@@ -6,11 +6,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/lipgloss"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 var projectVersion = "dev"
@@ -161,27 +161,18 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 		return hintStyle.Render("⏵ " + srcPrefix + "summarizing…"), true
 
 	case agentTypes.EventDone:
-		var parts []string
-		if ev.Duration > 0 {
-			parts = append(parts, ev.Duration.Round(100*time.Millisecond).String())
-		}
-		if ev.Model != "" {
-			modelDisplay := ev.Model
-			if _, after, ok := strings.Cut(ev.Model, "@"); ok {
-				modelDisplay = after
-			}
-			parts = append(parts, modelDisplay)
-		}
-		if ev.Usage != nil && (ev.Usage.Input > 0 || ev.Usage.Output > 0) {
-			parts = append(parts, fmt.Sprintf("↑%s ↓%s", compactNumber(ev.Usage.Input), compactNumber(ev.Usage.Output)))
-		}
+		footer := utils.FormatFooter(ev.Duration, ev.Model, ev.Usage)
 		if sessionLabel != "" {
-			parts = append(parts, "["+sessionLabel+"]")
+			if footer != "" {
+				footer = footer + " · [" + sessionLabel + "]"
+			} else {
+				footer = "[" + sessionLabel + "]"
+			}
 		}
-		if len(parts) == 0 {
+		if footer == "" {
 			return "", false
 		}
-		return hintStyle.Render("  ⎿ "+strings.Join(parts, " · ")) + "\n", true
+		return hintStyle.Render("  ⎿ "+footer) + "\n", true
 	}
 
 	return "", false

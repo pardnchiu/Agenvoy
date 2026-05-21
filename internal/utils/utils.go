@@ -82,11 +82,31 @@ func TruncateStatus(s string) string {
 	return string(r)
 }
 
-func FormatUsage(n int) string {
-	if n > 1000 {
-		return fmt.Sprintf("%dk", n/1000)
+func CompactNumber(n int) string {
+	switch {
+	case n >= 1_000_000:
+		return fmt.Sprintf("%.1fM", float64(n)/1_000_000)
+	case n >= 1_000:
+		return fmt.Sprintf("%.1fK", float64(n)/1_000)
 	}
 	return fmt.Sprintf("%d", n)
+}
+
+func FormatFooter(duration time.Duration, model string, usage *agentTypes.Usage) string {
+	var parts []string
+	if duration > 0 {
+		parts = append(parts, duration.Round(100*time.Millisecond).String())
+	}
+	if model = strings.TrimSpace(model); model != "" {
+		if _, after, ok := strings.Cut(model, "@"); ok {
+			model = after
+		}
+		parts = append(parts, model)
+	}
+	if usage != nil && (usage.Input > 0 || usage.Output > 0) {
+		parts = append(parts, fmt.Sprintf("↑%s ↓%s", CompactNumber(usage.Input), CompactNumber(usage.Output)))
+	}
+	return strings.Join(parts, " · ")
 }
 
 type AgentEventResult struct {

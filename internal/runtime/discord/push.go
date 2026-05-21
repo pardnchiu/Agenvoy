@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	go_bot_discord "github.com/pardnchiu/go-bot/discord"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -52,7 +53,7 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	cleanText, attachmentPaths := utils.ExtractFileMarkers(text)
 
 	if strings.TrimSpace(cleanText) != "" {
-		message := cleanText + buildPushFooter(payload.Model, payload.Usage)
+		message := cleanText + buildPushFooter(payload.Duration, payload.Model, payload.Usage)
 		if prefix := strings.TrimSpace(payload.Prefix); prefix != "" {
 			quoted := strings.ReplaceAll(prefix, "\n", "\n> ")
 			message = fmt.Sprintf("> %s\n%s", quoted, message)
@@ -70,21 +71,10 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	sendAttachments(ctx, client, channelID, chanName, "", attachmentPaths)
 }
 
-func buildPushFooter(model string, usage *agentTypes.Usage) string {
-	model = strings.TrimSpace(model)
-	if model == "" && usage == nil {
+func buildPushFooter(duration time.Duration, model string, usage *agentTypes.Usage) string {
+	footer := utils.FormatFooter(duration, model, usage)
+	if footer == "" {
 		return ""
-	}
-	if _, after, ok := strings.Cut(model, "@"); ok {
-		model = after
-	}
-	footer := model
-	if usage != nil {
-		if footer != "" {
-			footer = fmt.Sprintf("%s | in:%s out:%s", footer, utils.FormatUsage(usage.Input), utils.FormatUsage(usage.Output))
-		} else {
-			footer = fmt.Sprintf("in:%s out:%s", utils.FormatUsage(usage.Input), utils.FormatUsage(usage.Output))
-		}
 	}
 	return "\n-# ⎿ " + footer
 }

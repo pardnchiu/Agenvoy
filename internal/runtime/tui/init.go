@@ -2,7 +2,6 @@ package tui
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -111,9 +110,13 @@ func (t TUI) Init() tea.Cmd {
 		if go_pkg_filesystem_reader.Exists(path) && fileSize(path) > 0 {
 			seq = append(seq, func() tea.Msg { return LoadHistoryCheck{id: sid} })
 		}
+	} else {
+		seq = append(seq, func() tea.Msg { return StartupSelectSession{} })
 	}
 	return tea.Sequence(seq...)
 }
+
+type StartupSelectSession struct{}
 
 type LoadHistoryCheck struct {
 	id string
@@ -153,32 +156,13 @@ func newModel(ctx context.Context) TUI {
 
 	currentSID := ""
 	currentName := ""
-	cfg, _ := session.Load()
-	if cfg != nil {
-		currentSID = strings.TrimSpace(cfg.SessionID)
+
+	sessions := listSessions()
+	if len(sessions) == 1 {
+		currentSID = sessions[0].id
 	}
-	if currentSID != "" {
-		if !go_pkg_filesystem_reader.IsDir(filepath.Join(filesystem.SessionsDir, currentSID)) {
-			currentSID = ""
-		}
-	}
-	if currentSID == "" {
-		newID, err := session.CreateSession("cli-")
-		if err != nil {
-			slog.Warn("session.CreateSession",
-				slog.String("error", err.Error()))
-		} else {
-			currentSID = newID
-			if cfg == nil {
-				cfg = &session.Config{}
-			}
-			cfg.SessionID = newID
-			if err := session.Save(cfg); err != nil {
-				slog.Warn("session.Save",
-					slog.String("error", err.Error()))
-			}
-		}
-	}
+	// 0 or 2+ sessions: leave currentSID empty — Init() fires StartupSelectSession popup
+	// (popupSwitch always appends "(new session)" so 0-session case still gets an option)
 	if currentSID != "" {
 		currentName, _ = session.GetBot(currentSID)
 	}

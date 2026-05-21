@@ -49,7 +49,7 @@ The frontmatter `name` doubles as a lookup key (`GetSessionIDByName`); the body 
 
 Three ways decide which agent handles a task:
 
-**1. Automatic** — A planner LLM analyzes the input and picks the best-fit provider via `SelectAgent()`.
+**1. Automatic** — A dispatcher LLM analyzes the input and picks the best-fit provider via `SelectAgent()`.
 
 **2. `:name` one-shot override** (CLI / TUI) — Prefix any input with `:session-name` to dispatch one command at the named session **without** changing the primary pointer:
 

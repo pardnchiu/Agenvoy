@@ -39,7 +39,7 @@ func (t TUI) commandSessionModel() (TUI, tea.Cmd, bool) {
 	values := make([]string, 0, len(cfg.Models)+1)
 	options := make([]string, 0, len(cfg.Models)+1)
 	values = append(values, session.StatusModel)
-	autoLabel := session.StatusModel + "  " + hintStyle.Render("(planner picks)")
+	autoLabel := session.StatusModel + "  " + hintStyle.Render("(dispatcher picks)")
 	if currentModel == session.StatusModel {
 		autoLabel += "  " + hintStyle.Render("[current]")
 	}

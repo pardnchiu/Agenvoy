@@ -10,7 +10,7 @@
 ## Highlights
 
 - **Seven LLM providers** — Claude, OpenAI, Codex, Gemini, GitHub Copilot, Nvidia NIM, Compat (any OpenAI-compatible endpoint)
-- **Planner-based dispatch** — A planner LLM routes each task to the best-fit worker model
+- **Dispatcher-based routing** — A dispatcher LLM routes each task to the best-fit worker model
 - **Three-pass concurrent tool dispatch** — Read tools fan out concurrently; write tools stay serial for safety
 - **Multi-layer memory** — Rolling summary + 16-message recent history + keyword/semantic dual search + cross-session error memory with 90-day TTL
 - **Skill system** — Loadable markdown skill packs, triggered by `/skill-name` or `activate_skill`
