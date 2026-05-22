@@ -12,27 +12,30 @@ import (
 )
 
 var (
-	filesystemOnce  sync.Once
-	AgenvoyDir      string
-	ConfigPath      string
-	UsagePath       string
-	McpPath         string
-	StoreDir        string
-	SessionsDir     string
-	ToolsDir       string
-	APIToolsDir    string
-	ScriptToolsDir string
-	SystemToolsDir string
-	ErrorsDir       string
-	TasksPath       string
-	CronsPath       string
-	TelegramAuthPath string
-	DiscordAuthPath  string
-	SkillsDir            string
-	SystemSkillsDir      string
-	ScheduleSkillsDir    string
+	filesystemOnce        sync.Once
+	AgenvoyDir            string
+	ConfigPath            string
+	UsagePath             string
+	McpPath               string
+	StoreDir              string
+	SessionsDir           string
+	ToolsDir              string
+	APIToolsDir           string
+	ScriptToolsDir        string
+	SystemToolsDir        string
+	ErrorsDir             string
+	TasksPath             string
+	CronsPath             string
+	TelegramAuthPath      string
+	DiscordAuthPath       string
+	SkillsDir             string
+	SkillGitDir           string
+	SkillGitignorePath    string
+	SystemSkillsDir       string
+	ScheduleSkillsDir     string
 	ScheduleSkillTrashDir string
-	DownloadDir          string
+	DownloadDir           string
+	AllowSkillGlobalPath  string
 
 	WorkAgenvoyDir     string
 	WorkAPIToolsDir    string
@@ -80,6 +83,8 @@ func Init() error {
 		DiscordAuthPath = filepath.Join(AgenvoyDir, ".discord")
 
 		SkillsDir = filepath.Join(AgenvoyDir, "skills")
+		SkillGitDir = filepath.Join(SkillsDir, ".git")
+		SkillGitignorePath = filepath.Join(SkillsDir, ".gitignore")
 		SystemSkillsDir = filepath.Join(SkillsDir, ".system")
 		ScheduleSkillsDir = filepath.Join(SkillsDir, "scheduler")
 		ScheduleSkillTrashDir = filepath.Join(ScheduleSkillsDir, ".Trash")
@@ -93,6 +98,7 @@ func Init() error {
 		} else {
 			DownloadDir = filepath.Join(AgenvoyDir, "download")
 		}
+		AllowSkillGlobalPath = filepath.Join(AgenvoyDir, "allow_skill")
 
 		WorkAgenvoyDir = filepath.Join(workDir, ".config", projectName)
 		WorkAPIToolsDir = filepath.Join(WorkAgenvoyDir, "tools", "api")
@@ -130,3 +136,30 @@ func PagePath(sessionID string) string {
 	return filepath.Join(SessionsDir, sessionID, "page")
 }
 
+func AllowSkillProjectPath(workDir string) string {
+	return filepath.Join(workDir, "."+projectName, "allow_skill")
+}
+
+func AllowSkillProjectDir(workDir string) string {
+	return filepath.Join(workDir, "."+projectName, filepath.Dir("allow_skill"))
+}
+
+func AllowToolPath(workDir string) string {
+	return filepath.Join(workDir, "."+projectName, "allow_list")
+}
+
+func ScheduleSkillDir(name string) string {
+	return filepath.Join(ScheduleSkillsDir, name)
+}
+
+func ScheduleSkillPath(name string) string {
+	return filepath.Join(ScheduleSkillDir(name), "SKILL.md")
+}
+
+func ErrorDir(sessionID string) string {
+	return filepath.Join(SessionsDir, sessionID, "tool_errors")
+}
+
+func ErrorPath(sessionID, hash string) string {
+	return filepath.Join(ErrorDir(sessionID), hash+".json")
+}

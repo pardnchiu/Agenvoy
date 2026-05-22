@@ -11,6 +11,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func registAddTask() {
@@ -52,7 +53,7 @@ func registAddTask() {
 			if skill == "" {
 				return "", fmt.Errorf("skill_name is required")
 			}
-			if !filesystem.ScheduleSkillExists(skill) {
+			if !go_pkg_filesystem_reader.Exists(filesystem.ScheduleSkillPath(skill)) {
 				return "", fmt.Errorf("skill %q not found under %s. add_task is an internal binding called by the scheduler-skill-creator skill flow. Run scheduler-skill-creator skill which generates a hashed skill name and binds time in one flow. Do not call add_task with a hand-made name", skill, filesystem.ScheduleSkillPath(skill))
 			}
 

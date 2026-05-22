@@ -44,7 +44,7 @@ func ToggleGlobal(name string) (bool, error) {
 		set[name] = true
 		added = true
 	}
-	return added, write(filesystem.AllowSkillGlobalPath(), set)
+	return added, write(filesystem.AllowSkillGlobalPath, set)
 }
 
 func ToggleProject(workDir, name string) (bool, error) {

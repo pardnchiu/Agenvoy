@@ -2,13 +2,17 @@ package filesystem
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 type Skill struct {
@@ -24,9 +28,81 @@ type Skill struct {
 var (
 	skillFrontmatterRegex = regexp.MustCompile(`(?s)^---\n(.*?)\n---\n?(.*)$`)
 	skillNameRegex        = regexp.MustCompile(`(?m)^name:\s*(.+)$`)
+	skillBodyStripRegex   = regexp.MustCompile(`(?s)^---\n.*?\n---\n?`)
 )
 
-func parseDescriptionField(header []byte) string {
+func ParseSkill(path string) (*Skill, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, fmt.Errorf("filepath.Abs: %w", err)
+	}
+
+	result, err := go_pkg_filesystem.ReadText(absPath)
+	if err != nil {
+		return nil, fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem ReadText (%s): %w", path, err)
+	}
+	content := []byte(result)
+
+	hash := fmt.Sprintf("%x", sha256.Sum256(content))
+	dir := filepath.Dir(path)
+	skill := &Skill{
+		Name:    filepath.Base(dir),
+		AbsPath: absPath,
+		Path:    dir,
+		Content: result,
+		Body:    result,
+		Hash:    hash,
+	}
+
+	header, body, err := extractSkillHeader(content)
+	if err != nil {
+		return skill, nil
+	}
+	skill.Body = body
+
+	if matches := skillNameRegex.FindSubmatch(header); matches != nil {
+		skill.Name = strings.TrimSpace(string(matches[1]))
+	}
+	skill.Description = parseSkillDescription(header)
+
+	return skill, nil
+}
+
+func ParseSkillBytes(absPath, folderPath string, data []byte) *Skill {
+	hash := fmt.Sprintf("%x", sha256.Sum256(data))
+	text := string(data)
+	skill := &Skill{
+		Name:    filepath.Base(folderPath),
+		AbsPath: absPath,
+		Path:    folderPath,
+		Content: text,
+		Body:    text,
+		Hash:    hash,
+	}
+	header, body, err := extractSkillHeader(data)
+	if err != nil {
+		return skill
+	}
+
+	skill.Body = body
+	if matches := skillNameRegex.FindSubmatch(header); matches != nil {
+		skill.Name = strings.TrimSpace(string(matches[1]))
+	}
+	skill.Description = parseSkillDescription(header)
+	return skill
+}
+
+func extractSkillHeader(content []byte) ([]byte, string, error) {
+	matches := skillFrontmatterRegex.FindSubmatch(content)
+	if matches == nil {
+		return nil, "", fmt.Errorf("header not found")
+	}
+	result := bytes.TrimSpace(matches[1])
+	body := strings.TrimSpace(string(matches[2]))
+	return result, body, nil
+}
+
+func parseSkillDescription(header []byte) string {
 	lines := strings.Split(string(header), "\n")
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -66,72 +142,37 @@ func parseDescriptionField(header []byte) string {
 	return ""
 }
 
-func ParseSkill(path string) (*Skill, error) {
-	absPath, err := filepath.Abs(path)
+func GetScheduleSkillBody(name string) (string, error) {
+	path := ScheduleSkillPath(name)
+	if !go_pkg_filesystem_reader.Exists(path) {
+		return "", fmt.Errorf("schedule skill (%s) not found", name)
+	}
+
+	result, err := go_pkg_filesystem.ReadText(path)
 	if err != nil {
-		return nil, fmt.Errorf("filepath.Abs: %w", err)
+		return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/reader ReadText (%s): %w", path, err)
 	}
-
-	contentText, err := go_pkg_filesystem.ReadText(absPath)
-	if err != nil {
-		return nil, fmt.Errorf("go_pkg_filesystem.ReadText: %w", err)
-	}
-	content := []byte(contentText)
-
-	hash := fmt.Sprintf("%x", sha256.Sum256(content))
-	folderPath := filepath.Dir(path)
-	skill := &Skill{
-		Name:    filepath.Base(folderPath),
-		AbsPath: absPath,
-		Path:    folderPath,
-		Content: contentText,
-		Body:    contentText,
-		Hash:    hash,
-	}
-
-	header, body, err := extractSkillHeader(content)
-	if err != nil {
-		return skill, nil
-	}
-	skill.Body = body
-
-	if matches := skillNameRegex.FindSubmatch(header); matches != nil {
-		skill.Name = strings.TrimSpace(string(matches[1]))
-	}
-	skill.Description = parseDescriptionField(header)
-
-	return skill, nil
+	return strings.TrimSpace(skillBodyStripRegex.ReplaceAllString(result, "")), nil
 }
 
-func ParseSkillBytes(absPath, folderPath string, data []byte) *Skill {
-	hash := fmt.Sprintf("%x", sha256.Sum256(data))
-	text := string(data)
-	skill := &Skill{
-		Name:    filepath.Base(folderPath),
-		AbsPath: absPath,
-		Path:    folderPath,
-		Content: text,
-		Body:    text,
-		Hash:    hash,
+func TrashScheduleSkill(ctx context.Context, name string) error {
+	dir := ScheduleSkillDir(name)
+	if !go_pkg_filesystem_reader.IsDir(dir) {
+		return nil
 	}
-	header, body, err := extractSkillHeader(data)
-	if err != nil {
-		return skill
+	if err := go_pkg_filesystem.CheckDir(ScheduleSkillTrashDir, true); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir (%s): %w", dir, err)
 	}
-	skill.Body = body
-	if matches := skillNameRegex.FindSubmatch(header); matches != nil {
-		skill.Name = strings.TrimSpace(string(matches[1]))
-	}
-	skill.Description = parseDescriptionField(header)
-	return skill
-}
 
-func extractSkillHeader(content []byte) ([]byte, string, error) {
-	matches := skillFrontmatterRegex.FindSubmatch(content)
-	if matches == nil {
-		return nil, "", fmt.Errorf("header not found")
+	dst := filepath.Join(ScheduleSkillTrashDir, name)
+	if go_pkg_filesystem_reader.Exists(dst) {
+		dst = filepath.Join(ScheduleSkillTrashDir, fmt.Sprintf("%s-%d", name, time.Now().Unix()))
 	}
-	frontmatter := bytes.TrimSpace(matches[1])
-	body := strings.TrimSpace(string(matches[2]))
-	return frontmatter, body, nil
+	if err := os.Rename(dir, dst); err != nil {
+		return err
+	}
+
+	RunTrashCommitSkillDir(ctx, name)
+
+	return nil
 }

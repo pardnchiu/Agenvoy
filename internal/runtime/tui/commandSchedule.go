@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func (t TUI) commandSchedule(parts []string) (TUI, tea.Cmd, bool) {
@@ -14,10 +15,10 @@ func (t TUI) commandSchedule(parts []string) (TUI, tea.Cmd, bool) {
 	if name == "" {
 		return t, tea.Println(errorStyle.Render("[!] scheduler skill name required") + "\n"), true
 	}
-	if !filesystem.ScheduleSkillExists(name) {
+	if !go_pkg_filesystem_reader.Exists(filesystem.ScheduleSkillPath(name)) {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] scheduler skill %q not found", name)) + "\n"), true
 	}
-	body, err := filesystem.ScheduleSkillBody(name)
+	body, err := filesystem.GetScheduleSkillBody(name)
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] read scheduler skill: %v", err)) + "\n"), true
 	}

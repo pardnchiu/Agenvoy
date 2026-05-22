@@ -29,7 +29,7 @@ func read(path string) map[string]bool {
 }
 
 func LoadGlobal() map[string]bool {
-	return read(filesystem.AllowSkillGlobalPath())
+	return read(filesystem.AllowSkillGlobalPath)
 }
 
 func LoadProject(workDir string) map[string]bool {

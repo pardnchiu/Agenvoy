@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem/toolError"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
 func registReadErrorMemory() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "read_error_memory",
-		AlwaysAllow:   true,
-		Concurrent: true,
+		Name:        "read_error_memory",
+		AlwaysAllow: true,
+		Concurrent:  true,
 		Description: `
 Fetch a prior tool error record by hash.
 Use when a tool returns "no data: {hash}" and the full context is needed.`,
@@ -49,9 +49,9 @@ Use when a tool returns "no data: {hash}" and the full context is needed.`,
 				return "", fmt.Errorf("hash is required")
 			}
 
-			result := toolError.Get(sessionId, hash)
+			result := filesystem.GetError(sessionId, hash)
 			if result == "" {
-				return "not found", nil
+				return "tool not found", nil
 			}
 			return result, nil
 		},

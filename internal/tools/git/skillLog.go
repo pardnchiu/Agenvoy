@@ -13,7 +13,7 @@ import (
 func skillLog() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "skill_git_log",
-		AlwaysAllow:    true,
+		AlwaysAllow: true,
 		Description: "List the git commit history for ~/.config/agenvoy/skills in oneline format.",
 		Parameters: map[string]any{
 			"type": "object",
@@ -35,7 +35,7 @@ func skillLog() {
 			if params.Limit > 100 {
 				params.Limit = 100
 			}
-			log, err := filesystem.LogSkills(ctx, params.Limit)
+			log, err := filesystem.GetSkillDirGitLog(ctx, params.Limit)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.LogSkills: %w", err)
 			}

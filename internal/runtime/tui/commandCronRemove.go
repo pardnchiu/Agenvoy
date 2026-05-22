@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -60,7 +61,7 @@ func (t TUI) runCronRemove(skill string) (TUI, tea.Cmd) {
 	if removed == 0 {
 		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ no cron found for %s", skill)) + "\n")
 	}
-	if err := filesystem.TrashScheduleSkill(skill); err != nil {
+	if err := filesystem.TrashScheduleSkill(context.Background(), skill); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] TrashScheduleSkill: %v", err)) + "\n")
 	}
 	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ removed cron: %s · skill trashed", skill)) + "\n")
