@@ -183,6 +183,9 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd, _ := t.commandNew(nil)
 		return next, cmd
 
+	case SessionNewSubmit:
+		return t.runCreateSession(msg.name)
+
 	case ModelScopeSelect:
 		switch msg.scope {
 		case "global":

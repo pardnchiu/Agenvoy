@@ -10,21 +10,37 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
-func (t TUI) commandNew(parts []string) (TUI, tea.Cmd, bool) {
-	name := ""
-	if len(parts) >= 2 {
-		name = strings.TrimSpace(strings.Join(parts[1:], " "))
-	}
+type SessionNewSubmit struct {
+	name string
+}
 
+func (t TUI) commandNew(parts []string) (TUI, tea.Cmd, bool) {
+	if len(parts) >= 2 {
+		name := strings.TrimSpace(strings.Join(parts[1:], " "))
+		next, cmd := t.runCreateSession(name)
+		return next, cmd, true
+	}
+	t.popup = &Popup{
+		kind:  popupText,
+		title: "New session name (empty = unnamed)",
+		input: "",
+		onConfirm: func(value string) any {
+			return SessionNewSubmit{name: strings.TrimSpace(value)}
+		},
+	}
+	return t, nil, true
+}
+
+func (t TUI) runCreateSession(name string) (TUI, tea.Cmd) {
 	if name != "" {
 		if owner := session.GetSessionIDByName(name); owner != "" {
-			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] name %q already used by session %s", name, owner)) + "\n"), true
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] name %q already used by session %s", name, owner)) + "\n")
 		}
 	}
 
 	id, err := session.CreateSession("cli-")
 	if err != nil {
-		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] create session failed: %v", err)) + "\n"), true
+		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] create session failed: %v", err)) + "\n")
 	}
 
 	if name != "" {
@@ -56,5 +72,5 @@ func (t TUI) commandNew(parts []string) (TUI, tea.Cmd, bool) {
 		tea.ClearScreen,
 		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		tea.Println(strings.Join(lines, "\n")+"\n"),
-	), true
+	)
 }

@@ -34,7 +34,7 @@ func skillRollback() {
 			if params.Commit == "" {
 				return "", fmt.Errorf("commit is required")
 			}
-			out, err := filesystem.RollbackSkills(ctx, params.Commit)
+			out, err := filesystem.RollbackSkillDir(ctx, params.Commit)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.RollbackSkills: %w", err)
 			}

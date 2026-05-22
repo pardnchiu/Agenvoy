@@ -43,10 +43,10 @@ func skillCommit() {
 			if params.SkillName == "" {
 				return "", fmt.Errorf("skill_name is required")
 			}
-			if err := filesystem.CheckSkillsGit(ctx); err != nil {
-				return "", fmt.Errorf("filesystem.CheckSkillsGit: %w", err)
+			if err := filesystem.CheckSkillGitDir(ctx); err != nil {
+				return "", fmt.Errorf("filesystem.CheckSkillGitDir: %w", err)
 			}
-			if err := filesystem.CommitSkills(ctx, params.Act, params.SkillName); err != nil {
+			if err := filesystem.CommitSkillDir(ctx, params.Act, params.SkillName); err != nil {
 				return "", fmt.Errorf("filesystem.CommitSkills: %w", err)
 			}
 			return fmt.Sprintf("committed: %s_%s", params.Act, params.SkillName), nil

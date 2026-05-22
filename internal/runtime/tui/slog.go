@@ -2,20 +2,22 @@ package tui
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"os"
-	"path/filepath"
+	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/fsnotify/fsnotify"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
+
+var sseDataPrefix = []byte("data: ")
 
 type Log struct {
 	Source string
@@ -115,151 +117,138 @@ func extractField(s, key string) string {
 	return val
 }
 
+type sessionSubMgr struct {
+	mu      sync.Mutex
+	cancel  context.CancelFunc
+	current string
+}
+
+var subMgr = &sessionSubMgr{}
+
 func installSlogTUI(ctx context.Context) func() {
 	prev := slog.Default()
 	slog.SetDefault(slog.New(&tuiSlogHandler{}))
-
-	tailCtx, cancel := context.WithCancel(ctx)
-	go newDaemonLogTailer(tailCtx)
+	subMgrParentCtx = ctx
+	daemonCtx, daemonCancel := context.WithCancel(ctx)
+	go subscribeSessionEvents(daemonCtx, "daemon")
 
 	return func() {
-		cancel()
+		daemonCancel()
+		subMgr.Stop()
 		slog.SetDefault(prev)
 	}
 }
 
-func newDaemonLogTailer(ctx context.Context) {
-	path := filepath.Join(filesystem.AgenvoyDir, "daemon.log")
-	dir := filepath.Dir(path)
+var subMgrParentCtx = context.Background()
 
-	w, err := fsnotify.NewWatcher()
-	if err != nil {
+func subscribeSessionLog(sessionID string) {
+	if strings.HasPrefix(sessionID, "cli-") {
+		subMgr.Switch(subMgrParentCtx, "")
 		return
 	}
-	defer w.Close()
+	subMgr.Switch(subMgrParentCtx, sessionID)
+}
 
-	if err := w.Add(dir); err != nil {
+func (m *sessionSubMgr) Switch(parent context.Context, sessionID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if sessionID == m.current && m.cancel != nil {
 		return
 	}
-	if err := w.Add(path); err == nil {
-		defer w.Remove(path)
+	if m.cancel != nil {
+		m.cancel()
+		m.cancel = nil
 	}
+	m.current = sessionID
+	if sessionID == "" {
+		return
+	}
+	ctx, cancel := context.WithCancel(parent)
+	m.cancel = cancel
+	go subscribeSessionEvents(ctx, sessionID)
+}
 
-	lastSize := fileSize(path)
-	poll := time.NewTicker(500 * time.Millisecond)
-	defer poll.Stop()
+func (m *sessionSubMgr) Stop() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.cancel != nil {
+		m.cancel()
+		m.cancel = nil
+	}
+	m.current = ""
+}
+
+func subscribeSessionEvents(ctx context.Context, sessionID string) {
+	url := daemonBaseURL() + "/v1/session/" + sessionID + "/log"
+	client := &http.Client{}
+	backoff := time.Second
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case ev, ok := <-w.Events:
-			if !ok {
+		default:
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return
+		}
+		req.Header.Set("Accept", "text/event-stream")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			if ctx.Err() != nil {
 				return
 			}
-			if filepath.Base(ev.Name) != "daemon.log" {
-				continue
-			}
-			if ev.Has(fsnotify.Remove) || ev.Has(fsnotify.Rename) {
-				_ = w.Remove(path)
-				_ = w.Add(path)
-				lastSize = fileSize(path)
-				continue
-			}
-			if ev.Has(fsnotify.Create) {
-				_ = w.Add(path)
-			}
-			lastSize = drainDaemonLog(path, lastSize)
-		case <-w.Errors:
-		case <-poll.C:
-			lastSize = drainDaemonLog(path, lastSize)
+			sleepBackoff(ctx, &backoff)
+			continue
 		}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			sleepBackoff(ctx, &backoff)
+			continue
+		}
+		backoff = time.Second // 連到後重置
+
+		scanner := bufio.NewScanner(resp.Body)
+		scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
+		for scanner.Scan() {
+			buf := scanner.Bytes()
+			if !bytes.HasPrefix(buf, sseDataPrefix) {
+				continue
+			}
+			var ev agentTypes.Event
+			if err := json.Unmarshal(buf[len(sseDataPrefix):], &ev); err != nil {
+				continue
+			}
+			if ev.Type == agentTypes.EventDaemonLog {
+				send(Log{
+					Source: "daemon",
+					Level:  ev.Source,
+					Time:   time.Now(),
+					Msg:    ev.Text,
+				})
+				continue
+			}
+			send(agentEvent{event: ev})
+		}
+		if err := scanner.Err(); err != nil && ctx.Err() == nil {
+			slog.Warn("SSE scanner",
+				slog.String("session", sessionID),
+				slog.String("error", err.Error()))
+		}
+		resp.Body.Close()
 	}
 }
 
-func drainDaemonLog(path string, lastSize int64) int64 {
-	current := fileSize(path)
-	if current <= lastSize {
-		return current
+func sleepBackoff(ctx context.Context, backoff *time.Duration) {
+	select {
+	case <-time.After(*backoff):
+	case <-ctx.Done():
 	}
-	file, err := os.Open(path)
-	if err != nil {
-		return lastSize
+	*backoff *= 2
+	if *backoff > 30*time.Second {
+		*backoff = 30 * time.Second
 	}
-	defer file.Close()
-	if _, err := file.Seek(lastSize, 0); err != nil {
-		return current
-	}
-	scanner := bufio.NewScanner(io.LimitReader(file, current-lastSize))
-	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
-	for scanner.Scan() {
-		raw := strings.TrimRight(scanner.Text(), "\r")
-		if raw == "" {
-			continue
-		}
-		entry, ok := parseDaemonLog(raw)
-		if !ok {
-			continue
-		}
-		send(entry)
-	}
-	return current
-}
-
-func parseDaemonLog(raw string) (Log, bool) {
-	entry := Log{Source: "daemon", Time: time.Now()}
-	rest := strings.TrimSpace(raw)
-
-	if len(rest) >= 19 {
-		if t, err := time.Parse("2006/01/02 15:04:05", rest[:19]); err == nil {
-			entry.Time = t
-			rest = strings.TrimSpace(rest[19:])
-		}
-	}
-	if strings.HasPrefix(rest, "time=") {
-		if i := strings.Index(rest, " "); i > 5 {
-			if t, err := time.Parse(time.RFC3339Nano, rest[5:i]); err == nil {
-				entry.Time = t
-			}
-			rest = strings.TrimSpace(rest[i+1:])
-		}
-	}
-
-	level := ""
-	for _, lvl := range []string{"DEBUG", "INFO", "WARN", "ERROR"} {
-		if strings.HasPrefix(rest, lvl+" ") {
-			level = lvl
-			rest = strings.TrimSpace(rest[len(lvl):])
-			break
-		}
-		if strings.HasPrefix(rest, "level="+lvl) {
-			level = lvl
-			rest = strings.TrimSpace(rest[len("level=")+len(lvl):])
-			break
-		}
-	}
-	if level == "" {
-		level = "INFO"
-	}
-	if level == "DEBUG" {
-		return Log{}, false
-	}
-	entry.Level = level
-
-	if after, ok := strings.CutPrefix(rest, "msg="); ok {
-		rest = after
-		if quoted, ok := strings.CutPrefix(rest, "\""); ok {
-			if msgText, tail, ok := strings.Cut(quoted, "\""); ok {
-				attrText := strings.TrimSpace(tail)
-				if attrText != "" {
-					rest = msgText + " " + attrText
-				} else {
-					rest = msgText
-				}
-			}
-		}
-	}
-
-	entry.Msg = rest
-	return entry, true
 }

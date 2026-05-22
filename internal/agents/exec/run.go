@@ -25,6 +25,10 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 
 	trimInput := strings.TrimSpace(userInput)
 
+	if trimInput != "" {
+		events <- agentTypes.Event{Type: agentTypes.EventUserInput, Text: trimInput}
+	}
+
 	sessionOverride := sessionID
 	if name, effective := sessionManager.Match(trimInput); name != "" {
 		id := sessionManager.GetSessionIDByName(name)

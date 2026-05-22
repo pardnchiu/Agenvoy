@@ -172,7 +172,7 @@ func reload() error {
 			if hasMore {
 				return
 			}
-			if err := filesystem.TrashScheduleSkill(entryCopy.Skill); err != nil {
+			if err := filesystem.TrashScheduleSkill(context.Background(), entryCopy.Skill); err != nil {
 				slog.Warn("filesystem.TrashScheduleSkill",
 					slog.String("error", err.Error()))
 			}

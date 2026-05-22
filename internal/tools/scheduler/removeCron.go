@@ -26,7 +26,7 @@ func registRemoveCron() {
 			},
 			"required": []string{"skill_name"},
 		},
-		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				SkillName string `json:"skill_name"`
 			}
@@ -44,7 +44,7 @@ func registRemoveCron() {
 			if removed == 0 {
 				return fmt.Sprintf("no cron found for skill %q", skill), nil
 			}
-			if err := filesystem.TrashScheduleSkill(skill); err != nil {
+			if err := filesystem.TrashScheduleSkill(ctx, skill); err != nil {
 				return "", fmt.Errorf("TrashScheduleSkill: %w", err)
 			}
 			return fmt.Sprintf("removed %d cron(s) for skill %q and moved skill to .Trash", removed, skill), nil

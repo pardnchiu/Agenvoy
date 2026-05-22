@@ -114,7 +114,7 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 				return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 			}
 
-			filesystem.SkillCommit(ctx, absPath, false)
+			filesystem.RunCommitSkillDir(ctx, absPath, false)
 			return fmt.Sprintf("successfully updated %s", absPath), nil
 		},
 	})

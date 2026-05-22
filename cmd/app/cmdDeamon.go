@@ -23,13 +23,13 @@ import (
 	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
 	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/routes"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/plan"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
@@ -129,6 +129,7 @@ func reloadTelegram() {
 }
 
 func cmdDaemon() {
+	installDaemonSlog()
 	session.SetHash(session.Hash())
 
 	if err := filesystem.Init(); err != nil {
@@ -310,7 +311,7 @@ func watchConfig(ctx context.Context) func() {
 }
 
 func runSkill(ctx context.Context, sessionID, skillName string) (string, error) {
-	body, err := filesystem.ScheduleSkillBody(skillName)
+	body, err := filesystem.GetScheduleSkillBody(skillName)
 	if err != nil {
 		return "", fmt.Errorf("scheduler skill %q unreadable: %w", skillName, err)
 	}

@@ -37,6 +37,7 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 	send(agentExec{cancel: cancel})
 
 	ch := make(chan agentTypes.Event, 16)
+	wrapped := wrapEventsPublish(ctx, sessionID, ch)
 	done := make(chan error, 1)
 
 	scanner := agents.Scanner()
@@ -53,13 +54,13 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 			input,
 			nil,
 			nil,
-			ch,
+			wrapped,
 			allowAll,
 			workDir,
 			sessionID,
 			webMode,
 		)
-		close(ch)
+		close(wrapped)
 		done <- err
 	}()
 

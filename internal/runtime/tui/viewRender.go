@@ -84,12 +84,17 @@ func messageRow(text, subagent string) string {
 	indent := "  "
 
 	var sb strings.Builder
-	for i, line := range strings.Split(text, "\n") {
-		if i == 0 {
-			sb.WriteString(prefix + line)
-		} else {
-			sb.WriteString("\n" + indent + line)
+	first := true
+	for line := range strings.SplitSeq(text, "\n") {
+		if first {
+			sb.WriteString(prefix)
+			sb.WriteString(line)
+			first = false
+			continue
 		}
+		sb.WriteByte('\n')
+		sb.WriteString(indent)
+		sb.WriteString(line)
 	}
 	return sb.String()
 }

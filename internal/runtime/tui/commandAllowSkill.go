@@ -101,7 +101,7 @@ func (t TUI) runAllowSkillToggle(scope, name string) (TUI, tea.Cmd) {
 	switch scope {
 	case "global":
 		added, err = allowSkill.ToggleGlobal(name)
-		pathLabel = filesystem.AllowSkillGlobalPath()
+		pathLabel = filesystem.AllowSkillGlobalPath
 	case "project":
 		added, err = allowSkill.ToggleProject(t.cwd, name)
 		pathLabel = filesystem.AllowSkillProjectPath(t.cwd)
