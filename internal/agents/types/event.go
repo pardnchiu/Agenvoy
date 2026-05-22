@@ -11,6 +11,40 @@ func (e EventType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.String())
 }
 
+var eventTypeByName = map[string]EventType{
+	"EventText":            EventText,
+	"EventTextDone":        EventTextDone,
+	"EventSkillResult":     EventSkillResult,
+	"EventAgentSelect":     EventAgentSelect,
+	"EventAgentResult":     EventAgentResult,
+	"EventToolCall":        EventToolCall,
+	"EventToolCallStart":   EventToolCallStart,
+	"EventToolCallText":    EventToolCallText,
+	"EventToolCallEnd":     EventToolCallEnd,
+	"EventToolResult":      EventToolResult,
+	"EventToolSkipped":     EventToolSkipped,
+	"EventToolConfirm":     EventToolConfirm,
+	"EventExecError":       EventExecError,
+	"EventError":           EventError,
+	"EventSummaryGenerate": EventSummaryGenerate,
+	"EventDone":            EventDone,
+	"EventUserInput":       EventUserInput,
+	"EventDaemonLog":       EventDaemonLog,
+	"EventConnected":       EventConnected,
+}
+
+func (e *EventType) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	if v, ok := eventTypeByName[s]; ok {
+		*e = v
+		return nil
+	}
+	return nil
+}
+
 const (
 	EventText EventType = iota
 	EventTextDone
@@ -28,6 +62,9 @@ const (
 	EventError
 	EventSummaryGenerate
 	EventDone
+	EventUserInput
+	EventDaemonLog
+	EventConnected
 )
 
 func (e EventType) String() string {
@@ -64,6 +101,12 @@ func (e EventType) String() string {
 		return "EventSummaryGenerate"
 	case EventDone:
 		return "EventDone"
+	case EventUserInput:
+		return "EventUserInput"
+	case EventDaemonLog:
+		return "EventDaemonLog"
+	case EventConnected:
+		return "EventConnected"
 	default:
 		return "EventUnknown"
 	}

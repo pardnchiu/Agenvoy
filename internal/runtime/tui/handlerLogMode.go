@@ -30,12 +30,14 @@ func (t TUI) restartTailer() TUI {
 		t.tailCancel()
 		t.tailCancel = nil
 	}
-	if strings.TrimSpace(t.currentSessionID) == "" {
+	sid := strings.TrimSpace(t.currentSessionID)
+	subscribeSessionLog(sid)
+	if sid == "" {
 		return t
 	}
 	ctx, cancel := context.WithCancel(t.ctx)
 	t.tailCancel = cancel
-	go newActionTailer(ctx, t.currentSessionID)
+	go newActionTailer(ctx, sid)
 	return t
 }
 

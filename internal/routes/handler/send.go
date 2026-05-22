@@ -54,15 +54,19 @@ func Send() gin.HandlerFunc {
 
 		events := make(chan agentTypes.Event, 64)
 		ctx := c.Request.Context()
+		wrapped := sessionManager.Wrap(ctx, sessionID, events, 64)
 
 		go func() {
-			defer close(events)
+			defer close(wrapped)
 
 			scanner := agents.Scanner()
 			if scanner != nil {
 				scanner.Scan()
 			}
 			trimContent := strings.TrimSpace(req.Content)
+			if trimContent != "" {
+				wrapped <- agentTypes.Event{Type: agentTypes.EventUserInput, Text: trimContent}
+			}
 
 			externalAgent, externalEffective, externalReadOnly := external.MatchExternal(trimContent)
 			if externalAgent != "" {
@@ -76,14 +80,14 @@ func Send() gin.HandlerFunc {
 					matchedSkill = m
 					trimContent = strings.TrimSpace(effective)
 					skillResult = agentTypes.Event{Type: agentTypes.EventSkillResult, Text: strings.TrimSpace(m.Name)}
-					events <- skillResult
+					wrapped <- skillResult
 					if sessionID != "" {
 						sessionManager.Record(sessionID, skillResult)
 					}
 				}
 			}
 
-			events <- agentTypes.Event{Type: agentTypes.EventAgentSelect}
+			wrapped <- agentTypes.Event{Type: agentTypes.EventAgentSelect}
 			var agent agentTypes.Agent
 			var agentResult agentTypes.Event
 			if externalAgent != "" {
@@ -100,7 +104,7 @@ func Send() gin.HandlerFunc {
 				}
 				agentResult = agentTypes.Event{Type: agentTypes.EventAgentResult, Text: agent.Name()}
 			}
-			events <- agentResult
+			wrapped <- agentResult
 			if sessionID != "" {
 				sessionManager.Record(sessionID, agentResult)
 			}
@@ -120,19 +124,19 @@ func Send() gin.HandlerFunc {
 
 			session, err := newSession(data, sessionID)
 			if err != nil {
-				events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
+				wrapped <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 				return
 			}
 
 			if externalAgent != "" {
-				if err := exec.CallExternal(ctx, session.ID, externalAgent, trimContent, externalReadOnly, events); err != nil {
-					events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
+				if err := exec.CallExternal(ctx, session.ID, externalAgent, trimContent, externalReadOnly, wrapped); err != nil {
+					wrapped <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 				}
 				return
 			}
 
-			if err := exec.Execute(ctx, data, session, events, true); err != nil {
-				events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
+			if err := exec.Execute(ctx, data, session, wrapped, true); err != nil {
+				wrapped <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 				return
 			}
 		}()

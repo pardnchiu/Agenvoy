@@ -129,6 +129,7 @@ func reloadTelegram() {
 }
 
 func cmdDaemon() {
+	installDaemonSlog()
 	session.SetHash(session.Hash())
 
 	if err := filesystem.Init(); err != nil {
