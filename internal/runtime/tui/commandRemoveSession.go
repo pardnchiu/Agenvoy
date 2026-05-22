@@ -64,15 +64,6 @@ func (t TUI) openRemoveSessionConfirm2(sid string) (TUI, tea.Cmd) {
 }
 
 func (t TUI) runRemoveSession(sid string) (TUI, tea.Cmd) {
-	target := pickAlternateSession(sid)
-	if target == "" {
-		created, err := session.CreateSession("cli-")
-		if err != nil {
-			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] create fallback session failed: %v", err)) + "\n")
-		}
-		target = created
-	}
-
 	deletedKeys := deleteSessionHistKeys(sid)
 
 	sessionDir := filepath.Join(filesystem.SessionsDir, sid)
@@ -80,26 +71,45 @@ func (t TUI) runRemoveSession(sid string) (TUI, tea.Cmd) {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] remove session dir: %v", err)) + "\n")
 	}
 
-	t.currentSessionID = target
-	t.currentSessionName, _ = session.GetBot(target)
-	t = t.restartTailer()
+	fallback := pickAlternateSession(sid)
+	if fallback == "" {
+		created, err := session.CreateSession("cli-")
+		if err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] create fallback session failed: %v", err)) + "\n")
+		}
+		fallback = created
+	}
 
+	t.currentSessionID = fallback
+	t.currentSessionName, _ = session.GetBot(fallback)
+	t = t.restartTailer()
 	t.tokens = 0
 	t.lastIn = 0
 	t.lastOut = 0
 	t.currentModel = ""
 	t.activity = ""
 
+	popup := popupSwitch(fallback)
+	if popup != nil {
+		popup.title = "Removed. Switch to which session?"
+		popup.onConfirm = func(chosen string) any {
+			if chosen == "" {
+				return SessionNew{}
+			}
+			return SessionSelect{id: chosen}
+		}
+		t.popup = popup
+	}
+
 	lines := []string{
 		hintStyle.Render(fmt.Sprintf("⎯ removed: %s (%d keys, dir purged)", utils.ShortenSessionID(sid), deletedKeys)),
-		hintStyle.Render(fmt.Sprintf("⎯ switched to: %s", utils.ShortenSessionID(target))),
 	}
 
 	seq := []tea.Cmd{
 		tea.ClearScreen,
 		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 	}
-	seq = append(seq, loadSessionTail(target)...)
+	seq = append(seq, loadSessionTail(fallback)...)
 	seq = append(seq, tea.Println(strings.Join(lines, "\n")+"\n"))
 	return t, tea.Sequence(seq...)
 }
