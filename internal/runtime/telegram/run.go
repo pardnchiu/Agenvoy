@@ -244,6 +244,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	}
 
 	replyText = strings.TrimSpace(tsPrefixRegex.ReplaceAllString(replyText, ""))
+	replyText = sanitizeHTML(replyText)
 	if replyText == "" {
 		return fmt.Errorf("no reply")
 	}

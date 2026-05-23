@@ -142,11 +142,8 @@ func installSlogTUI(ctx context.Context) func() {
 var subMgrParentCtx = context.Background()
 
 func subscribeSessionLog(sessionID string) {
-	if strings.HasPrefix(sessionID, "cli-") {
-		subMgr.Switch(subMgrParentCtx, "")
-		return
-	}
-	subMgr.Switch(subMgrParentCtx, sessionID)
+	_ = sessionID
+	subMgr.Switch(subMgrParentCtx, "")
 }
 
 func (m *sessionSubMgr) Switch(parent context.Context, sessionID string) {

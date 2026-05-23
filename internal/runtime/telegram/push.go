@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html"
 	"log/slog"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -19,9 +20,15 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
+var brTagRegex = regexp.MustCompile(`(?i)<br\s*/?>`)
+
+func sanitizeHTML(s string) string {
+	return brTagRegex.ReplaceAllString(s, "\n")
+}
+
 func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	id := strings.TrimSpace(payload.SessionID)
-	text := strings.TrimSpace(payload.Text)
+	text := sanitizeHTML(strings.TrimSpace(payload.Text))
 	if id == "" || text == "" || !strings.HasPrefix(id, "tg-") {
 		return
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -14,14 +15,17 @@ type Handler func(ctx context.Context, e *toolTypes.Executor, args json.RawMessa
 
 type GroupHandler func(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error)
 
+const DefaultToolTimeout = time.Minute
+
 type Def struct {
 	Name        string
 	Description string
 	Parameters  map[string]any
 	Handler     Handler
-	AlwaysAllow    bool
+	AlwaysAllow bool
 	AlwaysLoad  bool
 	Concurrent  bool
+	Timeout     time.Duration
 }
 
 var handlerMap = map[string]Handler{}
@@ -30,6 +34,7 @@ var defList []toolTypes.Tool
 var readOnlySet = map[string]bool{}
 var alwaysLoadSet = map[string]bool{}
 var concurrentSet = map[string]bool{}
+var timeoutMap = map[string]time.Duration{}
 
 func Regist(d Def) {
 	d.Name = strings.TrimSpace(d.Name)
@@ -63,6 +68,16 @@ func Regist(d Def) {
 	if d.Concurrent {
 		concurrentSet[d.Name] = true
 	}
+	if d.Timeout > 0 {
+		timeoutMap[d.Name] = d.Timeout
+	}
+}
+
+func GetTimeout(name string) time.Duration {
+	if t, ok := timeoutMap[name]; ok {
+		return t
+	}
+	return DefaultToolTimeout
 }
 
 func IsAlwaysLoad(name string) bool {
@@ -94,14 +109,26 @@ func JSON() []byte {
 }
 
 func Dispatch(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
+	timeout := GetTimeout(name)
+	tctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	handler, ok := handlerMap[name]
 	if ok {
-		return handler(ctx, e, args)
+		result, err := handler(tctx, e, args)
+		if tctx.Err() == context.DeadlineExceeded {
+			return result, fmt.Errorf("tool %q timed out after %s", name, timeout)
+		}
+		return result, err
 	}
 
 	for prefix, handler := range groupHandlerMap {
 		if strings.HasPrefix(name, prefix) {
-			return handler(ctx, e, name, args)
+			result, err := handler(tctx, e, name, args)
+			if tctx.Err() == context.DeadlineExceeded {
+				return result, fmt.Errorf("tool %q timed out after %s", name, timeout)
+			}
+			return result, err
 		}
 	}
 
