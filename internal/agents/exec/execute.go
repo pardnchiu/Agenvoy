@@ -261,9 +261,11 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 			if isContextLengthError(err) {
 				trimmedToolCalls = trimmedToolCalls || trimOnContextExceeded(&session.OldHistories, &session.ToolHistories)
-				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange")
+				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange",
+					slog.String("session", session.ID))
 			} else {
 				slog.Warn("data.Agent.Send",
+					slog.String("session", session.ID),
 					slog.String("error", err.Error()),
 					slog.Int("sameSigCount", sendFailCount))
 			}
@@ -327,6 +329,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 			if err := saveNewHistory(choice, session); err != nil {
 				slog.Warn("writeHistory",
+					slog.String("session", session.ID),
 					slog.String("error", err.Error()))
 			}
 
@@ -342,6 +345,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 		if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 			slog.Warn("usageManager.Update",
+				slog.String("session", session.ID),
 				slog.String("error", err.Error()))
 		}
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
@@ -369,6 +373,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			sendText(events, StripModelResponse(text))
 			if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 				slog.Warn("usageManager.Update",
+					slog.String("session", session.ID),
 					slog.String("error", err.Error()))
 			}
 			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
@@ -379,6 +384,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	sendText(events, "no usable data, retry later, or using other tools.")
 	if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 		slog.Warn("usageManager.Update",
+			slog.String("session", session.ID),
 			slog.String("error", err.Error()))
 	}
 	events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
@@ -541,6 +547,7 @@ func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
 	if setErr := db.SetVector(context.Background(), key, value, torii.SetDefault, nil); setErr != nil {
 		if setErr = db.Set(key, value, torii.SetDefault, nil); setErr != nil {
 			slog.Warn("store.DB.Set",
+				slog.String("session", sessionID),
 				slog.String("error", setErr.Error()))
 		}
 	}

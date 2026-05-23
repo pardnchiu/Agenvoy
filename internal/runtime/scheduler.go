@@ -145,6 +145,7 @@ func reload() error {
 			go func(e TaskEntry) {
 				if _, err := RemoveTaskByTimeSkill(e.At, e.Skill); err != nil {
 					slog.Warn("RemoveTaskByTimeSkill",
+						slog.String("session", e.SessionID),
 						slog.String("error", err.Error()))
 				}
 			}(entry)
@@ -160,12 +161,14 @@ func reload() error {
 			st.mu.Unlock()
 			if _, err := RemoveTaskByTimeSkill(entryCopy.At, entryCopy.Skill); err != nil {
 				slog.Warn("RemoveTaskByTimeSkill",
+					slog.String("session", entryCopy.SessionID),
 					slog.String("error", err.Error()))
 				return
 			}
 			hasMore, err := HasTaskForSkill(entryCopy.Skill)
 			if err != nil {
 				slog.Warn("HasTaskForSkill",
+					slog.String("session", entryCopy.SessionID),
 					slog.String("error", err.Error()))
 				return
 			}
@@ -174,6 +177,7 @@ func reload() error {
 			}
 			if err := filesystem.TrashScheduleSkill(context.Background(), entryCopy.Skill); err != nil {
 				slog.Warn("filesystem.TrashScheduleSkill",
+					slog.String("session", entryCopy.SessionID),
 					slog.String("error", err.Error()))
 			}
 		})
@@ -190,6 +194,7 @@ func reload() error {
 		})
 		if err != nil {
 			slog.Warn("cron.Add",
+				slog.String("session", entry.SessionID),
 				slog.String("error", err.Error()))
 			continue
 		}
@@ -207,6 +212,7 @@ func fire(sessionID, skillName string) {
 	ctx := context.Background()
 	if _, err := (*fn)(ctx, sessionID, skillName); err != nil {
 		slog.Warn("scheduler.fire: runner error",
+			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 	}
 }

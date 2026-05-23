@@ -31,6 +31,7 @@ func SaveBot(sessionID, name string, force bool) {
 	dir := filepath.Join(filesystem.SessionsDir, sessionID)
 	if err := go_pkg_filesystem.CheckDir(dir, true); err != nil {
 		slog.Warn("go_pkg_filesystem.CheckDir",
+			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 		return
 	}
@@ -43,6 +44,7 @@ func SaveBot(sessionID, name string, force bool) {
 	content := fmt.Sprintf("---\nname: %s\n---\n%s", name, configs.DefaultSessionPrompt)
 	if err := go_pkg_filesystem.WriteFile(path, content, 0644); err != nil {
 		slog.Warn("go_pkg_filesystem.WriteFile",
+			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 	}
 }

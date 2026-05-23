@@ -33,7 +33,12 @@ func Register() {
 				},
 				"filter": map[string]any{
 					"type":        "string",
-					"description": "Case-insensitive substring filter applied per line before tailing. Blank returns every line. Pair with a specific identifier (tool name, session id prefix like 'tg-', error keyword) to drop unrelated noise.",
+					"description": "Case-insensitive substring filter applied per line before tailing. Blank returns every line. Pair with a specific identifier (tool name, error keyword) to drop unrelated noise.",
+					"default":     "",
+				},
+				"session": map[string]any{
+					"type":        "string",
+					"description": "Restrict to lines tagged with this session id (matches `session=<id>` in slog attrs; case-sensitive). Accepts a full id or a prefix like `tg-` / `dc-` / `cli-` to scope to one channel. Blank disables session filtering. Lines without a session attr never match a non-blank value.",
 					"default":     "",
 				},
 				"level": map[string]any{
@@ -50,9 +55,10 @@ func Register() {
 
 func handler(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 	var params struct {
-		Lines  int    `json:"lines"`
-		Filter string `json:"filter"`
-		Level  string `json:"level"`
+		Lines   int    `json:"lines"`
+		Filter  string `json:"filter"`
+		Session string `json:"session"`
+		Level   string `json:"level"`
 	}
 	if err := json.Unmarshal(args, &params); err != nil {
 		return "", fmt.Errorf("json.Unmarshal: %w", err)
@@ -100,12 +106,16 @@ func handler(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (st
 
 	filter := strings.ToLower(strings.TrimSpace(params.Filter))
 	level := strings.ToUpper(strings.TrimSpace(params.Level))
+	sessionNeedle := strings.TrimSpace(params.Session)
 
 	lines := strings.Split(text, "\n")
 	collected := make([]string, 0, params.Lines)
 	for i := len(lines) - 1; i >= 0 && len(collected) < params.Lines; i-- {
 		line := lines[i]
 		if line == "" {
+			continue
+		}
+		if sessionNeedle != "" && !strings.Contains(line, "session="+sessionNeedle) {
 			continue
 		}
 		if filter != "" && !strings.Contains(strings.ToLower(line), filter) {

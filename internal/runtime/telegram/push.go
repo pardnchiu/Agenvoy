@@ -36,7 +36,7 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	chatIDStr, err := sessionManager.GetChatID(id)
 	if err != nil {
 		slog.Warn("github.com/pardnchiu/agenvoy/internal/session GetChatID",
-			slog.String("session_id", id),
+			slog.String("session", id),
 			slog.String("error", err.Error()))
 		return
 	}
@@ -46,6 +46,7 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	chatID, err := strconv.ParseInt(chatIDStr, 10, 64)
 	if err != nil {
 		slog.Warn("strconv.ParseInt",
+			slog.String("session", id),
 			slog.String("chat_id", chatIDStr),
 			slog.String("error", err.Error()))
 		return
@@ -54,13 +55,14 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	token := strings.TrimSpace(keychain.Get(Key))
 	if token == "" {
 		slog.Warn("github.com/pardnchiu/go-pkg/filesystem/keychain Get",
-			slog.String("session_id", id),
+			slog.String("session", id),
 			slog.String("key", Key))
 		return
 	}
 	client, err := go_bot_telegram.New(token)
 	if err != nil {
 		slog.Warn("github.com/pardnchiu/go-bot/telegram New",
+			slog.String("session", id),
 			slog.String("error", err.Error()))
 		return
 	}
@@ -76,6 +78,7 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 		for _, chunk := range chunk(message) {
 			if _, err := client.Send(ctx, chatID, 0, chunk, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
 				slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.Send",
+					slog.String("session", id),
 					slog.String("chat", chatName),
 					slog.String("error", err.Error()))
 				break

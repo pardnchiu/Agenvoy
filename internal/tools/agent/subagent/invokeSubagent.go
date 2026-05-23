@@ -97,7 +97,8 @@ func registInvokeSubagent() {
 
 			model := strings.TrimSpace(params.Model)
 			if model != "" && !slices.Contains(models, model) {
-				slog.Warn("invalid model, fallback to auto-select")
+				slog.Warn("invalid model, fallback to auto-select",
+					slog.String("session", sessionID))
 				model = ""
 			}
 

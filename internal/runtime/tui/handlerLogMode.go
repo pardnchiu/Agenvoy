@@ -68,6 +68,7 @@ func newActionTailer(ctx context.Context, sid string) {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		slog.Warn("tail watcher",
+			slog.String("session", sid),
 			slog.String("error", err.Error()))
 		return
 	}
@@ -75,6 +76,7 @@ func newActionTailer(ctx context.Context, sid string) {
 
 	if err := w.Add(dir); err != nil {
 		slog.Warn("tail watch dir",
+			slog.String("session", sid),
 			slog.String("error", err.Error()))
 		return
 	}
@@ -112,6 +114,7 @@ func newActionTailer(ctx context.Context, sid string) {
 				return
 			}
 			slog.Warn("tail watcher error",
+				slog.String("session", sid),
 				slog.String("error", err.Error()))
 		case <-pollTicker.C:
 			lastSize = drainNew(path, lastSize)

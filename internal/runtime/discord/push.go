@@ -27,7 +27,7 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	channelID, err := sessionManager.GetChannelID(id)
 	if err != nil {
 		slog.Warn("github.com/pardnchiu/agenvoy/internal/session GetChannelID",
-			slog.String("session_id", id),
+			slog.String("session", id),
 			slog.String("error", err.Error()))
 		return
 	}
@@ -38,13 +38,14 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	token := strings.TrimSpace(keychain.Get(Key))
 	if token == "" {
 		slog.Warn("github.com/pardnchiu/go-pkg/filesystem/keychain Get",
-			slog.String("session_id", id),
+			slog.String("session", id),
 			slog.String("key", Key))
 		return
 	}
 	client, err := go_bot_discord.New(token)
 	if err != nil {
 		slog.Warn("github.com/pardnchiu/go-bot/discord New",
+			slog.String("session", id),
 			slog.String("error", err.Error()))
 		return
 	}
@@ -61,6 +62,7 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 		for _, part := range chunk(message) {
 			if _, err := client.Send(ctx, channelID, "", part); err != nil {
 				slog.Warn("github.com/pardnchiu/go-bot/discord Bot.Send",
+					slog.String("session", id),
 					slog.String("channel", chanName),
 					slog.String("error", err.Error()))
 				break
