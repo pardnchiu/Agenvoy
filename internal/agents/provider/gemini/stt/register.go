@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
@@ -21,6 +22,7 @@ func Register() {
 		Name:        "transcribe_media",
 		AlwaysAllow: true,
 		Concurrent:  true,
+		Timeout:     5 * time.Minute,
 		Description: `[system-default]
 Transcribe a local audio or video file to text via Gemini.
 Supports ogg / mp3 / wav / m4a / flac / aac / mp4 / mov / webm / mpeg / 3gp.`,

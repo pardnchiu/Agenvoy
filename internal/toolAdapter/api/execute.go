@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -41,7 +42,7 @@ func (t *Translator) Execute(ctx context.Context, name string, params map[string
 		return "", err
 	}
 
-	result, err := t.send(doc, params)
+	result, err := t.send(ctx, key, doc, params)
 	if err != nil {
 		return "", fmt.Errorf("t.send: %w", err)
 	}
@@ -107,7 +108,7 @@ func (t *Translator) checkRequireds(doc *APIDocumentData, params map[string]any)
 	return nil
 }
 
-func (t *Translator) send(doc *APIDocumentData, params map[string]any) (string, error) {
+func (t *Translator) send(ctx context.Context, key string, doc *APIDocumentData, params map[string]any) (string, error) {
 	var (
 		req *http.Request
 		err error
@@ -134,13 +135,17 @@ func (t *Translator) send(doc *APIDocumentData, params map[string]any) (string, 
 		}
 	}
 
-	timeout := doc.Endpoint.Timeout
-	if timeout <= 0 {
-		timeout = 30
+	timeoutSec := doc.Endpoint.Timeout
+	if timeoutSec <= 0 {
+		timeoutSec = 60
 	}
-	t.client.Timeout = time.Duration(timeout) * time.Second
+	timeout := time.Duration(timeoutSec) * time.Second
 
-	resp, err := t.client.Do(req)
+	reqCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	req = req.WithContext(reqCtx)
+
+	resp, err := t.doWithProgress(reqCtx, "api_"+key, req, timeoutSec)
 	if err != nil {
 		return "", fmt.Errorf("client.Do: %w", err)
 	}
@@ -199,4 +204,34 @@ func (t *Translator) insetAuth(req *http.Request, auth *APIDocumentAuthData) err
 	}
 
 	return nil
+}
+
+type httpResult struct {
+	resp *http.Response
+	err  error
+}
+
+func (t *Translator) doWithProgress(ctx context.Context, name string, req *http.Request, timeoutSec int) (*http.Response, error) {
+	done := make(chan httpResult, 1)
+	go func() {
+		resp, err := t.client.Do(req)
+		done <- httpResult{resp, err}
+	}()
+
+	start := time.Now()
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case r := <-done:
+			return r.resp, r.err
+		case <-ticker.C:
+			slog.Warn("running",
+				slog.String("name", name),
+				slog.String("elapsed", fmt.Sprintf("%ds/%ds", int(time.Since(start).Seconds()), timeoutSec)))
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
 }

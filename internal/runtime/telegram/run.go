@@ -225,6 +225,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		}
 		if execErr != nil {
 			slog.Warn("exec",
+				slog.String("session", sess.ID),
 				slog.String("error", execErr.Error()))
 		}
 		close(events)
@@ -239,11 +240,13 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 
 	if err := b.client.FinishStatus(ctx, in.ChatID); err != nil {
 		slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.FinishStatus",
+			slog.String("session", sess.ID),
 			slog.String("chat", chatName(in)),
 			slog.String("error", err.Error()))
 	}
 
 	replyText = strings.TrimSpace(tsPrefixRegex.ReplaceAllString(replyText, ""))
+	replyText = sanitizeHTML(replyText)
 	if replyText == "" {
 		return fmt.Errorf("no reply")
 	}
@@ -281,6 +284,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		_, sendErr := b.client.Send(ctx, in.ChatID, replyTo, chunk, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
 		if sendErr != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.Send",
+				slog.String("session", sess.ID),
 				slog.String("error", sendErr.Error()))
 			break
 		}
@@ -303,11 +307,13 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		chatID := in.ChatID
 		client := b.client
 		texts := voiceTexts
+		sessID := sess.ID
 		go func() {
 			notifyFailure := func(errMsg string) {
 				text := fmt.Sprintf("⚠️ SendVoice failed (background)\n<code>%s</code>", html.EscapeString(errMsg))
 				if _, err := client.Send(bgCtx, chatID, 0, text, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
 					slog.Error("github.com/pardnchiu/go-bot/telegram Bot.client.Send (notify)",
+						slog.String("session", sessID),
 						slog.String("chat", chat),
 						slog.String("error", err.Error()))
 				}
@@ -315,6 +321,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 			apiKey := strings.TrimSpace(keychain.Get("GEMINI_API_KEY"))
 			if apiKey == "" {
 				slog.Error("keychain.Get GEMINI_API_KEY missing",
+					slog.String("session", sessID),
 					slog.String("chat", chat))
 				notifyFailure("GEMINI_API_KEY missing")
 				return
@@ -322,6 +329,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 			for _, text := range texts {
 				if _, err := client.SendVoice(bgCtx, chatID, text, apiKey); err != nil {
 					slog.Error("github.com/pardnchiu/go-bot/telegram Bot.client.SendVoice",
+						slog.String("session", sessID),
 						slog.String("chat", chat),
 						slog.String("error", err.Error()))
 					notifyFailure(err.Error())

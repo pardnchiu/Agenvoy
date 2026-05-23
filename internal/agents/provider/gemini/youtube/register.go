@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
@@ -21,6 +22,7 @@ func Register() {
 		Name:        "fetch_youtube_transcript",
 		AlwaysAllow: true,
 		Concurrent:  true,
+		Timeout:     5 * time.Minute,
 		Description: `[system-default]
 Transcribe YouTube video with timestamps.
 Video to text for analysis, summarization, quote extraction.`,

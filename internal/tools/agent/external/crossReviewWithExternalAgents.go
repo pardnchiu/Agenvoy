@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -15,6 +16,7 @@ func registCrossReviewWithExternalAgents() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "cross_review_with_external_agents",
 		AlwaysAllow: true,
+		Timeout:     15 * time.Minute,
 		Description: "Fan out a deliverable to all installed external CLIs (codex / copilot / claude / gemini) in parallel for cross-review. Use for multi-model sanity check on non-trivial results.",
 		Parameters: map[string]any{
 			"type": "object",

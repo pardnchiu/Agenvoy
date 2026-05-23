@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
+
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 )
 
 type Agent struct {
@@ -35,7 +36,7 @@ func New(model ...string) (*Agent, error) {
 	workDir, _ := os.Getwd()
 
 	return &Agent{
-		httpClient: &http.Client{Timeout: 2 * time.Minute},
+		httpClient: provider.NewHTTPClient(),
 		model:      usedModel,
 		apiKey:     apiKey,
 		workDir:    workDir,

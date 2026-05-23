@@ -10,6 +10,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/errorMemory"
 	"github.com/pardnchiu/agenvoy/internal/tools/external"
 	"github.com/pardnchiu/agenvoy/internal/tools/file"
+	"github.com/pardnchiu/agenvoy/internal/tools/listLog"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolScheduler "github.com/pardnchiu/agenvoy/internal/tools/scheduler"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
@@ -27,6 +28,7 @@ func init() {
 	fetchPage.Register()
 	file.Register()
 	errorMemory.Register()
+	listLog.Register()
 	toolScheduler.Register()
 	toolSearcher.Register()
 

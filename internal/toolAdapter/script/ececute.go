@@ -13,6 +13,8 @@ import (
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 )
 
+const defaultScriptTimeoutSec = 300
+
 func (t *Translator) Execute(ctx context.Context, name string, args json.RawMessage, workDir string) (string, error) {
 	key := strings.TrimPrefix(name, "script_")
 	data, ok := t.scripts[key]
@@ -30,8 +32,13 @@ func (t *Translator) Execute(ctx context.Context, name string, args json.RawMess
 		input = "{}"
 	}
 
-	// * max 5min with every 30s check
-	execCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	timeoutSec := data.Doc.Timeout
+	if timeoutSec <= 0 {
+		timeoutSec = defaultScriptTimeoutSec
+	}
+	timeout := time.Duration(timeoutSec) * time.Second
+
+	execCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	cmd, err := go_pkg_sandbox.Wrap(execCtx, runtime, []string{data.scriptPath}, workDir, nil)
@@ -65,7 +72,7 @@ func (t *Translator) Execute(ctx context.Context, name string, args json.RawMess
 					return "", fmt.Errorf("script error: %s", strings.TrimSpace(stderr.String()))
 				}
 				if execCtx.Err() == context.DeadlineExceeded {
-					return "", fmt.Errorf("execution timeout: 5m")
+					return "", fmt.Errorf("execution timeout: %s", timeout)
 				}
 				return "", fmt.Errorf("exec: %w", err)
 			}
@@ -74,7 +81,7 @@ func (t *Translator) Execute(ctx context.Context, name string, args json.RawMess
 		case <-ticker.C:
 			slog.Warn("running",
 				slog.String("name", key),
-				slog.String("elapsed", fmt.Sprintf("%ds/300s", int(time.Since(start).Seconds()))))
+				slog.String("elapsed", fmt.Sprintf("%ds/%ds", int(time.Since(start).Seconds()), timeoutSec)))
 		}
 	}
 }

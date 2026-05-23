@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
@@ -58,6 +59,7 @@ func registGeneratePlan() {
 		Name:        "generate_plan",
 		AlwaysAllow: true,
 		Concurrent:  false,
+		Timeout:     5 * time.Minute,
 		Description: "Generate a detailed step-by-step execution plan from a requirement description. Use BEFORE starting a multi-step task where the user describes WHAT to achieve but not HOW — pass the requirement, receive a structured plan (需求總結 / 前置條件 / 步驟+驗收 / 整體驗收 / 風險表 / 回退方案), then execute it. This tool only generates the plan text; it never executes or gathers data.",
 		Parameters: map[string]any{
 			"type": "object",

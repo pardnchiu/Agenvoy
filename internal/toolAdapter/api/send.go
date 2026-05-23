@@ -40,7 +40,7 @@ func Send(api, method string, headers map[string]string, body map[string]any, co
 	}
 
 	if timeout <= 0 {
-		timeout = 30
+		timeout = 60
 	} else if timeout > 300 {
 		timeout = 300
 	}

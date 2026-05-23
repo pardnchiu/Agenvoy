@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
@@ -26,6 +27,7 @@ func registInvokeSubagent() {
 		Name:        "invoke_subagent",
 		AlwaysAllow: true,
 		Concurrent:  true,
+		Timeout:     time.Duration(exec.SubagentTimeoutMin) * time.Minute,
 		Description: "Spawn an internal subagent in its own session and return its reply. Use to delegate a self-contained subtask. Pass `name` / `session_id` for multi-turn persona threading.",
 		Parameters: map[string]any{
 			"type": "object",
@@ -95,7 +97,8 @@ func registInvokeSubagent() {
 
 			model := strings.TrimSpace(params.Model)
 			if model != "" && !slices.Contains(models, model) {
-				slog.Warn("invalid model, fallback to auto-select")
+				slog.Warn("invalid model, fallback to auto-select",
+					slog.String("session", sessionID))
 				model = ""
 			}
 

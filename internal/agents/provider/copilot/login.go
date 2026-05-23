@@ -72,7 +72,7 @@ func (c *Agent) Login(ctx context.Context) (*Token, error) {
 	deadline := time.Now().Add(time.Duration(code.ExpiresIn) * time.Second)
 
 	var token *Token
-	client := &http.Client{} // * use the same http client for reuse connection
+	client := &http.Client{Timeout: 30 * time.Second}
 	for time.Now().Before(deadline) {
 		select {
 		case <-ctx.Done():

@@ -187,6 +187,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	markStatus := func(text string) {
 		if err := b.client.SendStatus(ctx, in.ChannelID, in.MessageID, text); err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.SendStatus",
+				slog.String("session", sess.ID),
 				slog.String("text", text),
 				slog.String("channel", channelName(in)),
 				slog.String("error", err.Error()))
@@ -205,6 +206,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		}
 		if execErr != nil {
 			slog.Warn("exec",
+				slog.String("session", sess.ID),
 				slog.String("error", execErr.Error()))
 		}
 		close(events)
@@ -219,6 +221,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 
 	if err := b.client.FinishStatus(ctx, in.ChannelID); err != nil {
 		slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.FinishStatus",
+			slog.String("session", sess.ID),
 			slog.String("channel", channelName(in)),
 			slog.String("error", err.Error()))
 	}
@@ -259,6 +262,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		msg, sendErr := b.client.Send(ctx, in.ChannelID, replyTo, part)
 		if sendErr != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.Send",
+				slog.String("session", sess.ID),
 				slog.String("channel", channelName(in)),
 				slog.String("error", sendErr.Error()))
 			break
@@ -291,11 +295,13 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		reply := replyToID
 		client := b.client
 		texts := voiceTexts
+		sessID := sess.ID
 		go func() {
 			sendFailure := func(errMsg string) {
 				text := fmt.Sprintf("-# ⎿ ⚠️ SendVoice failed (background)\n-# ⎿ `%s`", errMsg)
 				if _, err := client.Send(bgCtx, channelID, reply, text); err != nil {
 					slog.Error("github.com/pardnchiu/go-bot/discord Bot.client.Send (notify)",
+						slog.String("session", sessID),
 						slog.String("channel", channel),
 						slog.String("error", err.Error()))
 				}
@@ -303,6 +309,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 			apiKey := strings.TrimSpace(keychain.Get("GEMINI_API_KEY"))
 			if apiKey == "" {
 				slog.Error("keychain.Get GEMINI_API_KEY missing",
+					slog.String("session", sessID),
 					slog.String("channel", channel))
 				sendFailure("GEMINI_API_KEY missing")
 				return
@@ -310,6 +317,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 			for _, text := range texts {
 				if _, err := client.SendVoice(bgCtx, channelID, reply, text, apiKey); err != nil {
 					slog.Error("github.com/pardnchiu/go-bot/discord Bot.client.SendVoice",
+						slog.String("session", sessID),
 						slog.String("channel", channel),
 						slog.String("error", err.Error()))
 					sendFailure(err.Error())

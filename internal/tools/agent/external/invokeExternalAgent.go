@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -16,6 +17,7 @@ func registInvokeExternalAgent() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "invoke_external_agent",
 		AlwaysAllow: true,
+		Timeout:     10 * time.Minute,
 		Description: "Invoke one external CLI agent (codex / copilot / claude / gemini) and return its response. Use when the user names an agent or wants a non-Anthropic perspective.",
 		Parameters: map[string]any{
 			"type": "object",

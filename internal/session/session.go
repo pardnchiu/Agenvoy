@@ -30,6 +30,7 @@ func SaveToToolCall(sessionID, content string) {
 		toolActionsPath := filepath.Join(toolCallsDir, filename)
 		if err := go_pkg_filesystem.WriteFile(toolActionsPath, content, 0644); err != nil {
 			slog.Warn("WriteFile",
+				slog.String("session", sessionID),
 				slog.String("error", err.Error()))
 		}
 	}
@@ -202,6 +203,7 @@ func Clean() {
 		if now.Sub(latestModTime(sessionDir)) > time.Hour {
 			if err := os.RemoveAll(sessionDir); err != nil {
 				slog.Warn("Clean",
+					slog.String("session", entry.Name()),
 					slog.String("dir", entry.Name()),
 					slog.String("error", err.Error()))
 			}

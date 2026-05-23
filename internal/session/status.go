@@ -190,6 +190,7 @@ func writeStatus(sessionID string, s Status) {
 	path := filepath.Join(dir, "status.json")
 	if err := go_pkg_filesystem.WriteJSON(path, s, true); err != nil {
 		slog.Warn("go_pkg_filesystem.WriteJSON",
+			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 	}
 }

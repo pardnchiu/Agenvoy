@@ -111,6 +111,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 					if reply.Approve && reply.Remember {
 						if err = allowTool.Append(exec.WorkDir, toolName, toolArg); err != nil {
 							slog.Warn("appendAllowListRule",
+								slog.String("session", sessionData.ID),
 								slog.String("error", err.Error()))
 						}
 					}

@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -22,8 +23,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
@@ -65,6 +66,30 @@ var MaxToolIterations = positiveEnvInt("MAX_TOOL_ITERATIONS", 16)
 var MaxSkillIterations = positiveEnvInt("MAX_SKILL_ITERATIONS", 128)
 var MaxEmptyResponses = positiveEnvInt("MAX_EMPTY_RESPONSES", 8)
 var MaxRetry = positiveEnvInt("MAX_SAME_PAYLOAD_RETRY", 3)
+var AgentSendTimeout = time.Duration(positiveEnvInt("AGENT_SEND_TIMEOUT_SECONDS", 600)) * time.Second
+
+func isSendTimeoutError(err error, sendCtxErr error) bool {
+	if errors.Is(sendCtxErr, context.DeadlineExceeded) {
+		return true
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	s := err.Error()
+	switch {
+	case strings.Contains(s, "Client.Timeout"):
+		return true
+	case strings.Contains(s, "context deadline exceeded"):
+		return true
+	case strings.Contains(s, "timeout awaiting response headers"):
+		return true
+	case strings.Contains(s, "TLS handshake timeout"):
+		return true
+	case strings.Contains(s, "i/o timeout"):
+		return true
+	}
+	return false
+}
 
 func positiveEnvInt(key string, def int) int {
 	if n := go_pkg_utils.GetWithDefaultInt(key, def); n > 0 {
@@ -247,28 +272,70 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			return ctx.Err()
 		}
 		assembled := assembleMessages(session.SystemPrompts, session.OldHistories, session.SummaryMessage, session.UserInput, session.ToolHistories)
-		resp, err := data.Agent.Send(ctx, assembled, exec.Tools)
+		sendStart := time.Now()
+		sendCtx, cancelSend := context.WithTimeout(ctx, AgentSendTimeout)
+		resp, err := data.Agent.Send(sendCtx, assembled, exec.Tools)
+		sendElapsed := time.Since(sendStart).Round(time.Second)
+		sendCtxErr := sendCtx.Err()
+		cancelSend()
 		if err != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			sig := hashPayload(assembled, exec.Tools)
-			if sig == lastSendSig {
+			isTimeout := isSendTimeoutError(err, sendCtxErr)
+			if isTimeout {
 				sendFailCount++
+				lastSendSig = ""
 			} else {
-				sendFailCount = 1
-				lastSendSig = sig
+				sig := hashPayload(assembled, exec.Tools)
+				if sig == lastSendSig {
+					sendFailCount++
+				} else {
+					sendFailCount = 1
+					lastSendSig = sig
+				}
 			}
 			if isContextLengthError(err) {
 				trimmedToolCalls = trimmedToolCalls || trimOnContextExceeded(&session.OldHistories, &session.ToolHistories)
-				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange")
+				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange",
+					slog.String("session", session.ID))
 			} else {
 				slog.Warn("data.Agent.Send",
+					slog.String("session", session.ID),
 					slog.String("error", err.Error()),
+					slog.Bool("timeout", isTimeout),
 					slog.Int("sameSigCount", sendFailCount))
 			}
+			modelName := data.Agent.Name()
 			if sendFailCount >= MaxRetry {
-				return fmt.Errorf("data.Agent.Send failed %d times with identical payload: %w", sendFailCount, err)
+				var userMsg string
+				switch {
+				case isTimeout:
+					userMsg = fmt.Sprintf("upstream %s timed out %d times in a row (last attempt bailed at %s). Try again later or switch model.", modelName, sendFailCount, sendElapsed)
+				case isContextLengthError(err):
+					userMsg = fmt.Sprintf("upstream %s context exceeded after %d trim attempts. Start a new session or switch to a larger-context model.", modelName, sendFailCount)
+				default:
+					userMsg = fmt.Sprintf("upstream %s failed %d times in a row: %s", modelName, sendFailCount, err.Error())
+				}
+				slog.Error("data.Agent.Send exhausted",
+					slog.String("session", session.ID),
+					slog.String("error", err.Error()),
+					slog.Int("attempts", sendFailCount))
+				sendText(events, userMsg)
+				events <- agentTypes.Event{
+					Type:     agentTypes.EventDone,
+					Model:    modelName,
+					Usage:    &usage,
+					Duration: time.Since(executeStart),
+				}
+				return fmt.Errorf("data.Agent.Send failed %d times: %w", sendFailCount, err)
+			}
+			if isTimeout {
+				events <- agentTypes.Event{
+					Type:     agentTypes.EventExecError,
+					ToolName: modelName,
+					Text:     fmt.Sprintf("upstream timeout after %s, retrying %d/%d", sendElapsed, sendFailCount, MaxRetry),
+				}
 			}
 			continue
 		}
@@ -327,6 +394,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 			if err := saveNewHistory(choice, session); err != nil {
 				slog.Warn("writeHistory",
+					slog.String("session", session.ID),
 					slog.String("error", err.Error()))
 			}
 
@@ -342,6 +410,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 		if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 			slog.Warn("usageManager.Update",
+				slog.String("session", session.ID),
 				slog.String("error", err.Error()))
 		}
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
@@ -369,6 +438,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			sendText(events, StripModelResponse(text))
 			if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 				slog.Warn("usageManager.Update",
+					slog.String("session", session.ID),
 					slog.String("error", err.Error()))
 			}
 			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
@@ -379,6 +449,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	sendText(events, "no usable data, retry later, or using other tools.")
 	if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 		slog.Warn("usageManager.Update",
+			slog.String("session", session.ID),
 			slog.String("error", err.Error()))
 	}
 	events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
@@ -541,6 +612,7 @@ func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
 	if setErr := db.SetVector(context.Background(), key, value, torii.SetDefault, nil); setErr != nil {
 		if setErr = db.Set(key, value, torii.SetDefault, nil); setErr != nil {
 			slog.Warn("store.DB.Set",
+				slog.String("session", sessionID),
 				slog.String("error", setErr.Error()))
 		}
 	}

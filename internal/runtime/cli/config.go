@@ -64,6 +64,7 @@ func Config(name string) {
 	fmt.Printf("Editing %s\n", botPath)
 	if err := cmd.Run(); err != nil {
 		slog.Error("cmd.Run",
+			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}

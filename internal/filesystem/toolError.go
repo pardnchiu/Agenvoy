@@ -22,6 +22,7 @@ func GetError(sessionID, hash string) string {
 	result, err := go_pkg_filesystem.ReadText(path)
 	if err != nil {
 		slog.Warn("github.com/pardnchiu/go-pkg/filesystem ReadText",
+			slog.String("session", sessionID),
 			slog.String("path", path),
 			slog.String("error", err.Error()))
 		return ""
@@ -42,6 +43,7 @@ func SaveError(sessionID, toolName, args, errMsg string) string {
 	dir := ErrorDir(sessionID)
 	if err := go_pkg_filesystem.CheckDir(dir, true); err != nil {
 		slog.Warn("github.com/pardnchiu/go-pkg/filesystem CheckDir",
+			slog.String("session", sessionID),
 			slog.String("dir", dir),
 			slog.String("error", err.Error()))
 		return hash
@@ -49,6 +51,7 @@ func SaveError(sessionID, toolName, args, errMsg string) string {
 	path := ErrorPath(sessionID, hash)
 	if err := go_pkg_filesystem.WriteJSON(path, record, false); err != nil {
 		slog.Warn("github.com/pardnchiu/go-pkg/filesystem WriteJSON",
+			slog.String("session", sessionID),
 			slog.String("path", path),
 			slog.String("error", err.Error()))
 	}

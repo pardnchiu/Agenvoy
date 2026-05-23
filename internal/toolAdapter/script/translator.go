@@ -26,6 +26,7 @@ type ScriptDoc struct {
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
 	AlwaysAllow bool            `json:"always_allow,omitempty"`
+	Timeout     int             `json:"timeout,omitempty"`
 	Parameters  json.RawMessage `json:"parameters,omitempty"`
 }
 

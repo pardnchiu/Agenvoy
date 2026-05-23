@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
+
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 )
 
 type Token struct {
@@ -50,7 +52,7 @@ func New(model ...string) (*Agent, error) {
 	// }
 
 	agent := &Agent{
-		httpClient: &http.Client{Timeout: 2 * time.Minute},
+		httpClient: provider.NewHTTPClient(),
 		model:      usedModel,
 		workDir:    workDir,
 	}
@@ -87,7 +89,7 @@ func Authenticate(ctx context.Context) error {
 		return fmt.Errorf("os.Getwd: %w", err)
 	}
 	a := &Agent{
-		httpClient: &http.Client{Timeout: 2 * time.Minute},
+		httpClient: provider.NewHTTPClient(),
 		workDir:    workDir,
 	}
 	token, err := a.Login(ctx)

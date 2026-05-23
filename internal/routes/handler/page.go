@@ -98,6 +98,7 @@ func PageListener() gin.HandlerFunc {
 					if go_pkg_filesystem_reader.IsDir(ev.Name) {
 						if err := watcher.Add(ev.Name); err != nil {
 							slog.Warn("page watcher add subdir",
+								slog.String("session", sessionID),
 								slog.String("path", ev.Name),
 								slog.String("error", err.Error()))
 						}

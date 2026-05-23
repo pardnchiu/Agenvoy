@@ -39,6 +39,7 @@ func SaveSummaryMeta(sessionID string, lastTime string) {
 	meta := SummaryMeta{LastMessageTime: lastTime}
 	if err := go_pkg_filesystem.WriteJSON(SummaryMetaPath(sessionID), meta, false); err != nil {
 		slog.Warn("WriteJSON summary meta",
+			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 	}
 }
@@ -53,6 +54,7 @@ func GetSummary(sessionID string) ([]byte, map[string]any) {
 	var summary map[string]any
 	if err := json.Unmarshal(bytes, &summary); err != nil {
 		slog.Warn("json.Unmarshal",
+			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 		return bytes, nil
 	}
@@ -143,6 +145,7 @@ func IsNeedSummary() []string {
 func SaveSummary(sessionID string, data any) {
 	if err := go_pkg_filesystem.WriteJSON(SummaryPath(sessionID), data, false); err != nil {
 		slog.Warn("WriteJSON",
+			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 	}
 }

@@ -3,6 +3,8 @@ package provider
 import (
 	_ "embed"
 	"encoding/json"
+	"net/http"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/configs"
 )
@@ -87,4 +89,17 @@ func Models(provider string) map[string]ModelItem {
 
 func SupportTemperature(providerName, model string) bool {
 	return !Get(providerName, model).NoTemperature
+}
+
+func NewHTTPClient() *http.Client {
+	base, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		base = &http.Transport{}
+	}
+	transport := base.Clone()
+	transport.ResponseHeaderTimeout = 15 * time.Second
+	return &http.Client{
+		Timeout:   5 * time.Minute,
+		Transport: transport,
+	}
 }
