@@ -14,6 +14,19 @@ import (
 
 const prefix = "codex@"
 
+func newHTTPClient() *http.Client {
+	base, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		base = &http.Transport{}
+	}
+	transport := base.Clone()
+	transport.ResponseHeaderTimeout = 15 * time.Second
+	return &http.Client{
+		Timeout:   10 * time.Minute,
+		Transport: transport,
+	}
+}
+
 type Agent struct {
 	httpClient *http.Client
 	model      string
@@ -34,7 +47,7 @@ func New(model ...string) (*Agent, error) {
 	}
 
 	a := &Agent{
-		httpClient: &http.Client{Timeout: 10 * time.Minute},
+		httpClient: newHTTPClient(),
 		model:      usedModel,
 		workDir:    workDir,
 	}
@@ -67,7 +80,7 @@ func Authenticate(ctx context.Context) error {
 		return fmt.Errorf("os.Getwd: %w", err)
 	}
 	a := &Agent{
-		httpClient: &http.Client{Timeout: 10 * time.Minute},
+		httpClient: newHTTPClient(),
 		workDir:    workDir,
 	}
 	token, err := a.Login(ctx)
