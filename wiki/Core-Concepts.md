@@ -1,6 +1,6 @@
 # Core Concepts
 
-> [中文](https://github.com/agenvoy/Agenvoy/wiki/核心概念)
+> [中文](Core-Concepts.zh.md)
 
 ## Session
 

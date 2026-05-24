@@ -1,6 +1,6 @@
 # Skill System
 
-> [中文](https://github.com/agenvoy/Agenvoy/wiki/Skill-系統)
+> [中文](Skill-System.zh.md)
 
 A skill is a loadable markdown instruction pack that switches the agent into a specific execution mode (e.g., commit message generation, code review, README generation).
 

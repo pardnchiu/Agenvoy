@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", (_) => {
     id: "page",
     i18n: {
       zh: {
-        title: "一鍵部署你的個人 Agent",
+        title: "讓 AI 真正為你工作的個人 AI 助理",
         // 區塊1
         one_command_title: "一鍵部署好簡單",
         one_command: "複製、貼上、不到 30 秒",
@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", (_) => {
         plan_mode_content: "只需提出需求，並依據問題回答，Agent 會依據需求自動規劃任務流程後再開始執行。",
       },
       en: {
-        title: "One-Command Deployment",
+        title: "Your Personal AI Assistant That Actually Works",
         // 區塊1
         one_command_title: "One-Command Deployment Made Easy",
         one_command: "Copy, paste, and you're done in under 30 seconds",

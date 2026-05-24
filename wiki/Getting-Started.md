@@ -1,6 +1,6 @@
 # Getting Started
 
-> [中文](https://github.com/agenvoy/Agenvoy/wiki/新手入門)
+> [中文](Getting-Started.zh.md)
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@
 ## Install
 
 ```bash
-git clone https://github.com/pardnchiu/agenvoy.git
+git clone https://github.com/pardnchiu/Agenvoy.git
 cd agenvoy
 make build
 ```
@@ -55,7 +55,7 @@ make run "use playwright to open example.com and screenshot"
 
 ## Next steps
 
-- [Core Concepts](https://github.com/agenvoy/Agenvoy/wiki/Core-Concepts) — sessions, agent routing, the iteration loop, and three-pass tool dispatch
-- [Providers](https://github.com/agenvoy/Agenvoy/wiki/Providers) — supported LLM backends and the dispatcher model
-- [MCP Integration](https://github.com/agenvoy/Agenvoy/wiki/MCP-Integration) — plug in external tool servers
-- [CLI Reference](https://github.com/agenvoy/Agenvoy/wiki/CLI-Reference) — full command list
+- [Core Concepts](Core-Concepts.md) — sessions, agent routing, the iteration loop, and three-pass tool dispatch
+- [Providers](Providers.md) — supported LLM backends and the dispatcher model
+- [MCP Integration](MCP-Integration.md) — plug in external tool servers
+- [CLI Reference](CLI-Reference.md) — full command list

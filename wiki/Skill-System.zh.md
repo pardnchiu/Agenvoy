@@ -1,6 +1,6 @@
 # Skill 系統
 
-> [English](https://github.com/agenvoy/Agenvoy/wiki/Skill-System)
+> [English](Skill-System.md)
 
 Skill 是可載入的 markdown 指令包，讓 agent 切換到特定執行模式（例如 commit message 生成、code review、README 生成）。
 

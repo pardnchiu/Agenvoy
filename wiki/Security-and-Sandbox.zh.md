@@ -1,6 +1,6 @@
 # 安全與沙箱
 
-> [English](https://github.com/agenvoy/Agenvoy/wiki/Security-and-Sandbox)
+> [English](Security-and-Sandbox.md)
 
 ## OS 沙箱
 
@@ -50,7 +50,7 @@ filesystem.New(Policy{DeniedMap: ..., ExcludeList: ...})
 
 ## Permission Mode
 
-`single-confirm` vs `always-allow` 與 7 類真正不可逆操作見 [核心概念 → Permission Mode](https://github.com/agenvoy/Agenvoy/wiki/核心概念#permission-mode)。
+`single-confirm` vs `always-allow` 與 7 類真正不可逆操作見 [核心概念 → Permission Mode](Core-Concepts.zh.md#permission-mode)。
 
 ## System Prompt 保護
 
@@ -83,7 +83,7 @@ service 名稱 `"agenvoy"` 固定，**不可變更**。
 
 ## MCP 隔離考量
 
-MCP server 是第三方 process、行為不可驗證。Agenvoy 預設將其視為不可信 —— 見 [MCP 整合 → Confirm 行為](https://github.com/agenvoy/Agenvoy/wiki/MCP-整合#confirm-行為) —— 且不提供 per-server「trusted」旗標。要批次操作 MCP 用 `agen run`（信任你自己的決策，而不是 server 的）。
+MCP server 是第三方 process、行為不可驗證。Agenvoy 預設將其視為不可信 —— 見 [MCP 整合 → Confirm 行為](MCP-Integration.zh.md#confirm-行為) —— 且不提供 per-server「trusted」旗標。要批次操作 MCP 用 `agen run`（信任你自己的決策，而不是 server 的）。
 
 ## Subprocess Timeout
 

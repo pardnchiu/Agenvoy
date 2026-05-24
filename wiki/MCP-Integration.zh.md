@@ -1,6 +1,6 @@
 # MCP 整合
 
-> [English](https://github.com/agenvoy/Agenvoy/wiki/MCP-Integration)
+> [English](MCP-Integration.md)
 
 MCP（Model Context Protocol）client 讓 Agenvoy agent 能呼叫任何 MCP server 暴露的工具。
 
