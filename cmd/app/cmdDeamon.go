@@ -29,6 +29,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
+	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
@@ -198,6 +199,7 @@ func cmdDaemon() {
 	geminiStt.Register()
 	telegramTool.Register()
 	discordTool.Register()
+	kuradbTool.Register()
 
 	if _, err := runtime.Init(); err != nil {
 		if errors.Is(err, runtime.ErrAlreadyRunning) {

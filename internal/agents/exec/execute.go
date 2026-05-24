@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
@@ -238,6 +239,11 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		assignBindingSkill(session, data.Skill)
 	}
 
+	if !go_pkg_filesystem_reader.Exists(filesystem.KuradbEndpointPath) {
+		data.ExcludeTools = append(data.ExcludeTools,
+			"rag_list_db", "rag_search_keyword", "rag_search_semantic")
+	}
+
 	if len(data.ExcludeTools) > 0 {
 		excluded := make(map[string]bool, len(data.ExcludeTools))
 		for _, name := range data.ExcludeTools {
@@ -329,13 +335,6 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 					Duration: time.Since(executeStart),
 				}
 				return fmt.Errorf("data.Agent.Send failed %d times: %w", sendFailCount, err)
-			}
-			if isTimeout {
-				events <- agentTypes.Event{
-					Type:     agentTypes.EventExecError,
-					ToolName: modelName,
-					Text:     fmt.Sprintf("upstream timeout after %s, retrying %d/%d", sendElapsed, sendFailCount, MaxRetry),
-				}
 			}
 			continue
 		}
