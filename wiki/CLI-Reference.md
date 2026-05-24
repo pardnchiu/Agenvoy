@@ -1,6 +1,6 @@
 # CLI Reference
 
-> [中文](https://github.com/agenvoy/Agenvoy/wiki/命令列參考)
+> [中文](CLI-Reference.zh.md)
 
 ## Top-level dispatch
 
@@ -91,11 +91,16 @@ The TUI auto-tails the active session's `action.log` (foreign-process writes pre
 | `/dispatcher` | Pick the dispatcher model from `cfg.Models`. |
 | `/reasoning [global\|session]` | `low` / `medium` / `high`. |
 | `/discord [enable\|disable]` | Toggle Discord bot connection (in-TUI popup chain: token entry → verification → keychain write → daemon fsnotify reload). |
-| `/telegram [enable\|disable]` | Toggle Telegram bot connection (same in-TUI popup chain as `/discord`; first chat to message the bot must pass an in-chat code stored in `~/.config/agenvoy/.telegram`). |
-| `/cron [add\|remove\|edit]` | Recurring schedules. `add` → multiline requirement → dispatches `/scheduler-skill-creator <requirement>` (skill asks for missing when/what via `ask_user`). `remove` → list → confirm → `runtime.RemoveCron` + trashes skill dir. `edit` → list → requirement → agent picks `patch_cron` or rewrites SKILL body. |
-| `/task [add\|remove\|edit]` | One-shot tasks (mirrors `/cron`; uses `add_task` / `patch_task` / `remove_task`). |
-| `/sched-<name>` | Surfaced in the slash picker after regular skills (warn-purple label) — picks an existing scheduler skill and dispatches its body with an explicit "execute, do NOT activate scheduler-skill-creator" preamble. |
-| `/mode [cli\|web]` | TUI rendering vs browser page. |
+| `/telegram [enable\|disable]` | Toggle Telegram bot connection (same in-TUI popup chain as `/discord`; first chat to message the bot must pass an in-chat 6-digit OTP, then chat ID is appended to `~/.config/agenvoy/.telegram`). |
+| `/kuradb [enable\|disable]` | Toggle KuraDB RAG. `enable` collects `OPENAI_API_KEY` (popupText) → `tea.ExecProcess` runs `curl https://cloud.agenvoy.com/KuraDB/install.sh \| bash` (TTY handed to child for `sudo` + apt/brew) → writes `kuradb_enabled=true`. `disable` runs `sudo rm /usr/local/bin/kura` + clears flag. Daemon picks up via fsnotify and spawns/kills the child. See [KuraDB RAG](KuraDB-RAG.md). |
+| `/cron [add\|remove\|edit]` | Recurring schedules. `add` → multiline requirement → dispatches `/scheduler-skill-creator <requirement>` (skill asks for missing when/what via `ask_user`). `remove` → list → confirm → `runtime.RemoveCron` + trashes skill dir. `edit` → list → requirement → agent picks `patch_cron` or rewrites SKILL body. Picker is **session-scoped** — only shows entries with `session_id == currentSessionID`. |
+| `/task [add\|remove\|edit]` | One-shot tasks (mirrors `/cron`; uses `add_task` / `patch_task` / `remove_task`). Session-scoped picker. |
+| `/sched-<name>` | Surfaced in the slash picker after regular skills (warn-purple label) — picks an existing scheduler skill and dispatches its body with an explicit "execute, do NOT activate scheduler-skill-creator" preamble. Filtered by session — only skills bound to the current session's task/cron entries appear. |
+| `/allow-skill` | Two-level popup (scope → skill list with `✓` mark) for marking a skill as always-allow. Writes to `<workDir>/.agenvoy/allow_skill` (project) or `~/.config/agenvoy/allow_skill` (global). Always-allow upgrades `AllowAll=true` at exec start — bypasses the confirm gate but sandbox / validator still apply. **Dangerous**: only mark skills you trust. |
+| `/mode [cli\|web]` | TUI rendering vs browser page (browser page is the `update_page` session canvas served by REST). |
+| `/history` | Reload visible transcript — clear screen, reprint header, render last 100 entries from session `action.log`. |
+| `/log` | Open raw `action.log` in `$PAGER` (fallback `less -Rf +G`, jumps to bottom). `\x1F` markers expanded to newlines for readability. |
+| `/cmd` | Run a shell command directly in the current workDir (`sh -c`). |
 | `/update` | Confirm → `agen stop && agen update` via `tea.ExecProcess` → quit (re-attach with `agen` to pick up the new binary). |
 | `/clear` | Clear terminal display only — memory untouched. |
 | `/exit`, `/quit` | Exit TUI. |
@@ -137,7 +142,7 @@ make cli "/commit-generate"
 make cli "/readme-generate private MIT"
 ```
 
-User message arguments after `/<skill-name>` are passed in as binding context — see [Skill System](https://github.com/agenvoy/Agenvoy/wiki/Skill-System#user-message-is-binding-context).
+User message arguments after `/<skill-name>` are passed in as binding context — see [Skill System](Skill-System.md#user-message-is-binding-context).
 
 ## REST API
 
@@ -163,4 +168,4 @@ Started by `make app` (default port `:3000`).
 
 ## Environment variables
 
-See [Configuration](https://github.com/agenvoy/Agenvoy/wiki/Configuration) for the full list.
+See [Configuration](Configuration.md) for the full list.

@@ -13,6 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
 func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -520,6 +521,48 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			seq = append(seq, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ telegram %sd · daemon reloading", msg.action))+"\n"))
 		}
 		return t, tea.Sequence(seq...)
+
+	case KuradbAction:
+		switch msg.action {
+		case "enable":
+			if strings.TrimSpace(keychain.Get("OPENAI_API_KEY")) == "" {
+				next, cmd := t.openKuradbKeyPrompt()
+				return next, cmd
+			}
+			return t, tea.Sequence(
+				tea.Println(hintStyle.Render("⎯ kuradb installing")+"\n"),
+				runKuradbEnableExec(),
+			)
+		case "disable":
+			return t, tea.Sequence(
+				tea.Println(hintStyle.Render("⎯ kuradb removing")+"\n"),
+				runKuradbDisableExec(),
+			)
+		}
+		return t, nil
+
+	case KuradbKeySubmit:
+		token := strings.TrimSpace(msg.token)
+		if token == "" {
+			return t, tea.Println(errorStyle.Render("[!] kuradb enable: OPENAI_API_KEY is required") + "\n")
+		}
+		if err := keychain.Set("OPENAI_API_KEY", token); err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb keychain.Set: %v", err)) + "\n")
+		}
+		return t, tea.Sequence(
+			tea.Println(hintStyle.Render("⎯ kuradb installing")+"\n"),
+			runKuradbEnableExec(),
+		)
+
+	case KuradbDone:
+		if msg.err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb %s: %v", msg.action, msg.err)) + "\n")
+		}
+		hint := fmt.Sprintf("⎯ kuradb %sd · daemon reloading", msg.action)
+		if msg.action == "enable" {
+			hint += " · restart agen to load RAG tools"
+		}
+		return t, tea.Println(hintStyle.Render(hint) + "\n")
 
 	case DispatcherSelect:
 		next, cmd := t.runDispatcherSelect(msg.name)

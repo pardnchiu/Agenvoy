@@ -19,6 +19,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
+	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/tui"
 	"github.com/pardnchiu/agenvoy/internal/session"
@@ -49,6 +50,7 @@ func newTUI() {
 	geminiStt.Register()
 	telegramTool.Register()
 	discordTool.Register()
+	kuradbTool.Register()
 
 	modelCheck()
 

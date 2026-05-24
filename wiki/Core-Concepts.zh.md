@@ -1,6 +1,6 @@
 # 核心概念
 
-> [English](https://github.com/agenvoy/Agenvoy/wiki/Core-Concepts)
+> [English](Core-Concepts.md)
 
 ## Session
 

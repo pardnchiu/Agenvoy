@@ -141,6 +141,7 @@ func installSlogTUI(ctx context.Context) func() {
 
 var subMgrParentCtx = context.Background()
 
+// * unsubscribe self tui logs
 func subscribeSessionLog(sessionID string) {
 	_ = sessionID
 	subMgr.Switch(subMgrParentCtx, "")

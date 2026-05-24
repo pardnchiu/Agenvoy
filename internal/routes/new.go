@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/pardnchiu/agenvoy/internal/routes/handler"
+	completionsHandler "github.com/pardnchiu/agenvoy/internal/routes/handler/chatCompletions"
 )
 
 func New() *gin.Engine {
@@ -15,6 +16,7 @@ func New() *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
+	r.POST("/v1/chat/completions", completionsHandler.ChatCompletions())
 	r.POST("/v1/send", handler.Send())
 
 	r.GET("/v1/tools", handler.ListTools())

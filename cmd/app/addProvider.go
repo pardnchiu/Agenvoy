@@ -152,7 +152,7 @@ func addCompat() (string, string) {
 	providor = strings.ToUpper(strings.TrimSpace(providor))
 
 	urlInput := promptui.Prompt{
-		Label:   "URL (leave empty for http://localhost:11434)",
+		Label:   "URL (leave empty for http://localhost:11434/v1)",
 		Default: "",
 	}
 	url, err := urlInput.Run()
@@ -163,7 +163,7 @@ func addCompat() (string, string) {
 	}
 	url = strings.TrimRight(strings.TrimSpace(url), "/")
 	if url == "" {
-		url = "http://localhost:11434"
+		url = "http://localhost:11434/v1"
 	}
 
 	if err := session.UpsertCompat(providor, url); err != nil {

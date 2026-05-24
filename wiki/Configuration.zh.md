@@ -1,27 +1,39 @@
 # 設定檔
 
-> [English](https://github.com/agenvoy/Agenvoy/wiki/Configuration)
+> [English](Configuration.md)
 
 ## 檔案結構
 
 ```
 ~/.config/agenvoy/
-├── config.json                       主設定（active session、預設值）
+├── config.json                       主設定（active session、dispatcher_model、kuradb_enabled、t_enabled、d_enabled、compats[]）
 ├── usage.json                        Token 使用量追蹤
-├── runtime.uid                       Server 模式 singleton lock
+├── runtime.uid                       Server 模式 singleton lock（僅 daemon 寫）
 ├── mcp.json                          全域 MCP server
+├── allow_skill                       全域 skill always-allow 清單（每行一個 name）
+├── .telegram                         已授權 Telegram chat ID（每行一個，OTP 通過後寫入）
 ├── scheduler/
 │   ├── tasks.json                    一次性排程任務
 │   └── crons.json                    週期 cron 任務
+├── download/                         對話收進來的附件 + 生成的圖片（agenvoy-img-<uuid>.png）
+├── skills/scheduler/                 隔離的 scheduler skill 目錄（<short>-<hash8>/SKILL.md）
 └── sessions/
     └── <sid>/
         ├── bot.md                    Agent persona（frontmatter + body）
         ├── status.json               Active task / state
-        ├── action.log                工具呼叫稽核軌跡（1 MB rotate，目標 768 KB）
+        ├── action.log                工具呼叫稽核軌跡（1 MB rotate，目標 768 KB；外部 process 行會 prefix）
+        ├── summary.meta.json         {last_message_time: YYYY-MM-DD HH:MM:SS} —— 增量 summary 游標
+        ├── input_history             per-session TUI 輸入歷史
         └── mcp.json                  Session 範圍 MCP server
+
+~/.config/kuradb/
+└── endpoint                          純文字 URL（隨機 port），KuraDB spawn 時寫入，disable 時移除
+
+<project-root>/.agenvoy/
+└── allow_skill                       Project 範圍 skill always-allow 清單（與 global 在載入時聯集）
 ```
 
-歷史、summary、config 旗標存在 ToriiDB（位於 `~/.config/agenvoy/.store/`，由 ToriiDB 管理，使用者不直接編輯）。
+歷史、summary、error memory、config 旗標存在 ToriiDB（位於 `~/.config/agenvoy/.store/`，由 ToriiDB 管理，使用者不直接編輯）。
 
 ## 專案內設定
 
@@ -63,7 +75,8 @@ configs/
 | `MAX_SESSION_TASKS` | 否 | `3`（cap `10`） | per-session 併發上限，超過排隊 |
 | `MAX_SUBAGENT_TIMEOUT_MIN` | 否 | `10`（cap `60`） | `invoke_subagent` 總上限（分鐘） |
 | `MAX_EXTERNAL_AGENT_TIMEOUT_MIN` | 否 | `10`（cap `60`） | 外部 CLI subprocess 上限（分鐘） |
-| `OPENAI_API_KEY` | 否 | — | 啟用語意搜尋（`text-embedding-3-small`） |
+| `AGENT_SEND_TIMEOUT_SECONDS` | 否 | `600` | Exec 層 ceiling，用 `context.WithTimeout` 包 provider 呼叫。主要對 codex SSE（10m client timeout）有意義；非 SSE provider 因 `Client.Timeout=5m` 一律先 fire |
+| `OPENAI_API_KEY` | 否 | — | 啟用語意搜尋（`text-embedding-3-small`）、KuraDB embeddings、generate_image（codex backend 走訂閱額度，與此獨立） |
 
 外部 CLI agent（`codex` / `gh` / `claude` / `gemini`）以 `exec.LookPath` 自動偵測；只要 binary 存在於 `PATH` 即啟用，不需設定 env flag。
 
@@ -99,11 +112,42 @@ body 每輪渲染進 system prompt 的 `## Bot Persona` 區段。frontmatter `na
 
 ## MCP 設定
 
-兩層、session 覆蓋 global。完整 schema 與 `${VAR}` 展開行為見 [MCP 整合](https://github.com/agenvoy/Agenvoy/wiki/MCP-整合)。
+兩層、session 覆蓋 global。完整 schema 與 `${VAR}` 展開行為見 [MCP 整合](MCP-Integration.zh.md)。
 
 ## Provider 設定
 
 Provider 定義在 `configs/jsons/providors/`（拼寫是慣例）。憑證**絕不**寫進 JSON —— 全部存 OS keychain，service 名 `agenvoy`。
+
+### Compat provider URL storage 分軌
+
+`compat` provider URL 走 **two-storage** 模型：
+
+| 內容 | 位置 | 為何 |
+|---|---|---|
+| URL（如 `http://host:8000/v1`） | `~/.config/agenvoy/config.json` `compats[].URL` | 非機密、使用者可編輯 |
+| API key（`COMPAT_<NAME>_API_KEY`） | OS keychain | 機密 |
+
+URL 慣例對齊 Zed：使用者填到 `/v1` 為止（例：`http://localhost:11434/v1`），`compat/send.go` 只 append `/chat/completions`。`compat.New` 透過 `session.GetCompatURL(instanceName)` 讀 URL —— **非** keychain。`COMPAT_<NAME>_URL` keychain key 已下線（歷史 bug：TUI 寫 config、runtime 讀 keychain，永遠 fallback localhost）。
+
+## KuraDB
+
+啟用狀態為 config.json 的 `kuradb_enabled: bool`。透過 TUI 的 `/kuradb` 切換（**無** CLI 子命令 —— install.sh + sudo 需要真正的 TTY）。生命週期詳見 [KuraDB RAG](KuraDB-RAG.zh.md)。
+
+| Key | 位置 |
+|---|---|
+| `kuradb_enabled` | `config.json` |
+| `OPENAI_API_KEY` | keychain（`agenvoy` service） —— 與語意搜尋共用 |
+| Endpoint URL（runtime） | `~/.config/kuradb/endpoint`（純文字，spawn 時隨機 port） |
+| Binary | `/usr/local/bin/kura`（install.sh 內 hardcoded） |
+
+## Telegram / Discord 啟用
+
+| Key | 位置 |
+|---|---|
+| `t_enabled` / `d_enabled` | `config.json` |
+| `TELEGRAM_TOKEN` / `DISCORD_TOKEN` | keychain（`agenvoy` service） |
+| 已授權 chat ID | `~/.config/agenvoy/.telegram`（一行一個 chat ID，6 碼 OTP 驗證成功後寫入） |
+| 已授權 Discord channel | 透過 guild mention + per-server `d_allowed` 設定 |
 
 ## 哪些東西**刻意**不放在這裡
 

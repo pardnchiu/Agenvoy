@@ -1,10 +1,18 @@
 # 記憶系統
 
-> [English](https://github.com/agenvoy/Agenvoy/wiki/Memory-System)
+> [English](Memory-System.md)
 
-Agenvoy 記憶層分四層，底層皆走 [ToriiDB](https://github.com/pardnchiu/ToriiDB)（embedded KV + 向量搜尋）。
+Agenvoy 記憶層有四層 ToriiDB-backed 的對話記憶，外加第五層選用——KuraDB——做外部文件 RAG。
 
-## 四層架構
+| 層 | 後端 | 範圍 |
+|---|---|---|
+| 當前 context（16-msg 視窗） | in-memory + `DBSessionHist` | session |
+| Rolling summary | `DBSessionSummary` | session |
+| 對話歷史搜尋 | `DBSessionHist`（keyword + vector） | session |
+| Error memory | `error_memory`（90d TTL） | 跨 session |
+| 外部文件 RAG | [KuraDB](KuraDB-RAG.zh.md)（in-process child） | 跨 session、使用者自管的具名資料庫 |
+
+## 四層架構（對話記憶，ToriiDB）
 
 ### 1. 當前上下文（`MAX_HISTORY_MESSAGES`，預設 16）
 
@@ -14,7 +22,18 @@ Agenvoy 記憶層分四層，底層皆走 [ToriiDB](https://github.com/pardnchiu
 
 ### 2. Rolling Summary
 
-當最近 N 則的視窗滑動，被擠出去的訊息會經由 `summary_prompt.md` + `summary_merge_prompt.md` 摘要後寫入 `DBSessionSummary`。Summary 在每輪 system prompt 頂部注入，確保舊脈絡不丟。
+當最近 N 則的視窗滑動，被擠出去的訊息會經由 `summary_prompt.md` 摘要後寫入 `DBSessionSummary`。Summary 在每輪 system prompt 頂部注入，確保舊脈絡不丟。
+
+**增量游標：** `summary.meta.json`（per-session）存 `last_message_time`（格式 `YYYY-MM-DD HH:MM:SS`，從 message content 開頭的 `當前時間: ...` 抓）。每次 `summary.Generate` 呼叫：
+
+1. `filterAfterTime(histories, cursor)` 只保留 `t > cursor` 的 messages
+2. 每 chunk **一次** `generatePass` LLM 呼叫（system prompt 內已塞 `{{.Summary}}`=old summary，merge 在生成時完成 —— 無獨立 `mergePass`，避 2× cost）
+3. 成功後 cursor 推進到該 chunk 內最大 timestamp + `SaveSummary` 觸發 mtime gate
+4. `generatePass` 失敗即 `return`（不雙計費已成功 chunk，下輪 cron retry）
+
+**為何用 timestamp 而非 count：** `summary.json` 欄位（`discussion_log` / `key_data`）有上限會裁剪，count 對應的「summary 覆蓋範圍」不穩。Message timestamp 是 message 自帶硬資料，不受裁剪影響。
+
+**Migration：** cursor 為空但 `summaryMap` 非空（首次升級）時 → `SaveSummaryMeta(latestMessageTime(histories))` + `SaveSummary` 寫 gate，當輪跳過 —— 避免首次升級後重跑全部歷史造成 token 爆量。
 
 > Summary 自動剝除已於 commit `a33cbef` 移除 —— 摘要**只**在明確觸發時產生。**勿再加回自動剝除**。
 
@@ -57,6 +76,14 @@ Agenvoy 記憶層分四層，底層皆走 [ToriiDB](https://github.com/pardnchiu
 - **Vector search** —— `SetVector` + `VSearch` cosine 相似度
 - **TTL with refresh** —— `Expire` 讓常被引用的 entry 保熱
 - **Lazy value getter** —— `Entry.Value` 是 `func() string`，scan 時不必 materialize 全部結果
+
+## 外部文件 RAG（KuraDB）
+
+上述四層皆服務對話記憶——歷史對話、摘要、錯誤紀錄。要查詢**使用者自管的文件集**（筆記、收件匣、程式碼倉……），Agenvoy 委派給 [KuraDB](KuraDB-RAG.zh.md)——daemon 在 `kuradb_enabled=true` 時 spawn 的 in-process child。
+
+KuraDB 對 agent 暴露三個工具（`rag_list_db` / `rag_search_keyword` / `rag_search_semantic`），endpoint 不存在時 per-turn 動態排除。載入時 system prompt 強制 information query 第一波先呼這三者（外部 web 工具退為補足角色）。
+
+這個切割是刻意的：ToriiDB 是整合在 runtime 的記憶層（不能停用）；KuraDB 是 opt-in 的索引知識庫（透過 `/kuradb` TUI 啟用）。
 
 ## 遷移備註
 

@@ -20,6 +20,9 @@ func (t TUI) commandModelRemove() (TUI, tea.Cmd, bool) {
 	if len(cfg.Models) == 0 {
 		return t, tea.Println(hintStyle.Render("no models configured") + "\n"), true
 	}
+	if len(cfg.Models) == 1 {
+		return t, tea.Println(warnStyle.Render("[!] cannot remove last model · /model global add another first") + "\n"), true
+	}
 
 	options := make([]string, len(cfg.Models))
 	values := make([]string, len(cfg.Models))
@@ -51,6 +54,10 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 	cfg, err := session.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n")
+	}
+
+	if len(cfg.Models) <= 1 {
+		return t, tea.Println(warnStyle.Render("[!] cannot remove last model · /model global add another first") + "\n")
 	}
 
 	idx := -1

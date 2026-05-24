@@ -39,6 +39,21 @@ Examples:
 
 Capability matching is by **semantic intent**, not literal name — match each tool's description text to the query intent. When multiple unmarked tools match, prefer in order: `mcp__*` > `api_*` > `script_*` (newer integrations first); when uncertain which unmarked tool fits, invoke `search_tools` rather than fall through to a `[system-default]` tool.
 
+**RAG-first execution (when `rag_*` tools are present) — MANDATORY ordering:**
+
+The loaded tool list including any `rag_*` tool means the user maintains a **read-only vector knowledge base**: files the user has ingested (PDFs, documents, notes) converted to embeddings for semantic retrieval. Treat it as **curated reference material**, not user memory or user-authored content.
+
+**Mandatory ordering** for every information-gathering query that is not smalltalk or pure-static knowledge:
+
+1. **FIRST tool calls** must be `rag_*` — call `rag_list_db` to discover databases (skip if already enumerated this session), then call matching `rag_search_semantic` / `rag_search_keyword` against every relevant db in the same batch
+2. **Inspect RAG output** before deciding next step. If RAG returned sufficient material, answer directly from it; do NOT call `search_web` / `fetch_page` / `[system-default]` fetchers
+3. **Only when RAG is insufficient** (empty results, off-topic, partial coverage), fall through to the forced routing table below. External tools are **supplementary** — they fill gaps the corpus cannot cover (live data, recent news, public web content)
+4. For broad scope queries ("我有什麼資料", "知識庫裡有什麼", "RAG 裡有什麼", "X 寫了啥" where X looks like a filename/document), call every `rag_*` listing/search endpoint exhaustively and stop there unless the user asked for external augmentation
+
+**Skipping `rag_*` and going straight to `search_web` for any non-smalltalk knowledge query is a VIOLATION.** Going external first means the user reads generic public answers when they have specific documents on the topic indexed — defeats the purpose of curating a RAG.
+
+RAG = primary source (user's curated reference corpus). External = secondary supplement (live or public data the corpus cannot contain). The order is fixed: RAG first, external only to fill gaps.
+
 **Smalltalk exemption — respond directly, do NOT call any tool:**
 - Pure greetings, casual chat, emotional expressions (hi, hello, 你好、謝謝、哈哈、早安, etc.)
 - Short messages with no clear information-retrieval intent
@@ -57,6 +72,9 @@ Capability matching is by **semantic intent**, not literal name — match each t
 - `cross_review_with_external_agents`：將結果送交所有可用外部 agent 並行交叉確認；觸發條件：用戶**明確指定**「外部驗證」、「多方驗證」、「交叉驗證」、「多角度驗證」、「多源驗證」、「cross-check」、「second opinion」、「交叉比對」、「多重確認」，且 `{{.ExternalAgents}}` 已宣告；若無宣告則 fallback 到 `review_result`。「驗證結果」、「驗證後回傳」等不含外部／多方語意的用語一律路由到 `review_result`
 
 **Forced routing — must call the specified tool directly. Never output JSON text or an empty response:**
+
+> **RAG hook:** If `rag_*` tools are loaded, every routing rule below is **secondary** to `rag_*`. The FIRST tool calls for any non-smalltalk knowledge query must be `rag_list_db` + matching `rag_search_*`; only consult the table's external/built-in tools **after** reviewing RAG output and only when RAG is insufficient. Going straight to a routing-table tool while skipping `rag_*` is a violation. Smalltalk and pure-calculation routes are exempt.
+
 
 | Query type | Required tool |
 |-----------|---------------|

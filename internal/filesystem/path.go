@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -36,6 +37,8 @@ var (
 	ScheduleSkillTrashDir string
 	DownloadDir           string
 	AllowSkillGlobalPath  string
+	KuradbDir             string
+	KuradbEndpointPath    string
 
 	WorkAgenvoyDir     string
 	WorkAPIToolsDir    string
@@ -100,6 +103,9 @@ func Init() error {
 		}
 		AllowSkillGlobalPath = filepath.Join(AgenvoyDir, "allow_skill")
 
+		KuradbDir = filepath.Join(homeDir, ".config", "kuradb")
+		KuradbEndpointPath = filepath.Join(KuradbDir, "endpoint")
+
 		WorkAgenvoyDir = filepath.Join(workDir, ".config", projectName)
 		WorkAPIToolsDir = filepath.Join(WorkAgenvoyDir, "tools", "api")
 		WorkScriptToolsDir = filepath.Join(WorkAgenvoyDir, "tools", "script")
@@ -154,6 +160,22 @@ func ScheduleSkillDir(name string) string {
 
 func ScheduleSkillPath(name string) string {
 	return filepath.Join(ScheduleSkillDir(name), "SKILL.md")
+}
+
+func GetKuradbEndpoint() (string, error) {
+	path := KuradbEndpointPath
+	if !go_pkg_filesystem_reader.Exists(path) {
+		return "", fmt.Errorf("endpoint file not found: %s", path)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("os.ReadFile %s: %w", path, err)
+	}
+	url := strings.TrimSpace(string(raw))
+	if url == "" {
+		return "", fmt.Errorf("endpoint file %s is empty", path)
+	}
+	return url, nil
 }
 
 func ErrorDir(sessionID string) string {

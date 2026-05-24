@@ -227,26 +227,6 @@ build_and_install() {
   ok "agen installed at $(command -v agen)"
 }
 
-seed_mcp_config() {
-  local mcp_path="${HOME}/.config/agenvoy/mcp.json"
-  if [ -e "$mcp_path" ]; then
-    return 0
-  fi
-  log "Seeding default MCP config at $mcp_path"
-  mkdir -p "$(dirname "$mcp_path")"
-  cat >"$mcp_path" <<'JSON'
-{
-  "servers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
-    }
-  }
-}
-JSON
-  ok "Wrote default MCP config (playwright)"
-}
-
 stop_daemon() {
   log "Stopping existing daemon (if any) so the new binary takes effect"
   agen stop || true
@@ -308,7 +288,6 @@ main() {
   ensure_go "$platform"
   clone_repo
   build_and_install
-  seed_mcp_config
   stop_daemon
   print_done "$INSTALLED_TAG"
 }

@@ -1,27 +1,39 @@
 # Configuration
 
-> [中文](https://github.com/agenvoy/Agenvoy/wiki/設定檔)
+> [中文](Configuration.zh.md)
 
 ## File layout
 
 ```
 ~/.config/agenvoy/
-├── config.json                       Main config (active session, defaults)
+├── config.json                       Main config (active session, dispatcher_model, kuradb_enabled, t_enabled, d_enabled, compats[])
 ├── usage.json                        Token usage tracker
-├── runtime.uid                       Server-mode singleton lock
+├── runtime.uid                       Server-mode singleton lock (daemon-only writer)
 ├── mcp.json                          Global MCP servers
+├── allow_skill                       Global skill always-allow list (one name per line)
+├── .telegram                         Authorized Telegram chat IDs (one per line, written after OTP success)
 ├── scheduler/
 │   ├── tasks.json                    One-shot scheduled tasks
 │   └── crons.json                    Recurring cron tasks
+├── download/                         Inbound chat attachments + outbound generated images (agenvoy-img-<uuid>.png)
+├── skills/scheduler/                 Isolated scheduler skill dirs (<short>-<hash8>/SKILL.md)
 └── sessions/
     └── <sid>/
         ├── bot.md                    Agent persona (frontmatter + body)
         ├── status.json               Active task list / state
-        ├── action.log                Tool call audit trail (1 MB rotate, 768 KB target)
+        ├── action.log                Tool call audit trail (1 MB rotate, 768 KB target; foreign-process lines prefixed)
+        ├── summary.meta.json         {last_message_time: YYYY-MM-DD HH:MM:SS} — incremental summary cursor
+        ├── input_history             Per-session TUI input history
         └── mcp.json                  Session-scoped MCP servers
+
+~/.config/kuradb/
+└── endpoint                          Plaintext URL (random port), written by KuraDB on spawn, removed on disable
+
+<project-root>/.agenvoy/
+└── allow_skill                       Project-scoped skill always-allow list (union with global at load time)
 ```
 
-History, summaries, and config flags live in ToriiDB under `~/.config/agenvoy/.store/` (managed by ToriiDB itself, not directly user-editable).
+History, summaries, error memory and config flags live in ToriiDB under `~/.config/agenvoy/.store/` (managed by ToriiDB itself, not directly user-editable).
 
 ## Project configs
 
@@ -63,7 +75,8 @@ Loaded from repo-root `.env` via `godotenv` in `cmd/app/main.go init()`.
 | `MAX_SESSION_TASKS` | No | `3` (cap `10`) | Per-session concurrency limit; excess tasks queue |
 | `MAX_SUBAGENT_TIMEOUT_MIN` | No | `10` (cap `60`) | `invoke_subagent` total timeout in minutes |
 | `MAX_EXTERNAL_AGENT_TIMEOUT_MIN` | No | `10` (cap `60`) | External CLI subprocess timeout in minutes |
-| `OPENAI_API_KEY` | No | — | Enables semantic search via `text-embedding-3-small` |
+| `AGENT_SEND_TIMEOUT_SECONDS` | No | `600` | Exec-layer ceiling on `Agent.Send`; wraps `context.WithTimeout` around the provider call. Mainly relevant for codex SSE (10m client timeout); for non-SSE providers, `Client.Timeout=5m` fires first |
+| `OPENAI_API_KEY` | No | — | Enables semantic search via `text-embedding-3-small`, KuraDB embedding, generate_image (codex backend uses subscription quota independently) |
 
 External CLI agents (`codex` / `gh` / `claude` / `gemini`) are auto-detected via `exec.LookPath`; install the binary on `PATH` to enable, no env flag required.
 
@@ -99,11 +112,42 @@ The mode is rendered into the system prompt under `## Permission Mode`. There is
 
 ## MCP config
 
-Two layers; session overrides global. See [MCP Integration](https://github.com/agenvoy/Agenvoy/wiki/MCP-Integration) for full schema and `${VAR}` expansion behavior.
+Two layers; session overrides global. See [MCP Integration](MCP-Integration.md) for full schema and `${VAR}` expansion behavior.
 
 ## Provider config
 
 Provider definitions live under `configs/jsons/providors/` (spelling intentional). Credentials never live in JSON — they live in OS keychain under service `agenvoy`.
+
+### Compat provider URL storage split
+
+`compat` provider URLs use a **two-storage** model:
+
+| What | Where | Why |
+|---|---|---|
+| URL (e.g. `http://host:8000/v1`) | `~/.config/agenvoy/config.json` `compats[].URL` | Non-secret, user-editable |
+| API key (`COMPAT_<NAME>_API_KEY`) | OS keychain | Secret |
+
+URL convention follows Zed: the user enters the URL up to `/v1` (e.g. `http://localhost:11434/v1`), and `compat/send.go` appends only `/chat/completions`. `compat.New` reads URL via `session.GetCompatURL(instanceName)` — **not** keychain. There is no `COMPAT_<NAME>_URL` keychain key (intentionally removed: a historical bug had the TUI writing to config while runtime read keychain, always falling back to localhost).
+
+## KuraDB
+
+Enabled state is `kuradb_enabled: bool` in config.json. Toggle via `/kuradb` in the TUI (no CLI subcommand — install.sh + sudo need a real TTY). See [KuraDB RAG](KuraDB-RAG.md) for full lifecycle.
+
+| Key | Location |
+|---|---|
+| `kuradb_enabled` | `config.json` |
+| `OPENAI_API_KEY` | keychain (`agenvoy` service) — shared with semantic search |
+| Endpoint URL (runtime) | `~/.config/kuradb/endpoint` (plaintext, random port per spawn) |
+| Binary | `/usr/local/bin/kura` (hardcoded in install.sh) |
+
+## Telegram / Discord enablement
+
+| Key | Location |
+|---|---|
+| `t_enabled` / `d_enabled` | `config.json` |
+| `TELEGRAM_TOKEN` / `DISCORD_TOKEN` | keychain (`agenvoy` service) |
+| Authorized chat IDs | `~/.config/agenvoy/.telegram` (one chat ID per line, written after 6-digit OTP verification succeeds) |
+| Authorized Discord channels | Set via guild mention + per-server `d_allowed` config |
 
 ## Where things deliberately do **not** live
 

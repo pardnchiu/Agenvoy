@@ -21,6 +21,7 @@ type CmdSelector struct {
 type CmdSelectorItem struct {
 	label       string
 	desc        string
+	descStyled  string
 	isSkill     bool
 	isScheduler bool
 }
@@ -41,6 +42,7 @@ var commands = []Command{
 	{"bot", "edit / rename current session · name / description (persona)"},
 	{"discord", "enable / disable Discord bot · gateway validated on enable"},
 	{"telegram", "enable / disable Telegram bot · getMe validated on enable"},
+	{"kuradb", "enable / disable KuraDB RAG · install.sh + OPENAI_API_KEY on enable"},
 	{"cron", "add / remove / edit scheduled recurring task"},
 	{"task", "add / remove / edit one-shot scheduled task"},
 	{"update", "update / upgrade · fetch latest release · rebuild · quit TUI"},
@@ -48,7 +50,7 @@ var commands = []Command{
 	{"history", "reload visible transcript · last 100 entries from action.log"},
 	{"log", "open / view raw action.log via $PAGER (less)"},
 	{"cmd", "run / exec shell command directly in cwd · sh -c"},
-	{"allow-skill", "toggle / mark skill as always-allow · global or project scope"},
+	{"allow-skill", "dangerously skip permission · always-allow skill"},
 	{"clear", "clear visible transcript / history · memory untouched"},
 	{"exit", "exit / quit TUI · daemon keeps running"},
 }
@@ -104,6 +106,9 @@ func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 		item := CmdSelectorItem{
 			label: "/" + c.name,
 			desc:  c.desc,
+		}
+		if c.name == "allow-skill" {
+			item.descStyled = errorStyle.Render("dangerously") + hintStyle.Render(strings.TrimPrefix(c.desc, "dangerously"))
 		}
 		switch {
 		case query == "" || strings.Contains(c.name, query):
@@ -281,7 +286,10 @@ func renderCmdSelector(p *CmdSelector) string {
 		}
 		pad := strings.Repeat(" ", maxLabel-lipgloss.Width(it.label))
 		line := marker + labelStyle.Render(it.label) + pad
-		if it.desc != "" {
+		switch {
+		case it.descStyled != "":
+			line += "  " + it.descStyled
+		case it.desc != "":
 			line += "  " + hintStyle.Render(it.desc)
 		}
 		lines = append(lines, line)

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -27,6 +28,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
+	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
+	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
@@ -48,6 +51,10 @@ var (
 	telegramBot         *telegram.Bot
 	lastTelegramEnabled bool
 	lastTelegramToken   string
+
+	kuradbMu          sync.Mutex
+	kuradbCancel      context.CancelFunc
+	lastKuradbEnabled bool
 )
 
 func reloadDiscord() {
@@ -128,6 +135,49 @@ func reloadTelegram() {
 	telegramBot = bot
 }
 
+func reloadKuradb() {
+	newEnabled := false
+	if cfg, err := session.Load(); err == nil && cfg != nil {
+		newEnabled = cfg.KuradbEnabled
+	}
+
+	kuradbMu.Lock()
+	defer kuradbMu.Unlock()
+
+	if newEnabled == lastKuradbEnabled {
+		return
+	}
+
+	if kuradbCancel != nil {
+		kuradbCancel()
+		kuradbCancel = nil
+	}
+	lastKuradbEnabled = newEnabled
+
+	if !newEnabled || !kuradb.IsInstalled() || strings.TrimSpace(keychain.Get("OPENAI_API_KEY")) == "" {
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	kuradbCancel = cancel
+
+	go kuradb.Run(ctx)
+	go kuradb.Health(ctx, func() {
+		if cfg, err := session.Load(); err == nil && cfg != nil {
+			cfg.KuradbEnabled = false
+			if err := session.Save(cfg); err != nil {
+				slog.Warn("session.Save",
+					slog.String("error", err.Error()))
+			}
+		}
+		if err := kuradb.Remove(); err != nil {
+			slog.Warn("kuradb.RemoveEndpoint",
+				slog.String("error", err.Error()))
+		}
+		reloadKuradb()
+	})
+}
+
 func cmdDaemon() {
 	installDaemonSlog()
 	session.SetHash(session.Hash())
@@ -149,6 +199,7 @@ func cmdDaemon() {
 	geminiStt.Register()
 	telegramTool.Register()
 	discordTool.Register()
+	kuradbTool.Register()
 
 	if _, err := runtime.Init(); err != nil {
 		if errors.Is(err, runtime.ErrAlreadyRunning) {
@@ -200,6 +251,7 @@ func cmdDaemon() {
 	if selectorBot != nil {
 		reloadDiscord()
 		reloadTelegram()
+		reloadKuradb()
 
 		route := routes.New()
 		port := go_pkg_utils.GetWithDefault("PORT", "17989")
@@ -237,6 +289,12 @@ func cmdDaemon() {
 		telegramBot = nil
 	}
 	telegramMu.Unlock()
+	kuradbMu.Lock()
+	if kuradbCancel != nil {
+		kuradbCancel()
+		kuradbCancel = nil
+	}
+	kuradbMu.Unlock()
 	if server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		_ = server.Shutdown(ctx)
@@ -298,6 +356,7 @@ func watchConfig(ctx context.Context) func() {
 				}
 				reloadDiscord()
 				reloadTelegram()
+				reloadKuradb()
 			case err, ok := <-w.Errors:
 				if !ok {
 					return

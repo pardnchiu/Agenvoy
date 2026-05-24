@@ -1,6 +1,6 @@
 # Providers
 
-> [中文](https://github.com/agenvoy/Agenvoy/wiki/Provider-設定)
+> [中文](Providers.zh.md)
 
 Agenvoy supports seven LLM providers behind a unified `Agent.Send()` interface.
 
@@ -52,17 +52,64 @@ Only `openaiCodex` uses SSE for response streaming (`parseSSEStream` accumulates
 
 ## Adding a custom OpenAI-compatible endpoint
 
-Use the `compat` provider type and point at any endpoint that accepts the OpenAI Chat Completions schema:
+Use the `compat` provider type and point at any endpoint that accepts the OpenAI Chat Completions schema. URL convention follows Zed: **enter the URL up to `/v1`** (e.g. `http://192.168.1.10:4000/v1`, Ollama default `http://localhost:11434/v1`). `compat/send.go` appends only `/chat/completions`.
 
-```json
-{
-  "type": "compat",
-  "name": "my-local",
-  "base_url": "http://localhost:8080/v1",
-  "models": [
-    {"id": "qwen2.5-coder-32b"}
-  ]
-}
+```
+/providor → name: VLLM
+            URL:  http://192.168.1.10:4000/v1
+            API key: <bearer token, or blank>
+            Model: gemma3-27b-it          (becomes compat[VLLM]@gemma3-27b-it)
 ```
 
-Run `agen model add` and pick the `compat` type to walk through the interactive setup; new models become available on next agent invocation.
+### Storage split (URL vs key)
+
+| What | Where | API |
+|---|---|---|
+| URL | `~/.config/agenvoy/config.json` `compats[].URL` | `session.UpsertCompat` / `session.GetCompatURL` |
+| API key | OS keychain | `keychain.Set("COMPAT_<NAME>_API_KEY", value)` |
+
+`compat.New` reads URL via `session.GetCompatURL(instanceName)`. There is no `COMPAT_<NAME>_URL` keychain key (intentionally removed).
+
+### Tested compat targets
+
+| Target | Works | Notes |
+|---|---|---|
+| Ollama | ✅ | default `http://localhost:11434/v1` |
+| LM Studio | ✅ | |
+| vLLM | ✅ | `--enable-auto-tool-choice --tool-call-parser <name>` for tool use |
+| llama.cpp server | ✅ | |
+| LiteLLM proxy | ✅ | virtual key as Bearer token |
+| Groq / Together / DeepInfra / OpenRouter / Fireworks | ✅ | |
+| Azure OpenAI | ❌ | needs `api-key` header (not `Bearer`) + `?api-version=` query — not supported |
+| Reasoning-only models (o1, deepseek-r1, QwQ) | ⚠️ | compat sends `temperature: 0.2` hardcoded; some servers 422 |
+
+## Send timeout (3 layers)
+
+Send-side timeout has three independent layers, each catching a different failure mode:
+
+| Layer | Value | Catches | Where |
+|---|---|---|---|
+| **Transport** `ResponseHeaderTimeout` | `10s` | Backend stuck before returning headers (healthy SSE returns <1s; high load ≤ 5s; 10s = 10× margin) | `provider.NewHTTPClient()` (cloud non-SSE) + `openaiCodex/new.go::newHTTPClient()` (SSE) |
+| **`http.Client.Timeout`** | `5m` non-SSE / `10m` SSE | Full request (headers + body) | per-provider client |
+| **`execute.go::AgentSendTimeout`** | env `AGENT_SEND_TIMEOUT_SECONDS`, default `600s` | Exec-layer ceiling via `context.WithTimeout` | `internal/agents/exec/execute.go` |
+
+For non-SSE providers, `Client.Timeout=5m` always fires before the exec wrap (which is 10m). The exec wrap exists primarily for codex SSE (10m client) and long-reasoning models.
+
+### HTTP client factory split
+
+| Provider category | Factory | Config |
+|---|---|---|
+| Cloud non-SSE (claude / copilot / gemini / nvidia / openai) | `provider.NewHTTPClient()` | `Timeout=5m` + `ResponseHeaderTimeout=10s` |
+| Cloud SSE (openaiCodex) | `openaiCodex/new.go::newHTTPClient()` | `Timeout=10m` + `ResponseHeaderTimeout=10s` |
+| Local / self-hosted (compat) | inline `&http.Client{Timeout: 5 * time.Minute}` | **no** `ResponseHeaderTimeout` — Ollama / vLLM / llama.cpp cold-start may hold 30-90s before headers; 10s would 100% false-positive |
+
+Local compat is **not** routed through the factory by design. Cold-start tolerance is non-negotiable for self-hosted backends.
+
+### Retry semantics
+
+- `sendFailCount` accumulates **unconditionally** for timeout/network errors (payload didn't reach the model; signature comparison is meaningless)
+- For content-level errors (parse failure, 4xx with body, garbage response), retry is sig-based — same payload signature → counter increments; different → reset
+- `sendFailCount >= MaxRetry` (default 3) → MaxRetry-exhausted path emits `sendText` + `EventDone` with a branch-specific message (timeout / context-length / generic)
+- During retries (`sendFailCount < MaxRetry`) → **only** `slog.Warn` is emitted; no chat event surfaces (avoids noisy "retrying 1/3, 2/3" spam — only the final outcome reaches the user)
+
+OAuth device-code polling (`copilot/login.go`) uses a separate `http.Client{Timeout: 30s}` per poll — zero timeout would let GitHub OAuth backend hang and lock the entire login flow.

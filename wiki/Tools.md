@@ -1,6 +1,6 @@
 # Tools
 
-> [中文](https://github.com/agenvoy/Agenvoy/wiki/工具系統)
+> [中文](Tools.zh.md)
 
 ## Built-in tools
 
@@ -34,12 +34,13 @@
 
 | Tool | Description |
 |---|---|
-| `invoke_subagent` | In-process subagent (no HTTP); supports `name` / `session_id` / `model` / `system_prompt` / `exclude_tools` |
-| `invoke_external_agent` | One-shot external CLI (claude / codex / copilot / gemini); `readonly` flag controls write permission |
-| `cross_review_with_external_agents` | Chain four external CLIs through up to three review rounds (`MaxVerifyRounds=3`, package const) |
+| `invoke_subagent` | In-process subagent (no HTTP); supports `name` / `session_id` / `model` / `system_prompt` / `exclude_tools`. Forced-exclude set: `invoke_subagent` itself, `invoke_external_agent`, `cross_review_with_external_agents`, `review_result`. `AllowAll` and `WorkDir` inherit from parent ctx |
+| `invoke_external_agent` | One-shot external CLI (claude / codex / copilot / gemini); `readonly` flag controls write permission. Subprocess timeout capped by `MAX_EXTERNAL_AGENT_TIMEOUT_MIN` (default 10 min) |
+| `cross_review_with_external_agents` | Chain four external CLIs through up to three review rounds (`MaxVerifyRounds=3`, package const). 15 min hard cap |
 | `review_result` | Internal priority-model self-review |
+| `generate_plan` | Returns a structured markdown plan (requirement summary / prerequisites / steps + acceptance / overall acceptance / risks / fallback). Uses `exec.SelectAgent(ctx, dispatcher, registry, "[plan] " + requirement, ...)` — the `[plan]` prefix triggers `agent_selector.md` P0.6 routing to pick a strong reasoning agent (claude-opus > codex-pro > codex > claude-sonnet > ...). Sends the agent with `toolDefs=nil` so the planner has no tools to call — plan only, no execution. 5 min cap |
 | `ask_user` | Free-text / single-select / multi-select / `secret` masked input prompts; routes through `pending` registry when active, else falls back to stdin (CLI) or non-interactive guidance |
-| `store_secret` | Captures a value via masked input and writes directly to keychain — **the value never enters the LLM context, history, or logs** |
+| `store_secret` | Captures a value via masked input and writes directly to keychain — **the value never enters the LLM context, history, or logs**. Schema does **not** accept a `value` parameter; the agent only sees `name` + description |
 
 ### Memory
 
@@ -49,6 +50,50 @@
 | `remember_error` | Record a tool error with resolution / strategy |
 | `search_error_memory` | Cross-session semantic search over error memory |
 | `read_error_memory` | Read a specific error entry by key |
+
+### RAG
+
+External-document RAG via the KuraDB child process. See [KuraDB RAG](KuraDB-RAG.md) for lifecycle / health check. Tools are **per-turn dynamically excluded** when `~/.config/kuradb/endpoint` is absent — the LLM never sees them when KuraDB is off.
+
+| Tool | Description |
+|---|---|
+| `rag_list_db` | List available KuraDB databases (e.g. `notes`, `inbox`, `code`) |
+| `rag_search_keyword` | Keyword search a database via `gse` tokenization (Chinese-aware) |
+| `rag_search_semantic` | Semantic search a database via OpenAI embeddings (`text-embedding-3-small`) |
+
+When `rag_*` tools are loaded, the system prompt forces the **first wave** of tool calls for any information query to be `rag_list_db` + `rag_search_*`. External web/search tools become secondary (gap-filling), not fallback or substitute.
+
+### Render
+
+| Tool | Description |
+|---|---|
+| `update_page` | Overwrite the rendered HTML page for the current session canvas; browser tabs auto-reload via SSE |
+| `generate_image` | Generate an image via `gpt-image-2` through the codex OAuth backend (`chatgpt.com/backend-api/codex/responses` + `image_generation` built-in). Schema requires `prompt` + `size` (enum: `1024x1024` / `1024x1792` / `1792x1024`) + `quality` (enum: `low` / `medium` / `high`); empty size/quality → handler fails with a hint to call `ask_user` first (no silent default — each generation costs 3-5× of subscription). Output lands in `~/.config/agenvoy/download/agenvoy-img-<uuid>.png`; the return text's last line is `FILE: <path>`, which the channel runtime auto-attaches. `AlwaysAllow=false` (must pass confirm gate) |
+
+### Channel
+
+Cross-session push tools and channel format references. Each tool gates on both `cfg.{T,D}Enabled` and keychain credential presence.
+
+| Tool | Description |
+|---|---|
+| `list_telegram_chat` | List authorized Telegram chats (`id` + `name`); reads `~/.config/agenvoy/.telegram`. *(telegram needed)* |
+| `send_to_telegram_chat` | Send an HTML-formatted message to an authorized chat by `chat_id`. Transient client (not the daemon's long-polling bot). Forced `parse_mode=HTML`. *(telegram needed)* |
+| `telegram_format` | `AlwaysLoad=true`; returns the full Telegram HTML formatting reference (allowed tags, escape rules, file/voice markers, char limits). *(telegram needed)* |
+| `list_discord_channel` | List authorized Discord channels (`id` + `name`). *(discord needed)* |
+| `send_to_discord_channel` | Send a markdown-formatted message to an authorized channel by `channel_id`. Transient client via daemon REST. *(discord needed)* |
+| `discord_format` | `AlwaysLoad=true`; returns Discord markdown reference. *(discord needed)* |
+
+### Output markers (channel-specific behavior)
+
+Output text from any tool or LLM response is post-processed for these markers:
+
+| Marker | Behavior |
+|---|---|
+| `FILE: <path>` (full-line, any line) | Channel runtime auto-attaches the file (Telegram → photo/document split by ext, Discord → unified `SendFiles` batched 10/msg) |
+| `[SEND_FILE:<path>]` (inline) | Same as above — LLM emits this when proactively wanting to attach |
+| `[SEND_VOICE:<text>]` | Telegram only. Synthesizes via Gemini TTS, sends as OGG voice. Run.go fires the upload **async** (`go func` with `context.WithoutCancel`); reply text returns immediately. Failure → `slog.Error` + chat notify `⚠️ SendVoice failed (background)` (never silent) |
+
+Marker regex + dedupe + `os.Stat` filtering lives in `internal/utils/fileMarker.go`. Push hooks (`telegram.PushTelegramResult` / `discord.PushDiscordResult`) call the same extractor — image generation during a cron fire still attaches correctly.
 
 ### Skill discovery
 
@@ -98,7 +143,7 @@ Drop a JSON file under `extensions/apis/<name>.json` describing a REST endpoint.
 
 ### MCP tools (`mcp__*`)
 
-Tools exposed by an MCP server are auto-registered as `mcp__<server>__<tool>`. See [MCP Integration](https://github.com/agenvoy/Agenvoy/wiki/MCP-Integration) for configuration. MCP tool output is capped at **1 MiB** per call to keep tool results within provider limits.
+Tools exposed by an MCP server are auto-registered as `mcp__<server>__<tool>`. See [MCP Integration](MCP-Integration.md) for configuration. MCP tool output is capped at **1 MiB** per call to keep tool results within provider limits.
 
 ## Tool design rules
 
@@ -118,7 +163,23 @@ Tools have two independent flags:
 - `ReadOnly` — exempts from confirm gate when `agen cli` is in use
 - `Concurrent` — opts into Pass 2 fan-out (parallel goroutine per call)
 
-Adding `Concurrent: true` requires both "no side effects" and "upstream allows parallelism". The current concurrent set is documented in [Core Concepts](https://github.com/agenvoy/Agenvoy/wiki/Core-Concepts#three-pass-tool-concurrency).
+Adding `Concurrent: true` requires both "no side effects" and "upstream allows parallelism". The current concurrent set is documented in [Core Concepts](Core-Concepts.md#three-pass-tool-concurrency).
+
+## Tool timeout matrix
+
+Each adapter has its own timeout, layered with the executor-side ceiling:
+
+| Adapter | Default | Configurable | Where |
+|---|---|---|---|
+| Built-in (`toolRegister.Dispatch`) | 1 min | `Def.Timeout` per tool | tool registration |
+| Script (`script_*`) | 5 min (300s) | `tool.json` `"timeout": <seconds>` | `extensions/scripts/<name>/tool.json` |
+| API (`api_*`) | 60s | `doc.Endpoint.Timeout`; hard cap 300s | `extensions/apis/<name>.json` |
+| MCP HTTP | 60s `http.Client.Timeout` + 1 min outer dispatch | n/a | MCP server config |
+| MCP stdio | 1 min outer dispatch only | n/a | MCP server config |
+
+Long-running tools (script + API) emit `running name=... elapsed=Ys/Zs` to the daemon log every 30s for visibility.
+
+Subagent + external-agent tools have their own multi-minute caps (`invoke_subagent` = `MAX_SUBAGENT_TIMEOUT_MIN`, `invoke_external_agent` = 10 min, `cross_review_with_external_agents` = 15 min, `generate_plan` / `generate_image` / `transcribe_media` / `fetch_youtube_transcript` = 5 min).
 
 ## Credential auto-heal
 

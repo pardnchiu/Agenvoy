@@ -5,37 +5,43 @@
 
 ***
 
-**Agenvoy** is a Go-based multi-agent execution framework — the runtime layer for agentic AI. It is not a code-writing tool; it is the substrate that lets multiple AI agents operate in the same environment with safety, memory, and coordination.
+**Agenvoy** makes AI actually work for you — a personal AI assistant runtime that is always-on, model-agnostic, and self-improving. A single Go daemon talks to multiple LLM providers (Claude / GPT / Gemini auto-routed), reaches you through Telegram / Discord / TUI / browser, and lets the agent build & persist its own tools as you ask.
 
 ## Highlights
 
-- **Seven LLM providers** — Claude, OpenAI, Codex, Gemini, GitHub Copilot, Nvidia NIM, Compat (any OpenAI-compatible endpoint)
-- **Dispatcher-based routing** — A dispatcher LLM routes each task to the best-fit worker model
-- **Three-pass concurrent tool dispatch** — Read tools fan out concurrently; write tools stay serial for safety
-- **Multi-layer memory** — Rolling summary + 16-message recent history + keyword/semantic dual search + cross-session error memory with 90-day TTL
-- **Skill system** — Loadable markdown skill packs, triggered by `/skill-name` or `activate_skill`
+- **Seven LLM providers** — Claude · OpenAI · Codex (OAuth) · Gemini · GitHub Copilot · Nvidia NIM · Compat (any OpenAI-compatible endpoint, Zed-style `/v1` URL)
+- **Dispatcher-based routing** — a dispatcher LLM routes each task to the best-fit worker (Claude for coding, Gemini for video, GPT for research)
+- **Three-pass concurrent tool dispatch** — read tools fan out concurrently; write tools stay serial for safety
+- **Multi-layer memory** — rolling summary (incremental, timestamp-cursored) + 16-message recent history + keyword/semantic dual search + cross-session error memory with 90-day TTL
+- **Native document RAG** — KuraDB in-process child process (`rag_list_db` / `rag_search_keyword` / `rag_search_semantic`), enabled via `/kuradb` in the TUI
+- **Skill system** — loadable markdown skill packs triggered by `/skill-name` or `activate_skill`; scheduler skills isolated under `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/`
 - **OS sandbox** — Linux bubblewrap / macOS sandbox-exec; tools execute in isolation
 - **MCP client** — stdio + HTTP/SSE; tools auto-inject as `mcp__<server>__<tool>`
-- **Interactive surfaces** — TUI (with co-work dashboard), CLI, Discord bot, Telegram bot, REST API + SSE log stream
+- **Chat platform integration** — Telegram (6-digit OTP first-contact verification) + Discord (native select menus / modals); cross-session push via `send_to_telegram_chat` / `send_to_discord_channel`
+- **Voice & image** — `[SEND_VOICE:text]` → Gemini TTS (OGG/OPUS); `generate_image` → gpt-image-2 (codex OAuth backend); inbound attachments saved to download dir
+- **Sub-agents & external agents** — `invoke_subagent` (in-process) + `invoke_external_agent` (codex / copilot / claude / gemini CLI) + `cross_review_with_external_agents` (parallel review)
+- **Scheduler** — cron / one-shot tasks, fsnotify hot-reload, output push back to Telegram/Discord
+- **Send-timeout 3-layer system** — Transport `ResponseHeaderTimeout=10s` · `Client.Timeout` 5m / 10m (SSE) · exec layer `AgentSendTimeout` 600s with retry
 
 ## Pages
 
 | English | 中文 |
 |---|---|
-| [Getting Started](https://github.com/agenvoy/Agenvoy/wiki/Getting-Started) | [新手入門](https://github.com/agenvoy/Agenvoy/wiki/新手入門) |
-| [Architecture](https://github.com/agenvoy/Agenvoy/wiki/Architecture) | [架構](https://github.com/agenvoy/Agenvoy/wiki/架構) |
-| [Core Concepts](https://github.com/agenvoy/Agenvoy/wiki/Core-Concepts) | [核心概念](https://github.com/agenvoy/Agenvoy/wiki/核心概念) |
-| [Providers](https://github.com/agenvoy/Agenvoy/wiki/Providers) | [Provider 設定](https://github.com/agenvoy/Agenvoy/wiki/Provider-設定) |
-| [Tools](https://github.com/agenvoy/Agenvoy/wiki/Tools) | [工具系統](https://github.com/agenvoy/Agenvoy/wiki/工具系統) |
-| [Memory System](https://github.com/agenvoy/Agenvoy/wiki/Memory-System) | [記憶系統](https://github.com/agenvoy/Agenvoy/wiki/記憶系統) |
-| [Skill System](https://github.com/agenvoy/Agenvoy/wiki/Skill-System) | [Skill 系統](https://github.com/agenvoy/Agenvoy/wiki/Skill-系統) |
-| [MCP Integration](https://github.com/agenvoy/Agenvoy/wiki/MCP-Integration) | [MCP 整合](https://github.com/agenvoy/Agenvoy/wiki/MCP-整合) |
-| [Security and Sandbox](https://github.com/agenvoy/Agenvoy/wiki/Security-and-Sandbox) | [安全與沙箱](https://github.com/agenvoy/Agenvoy/wiki/安全與沙箱) |
-| [CLI Reference](https://github.com/agenvoy/Agenvoy/wiki/CLI-Reference) | [命令列參考](https://github.com/agenvoy/Agenvoy/wiki/命令列參考) |
-| [Configuration](https://github.com/agenvoy/Agenvoy/wiki/Configuration) | [設定檔](https://github.com/agenvoy/Agenvoy/wiki/設定檔) |
+| [Getting Started](Getting-Started.md) | [新手入門](Getting-Started.zh.md) |
+| [Architecture](Architecture.md) | [架構](Architecture.zh.md) |
+| [Core Concepts](Core-Concepts.md) | [核心概念](Core-Concepts.zh.md) |
+| [Providers](Providers.md) | [Provider 設定](Providers.zh.md) |
+| [Tools](Tools.md) | [工具系統](Tools.zh.md) |
+| [Memory System](Memory-System.md) | [記憶系統](Memory-System.zh.md) |
+| [KuraDB RAG](KuraDB-RAG.md) | [KuraDB RAG](KuraDB-RAG.zh.md) |
+| [Skill System](Skill-System.md) | [Skill 系統](Skill-System.zh.md) |
+| [MCP Integration](MCP-Integration.md) | [MCP 整合](MCP-Integration.zh.md) |
+| [Security and Sandbox](Security-and-Sandbox.md) | [安全與沙箱](Security-and-Sandbox.zh.md) |
+| [CLI Reference](CLI-Reference.md) | [命令列參考](CLI-Reference.zh.md) |
+| [Configuration](Configuration.md) | [設定檔](Configuration.zh.md) |
 
 ## Source
 
-- Repository: [pardnchiu/agenvoy](https://github.com/pardnchiu/agenvoy)
-- Architecture: [doc/architecture.md](https://github.com/pardnchiu/agenvoy/blob/main/doc/architecture.md)
-- Living spec: [CLAUDE.md](https://github.com/pardnchiu/agenvoy/blob/main/CLAUDE.md)
+- Repository: [pardnchiu/Agenvoy](https://github.com/pardnchiu/Agenvoy)
+- Architecture: [doc/architecture.md](https://github.com/pardnchiu/Agenvoy/blob/master/doc/architecture.md)
+- Living spec: [CLAUDE.md](https://github.com/pardnchiu/Agenvoy/blob/master/CLAUDE.md)

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -20,7 +21,7 @@ type Agent struct {
 
 const (
 	defaultModel   = "qwen3:8b"
-	defaultBaseURL = "http://localhost:11434"
+	defaultBaseURL = "http://localhost:11434/v1"
 )
 
 func New(model ...string) (*Agent, error) {
@@ -39,14 +40,12 @@ func New(model ...string) (*Agent, error) {
 		}
 	}
 
-	urlEnvKey := "COMPAT_URL"
 	apiKeyEnvKey := "COMPAT_API_KEY"
 	if instanceName != "" {
-		urlEnvKey = "COMPAT_" + instanceName + "_URL"
 		apiKeyEnvKey = "COMPAT_" + instanceName + "_API_KEY"
 	}
 
-	baseURL := keychain.Get(urlEnvKey)
+	baseURL := session.GetCompatURL(instanceName)
 	if baseURL == "" {
 		baseURL = defaultBaseURL
 	}

@@ -26,7 +26,7 @@ func (a *Agent) Execute(ctx context.Context, skill *filesystem.Skill, userInput 
 }
 
 func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools []toolTypes.Tool) (*agentTypes.Output, error) {
-	chatAPI := a.baseURL + "/v1/chat/completions"
+	chatAPI := a.baseURL + "/chat/completions"
 
 	headers := map[string]string{
 		"Content-Type": "application/json",

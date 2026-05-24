@@ -1,6 +1,6 @@
 # Architecture
 
-> [中文](https://github.com/agenvoy/Agenvoy/wiki/架構)
+> [中文](Architecture.zh.md)
 
 A high-level view of how Agenvoy fits together. For per-module diagrams, sequence flows, and the tool-dispatch state machine, jump into the topic-specific pages linked at the bottom of this page.
 
@@ -44,6 +44,10 @@ graph TB
         M["DBSessionHist · DBSessionSummary<br/>error_memory · 90d TTL<br/>OpenAI text-embedding-3-small"]
     end
 
+    subgraph Kura["KuraDB · daemon-managed child"]
+        K["/usr/local/bin/kura<br/>endpoint @ ~/.config/kuradb/endpoint<br/>3-strike health check · 5s backoff<br/>rag_list_db · rag_search_{keyword,semantic}"]
+    end
+
     App --> Run
     Run --> Execute
     Execute -->|invoke_subagent| Sub
@@ -53,10 +57,12 @@ graph TB
     Tools --> MCP
     Tools --> Ext
     Tools --> Security
+    Tools -.->|rag_*<br/>per-turn excluded if endpoint absent| Kura
     Execute <-->|confirm/ask| Pending
     Sub <-->|subagent ask_user| Pending
     Execute <--> Memory
     Execute <--> Session
+    App -.->|spawn + healthcheck| Kura
 ```
 
 ## Layers
@@ -76,6 +82,7 @@ graph TB
 | Pending | `internal/runtime/pending.go` | prefix-routed confirm/ask listener registry; per-runtime listener via `RegisterListener(prefix)`, claim via `PickNextFor(prefix)` |
 | Memory | ToriiDB (`DBSessionHist` / `DBSessionSummary` / `error_memory`) | semantic search + 90-day TTL |
 | Scheduler | `internal/runtime/scheduler.go` (+ `runtime.SchedulerWatcher` fsnotify) | cron / one-shot tasks bound to scheduler skills; hot-reload on `{tasks,crons}.json` change |
+| KuraDB | `internal/runtime/kuradb/` (`kuradb.go` / `spawn.go` / `health.go`) + `internal/runtime/kuradb/tool/` | RAG provider child process; daemon-managed spawn + 3-strike health check; per-turn dynamic tool exclusion when endpoint missing. See [KuraDB RAG](KuraDB-RAG.md) |
 | TUI | `internal/runtime/tui` | bubbletea inline-chat front-end; single-package by design |
 
 ## Cross-cutting principles
@@ -126,10 +133,11 @@ Switch to per-domain widget packages when **any one** of:
 
 | Topic | Page |
 |---|---|
-| Iteration loop, three-pass dispatch in detail | [Core Concepts](https://github.com/agenvoy/Agenvoy/wiki/Core-Concepts) |
-| Provider routing and dispatcher | [Providers](https://github.com/agenvoy/Agenvoy/wiki/Providers) |
-| Tool registry, extension paths | [Tools](https://github.com/agenvoy/Agenvoy/wiki/Tools) |
-| Memory tiers and semantic search | [Memory System](https://github.com/agenvoy/Agenvoy/wiki/Memory-System) |
-| Sandbox policy, permission modes | [Security and Sandbox](https://github.com/agenvoy/Agenvoy/wiki/Security-and-Sandbox) |
-| MCP transports, lifecycle | [MCP Integration](https://github.com/agenvoy/Agenvoy/wiki/MCP-Integration) |
-| Source of truth for architecture rules | [CLAUDE.md](https://github.com/pardnchiu/agenvoy/blob/main/CLAUDE.md) |
+| Iteration loop, three-pass dispatch in detail | [Core Concepts](Core-Concepts.md) |
+| Provider routing and dispatcher | [Providers](Providers.md) |
+| Tool registry, extension paths | [Tools](Tools.md) |
+| Memory tiers and semantic search | [Memory System](Memory-System.md) |
+| Sandbox policy, permission modes | [Security and Sandbox](Security-and-Sandbox.md) |
+| MCP transports, lifecycle | [MCP Integration](MCP-Integration.md) |
+| KuraDB RAG lifecycle, healthcheck, `/kuradb` wizard | [KuraDB RAG](KuraDB-RAG.md) |
+| Source of truth for architecture rules | [CLAUDE.md](https://github.com/pardnchiu/Agenvoy/blob/master/CLAUDE.md) |

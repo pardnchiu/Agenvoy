@@ -1,6 +1,6 @@
 # 工具系統
 
-> [English](https://github.com/agenvoy/Agenvoy/wiki/Tools)
+> [English](Tools.md)
 
 ## 內建工具
 
@@ -34,12 +34,13 @@
 
 | 工具 | 說明 |
 |---|---|
-| `invoke_subagent` | In-process subagent（不走 HTTP）；支援 `name` / `session_id` / `model` / `system_prompt` / `exclude_tools` |
-| `invoke_external_agent` | 一次性外部 CLI（claude / codex / copilot / gemini）；`readonly` 旗標控制寫入權限 |
-| `cross_review_with_external_agents` | 串四家外部 CLI 互審至三輪上限（`MaxVerifyRounds=3`，package 常數） |
+| `invoke_subagent` | In-process subagent（不走 HTTP）；支援 `name` / `session_id` / `model` / `system_prompt` / `exclude_tools`。強制排除集：`invoke_subagent` 自身、`invoke_external_agent`、`cross_review_with_external_agents`、`review_result`。`AllowAll` 與 `WorkDir` 從父 ctx 繼承 |
+| `invoke_external_agent` | 一次性外部 CLI（claude / codex / copilot / gemini）；`readonly` 旗標控制寫入權限。Subprocess timeout 由 `MAX_EXTERNAL_AGENT_TIMEOUT_MIN`（default 10 分）封頂 |
+| `cross_review_with_external_agents` | 串四家外部 CLI 互審至三輪上限（`MaxVerifyRounds=3`，package 常數）。15 分硬上限 |
 | `review_result` | 內部優先 model 自審 |
+| `generate_plan` | 回傳結構化 markdown 計畫（需求總結／前置／步驟+驗收／整體驗收／風險／回退）。走 `exec.SelectAgent(ctx, dispatcher, registry, "[plan] " + requirement, ...)` —— `[plan]` prefix 觸發 `agent_selector.md` P0.6 routing 挑強 reasoning agent（claude-opus > codex-pro > codex > claude-sonnet > ...）。送 agent 時 `toolDefs=nil`，planner 無 tool 可呼 —— plan only, no execution。5 分上限 |
 | `ask_user` | free-text／single-select／multi-select／`secret` 遮罩輸入；`pending` 啟用時走 registry，否則 fallback 至 stdin（CLI）或非互動引導訊息 |
-| `store_secret` | 透過遮罩輸入取值並直接寫 keychain —— **value 從未進入 LLM context、history 或 log** |
+| `store_secret` | 透過遮罩輸入取值並直接寫 keychain —— **value 從未進入 LLM context、history 或 log**。Schema **不**收 `value` 參數；agent 只看到 `name` + description |
 
 ### 記憶
 
@@ -49,6 +50,50 @@
 | `remember_error` | 記錄工具錯誤與解法／策略 |
 | `search_error_memory` | 跨 session 的 error memory 語意搜尋 |
 | `read_error_memory` | 依 key 讀取指定錯誤紀錄 |
+
+### RAG
+
+透過 KuraDB child process 的外部文件 RAG。生命週期／health check 見 [KuraDB RAG](KuraDB-RAG.zh.md)。`~/.config/kuradb/endpoint` 不存在時三個工具會**per-turn 動態排除**——LLM 完全看不到。
+
+| 工具 | 說明 |
+|---|---|
+| `rag_list_db` | 列出可用的 KuraDB 資料庫（例：`notes`、`inbox`、`code`） |
+| `rag_search_keyword` | 透過 `gse` 分詞做關鍵字搜尋（支援中文） |
+| `rag_search_semantic` | 透過 OpenAI embeddings（`text-embedding-3-small`）做語意搜尋 |
+
+當 `rag_*` 工具被載入時，system prompt 強制：任何 information query 的**第一波** tool calls 必為 `rag_list_db` + `rag_search_*`。外部 web／search 工具為次要（補足 RAG 沒命中的部分），非 fallback 也非替代。
+
+### 渲染
+
+| 工具 | 說明 |
+|---|---|
+| `update_page` | 覆寫當前 session canvas 的 HTML 頁；瀏覽器分頁透過 SSE 自動 reload |
+| `generate_image` | 透過 codex OAuth backend（`chatgpt.com/backend-api/codex/responses` + `image_generation` built-in）走 `gpt-image-2` 生圖。Schema 要求 `prompt` + `size`（enum: `1024x1024` / `1024x1792` / `1792x1024`）+ `quality`（enum: `low` / `medium` / `high`）；size/quality 為空 → handler fail 並提示先呼 `ask_user`（無 silent default —— 每張吃訂閱 3-5×）。輸出落 `~/.config/agenvoy/download/agenvoy-img-<uuid>.png`；return 文字最後一行為 `FILE: <path>`，channel runtime 自動 attach。`AlwaysAllow=false`（必過 confirm gate） |
+
+### Channel
+
+跨 session 推送工具與 channel format reference。各工具雙重 gate：`cfg.{T,D}Enabled` 與 keychain credential。
+
+| 工具 | 說明 |
+|---|---|
+| `list_telegram_chat` | 列出已授權 Telegram chat（`id` + `name`）；讀取 `~/.config/agenvoy/.telegram`。*(需 telegram)* |
+| `send_to_telegram_chat` | 依 `chat_id` 送 HTML 格式訊息。Transient client（非 daemon long-poll bot）。強制 `parse_mode=HTML`。*(需 telegram)* |
+| `telegram_format` | `AlwaysLoad=true`；回傳完整 Telegram HTML formatting reference（允許 tag、escape 規則、檔案／語音 markers、字數上限）。*(需 telegram)* |
+| `list_discord_channel` | 列出已授權 Discord channel（`id` + `name`）。*(需 discord)* |
+| `send_to_discord_channel` | 依 `channel_id` 送 markdown 格式訊息。透過 daemon REST 走 transient client。*(需 discord)* |
+| `discord_format` | `AlwaysLoad=true`；回傳 Discord markdown reference。*(需 discord)* |
+
+### 輸出 markers（channel-specific 行為）
+
+任何 tool 或 LLM 回應的輸出文字會被掃 marker 並對應行為：
+
+| Marker | 行為 |
+|---|---|
+| `FILE: <path>`（單獨一行） | Channel runtime 自動 attach 檔案（Telegram → 依副檔名分 photo/document，Discord → 統一 `SendFiles`，10 個/訊息分批） |
+| `[SEND_FILE:<path>]`（inline） | 同上 —— LLM 主動要求 attach 時用 |
+| `[SEND_VOICE:<text>]` | 僅 Telegram。透過 Gemini TTS 合成 OGG voice 送出。Run.go **async** 觸發（`go func` + `context.WithoutCancel`），reply 文字立即 return。失敗 → `slog.Error` + chat notify `⚠️ SendVoice failed (background)`（不能靜默） |
+
+Marker regex + dedupe + `os.Stat` 過濾的唯一住處在 `internal/utils/fileMarker.go`。Push hook（`telegram.PushTelegramResult` / `discord.PushDiscordResult`）共用同一 extractor —— cron fire 期間生圖也能正確 attach。
 
 ### Skill 探索
 
@@ -98,7 +143,7 @@ extensions/scripts/my-tool/
 
 ### MCP 工具（`mcp__*`）
 
-MCP server 暴露的 tool 自動註冊為 `mcp__<server>__<tool>`。配置見 [MCP 整合](https://github.com/agenvoy/Agenvoy/wiki/MCP-整合)。MCP tool 輸出每次上限 **1 MiB**，避免超過 provider 上限。
+MCP server 暴露的 tool 自動註冊為 `mcp__<server>__<tool>`。配置見 [MCP 整合](MCP-Integration.zh.md)。MCP tool 輸出每次上限 **1 MiB**，避免超過 provider 上限。
 
 ## 工具設計原則
 
@@ -118,7 +163,23 @@ Description 長度：預設**單句**動詞開頭。**禁止**：觸發條件（
 - `ReadOnly` —— `agen cli` 模式下豁免 confirm
 - `Concurrent` —— 加入 Pass 2 fan-out（每筆呼叫一個 goroutine）
 
-要標 `Concurrent: true` 須同時「無副作用」+「上游允許併發」。當前 concurrent 集合見 [核心概念](https://github.com/agenvoy/Agenvoy/wiki/核心概念#三段式工具併發)。
+要標 `Concurrent: true` 須同時「無副作用」+「上游允許併發」。當前 concurrent 集合見 [核心概念](Core-Concepts.zh.md#三段式工具併發)。
+
+## Tool timeout 矩陣
+
+各 adapter 自有 timeout，再加上 executor 層 ceiling：
+
+| Adapter | Default | 可調 | 位置 |
+|---|---|---|---|
+| 內建（`toolRegister.Dispatch`） | 1 分 | per-tool `Def.Timeout` | tool 註冊處 |
+| Script（`script_*`） | 5 分（300s） | `tool.json` `"timeout": <秒>` | `extensions/scripts/<name>/tool.json` |
+| API（`api_*`） | 60s | `doc.Endpoint.Timeout`；硬上限 300s | `extensions/apis/<name>.json` |
+| MCP HTTP | 60s `http.Client.Timeout` + 1 分外層 dispatch | n/a | MCP server config |
+| MCP stdio | 僅 1 分外層 dispatch | n/a | MCP server config |
+
+長跑 tool（script + API）每 30s 在 daemon log 印 `running name=... elapsed=Ys/Zs` 提供可見性。
+
+Subagent + external-agent 工具另有多分鐘 cap（`invoke_subagent` = `MAX_SUBAGENT_TIMEOUT_MIN`、`invoke_external_agent` = 10 分、`cross_review_with_external_agents` = 15 分、`generate_plan` / `generate_image` / `transcribe_media` / `fetch_youtube_transcript` = 5 分）。
 
 ## 憑證自動修復
 

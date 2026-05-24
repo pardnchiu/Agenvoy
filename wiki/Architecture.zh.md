@@ -1,6 +1,6 @@
 # 架構
 
-> [English](https://github.com/agenvoy/Agenvoy/wiki/Architecture)
+> [English](Architecture.md)
 
 Agenvoy 各部分的高階全景。模組級圖、sequence 流程、tool dispatch 狀態機請從本頁底部的主題頁連結進去。
 
@@ -44,6 +44,10 @@ graph TB
         M["DBSessionHist · DBSessionSummary<br/>error_memory · 90d TTL<br/>OpenAI text-embedding-3-small"]
     end
 
+    subgraph Kura["KuraDB · daemon-managed child"]
+        K["/usr/local/bin/kura<br/>endpoint @ ~/.config/kuradb/endpoint<br/>3-strike health check · 5s backoff<br/>rag_list_db · rag_search_{keyword,semantic}"]
+    end
+
     App --> Run
     Run --> Execute
     Execute -->|invoke_subagent| Sub
@@ -53,10 +57,12 @@ graph TB
     Tools --> MCP
     Tools --> Ext
     Tools --> Security
+    Tools -.->|rag_*<br/>endpoint 不存在時<br/>per-turn 排除| Kura
     Execute <-->|confirm/ask| Pending
     Sub <-->|subagent ask_user| Pending
     Execute <--> Memory
     Execute <--> Session
+    App -.->|spawn + healthcheck| Kura
 ```
 
 ## 分層
@@ -76,6 +82,7 @@ graph TB
 | Pending | `internal/runtime/pending.go` | 前綴路由 confirm/ask listener registry；各 runtime 透過 `RegisterListener(prefix)` 註冊、`PickNextFor(prefix)` 取對應條目 |
 | Memory | ToriiDB（`DBSessionHist` / `DBSessionSummary` / `error_memory`） | 語意搜尋 + 90 天 TTL |
 | Scheduler | `internal/runtime/scheduler.go`（+ `runtime.SchedulerWatcher` fsnotify） | scheduler skill 綁定 cron／one-shot；`{tasks,crons}.json` 變動熱重載 |
+| KuraDB | `internal/runtime/kuradb/`（`kuradb.go` / `spawn.go` / `health.go`）+ `internal/runtime/kuradb/tool/` | RAG provider child process；daemon-managed spawn + 3-strike health check；endpoint 不存在時 per-turn 動態排除 tool。見 [KuraDB RAG](KuraDB-RAG.zh.md) |
 | TUI | `internal/runtime/tui` | bubbletea inline-chat 前端；單一 package 設計 |
 
 ## 跨切原則
@@ -126,10 +133,11 @@ TUI 全部放在單一 package（`internal/tui`），**不拆 subpackage**。`in
 
 | 主題 | 頁 |
 |---|---|
-| 迭代迴圈、三段式派發細節 | [核心概念](https://github.com/agenvoy/Agenvoy/wiki/核心概念) |
-| Provider 路由與 dispatcher | [Provider 設定](https://github.com/agenvoy/Agenvoy/wiki/Provider-設定) |
-| 工具 registry、擴展路徑 | [工具系統](https://github.com/agenvoy/Agenvoy/wiki/工具系統) |
-| 記憶層級與語意搜尋 | [記憶系統](https://github.com/agenvoy/Agenvoy/wiki/記憶系統) |
-| 沙箱 policy、permission mode | [安全與沙箱](https://github.com/agenvoy/Agenvoy/wiki/安全與沙箱) |
-| MCP transport、生命週期 | [MCP 整合](https://github.com/agenvoy/Agenvoy/wiki/MCP-整合) |
-| 架構規則與限制的真理來源 | [CLAUDE.md](https://github.com/pardnchiu/agenvoy/blob/main/CLAUDE.md) |
+| 迭代迴圈、三段式派發細節 | [核心概念](Core-Concepts.zh.md) |
+| Provider 路由與 dispatcher | [Provider 設定](Providers.zh.md) |
+| 工具 registry、擴展路徑 | [工具系統](Tools.zh.md) |
+| 記憶層級與語意搜尋 | [記憶系統](Memory-System.zh.md) |
+| 沙箱 policy、permission mode | [安全與沙箱](Security-and-Sandbox.zh.md) |
+| MCP transport、生命週期 | [MCP 整合](MCP-Integration.zh.md) |
+| KuraDB RAG 生命週期、healthcheck、`/kuradb` wizard | [KuraDB RAG](KuraDB-RAG.zh.md) |
+| 架構規則與限制的真理來源 | [CLAUDE.md](https://github.com/pardnchiu/Agenvoy/blob/master/CLAUDE.md) |

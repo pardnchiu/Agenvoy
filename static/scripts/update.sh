@@ -80,26 +80,6 @@ latest_tag() {
     | sed 's/.*"\([^"]*\)"$/\1/'
 }
 
-seed_mcp_config() {
-  local mcp_path="${HOME}/.config/agenvoy/mcp.json"
-  if [ -e "$mcp_path" ]; then
-    return 0
-  fi
-  log "Seeding default MCP config at $mcp_path"
-  mkdir -p "$(dirname "$mcp_path")"
-  cat >"$mcp_path" <<'JSON'
-{
-  "servers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
-    }
-  }
-}
-JSON
-  ok "Wrote default MCP config (playwright)"
-}
-
 main() {
   log "Agenvoy updater"
 
@@ -124,8 +104,6 @@ main() {
   command -v agen >/dev/null 2>&1 \
     || die "agen not found on PATH after build (expected /usr/local/bin/agen)"
   ok "Updated to $tag at $(command -v agen)"
-
-  seed_mcp_config
 
   log "Stopping old daemon (if any) so the new binary takes effect"
   agen stop || true

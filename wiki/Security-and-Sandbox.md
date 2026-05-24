@@ -1,6 +1,6 @@
 # Security and Sandbox
 
-> [中文](https://github.com/agenvoy/Agenvoy/wiki/安全與沙箱)
+> [中文](Security-and-Sandbox.zh.md)
 
 ## OS sandbox
 
@@ -50,7 +50,7 @@ The `internal/filesystem` package retains only path computation and domain wrapp
 
 ## Permission mode
 
-See [Core Concepts → Permission mode](https://github.com/agenvoy/Agenvoy/wiki/Core-Concepts#permission-mode) for the `single-confirm` vs `always-allow` distinction and the seven categories of irreversible operations that always require explicit `ask_user`.
+See [Core Concepts → Permission mode](Core-Concepts.md#permission-mode) for the `single-confirm` vs `always-allow` distinction and the seven categories of irreversible operations that always require explicit `ask_user`.
 
 ## System prompt protection
 
@@ -83,7 +83,7 @@ The service name `"agenvoy"` is fixed and must not change.
 
 ## MCP isolation considerations
 
-MCP servers are third-party processes whose behavior is unverifiable. Agenvoy treats them as untrusted by default — see [MCP Integration → Confirm behavior](https://github.com/agenvoy/Agenvoy/wiki/MCP-Integration#confirm-behavior) — and does not provide a per-server "trusted" flag. If you want batch MCP operation, use `agen run` (which trusts your own decision, not the server's).
+MCP servers are third-party processes whose behavior is unverifiable. Agenvoy treats them as untrusted by default — see [MCP Integration → Confirm behavior](MCP-Integration.md#confirm-behavior) — and does not provide a per-server "trusted" flag. If you want batch MCP operation, use `agen run` (which trusts your own decision, not the server's).
 
 ## Subprocess timeout
 

@@ -20,7 +20,7 @@ func newHTTPClient() *http.Client {
 		base = &http.Transport{}
 	}
 	transport := base.Clone()
-	transport.ResponseHeaderTimeout = 15 * time.Second
+	transport.ResponseHeaderTimeout = 10 * time.Second
 	return &http.Client{
 		Timeout:   10 * time.Minute,
 		Transport: transport,
