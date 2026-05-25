@@ -10,6 +10,7 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/tools/file/denied"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -66,9 +67,17 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 				return "", fmt.Errorf("content is required")
 			}
 
+			if parent, ok := denied.Hit(e.SessionID, absPath); ok {
+				return "", fmt.Errorf("permission denied: %s is under previously rejected %s; not retried", absPath, parent)
+			}
+
 			info, err := os.Stat(absPath)
 			isNew := os.IsNotExist(err)
 			if err != nil && !isNew {
+				if denied.IsPermission(err) {
+					denied.Register(e.SessionID, absPath)
+					return "", fmt.Errorf("permission denied: %s (recorded; further writes under this path will be skipped)", absPath)
+				}
 				return "", fmt.Errorf("os.Stat: %w", err)
 			}
 			if !isNew && info.Size() > maxReadSize {
@@ -76,6 +85,10 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 			}
 
 			if err := go_pkg_filesystem.WriteFile(absPath, content, 0644); err != nil {
+				if denied.IsPermission(err) {
+					denied.Register(e.SessionID, absPath)
+					return "", fmt.Errorf("permission denied: %s (recorded; further writes under this path will be skipped)", absPath)
+				}
 				return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 			}
 
