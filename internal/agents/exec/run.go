@@ -68,6 +68,9 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		}
 	} else {
 		agent = SelectAgent(ctx, bot, registry, trimInput, matchedSkill != nil, sessionOverride)
+		if agent == nil {
+			return fmt.Errorf("no agent available; run `agen model add` to authenticate at least one provider")
+		}
 		agentResult = agentTypes.Event{
 			Type: agentTypes.EventAgentResult,
 			Text: strings.TrimSpace(agent.Name()),

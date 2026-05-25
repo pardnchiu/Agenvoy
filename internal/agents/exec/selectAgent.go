@@ -56,7 +56,7 @@ func SelectAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.
 		}
 	}
 
-	if len(registry.Entries) == 0 {
+	if len(registry.Entries) == 0 || bot == nil {
 		return registry.Fallback
 	}
 

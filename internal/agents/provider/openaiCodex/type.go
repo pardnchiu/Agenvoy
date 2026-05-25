@@ -29,6 +29,8 @@ type oauthTokenResponse struct {
 	IDToken      string `json:"id_token"`
 	ExpiresIn    int    `json:"expires_in"`
 	TokenType    string `json:"token_type"`
-	Error        string `json:"error,omitempty"`
-	ErrorDesc    string `json:"error_description,omitempty"`
+	// * Error / ErrorDesc are `any` because OpenAI's token endpoint switched
+	// * `error` from string to object (e.g. {"code":"...","message":"..."}).
+	Error     any `json:"error,omitempty"`
+	ErrorDesc any `json:"error_description,omitempty"`
 }

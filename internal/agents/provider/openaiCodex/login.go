@@ -86,8 +86,8 @@ func (a *Agent) exchangeCode(ctx context.Context, code, verifier, redirect strin
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("json.Decode: %w", err)
 	}
-	if raw.Error != "" {
-		return nil, fmt.Errorf("token error %s: %s", raw.Error, raw.ErrorDesc)
+	if raw.Error != nil {
+		return nil, fmt.Errorf("token error %v: %v", raw.Error, raw.ErrorDesc)
 	}
 
 	expiry := time.Now().Add(time.Duration(raw.ExpiresIn) * time.Second)

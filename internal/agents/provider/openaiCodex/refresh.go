@@ -47,8 +47,8 @@ func (a *Agent) refreshToken(ctx context.Context) error {
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return fmt.Errorf("json.Decode: %w", err)
 	}
-	if raw.Error != "" {
-		return fmt.Errorf("refresh error %s: %s", raw.Error, raw.ErrorDesc)
+	if raw.Error != nil {
+		return fmt.Errorf("refresh error %v: %v", raw.Error, raw.ErrorDesc)
 	}
 
 	expiry := time.Now().Add(time.Duration(raw.ExpiresIn) * time.Second)
