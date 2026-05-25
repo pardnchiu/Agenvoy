@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -50,7 +51,7 @@ func filterAfterTime(messages []agentTypes.Message, cursor string) []agentTypes.
 	return out
 }
 
-func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, histories []agentTypes.Message) {
+func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, histories []agentTypes.Message) error {
 	raw, summaryMap := sessionManager.EnsureSummary(sessionID)
 	meta := sessionManager.GetSummaryMeta(sessionID)
 
@@ -61,12 +62,12 @@ func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, his
 		slog.Info("summary meta initialized from existing summary",
 			slog.String("session", sessionID),
 			slog.String("cursor", latest))
-		return
+		return nil
 	}
 
 	newHistories := filterAfterTime(histories, meta.LastMessageTime)
 	if len(newHistories) == 0 {
-		return
+		return nil
 	}
 
 	oldSummary := string(raw)
@@ -83,7 +84,7 @@ func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, his
 			slog.Warn("summary generatePass returned nil",
 				slog.String("session", sessionID),
 				slog.Int("chunk", i+1))
-			return
+			return fmt.Errorf("generatePass returned nil at chunk %d/%d", i+1, len(chunks))
 		}
 
 		if b, err := json.Marshal(newMap); err == nil {
@@ -96,6 +97,7 @@ func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, his
 		}
 		sessionManager.SaveSummaryMeta(sessionID, cursor)
 	}
+	return nil
 }
 
 func chunkMessages(messages []agentTypes.Message, size int) [][]agentTypes.Message {

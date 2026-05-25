@@ -485,6 +485,24 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd := t.runRemoveSession(msg.id)
 		return next, cmd
 
+	case ResetSessionConfirm1:
+		if !msg.yes {
+			return t, tea.Println(hintStyle.Render("⎯ reset cancelled") + "\n")
+		}
+		next, cmd := t.openResetConfirm2(msg.id)
+		return next, cmd
+
+	case ResetSessionConfirm2:
+		if !msg.yes {
+			return t, tea.Println(hintStyle.Render("⎯ reset cancelled") + "\n")
+		}
+		next, cmd := t.runResetSession(msg.id)
+		return next, cmd
+
+	case ResetSessionDone:
+		next, cmd := t.finishResetSession(msg)
+		return next, cmd
+
 	case TaskEditSelect:
 		next, cmd := t.openTaskEditRequirement(msg.skill, msg.at)
 		return next, cmd

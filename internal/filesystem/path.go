@@ -127,7 +127,7 @@ func Init() error {
 }
 
 func HistoryPath(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, "history.md")
+	return filepath.Join(SessionsDir, sessionID, "history.json")
 }
 
 func InputHistoryPath(sessionID string) string {
