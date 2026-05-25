@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	go_pkg_keychain "github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
@@ -242,6 +243,22 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	if !go_pkg_filesystem_reader.Exists(filesystem.KuradbEndpointPath) {
 		data.ExcludeTools = append(data.ExcludeTools,
 			"rag_list_db", "rag_search_keyword", "rag_search_semantic")
+	}
+	if go_pkg_keychain.Get("agenvoy.codex.token") == "" {
+		data.ExcludeTools = append(data.ExcludeTools, "generate_image")
+	}
+	if go_pkg_keychain.Get("GEMINI_API_KEY") == "" {
+		data.ExcludeTools = append(data.ExcludeTools,
+			"fetch_youtube_transcript", "transcribe_media")
+	}
+	cfg, _ := sessionManager.Load()
+	if cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "" {
+		data.ExcludeTools = append(data.ExcludeTools,
+			"telegram_format", "list_telegram_chat", "send_to_telegram_chat")
+	}
+	if cfg == nil || !cfg.DiscordEnabled || go_pkg_keychain.Get("DISCORD_TOKEN") == "" {
+		data.ExcludeTools = append(data.ExcludeTools,
+			"discord_format", "list_discord_channel", "send_to_discord_channel")
 	}
 
 	if len(data.ExcludeTools) > 0 {

@@ -132,7 +132,7 @@ func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 			if scanner.Skills != nil {
 				if sk := scanner.Skills.ByName[name]; sk != nil {
 					source = skillSource(sk.AbsPath)
-					description = sk.Description
+					description = strings.Join(strings.Fields(sk.Description), " ")
 				}
 			}
 			desc := description

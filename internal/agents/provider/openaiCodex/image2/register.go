@@ -3,14 +3,10 @@ package image2
 import (
 	"time"
 
-	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 )
 
 func Register() {
-	if !openaicodex.HasToken() {
-		return
-	}
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "generate_image",

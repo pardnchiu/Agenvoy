@@ -7,16 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/go-pkg/filesystem/keychain"
-
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
 func Register() {
-	if strings.TrimSpace(keychain.Get("GEMINI_API_KEY")) == "" {
-		return
-	}
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "transcribe_media",
