@@ -21,6 +21,7 @@ import (
 const (
 	ProbeTimeout          = 5 * time.Second
 	DispatcherCallTimeout = 10 * time.Second
+	DispatcherMaxRetry    = 3
 )
 
 type AgentConfig struct {
@@ -48,7 +49,7 @@ func GetAgent() []agentTypes.AgentEntry {
 	return cfg.Models
 }
 
-func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool, sessionID string) ([]string, map[string]bool) {
+func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool, sessionID string) ([]string, map[string]bool, error) {
 	dead := map[string]bool{}
 
 	if sessionID != "" {
@@ -58,13 +59,13 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 		}
 		if s.Model != "" && s.Model != sessionManager.StatusModel {
 			if _, ok := registry.Registry[s.Model]; ok {
-				return []string{s.Model}, dead
+				return []string{s.Model}, dead, nil
 			}
 		}
 	}
 
 	if len(registry.Entries) == 0 {
-		return nil, dead
+		return nil, dead, nil
 	}
 
 	registryOrder := make([]string, 0, len(registry.Entries))
@@ -88,10 +89,23 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 				{Role: "system", Content: strings.TrimSpace(configs.AgentSelector)},
 				{Role: "user", Content: fmt.Sprintf("Available agents:\n%s\nUser request: %s", string(agentJson), userContent)},
 			}
-			routingCtx, cancel := context.WithTimeout(ctx, DispatcherCallTimeout)
-			resp, sendErr := bot.Send(routingCtx, messages, nil)
-			cancel()
-			if sendErr == nil && len(resp.Choices) > 0 {
+			var resp *agentTypes.Output
+			var sendErr error
+			for attempt := 1; attempt <= DispatcherMaxRetry; attempt++ {
+				routingCtx, cancel := context.WithTimeout(ctx, DispatcherCallTimeout)
+				resp, sendErr = bot.Send(routingCtx, messages, nil)
+				cancel()
+				if sendErr == nil {
+					break
+				}
+				slog.Warn("dispatcher routing failed",
+					slog.String("name", bot.Name()),
+					slog.String("error", sendErr.Error()))
+			}
+			if sendErr != nil {
+				return nil, dead, fmt.Errorf("dispatcher routing exhausted after %d attempts (%v each): %w", DispatcherMaxRetry, DispatcherCallTimeout, sendErr)
+			}
+			if resp != nil && len(resp.Choices) > 0 {
 				if content, ok := resp.Choices[0].Message.Content.(string); ok {
 					raw := strings.Trim(strings.TrimSpace(content), "\"'` \n")
 					if raw != "" && raw != "NONE" {
@@ -108,11 +122,6 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 						}
 					}
 				}
-			} else if sendErr != nil {
-				dead[bot.Name()] = true
-				slog.Warn("dispatcher routing failed, falling back to registry order",
-					slog.String("name", bot.Name()),
-					slog.String("error", sendErr.Error()))
 			}
 		}
 	}
@@ -124,11 +133,11 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 		picked = append(picked, n)
 		seen[n] = true
 	}
-	return picked, dead
+	return picked, dead, nil
 }
 
 func SelectAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool, sessionID string) agentTypes.Agent {
-	names, dead := SelectAgentNames(ctx, bot, registry, userInput, hasSkill, sessionID)
+	names, dead, _ := SelectAgentNames(ctx, bot, registry, userInput, hasSkill, sessionID)
 	for _, n := range names {
 		if dead[n] {
 			continue
@@ -151,7 +160,10 @@ func ProbeAgent(ctx context.Context, a agentTypes.Agent, timeout time.Duration) 
 }
 
 func ResolveAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool, sessionID string) (agentTypes.Agent, []agentTypes.Agent, error) {
-	names, dead := SelectAgentNames(ctx, bot, registry, userInput, hasSkill, sessionID)
+	names, dead, err := SelectAgentNames(ctx, bot, registry, userInput, hasSkill, sessionID)
+	if err != nil {
+		return nil, nil, err
+	}
 	if len(names) == 0 {
 		return nil, nil, fmt.Errorf("no agents available")
 	}
@@ -166,6 +178,10 @@ func ResolveAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes
 	}
 	if len(candidates) == 0 {
 		return nil, nil, fmt.Errorf("no resolvable agents from %d names (dead: %d)", len(names), len(dead))
+	}
+	// * single candidate has no fallback; skip probe and let real Send drive retry/timeout
+	if len(candidates) == 1 {
+		return candidates[0], nil, nil
 	}
 	for i, a := range candidates {
 		if ProbeAgent(ctx, a, ProbeTimeout) {

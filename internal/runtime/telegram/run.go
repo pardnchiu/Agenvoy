@@ -200,6 +200,17 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	if externalAgent == "" {
 		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, "")
 		if err != nil {
+			if finishErr := b.client.FinishStatus(ctx, in.ChatID); finishErr != nil {
+				slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.FinishStatus",
+					slog.String("chat", chatName(in)),
+					slog.String("error", finishErr.Error()))
+			}
+			errReply := fmt.Sprintf("<blockquote expandable>⚠️ %s</blockquote>", html.EscapeString(err.Error()))
+			if _, sendErr := b.client.Send(ctx, in.ChatID, in.MessageID, errReply, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); sendErr != nil {
+				slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.Send (ResolveAgent error reply)",
+					slog.String("chat", chatName(in)),
+					slog.String("error", sendErr.Error()))
+			}
 			return fmt.Errorf("ResolveAgent: %w", err)
 		}
 		agent = primary

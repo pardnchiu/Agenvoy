@@ -170,6 +170,11 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	if externalAgent == "" {
 		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, "")
 		if err != nil {
+			if _, sendErr := b.client.Send(ctx, in.ChannelID, in.MessageID, fmt.Sprintf("⚠️ %s", err.Error())); sendErr != nil {
+				slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.Send (ResolveAgent error reply)",
+					slog.String("channel", channelName(in)),
+					slog.String("error", sendErr.Error()))
+			}
 			return fmt.Errorf("ResolveAgent: %w", err)
 		}
 		agent = primary
