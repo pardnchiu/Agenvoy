@@ -64,13 +64,15 @@ func runCommand(ctx context.Context, e *toolTypes.Executor, argv []string) (stri
 
 	binary := filepath.Base(argv[0])
 
-	if binary == "sh" && len(argv) >= 3 && argv[1] == "-c" {
-		inner := strings.Fields(argv[2])
-		if len(inner) == 0 {
-			return "", fmt.Errorf("sh -c requires a non-empty command string")
+	if (binary == "sh" || binary == "bash") && len(argv) >= 3 && argv[1] == "-c" {
+		if !e.AllowedCommand[binary] {
+			return "", fmt.Errorf("failed to run command: %s is not allowed", binary)
 		}
-		if !e.AllowedCommand[filepath.Base(inner[0])] {
-			return "", fmt.Errorf("failed to run command: %s is not allowed", inner[0])
+		if strings.TrimSpace(argv[2]) == "" {
+			return "", fmt.Errorf("%s -c requires a non-empty command string", binary)
+		}
+		if err := validateShellScript(argv[2], e.AllowedCommand); err != nil {
+			return "", err
 		}
 	} else {
 		if binary == "cd" {
