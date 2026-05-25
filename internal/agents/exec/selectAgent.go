@@ -49,7 +49,7 @@ func GetAgent() []agentTypes.AgentEntry {
 	return cfg.Models
 }
 
-func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool, sessionID string) ([]string, map[string]bool, error) {
+func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool, sessionID string) ([]string, map[string]bool) {
 	dead := map[string]bool{}
 
 	if sessionID != "" {
@@ -59,13 +59,17 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 		}
 		if s.Model != "" && s.Model != sessionManager.StatusModel {
 			if _, ok := registry.Registry[s.Model]; ok {
-				return []string{s.Model}, dead, nil
+				return []string{s.Model}, dead
 			}
 		}
 	}
 
 	if len(registry.Entries) == 0 {
-		return nil, dead, nil
+		return nil, dead
+	}
+
+	if len(registry.Entries) == 1 {
+		return []string{registry.Entries[0].Name}, dead
 	}
 
 	registryOrder := make([]string, 0, len(registry.Entries))
@@ -98,14 +102,16 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 				if sendErr == nil {
 					break
 				}
-				slog.Warn("dispatcher routing failed",
+				slog.Warn("dispatcher routing attempt failed",
 					slog.String("name", bot.Name()),
 					slog.String("error", sendErr.Error()))
 			}
 			if sendErr != nil {
-				return nil, dead, fmt.Errorf("dispatcher routing exhausted after %d attempts (%v each): %w", DispatcherMaxRetry, DispatcherCallTimeout, sendErr)
-			}
-			if resp != nil && len(resp.Choices) > 0 {
+				dead[bot.Name()] = true
+				slog.Warn("dispatcher routing exhausted, falling back to registry order",
+					slog.String("name", bot.Name()),
+					slog.String("error", sendErr.Error()))
+			} else if resp != nil && len(resp.Choices) > 0 {
 				if content, ok := resp.Choices[0].Message.Content.(string); ok {
 					raw := strings.Trim(strings.TrimSpace(content), "\"'` \n")
 					if raw != "" && raw != "NONE" {
@@ -133,11 +139,11 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 		picked = append(picked, n)
 		seen[n] = true
 	}
-	return picked, dead, nil
+	return picked, dead
 }
 
 func SelectAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool, sessionID string) agentTypes.Agent {
-	names, dead, _ := SelectAgentNames(ctx, bot, registry, userInput, hasSkill, sessionID)
+	names, dead := SelectAgentNames(ctx, bot, registry, userInput, hasSkill, sessionID)
 	for _, n := range names {
 		if dead[n] {
 			continue
@@ -160,10 +166,7 @@ func ProbeAgent(ctx context.Context, a agentTypes.Agent, timeout time.Duration) 
 }
 
 func ResolveAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool, sessionID string) (agentTypes.Agent, []agentTypes.Agent, error) {
-	names, dead, err := SelectAgentNames(ctx, bot, registry, userInput, hasSkill, sessionID)
-	if err != nil {
-		return nil, nil, err
-	}
+	names, dead := SelectAgentNames(ctx, bot, registry, userInput, hasSkill, sessionID)
 	if len(names) == 0 {
 		return nil, nil, fmt.Errorf("no agents available")
 	}

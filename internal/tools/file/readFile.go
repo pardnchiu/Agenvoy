@@ -8,6 +8,7 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/tools/file/denied"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -70,12 +71,21 @@ Inspect source, config, notes, slides, documents, tabular data, or screenshots.`
 				return "", fmt.Errorf("path is required")
 			}
 
+			if parent, ok := denied.Hit(e.SessionID, absPath); ok {
+				return "", fmt.Errorf("permission denied: %s is under previously rejected %s; not retried", absPath, parent)
+			}
+
 			offset := max(params.Offset, 1)
 			limit := max(params.Limit, 0)
 			if limit == 0 {
 				limit = defaultReadLimit
 			}
-			return filesystem.ReadFile(ctx, absPath, offset, limit)
+			out, err := filesystem.ReadFile(ctx, absPath, offset, limit)
+			if err != nil && denied.IsPermission(err) {
+				denied.Register(e.SessionID, absPath)
+				return "", fmt.Errorf("permission denied: %s (recorded; further reads under this path will be skipped)", absPath)
+			}
+			return out, err
 		},
 	})
 }

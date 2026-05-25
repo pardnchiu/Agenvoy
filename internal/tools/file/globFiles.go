@@ -8,6 +8,7 @@ import (
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
+	"github.com/pardnchiu/agenvoy/internal/tools/file/denied"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
@@ -53,6 +54,10 @@ Locate specific file types (e.g. '**/*.go' for Go files).`,
 				return "", fmt.Errorf("go_pkg_filesystem.AbsPath: %w", err)
 			}
 
+			if parent, ok := denied.Hit(e.SessionID, absPath); ok {
+				return "", fmt.Errorf("permission denied: %s is under previously rejected %s; not retried", absPath, parent)
+			}
+
 			pattern := strings.TrimSpace(params.Pattern)
 			if pattern == "" {
 				return "", fmt.Errorf("pattern is required")
@@ -60,6 +65,10 @@ Locate specific file types (e.g. '**/*.go' for Go files).`,
 
 			matches, err := go_pkg_filesystem_reader.GlobFiles(absPath, pattern)
 			if err != nil {
+				if denied.IsPermission(err) {
+					denied.Register(e.SessionID, absPath)
+					return "", fmt.Errorf("permission denied: %s (recorded; further reads under this path will be skipped)", absPath)
+				}
 				return "", fmt.Errorf("go_pkg_filesystem_reader.GlobFiles: %w", err)
 			}
 			data, err := json.Marshal(matches)
