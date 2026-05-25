@@ -37,7 +37,7 @@ type WorkDir struct {
 }
 
 func Run(ctx context.Context) error {
-	prog := tea.NewProgram(newModel(ctx), tea.WithContext(ctx))
+	prog := tea.NewProgram(newModel(ctx), tea.WithContext(ctx), tea.WithoutSignalHandler())
 	program.Store(prog)
 	defer program.Store(nil)
 

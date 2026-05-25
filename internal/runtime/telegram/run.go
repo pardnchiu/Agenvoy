@@ -196,16 +196,23 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	}
 
 	var agent agentTypes.Agent
+	var fallbacks []agentTypes.Agent
 	if externalAgent == "" {
-		agent = exec.SelectAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, "")
+		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, "")
+		if err != nil {
+			return fmt.Errorf("ResolveAgent: %w", err)
+		}
+		agent = primary
+		fallbacks = rest
 	}
 
 	execData := exec.ExecData{
-		Agent:    agent,
-		WorkDir:  workDir,
-		Skill:    matchedSkill,
-		Content:  content,
-		AllowAll: false,
+		Agent:          agent,
+		FallbackAgents: fallbacks,
+		WorkDir:        workDir,
+		Skill:          matchedSkill,
+		Content:        content,
+		AllowAll:       false,
 	}
 
 	sess, err := getSession(in.ChatID, in.Username, content, execData, sessionOverride, sessionMissing)

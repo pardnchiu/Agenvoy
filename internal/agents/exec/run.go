@@ -60,6 +60,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	}
 
 	var agent agentTypes.Agent
+	var fallbacks []agentTypes.Agent
 	var agentResult agentTypes.Event
 	if externalAgent != "" {
 		agentResult = agentTypes.Event{
@@ -67,10 +68,12 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 			Text: "external:" + externalAgent,
 		}
 	} else {
-		agent = SelectAgent(ctx, bot, registry, trimInput, matchedSkill != nil, sessionOverride)
-		if agent == nil {
-			return fmt.Errorf("no agent available; run `agen model add` to authenticate at least one provider")
+		primary, rest, err := ResolveAgent(ctx, bot, registry, trimInput, matchedSkill != nil, sessionOverride)
+		if err != nil {
+			return fmt.Errorf("ResolveAgent: %w", err)
 		}
+		agent = primary
+		fallbacks = rest
 		agentResult = agentTypes.Event{
 			Type: agentTypes.EventAgentResult,
 			Text: strings.TrimSpace(agent.Name()),
@@ -79,15 +82,16 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	events <- agentResult
 
 	execData := ExecData{
-		Agent:       agent,
-		WorkDir:     workDir,
-		Skill:       matchedSkill,
-		Content:     trimInput,
-		SessionID:   sessionOverride,
-		ImageInputs: imageInputs,
-		FileInputs:  fileInputs,
-		AllowAll:    allowAll,
-		WebMode:     webMode,
+		Agent:          agent,
+		FallbackAgents: fallbacks,
+		WorkDir:        workDir,
+		Skill:          matchedSkill,
+		Content:        trimInput,
+		SessionID:      sessionOverride,
+		ImageInputs:    imageInputs,
+		FileInputs:     fileInputs,
+		AllowAll:       allowAll,
+		WebMode:        webMode,
 	}
 	session, err := GetSession(execData)
 	if err != nil {

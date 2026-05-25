@@ -89,6 +89,7 @@ func Send() gin.HandlerFunc {
 
 			wrapped <- agentTypes.Event{Type: agentTypes.EventAgentSelect}
 			var agent agentTypes.Agent
+			var fallbacks []agentTypes.Agent
 			var agentResult agentTypes.Event
 			if externalAgent != "" {
 				agentResult = agentTypes.Event{Type: agentTypes.EventAgentResult, Text: "external:" + externalAgent}
@@ -100,7 +101,13 @@ func Send() gin.HandlerFunc {
 					}
 				}
 				if agent == nil {
-					agent = exec.SelectAgent(ctx, agents.Dispatcher(), registry, trimContent, false, sessionID)
+					primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), registry, trimContent, false, sessionID)
+					if err != nil {
+						wrapped <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
+						return
+					}
+					agent = primary
+					fallbacks = rest
 				}
 				agentResult = agentTypes.Event{Type: agentTypes.EventAgentResult, Text: agent.Name()}
 			}
@@ -112,6 +119,7 @@ func Send() gin.HandlerFunc {
 			workDir, _ := os.UserHomeDir()
 			data := exec.ExecData{
 				Agent:             agent,
+				FallbackAgents:    fallbacks,
 				WorkDir:           workDir,
 				Skill:             matchedSkill,
 				Content:           trimContent,

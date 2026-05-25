@@ -112,6 +112,7 @@ func hashPayload(parts ...any) string {
 
 type ExecData struct {
 	Agent             agentTypes.Agent
+	FallbackAgents    []agentTypes.Agent
 	WorkDir           string
 	Skill             *filesystem.Skill
 	SkillScanner      *runtime.SkillScanner
@@ -331,10 +332,46 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 			modelName := data.Agent.Name()
 			if sendFailCount >= MaxRetry {
+				var nextAgent agentTypes.Agent
+				var nextName string
+				if !isContextLengthError(err) {
+					for len(data.FallbackAgents) > 0 {
+						cand := data.FallbackAgents[0]
+						data.FallbackAgents = data.FallbackAgents[1:]
+						if cand == nil {
+							continue
+						}
+						if !ProbeAgent(ctx, cand, ProbeTimeout) {
+							slog.Warn("fallback probe failed",
+								slog.String("session", session.ID),
+								slog.String("name", cand.Name()))
+							continue
+						}
+						nextAgent = cand
+						nextName = cand.Name()
+						break
+					}
+				}
+				if nextAgent != nil {
+					slog.Warn("data.Agent.Send exhausted, switching model",
+						slog.String("session", session.ID),
+						slog.String("from", modelName),
+						slog.String("to", nextName),
+						slog.Int("attempts", sendFailCount))
+					events <- agentTypes.Event{
+						Type:  agentTypes.EventAgentResult,
+						Text:  nextName,
+						Model: nextName,
+					}
+					data.Agent = nextAgent
+					sendFailCount = 0
+					lastSendSig = ""
+					continue
+				}
 				var userMsg string
 				switch {
 				case isTimeout:
-					userMsg = fmt.Sprintf("upstream %s timed out %d times in a row (last attempt bailed at %s). Try again later or switch model.", modelName, sendFailCount, sendElapsed)
+					userMsg = fmt.Sprintf("upstream %s timed out %d times in a row (last attempt bailed at %s). No fallback model available.", modelName, sendFailCount, sendElapsed)
 				case isContextLengthError(err):
 					userMsg = fmt.Sprintf("upstream %s context exceeded after %d trim attempts. Start a new session or switch to a larger-context model.", modelName, sendFailCount)
 				default:

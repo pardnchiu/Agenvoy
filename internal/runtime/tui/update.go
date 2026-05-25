@@ -45,10 +45,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
-			return t, tea.Sequence(
-				tea.Println(hintStyle.Render("⎯ exit")+"\n"),
-				tea.Quit,
-			)
+			return t, nil
 
 		case tea.KeyEsc:
 			if t.selector != nil {

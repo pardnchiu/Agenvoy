@@ -46,6 +46,7 @@ func run(ctx context.Context, req Request, sessionID, userContent string, events
 	events <- agentTypes.Event{Type: agentTypes.EventAgentSelect}
 
 	var agent agentTypes.Agent
+	var fallbacks []agentTypes.Agent
 	var agentResult agentTypes.Event
 	registry := agents.Registry()
 	if externalAgent != "" {
@@ -53,7 +54,13 @@ func run(ctx context.Context, req Request, sessionID, userContent string, events
 	} else {
 		switch {
 		case req.Model == "" || req.Model == "auto":
-			agent = exec.SelectAgent(ctx, agents.Dispatcher(), registry, trimContent, matchedSkill != nil, sessionID)
+			primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), registry, trimContent, matchedSkill != nil, sessionID)
+			if err != nil {
+				events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
+				return
+			}
+			agent = primary
+			fallbacks = rest
 
 		default:
 			a, ok := registry.Registry[req.Model]
@@ -73,12 +80,13 @@ func run(ctx context.Context, req Request, sessionID, userContent string, events
 		workDir, _ = os.UserHomeDir()
 	}
 	data := exec.ExecData{
-		Agent:     agent,
-		WorkDir:   workDir,
-		Skill:     matchedSkill,
-		Content:   trimContent,
-		SessionID: sessionID,
-		AllowAll:  true,
+		Agent:          agent,
+		FallbackAgents: fallbacks,
+		WorkDir:        workDir,
+		Skill:          matchedSkill,
+		Content:        trimContent,
+		SessionID:      sessionID,
+		AllowAll:       true,
 	}
 
 	sessionManager.SaveBot(sessionID, sessionID, false)
