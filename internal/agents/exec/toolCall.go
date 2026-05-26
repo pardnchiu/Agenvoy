@@ -213,7 +213,9 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 
 		result := s.result
 		if s.execErr != "" {
-			filesystem.SaveError(sessionData.ID, s.name, s.args, s.execErr)
+			if !sessionData.Stateless {
+				filesystem.SaveError(sessionData.ID, s.name, s.args, s.execErr)
+			}
 			toolFailCount[s.hash]++
 			if toolFailCount[s.hash] >= filesystem.MaxRetry {
 				result = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次失敗: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", s.name, toolFailCount[s.hash], s.execErr, s.name)

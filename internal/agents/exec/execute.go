@@ -166,10 +166,13 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		isDcPush := hasPush && !isDcPushSuppressed(ctx)
 		var pushTextBuf strings.Builder
 		var pushDoneEv agentTypes.Event
+		stateless := session.Stateless
 		go func() {
 			defer close(done)
 			for ev := range teed {
-				sessionManager.Record(sid, ev)
+				if !stateless {
+					sessionManager.Record(sid, ev)
+				}
 				if isDcPush {
 					switch ev.Type {
 					case agentTypes.EventText:
@@ -454,7 +457,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		}
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 
-		if len(session.Tools) > 0 {
+		if !session.Stateless && len(session.Tools) > 0 {
 			if data, err := json.Marshal(session.Tools); err == nil {
 				sessionManager.SaveToToolCall(session.ID, string(data))
 			}
@@ -575,6 +578,26 @@ func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *runtime.Skil
 	return prompts
 }
 
+func GetChatCompletionsSystemPrompt(workDir string, scanner *runtime.SkillScanner) string {
+	skillsSection := ""
+	if list := toolSearcher.ListBlock(scanner); list != "" {
+		skillsSection = "## Skills\n\n" +
+			"**Slash invocations (`/<name>`) are STRICT EXECUTION.** The user has explicitly authorized the skill's full procedure; every step in SKILL.md is binding and must complete via tool calls in order. The FIRST step (often `ask_user` for requirement gathering) must run before any other tool call — no exceptions, no \"the user input looks complete so I'll skip ahead\".\n\n" +
+			"The `activate_skill` tool path is advisory — consult, integrate parts that fit, ignore parts that don't. Consider activating a skill when its description matches the user's intent on each turn, even without an explicit `/<name>` invocation.\n\n" +
+			list
+	}
+
+	return strings.NewReplacer(
+		"{{.SystemOS}}", goRuntime.GOOS,
+		"{{.WorkPath}}", workDir,
+		"{{.AvailableSkills}}", skillsSection,
+	).Replace(configs.ChatCompletionsSystemPrompt)
+}
+
+func BuildChatCompletionsSystemPrompts(workDir string, scanner *runtime.SkillScanner) []agentTypes.Message {
+	return []agentTypes.Message{{Role: "system", Content: GetChatCompletionsSystemPrompt(workDir, scanner)}}
+}
+
 func buildPermissionModeSection(allowAll bool) string {
 	if allowAll {
 		return strings.TrimRight(configs.PermissionAlwaysAllow, "\n")
@@ -604,6 +627,10 @@ func sendText(events chan<- agentTypes.Event, text string) {
 
 func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSession) error {
 	session.Histories = append(session.Histories, choice.Message)
+
+	if session.Stateless {
+		return nil
+	}
 
 	newHistories := make([]agentTypes.Message, 0, len(session.Histories))
 	for _, message := range session.Histories {

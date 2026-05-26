@@ -1,8 +1,6 @@
 package chatCompletions
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
 	"regexp"
 	"strings"
@@ -12,7 +10,6 @@ import (
 	"github.com/pardnchiu/go-pkg/utils"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 
 var (
@@ -20,10 +17,11 @@ var (
 )
 
 type Request struct {
-	Model    string               `json:"model"`
-	Messages []agentTypes.Message `json:"messages"`
-	Stream   bool                 `json:"stream"`
-	workDir  string               `json:"-"`
+	Model         string               `json:"model"`
+	Messages      []agentTypes.Message `json:"messages"`
+	Stream        bool                 `json:"stream"`
+	workDir       string               `json:"-"`
+	systemPrompts []agentTypes.Message `json:"-"`
 }
 
 func ChatCompletions() gin.HandlerFunc {
@@ -37,18 +35,23 @@ func ChatCompletions() gin.HandlerFunc {
 			return
 		}
 
+		normalizeContent(req.Messages)
+
 		workDir := extractWorkDirFromZed(req.Messages)
 		if workDir != "" {
 			req.workDir = workDir
 		}
 
+		systemPrompts := make([]agentTypes.Message, 0)
 		messages := make([]agentTypes.Message, 0, len(req.Messages))
 		for _, msg := range req.Messages {
 			if msg.Role == "system" {
+				systemPrompts = append(systemPrompts, msg)
 				continue
 			}
 			messages = append(messages, msg)
 		}
+		req.systemPrompts = systemPrompts
 		req.Messages = messages
 
 		input := ""
@@ -70,16 +73,12 @@ func ChatCompletions() gin.HandlerFunc {
 			return
 		}
 
-		sessionID := sessionID(req.Messages)
-		go sessionManager.Clean()
-
 		events := make(chan agentTypes.Event, 64)
 		ctx := c.Request.Context()
-		wrapped := sessionManager.Wrap(ctx, sessionID, events, 64)
 
 		go func() {
-			defer close(wrapped)
-			run(ctx, req, sessionID, input, wrapped)
+			defer close(events)
+			run(ctx, req, input, events)
 		}()
 
 		id := "chatcmpl-" + utils.UUID()
@@ -90,6 +89,69 @@ func ChatCompletions() gin.HandlerFunc {
 			collect(c, id, created, req.Model, events)
 		}
 	}
+}
+
+func normalizeContent(messages []agentTypes.Message) {
+	for i := range messages {
+		raw, ok := messages[i].Content.([]any)
+		if !ok {
+			continue
+		}
+		parts := make([]agentTypes.ContentPart, 0, len(raw))
+		allText := true
+		var textBuf strings.Builder
+		for _, item := range raw {
+			m, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			typeStr, _ := m["type"].(string)
+			text, _ := m["text"].(string)
+			switch typeStr {
+			case "text", "input_text", "output_text":
+				if textBuf.Len() > 0 {
+					textBuf.WriteByte('\n')
+				}
+				textBuf.WriteString(text)
+				parts = append(parts, agentTypes.ContentPart{Type: "text", Text: text})
+			case "image_url":
+				url, detail := extractImageURL(m["image_url"])
+				parts = append(parts, agentTypes.ContentPart{
+					Type:     "image_url",
+					ImageURL: &agentTypes.ImageURL{URL: url, Detail: detail},
+				})
+				allText = false
+			case "input_image":
+				url, _ := m["image_url"].(string)
+				parts = append(parts, agentTypes.ContentPart{
+					Type:     "image_url",
+					ImageURL: &agentTypes.ImageURL{URL: url, Detail: "auto"},
+				})
+				allText = false
+			}
+		}
+		if allText {
+			messages[i].Content = textBuf.String()
+		} else {
+			messages[i].Content = parts
+		}
+	}
+}
+
+func extractImageURL(v any) (url, detail string) {
+	detail = "auto"
+	switch t := v.(type) {
+	case string:
+		url = t
+	case map[string]any:
+		if u, ok := t["url"].(string); ok {
+			url = u
+		}
+		if d, ok := t["detail"].(string); ok && d != "" {
+			detail = d
+		}
+	}
+	return
 }
 
 func extractWorkDirFromZed(messages []agentTypes.Message) string {
@@ -107,25 +169,6 @@ func extractWorkDirFromZed(messages []agentTypes.Message) string {
 		}
 	}
 	return ""
-}
-
-func sessionID(messages []agentTypes.Message) string {
-	var sb strings.Builder
-	for _, msg := range messages {
-		if msg.Role == "system" || msg.Role == "user" {
-			if s, ok := msg.Content.(string); ok {
-				sb.WriteString(msg.Role)
-				sb.WriteByte(':')
-				sb.WriteString(s)
-				sb.WriteByte('\n')
-			}
-		}
-		if sb.Len() > 512 {
-			break
-		}
-	}
-	sum := sha256.Sum256([]byte(sb.String()))
-	return "chatcmpl-" + hex.EncodeToString(sum[:])[:16]
 }
 
 func collect(c *gin.Context, id string, created int64, model string, events <-chan agentTypes.Event) {

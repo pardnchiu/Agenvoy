@@ -16,20 +16,16 @@ import (
 type LogDone struct{ err error }
 
 func (t TUI) commandLog() (TUI, tea.Cmd, bool) {
-	sid := strings.TrimSpace(t.currentSessionID)
-	if sid == "" {
-		return t, tea.Println(hintStyle.Render("no active session") + "\n"), true
-	}
-	path := filepath.Join(filesystem.SessionsDir, sid, "action.log")
+	path := filepath.Join(filesystem.AgenvoyDir, "daemon.log")
 	if !go_pkg_filesystem_reader.Exists(path) {
-		return t, tea.Println(hintStyle.Render("⎯ no log yet") + "\n"), true
+		return t, tea.Println(hintStyle.Render("⎯ no daemon log yet") + "\n"), true
 	}
 
 	pager := strings.TrimSpace(os.Getenv("PAGER"))
 	if pager == "" {
 		pager = "less -Rf +G"
 	}
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("tr '\\037' '\\n' < %q | %s", path, pager))
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s %q", pager, path))
 	cmd.Env = os.Environ()
 	return t, tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return LogDone{err: err}
