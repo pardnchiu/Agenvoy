@@ -8,15 +8,14 @@ import (
 	"sync"
 	"time"
 
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
-
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 var daemonPublishClient = &http.Client{Timeout: 2 * time.Second}
 
 var daemonBaseURL = sync.OnceValue(func() string {
-	return "http://127.0.0.1:" + go_pkg_utils.GetWithDefault("PORT", "17989")
+	return "http://127.0.0.1:" + filesystem.Port
 })
 
 func publishEventToDaemon(ctx context.Context, sessionID string, ev agentTypes.Event) {

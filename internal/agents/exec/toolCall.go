@@ -150,7 +150,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			}
 			toolFailCount[hash]++
 			var content string
-			if toolFailCount[hash] >= MaxRetry {
+			if toolFailCount[hash] >= filesystem.MaxRetry {
 				content = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次以相同參數觸發 validator 錯誤: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", toolName, toolFailCount[hash], earlyErr, toolName)
 			} else {
 				content = fmt.Sprintf("tool=%s dropped (incomplete args: %s). Do NOT re-issue the same call; if still needed, pivot to a different tool or provide the missing fields from context in a differently-shaped call.", toolName, earlyErr)
@@ -215,7 +215,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		if s.execErr != "" {
 			filesystem.SaveError(sessionData.ID, s.name, s.args, s.execErr)
 			toolFailCount[s.hash]++
-			if toolFailCount[s.hash] >= MaxRetry {
+			if toolFailCount[s.hash] >= filesystem.MaxRetry {
 				result = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次失敗: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", s.name, toolFailCount[s.hash], s.execErr, s.name)
 			} else {
 				if hint := memory.Search(ctx, s.name, s.execErr, 3); hint != "" {

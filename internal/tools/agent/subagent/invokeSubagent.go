@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -27,7 +28,7 @@ func registInvokeSubagent() {
 		Name:        "invoke_subagent",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Timeout:     time.Duration(exec.SubagentTimeoutMin) * time.Minute,
+		Timeout:     time.Duration(filesystem.MaxSubagentTimeoutMin) * time.Minute,
 		Description: "Spawn an internal subagent in its own session and return its reply. Use to delegate a self-contained subtask. Pass `name` / `session_id` for multi-turn persona threading.",
 		Parameters: map[string]any{
 			"type": "object",

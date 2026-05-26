@@ -36,7 +36,7 @@ func GetSessionStatus() gin.HandlerFunc {
 		}
 
 		status := sessionManager.ReadStatus(sessionID)
-		limit := sessionManager.MaxConcurrentPerSession
+		limit := filesystem.MaxSessionTasks
 		usage := 0.0
 		if limit > 0 {
 			usage = math.Round(float64(len(status.Active))/float64(limit)*10000) / 100

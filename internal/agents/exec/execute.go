@@ -16,7 +16,6 @@ import (
 
 	go_pkg_keychain "github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
@@ -64,12 +63,6 @@ func StripModelResponse(text string) string {
 	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
-var MaxToolIterations = positiveEnvInt("MAX_TOOL_ITERATIONS", 16)
-var MaxSkillIterations = positiveEnvInt("MAX_SKILL_ITERATIONS", 128)
-var MaxEmptyResponses = positiveEnvInt("MAX_EMPTY_RESPONSES", 8)
-var MaxRetry = positiveEnvInt("MAX_SAME_PAYLOAD_RETRY", 3)
-var AgentSendTimeout = time.Duration(positiveEnvInt("AGENT_SEND_TIMEOUT_SECONDS", 600)) * time.Second
-
 func isSendTimeoutError(err error, sendCtxErr error) bool {
 	if errors.Is(sendCtxErr, context.DeadlineExceeded) {
 		return true
@@ -91,13 +84,6 @@ func isSendTimeoutError(err error, sendCtxErr error) bool {
 		return true
 	}
 	return false
-}
-
-func positiveEnvInt(key string, def int) int {
-	if n := go_pkg_utils.GetWithDefaultInt(key, def); n > 0 {
-		return n
-	}
-	return def
 }
 
 func hashPayload(parts ...any) string {
@@ -282,7 +268,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		}
 	}
 
-	limit := MaxSkillIterations
+	limit := filesystem.MaxSkillIterations
 
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
@@ -297,7 +283,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		}
 		assembled := assembleMessages(session.SystemPrompts, session.OldHistories, session.SummaryMessage, session.UserInput, session.ToolHistories)
 		sendStart := time.Now()
-		sendCtx, cancelSend := context.WithTimeout(ctx, AgentSendTimeout)
+		sendCtx, cancelSend := context.WithTimeout(ctx, time.Duration(filesystem.AgentSendTimeoutSec)*time.Second)
 		resp, err := data.Agent.Send(sendCtx, assembled, exec.Tools)
 		sendElapsed := time.Since(sendStart).Round(time.Second)
 		sendCtxErr := sendCtx.Err()
@@ -321,17 +307,17 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 			if isContextLengthError(err) {
 				trimmedToolCalls = trimmedToolCalls || trimOnContextExceeded(&session.OldHistories, &session.ToolHistories)
-				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange",
+				slog.Debug("data.Agent.Send context length exceeded, trimming oldest exchange",
 					slog.String("session", session.ID))
 			} else {
-				slog.Warn("data.Agent.Send",
+				slog.Debug("data.Agent.Send",
 					slog.String("session", session.ID),
 					slog.String("error", err.Error()),
 					slog.Bool("timeout", isTimeout),
 					slog.Int("sameSigCount", sendFailCount))
 			}
 			modelName := data.Agent.Name()
-			if sendFailCount >= MaxRetry {
+			if sendFailCount >= filesystem.MaxRetry {
 				var nextAgent agentTypes.Agent
 				var nextName string
 				if !isContextLengthError(err) {
@@ -342,7 +328,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 							continue
 						}
 						if !ProbeAgent(ctx, cand, ProbeTimeout) {
-							slog.Warn("fallback probe failed",
+							slog.Debug("fallback probe failed",
 								slog.String("session", session.ID),
 								slog.String("name", cand.Name()))
 							continue
@@ -598,7 +584,7 @@ func buildPermissionModeSection(allowAll bool) string {
 
 func actionError(emptyCount *int, events chan<- agentTypes.Event) bool {
 	*emptyCount++
-	if *emptyCount >= MaxEmptyResponses {
+	if *emptyCount >= filesystem.MaxEmptyResponses {
 		sendText(events, "no usable data, retry later, or using other tools.")
 		events <- agentTypes.Event{Type: agentTypes.EventDone}
 		return true

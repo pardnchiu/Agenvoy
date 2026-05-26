@@ -15,7 +15,6 @@ import (
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -164,13 +163,6 @@ func GetChatID(sessionID string) (string, error) {
 	return config["chat_id"], nil
 }
 
-var MaxHistoryMessages = func() int {
-	if n := go_pkg_utils.GetWithDefaultInt("MAX_HISTORY_MESSAGES", 16); n > 0 {
-		return n
-	}
-	return 16
-}()
-
 func GetHistory(sessionID string) (old, max []agentTypes.Message) {
 	historyPath := filepath.Join(filesystem.SessionsDir, sessionID, "history.json")
 	oldHistory, err := go_pkg_filesystem.ReadJSON[[]agentTypes.Message](historyPath)
@@ -179,8 +171,8 @@ func GetHistory(sessionID string) (old, max []agentTypes.Message) {
 	}
 
 	maxHistory := oldHistory
-	if len(oldHistory) > MaxHistoryMessages {
-		maxHistory = oldHistory[len(oldHistory)-MaxHistoryMessages:]
+	if len(oldHistory) > filesystem.MaxHistoryMessages {
+		maxHistory = oldHistory[len(oldHistory)-filesystem.MaxHistoryMessages:]
 	}
 	return oldHistory, maxHistory
 }

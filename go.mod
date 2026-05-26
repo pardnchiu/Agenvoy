@@ -9,7 +9,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-telegram/bot v1.20.0
-	github.com/joho/godotenv v1.5.1
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pardnchiu/ToriiDB v0.5.1
 	github.com/pardnchiu/go-bot v0.3.5
@@ -18,7 +17,10 @@ require (
 	github.com/pardnchiu/go-scheduler v1.2.0
 )
 
-require mvdan.cc/sh/v3 v3.13.1 // indirect
+require (
+	github.com/joho/godotenv v1.5.1 // indirect
+	mvdan.cc/sh/v3 v3.13.1
+)
 
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect

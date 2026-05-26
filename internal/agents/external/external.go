@@ -10,7 +10,8 @@ import (
 	"time"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 var binaryByAgent = map[string]string{
@@ -19,15 +20,6 @@ var binaryByAgent = map[string]string{
 	"claude":  "claude",
 	"gemini":  "gemini",
 }
-
-const (
-	defaultExternalAgentTimeoutMin = 10
-	hardCapExternalAgentTimeoutMin = 60
-)
-
-var ExternalAgentTimeoutMin = max(defaultExternalAgentTimeoutMin,
-	min(hardCapExternalAgentTimeoutMin,
-		go_pkg_utils.GetWithDefaultInt("MAX_EXTERNAL_AGENT_TIMEOUT_MIN", defaultExternalAgentTimeoutMin)))
 
 func runCodex(ctx context.Context, prompt string, readOnly bool) (string, error) {
 	outFile := filepath.Join(os.TempDir(), fmt.Sprintf("agenvoy-codex-%d.txt", time.Now().UnixNano()))
@@ -105,7 +97,7 @@ func CheckAgents() ([]string, map[string]error) {
 }
 
 func Call(ctx context.Context, agent, prompt string, readOnly bool) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(ExternalAgentTimeoutMin)*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(filesystem.MaxExternalAgentTimeoutMin)*time.Minute)
 	defer cancel()
 
 	if agent == "codex" {

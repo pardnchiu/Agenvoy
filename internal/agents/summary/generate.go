@@ -59,9 +59,6 @@ func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, his
 		latest := latestMessageTime(histories)
 		sessionManager.SaveSummaryMeta(sessionID, latest)
 		sessionManager.SaveSummary(sessionID, summaryMap)
-		slog.Info("summary meta initialized from existing summary",
-			slog.String("session", sessionID),
-			slog.String("cursor", latest))
 		return nil
 	}
 
