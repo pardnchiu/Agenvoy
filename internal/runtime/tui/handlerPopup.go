@@ -320,15 +320,19 @@ func (p *Popup) loadCurrentQuestion() {
 	switch {
 	case len(q.Options) == 0 && q.Secret:
 		p.kind = popupSecret
+		p.maxVisible = 0
 	case len(q.Options) == 0:
 		p.kind = popupText
+		p.maxVisible = 0
 	case q.MultiSelect:
 		p.kind = popupMultiSelect
 		p.options = q.Options
 		p.multi = make(map[int]bool, len(q.Options))
+		p.maxVisible = cmdSelectorMaxVisible
 	default:
 		p.kind = popupSingleSelect
 		p.options = q.Options
+		p.maxVisible = cmdSelectorMaxVisible
 	}
 }
 

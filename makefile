@@ -1,4 +1,4 @@
-ifneq ($(filter cli run mcp model session,$(MAKECMDGOALS)),)
+ifneq ($(filter cli run model,$(MAKECMDGOALS)),)
 
 cli:
 	@go run ./cmd/app/ cli $(filter-out $@,$(MAKECMDGOALS))
@@ -6,14 +6,8 @@ cli:
 run:
 	@go run ./cmd/app/ run $(filter-out $@,$(MAKECMDGOALS))
 
-mcp:
-	@go run ./cmd/app/ mcp $(filter-out $@,$(MAKECMDGOALS))
-
 model:
 	@go run ./cmd/app/ model $(filter-out $@,$(MAKECMDGOALS))
-
-session:
-	@go run ./cmd/app/ session $(filter-out $@,$(MAKECMDGOALS))
 
 %:
 	@:
@@ -29,9 +23,7 @@ help:
 	@echo "  make stop               Stop the running server daemon"
 	@echo "  make update             Update agen to the latest release (always overwrite)"
 	@echo "  make test               Run provider integration tests (skips when API keys missing)"
-	@echo "  make mcp [list|add|remove]                       Manage MCP servers"
-	@echo "  make model [add|remove|list|planner|reasoning]   Manage providers/models, planner, reasoning"
-	@echo "  make session [new|switch|config] [name]          Manage CLI sessions (interactive picker if no name)"
+	@echo "  make model [add|remove|list|dispatcher|reasoning]   Manage providers/models, dispatcher, reasoning"
 	@echo "  make cli <input...>     Run agent (requires tool confirmation)"
 	@echo "  make run <input...>     Run agent (allow all tools, no confirmation)"
 

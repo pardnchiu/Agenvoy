@@ -59,16 +59,6 @@ func main() {
 			runModel(os.Args[2:])
 			return
 
-		case "session":
-			initCLI()
-			cli.Session(os.Args[2:])
-			return
-
-		case "mcp":
-			initCLI()
-			cli.MCP(os.Args[2:])
-			return
-
 		case "cli", "run":
 			if len(os.Args) < 3 {
 				fmt.Fprintf(os.Stderr, "Usage: agen cli <input...>\n")
@@ -277,8 +267,6 @@ func printUsage() {
 	fmt.Println("  agen stop                                       Stop the running server daemon")
 	fmt.Println("  agen update                                     Update agen to the latest release")
 	fmt.Println("  agen model [add|remove|list|dispatcher|reasoning]  Manage providers/models, dispatcher, reasoning")
-	fmt.Println("  agen mcp [list|add|remove]                      Manage MCP servers")
-	fmt.Println("  agen session [new|config] [name]                Manage CLI sessions (interactive picker if no name)")
 	fmt.Println("  agen cli <input...>                             Run agent (requires tool confirmation)")
 	fmt.Println("  agen run <input...>                             Run agent (allow all tools)")
 }

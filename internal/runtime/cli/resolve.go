@@ -7,21 +7,13 @@ import (
 )
 
 func ResolveSession() (string, error) {
-	sessions := listSessions()
-	switch len(sessions) {
-	case 0:
+	chosen := pickSession("Select session")
+	if chosen == pickSessionNew {
 		id, err := session.CreateSession("cli-")
 		if err != nil {
 			return "", fmt.Errorf("session.CreateSession: %w", err)
 		}
 		return id, nil
-	case 1:
-		return sessions[0].id, nil
-	default:
-		sid, ok := pickSession("Select session")
-		if !ok || sid == "" {
-			return "", fmt.Errorf("no session selected")
-		}
-		return sid, nil
 	}
+	return chosen, nil
 }
