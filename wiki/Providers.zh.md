@@ -2,7 +2,7 @@
 
 > [English](Providers.md)
 
-Agenvoy 透過統一的 `Agent.Send()` 介面支援 7 家 LLM provider。
+Agenvoy 透過統一的 `Agent.Send()` 介面支援 9 家 LLM provider。
 
 ## 支援清單
 
@@ -14,9 +14,11 @@ Agenvoy 透過統一的 `Agent.Send()` 介面支援 7 家 LLM provider。
 | Google Gemini | `gemini` | gemini-2.x / 3.x 系列 |
 | GitHub Copilot | `copilot` | 需 GitHub OAuth（一次性登入） |
 | Nvidia NIM | `nvidia` | Llama、Mistral 等 hosted 開源模型 |
+| xAI Grok | `grok` | grok-4／grok-3 系列含 `grok-code-fast-1`；非串流 HTTP client |
+| DeepSeek | `deepseek` | `deepseek-chat`（tool use）與 `deepseek-reasoner`（CoT，停用 temperature）；非串流 HTTP client |
 | Compat | `compat` | 任何 OpenAI 相容格式的自訂 endpoint |
 
-> **`providors/` 拼寫** —— 是慣例非錯字，請勿「修正」。Provider JSON 目錄在 `configs/jsons/providors/`，現有 6 份靜態 catalog（`claude.json`、`openai.json`、`codex.json`、`gemini.json`、`copilot.json`、`nvidia.json`）；`compat` 由使用者輸入動態建構。
+> **`providors/` 拼寫** —— 是慣例非錯字，請勿「修正」。Provider JSON 目錄在 `configs/jsons/providors/`，現有 8 份靜態 catalog（`claude.json`、`openai.json`、`codex.json`、`gemini.json`、`copilot.json`、`nvidia.json`、`grok.json`、`deepseek.json`）；`compat` 由使用者輸入動態建構。
 
 ## Provider 配置
 
