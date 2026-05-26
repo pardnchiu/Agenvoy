@@ -52,7 +52,7 @@ func New(model ...string) (*Agent, error) {
 	// }
 
 	agent := &Agent{
-		httpClient: provider.NewHTTPClient(),
+		httpClient: provider.NewHTTPClientNonStream(),
 		model:      usedModel,
 		workDir:    workDir,
 	}
@@ -89,7 +89,7 @@ func Authenticate(ctx context.Context) error {
 		return fmt.Errorf("os.Getwd: %w", err)
 	}
 	a := &Agent{
-		httpClient: provider.NewHTTPClient(),
+		httpClient: provider.NewHTTPClientNonStream(),
 		workDir:    workDir,
 	}
 	token, err := a.Login(ctx)

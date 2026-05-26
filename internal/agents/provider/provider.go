@@ -63,12 +63,14 @@ func parse(data []byte) map[string]ModelItem {
 
 func providers() map[string]map[string]ModelItem {
 	return map[string]map[string]ModelItem{
-		"claude":  parse(configs.ClaudeModels),
-		"codex":   parse(configs.CodexModels),
-		"copilot": parse(configs.CopilotModels),
-		"gemini":  parse(configs.GeminiModels),
-		"nvidia":  parse(configs.NvidiaModels),
-		"openai":  parse(configs.OpenaiModels),
+		"claude":   parse(configs.ClaudeModels),
+		"openai":   parse(configs.OpenaiModels),
+		"codex":    parse(configs.CodexModels),
+		"gemini":   parse(configs.GeminiModels),
+		"grok":     parse(configs.GrokModels),
+		"copilot":  parse(configs.CopilotModels),
+		"nvidia":   parse(configs.NvidiaModels),
+		"deepseek": parse(configs.DeepseekModels),
 	}
 }
 
@@ -102,4 +104,8 @@ func NewHTTPClient() *http.Client {
 		Timeout:   5 * time.Minute,
 		Transport: transport,
 	}
+}
+
+func NewHTTPClientNonStream() *http.Client {
+	return &http.Client{Timeout: 5 * time.Minute}
 }

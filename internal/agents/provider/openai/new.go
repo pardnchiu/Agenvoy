@@ -36,7 +36,7 @@ func New(model ...string) (*Agent, error) {
 	workDir, _ := os.Getwd()
 
 	return &Agent{
-		httpClient: provider.NewHTTPClient(),
+		httpClient: provider.NewHTTPClientNonStream(),
 		model:      usedModel,
 		apiKey:     apiKey,
 		workDir:    workDir,

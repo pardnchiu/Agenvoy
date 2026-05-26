@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	ProbeTimeout          = 5 * time.Second
+	ProbeTimeout          = 15 * time.Second
 	DispatcherCallTimeout = 10 * time.Second
 	DispatcherMaxRetry    = 3
 )
@@ -161,8 +161,15 @@ func ProbeAgent(ctx context.Context, a agentTypes.Agent, timeout time.Duration) 
 	}
 	probeCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	_, err := a.Send(probeCtx, []agentTypes.Message{{Role: "user", Content: "."}}, nil)
-	return err == nil
+	resp, err := a.Send(probeCtx, []agentTypes.Message{
+		{Role: "system", Content: "Reply with only: ok"},
+		{Role: "user", Content: "ping"},
+	}, nil)
+	if err != nil || resp == nil || len(resp.Choices) == 0 {
+		return false
+	}
+	content, _ := resp.Choices[0].Message.Content.(string)
+	return strings.TrimSpace(content) != ""
 }
 
 func ResolveAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool, sessionID string) (agentTypes.Agent, []agentTypes.Agent, error) {

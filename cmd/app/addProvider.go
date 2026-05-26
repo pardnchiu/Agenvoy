@@ -48,6 +48,8 @@ var providers = []Provider{
 	{Prefix: "codex@"},
 	{Prefix: "claude@"},
 	{Prefix: "gemini@"},
+	{Prefix: "grok@"},
+	{Prefix: "deepseek@"},
 	{Prefix: "nvidia@"},
 	{Prefix: "compat"},
 }
@@ -517,7 +519,7 @@ func checkBrokenModels() []brokenModel {
 	}
 	out := make([]brokenModel, 0)
 	for _, m := range cfg.Models {
-		head := strings.SplitN(m.Name, "@", 2)[0]
+		head, _, _ := strings.Cut(m.Name, "@")
 		prov, _, _ := strings.Cut(head, "[")
 		var reason string
 		switch prov {
@@ -529,7 +531,7 @@ func checkBrokenModels() []brokenModel {
 			if !openaicodex.HasToken() {
 				reason = "codex token missing"
 			}
-		case "openai", "claude", "gemini", "nvidia":
+		case "openai", "claude", "gemini", "nvidia", "grok", "deepseek":
 			envKey := strings.ToUpper(prov) + "_API_KEY"
 			if keychain.Get(envKey) == "" {
 				reason = envKey + " missing"
@@ -617,7 +619,7 @@ func reLogin(b brokenModel) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
 		return openaicodex.Authenticate(ctx)
-	case "openai", "claude", "gemini", "nvidia":
+	case "openai", "claude", "gemini", "nvidia", "grok", "deepseek":
 		envKey := strings.ToUpper(b.Provider) + "_API_KEY"
 		fmt.Printf("%s API Key: ", strings.ToUpper(b.Provider[:1])+b.Provider[1:])
 		keyBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
