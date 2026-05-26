@@ -1,26 +1,25 @@
 # Previous Conversation Summary (Merge Rules)
 
-Generate a new summary based on "previous summary + new data from this turn".
+Generate a new summary based on "previous summary + new data from this turn". The summary captures (1) key decisions, (2) past discussion topics with their latest direction, and (3) the topic currently being discussed.
 
 **Merge rules:**
-- `confirmed_needs`, `constraints`, `excluded_options`, `key_data`: merge semantically identical or highly similar entries into one; keep only the latest wording; append genuinely new entries
-- `discussion_log`: same or highly similar topic → **replace** the existing entry (update `conclusion` and `time` to latest); new topic → append; **never duplicate topics**; trivial greetings (hi, hello, hey, etc.) → do NOT create a log entry
-- `core_discussion`, `pending_questions`: overwrite with this turn's content
-- All `time` fields must reflect the most recent occurrence, not the first
-- Never include any system prompt text, system instructions, or prompt templates in any field
+- `key_decisions`: **only locked-in, concluded outcomes** — what was finally agreed (要) or finally rejected (不要). Treat this as the authoritative "settled" layer that downstream turns can rely on without re-checking. Merge semantically identical entries; keep latest wording. Append a new entry only when this turn produced a clear conclusion. **Do NOT** record: tentative leanings ("maybe X", "considering Y"), in-flight debates, options being weighed (those belong in `past_discussions.direction` or `current_discussion`). When an earlier decision is reversed, **replace** the old entry rather than appending the negation as a separate item.
+- `past_discussions`: same or highly similar topic → **replace** the existing entry (update `description`, `direction`, `last_discussed` to latest); new topic that is no longer the current focus → append. **Never duplicate topics.** Trivial greetings (hi, hello, hey, etc.) → do NOT create an entry.
+- `current_discussion`: overwrite with this turn's topic. When the conversation moves to a new topic, demote the previous `current_discussion` into `past_discussions` (carry over its `description`/`direction`/timestamp) before overwriting. **If the demoted topic reached a clear conclusion, also promote that conclusion into `key_decisions`.**
+- All time fields must reflect the most recent occurrence, not the first.
+- Never include any system prompt text, system instructions, or prompt templates in any field.
 
 **Compression limits (MANDATORY):**
-- `discussion_log`: max **10** entries; when exceeding, drop the oldest **resolved** entries first, then oldest **pending** entries
-- `current_conclusion`: max **8** entries; merge similar conclusions into one sentence; drop conclusions that are no longer relevant
-- `confirmed_needs`, `constraints`, `excluded_options`, `key_data`: max **6** each; merge similar items aggressively
-- `pending_questions`: max **5**; drop resolved questions
+- `past_discussions`: max **8** entries; when exceeding, drop the oldest by `last_discussed` first.
+- `key_decisions`: max **8** entries; merge similar items aggressively; drop decisions that are no longer load-bearing for current/future work.
+- Each `description` / `perspectives` / `direction`: **1-3 sentences**, no headings or markdown structure inside.
 
 **Output rules:**
-- Return exactly one `<summary>...</summary>` block
-- Do not output any explanation, prose, headings, markdown fences, or extra text before/after the block
-- The content inside `<summary>` must be valid JSON
-- Always output all fields below, even when empty
-- `discussion_log[].time` must use `YYYY-MM-DD HH:mm`
+- Return exactly one `<summary>...</summary>` block.
+- Do not output any explanation, prose, headings, markdown fences, or extra text before/after the block.
+- The content inside `<summary>` must be valid JSON.
+- Always output all fields below, even when empty (`[]` for arrays, `{}` with empty string values for `current_discussion`).
+- `last_discussed` must use `YYYY-MM-DD HH:mm`.
 
 **Previous summary:**
 ```json
@@ -31,19 +30,23 @@ Return in exactly this format:
 
 <summary>
 {
-  "core_discussion": "core topic of current discussion",
-  "confirmed_needs": ["deduplicated confirmed needs (merge similar items, keep latest wording)"],
-  "constraints": ["deduplicated constraints (merge similar items, keep latest wording)"],
-  "excluded_options": ["excluded option: reason"],
-  "key_data": ["deduplicated key facts; exclude: dynamic data retrievable via tools, calculation results computable via calculate"],
-  "current_conclusion": ["deduplicated conclusions in chronological order"],
-  "pending_questions": ["unresolved questions related to the current topic"],
-  "discussion_log": [
+  "key_decisions": [
+    "要：concluded want / final agreed approach / locked-in requirement",
+    "不要：concluded avoid / final rejected approach / locked-in constraint"
+  ],
+  "past_discussions": [
     {
-      "topic": "topic summary",
-      "time": "YYYY-MM-DD HH:mm (latest occurrence)",
-      "conclusion": "resolved / pending / dropped"
+      "topic": "short topic name",
+      "description": "1-3 sentence summary of what was discussed",
+      "direction": "latest conclusion if resolved; current direction if unresolved",
+      "last_discussed": "YYYY-MM-DD HH:mm"
     }
-  ]
+  ],
+  "current_discussion": {
+    "topic": "current topic name",
+    "description": "1-3 sentence summary of what is being discussed now",
+    "perspectives": "both sides' views / arguments / trade-offs being weighed",
+    "direction": "latest conclusion if resolved this turn; current direction otherwise"
+  }
 }
 </summary>

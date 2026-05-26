@@ -1,4 +1,4 @@
-package gemini
+package grok
 
 import (
 	"fmt"
@@ -19,18 +19,18 @@ type Agent struct {
 }
 
 const (
-	prefix = "gemini@"
+	prefix = "grok@"
 )
 
 func New(model ...string) (*Agent, error) {
 	if len(model) == 0 || !strings.HasPrefix(model[0], prefix) {
-		return nil, fmt.Errorf("gemini.New: model arg required with %q prefix", prefix)
+		return nil, fmt.Errorf("grok.New: model arg required with %q prefix", prefix)
 	}
 	usedModel := strings.TrimPrefix(model[0], prefix)
 
-	apiKey := keychain.Get("GEMINI_API_KEY")
+	apiKey := keychain.Get("GROK_API_KEY")
 	if apiKey == "" {
-		return nil, fmt.Errorf("keychain.Get: GEMINI_API_KEY is required")
+		return nil, fmt.Errorf("keychain.Get: GROK_API_KEY is required")
 	}
 
 	workDir, _ := os.Getwd()

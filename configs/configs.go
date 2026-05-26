@@ -61,20 +61,26 @@ var WhiteList []byte
 //go:embed jsons/providors/claude.json
 var ClaudeModels []byte
 
-//go:embed jsons/providors/copilot.json
-var CopilotModels []byte
-
-//go:embed jsons/providors/gemini.json
-var GeminiModels []byte
-
-//go:embed jsons/providors/nvidia.json
-var NvidiaModels []byte
+//go:embed jsons/providors/openai.json
+var OpenaiModels []byte
 
 //go:embed jsons/providors/codex.json
 var CodexModels []byte
 
-//go:embed jsons/providors/openai.json
-var OpenaiModels []byte
+//go:embed jsons/providors/gemini.json
+var GeminiModels []byte
+
+//go:embed jsons/providors/grok.json
+var GrokModels []byte
+
+//go:embed jsons/providors/copilot.json
+var CopilotModels []byte
+
+//go:embed jsons/providors/nvidia.json
+var NvidiaModels []byte
+
+//go:embed jsons/providors/deepseek.json
+var DeepseekModels []byte
 
 //go:embed webmode.html
 var WebmodeHTML string

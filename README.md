@@ -111,7 +111,9 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | GitHub Copilot | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Nvidia NIM | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | OpenAI-compat | ✅ | ✅ Ollama/LM Studio | ✅ OpenRouter 200+ | ❌ | ❌ | ❌ |
-| DeepSeek / Mistral / xAI | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| DeepSeek | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| xAI (Grok) | ✅ API key | ✅ | ✅ OAuth + API key | ❌ | ❌ | ❌ |
+| Mistral | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Dispatcher routing | ✅ dedicated dispatcher model | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ---

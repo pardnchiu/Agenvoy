@@ -11,14 +11,20 @@ var (
 )
 
 func isSummaryJSON(m map[string]any) bool {
-	keys := []string{
-		"core_discussion", "discussion_log", "confirmed_needs", "current_conclusion",
+	newKeys := []string{"key_decisions", "past_discussions", "current_discussion"}
+	if countMatch(m, newKeys) >= 2 {
+		return true
 	}
-	matched := 0
+	legacyKeys := []string{"core_discussion", "discussion_log", "confirmed_needs", "current_conclusion"}
+	return countMatch(m, legacyKeys) >= 2
+}
+
+func countMatch(record map[string]any, keys []string) int {
+	num := 0
 	for _, key := range keys {
-		if _, exist := m[key]; exist {
-			matched++
+		if _, ok := record[key]; ok {
+			num++
 		}
 	}
-	return matched >= 2
+	return num
 }

@@ -2,7 +2,7 @@
 
 > [中文](Providers.zh.md)
 
-Agenvoy supports seven LLM providers behind a unified `Agent.Send()` interface.
+Agenvoy supports nine LLM providers behind a unified `Agent.Send()` interface.
 
 ## Supported list
 
@@ -14,9 +14,11 @@ Agenvoy supports seven LLM providers behind a unified `Agent.Send()` interface.
 | Google Gemini | `gemini` | gemini-2.x / 3.x families |
 | GitHub Copilot | `copilot` | Requires GitHub OAuth (one-shot login flow) |
 | Nvidia NIM | `nvidia` | Llama, Mistral, and other open-weight hosted models |
+| xAI Grok | `grok` | grok-4 / grok-3 families incl. `grok-code-fast-1`; non-streaming HTTP client |
+| DeepSeek | `deepseek` | `deepseek-chat` (tool use) and `deepseek-reasoner` (CoT, temperature disabled); non-streaming HTTP client |
 | Compat | `compat` | Any custom OpenAI-compatible endpoint |
 
-> **On the `providors/` spelling** — intentional convention; do not "fix" it. Provider JSON catalogs live under `configs/jsons/providors/`. Six static files ship today (`claude.json`, `openai.json`, `codex.json`, `gemini.json`, `copilot.json`, `nvidia.json`); `compat` is constructed at runtime from user-supplied endpoints.
+> **On the `providors/` spelling** — intentional convention; do not "fix" it. Provider JSON catalogs live under `configs/jsons/providors/`. Eight static files ship today (`claude.json`, `openai.json`, `codex.json`, `gemini.json`, `copilot.json`, `nvidia.json`, `grok.json`, `deepseek.json`); `compat` is constructed at runtime from user-supplied endpoints.
 
 ## Provider configuration
 

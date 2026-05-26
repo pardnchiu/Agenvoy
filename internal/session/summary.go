@@ -84,29 +84,8 @@ func GetSummaryPrompt(sessionID string, cutoff time.Time) string {
 	}
 
 	if !cutoff.IsZero() && summaryMap != nil {
-		if logs, ok := summaryMap["discussion_log"].([]any); ok {
-			filtered := make([]any, 0, len(logs))
-			for _, item := range logs {
-				m, ok := item.(map[string]any)
-				if !ok {
-					continue
-				}
-				t, ok := m["time"].(string)
-				if !ok {
-					filtered = append(filtered, item)
-					continue
-				}
-				// discussion_log time format: "2006-01-02 15:04"
-				if parsed, err := time.ParseInLocation("2006-01-02 15:04", t, time.Local); err == nil {
-					if !parsed.Before(cutoff) {
-						filtered = append(filtered, item)
-					}
-				} else {
-					filtered = append(filtered, item)
-				}
-			}
-			summaryMap["discussion_log"] = filtered
-		}
+		filterByTimeField(summaryMap, "past_discussions", "last_discussed", cutoff)
+		filterByTimeField(summaryMap, "discussion_log", "time", cutoff)
 		if b, err := json.Marshal(summaryMap); err == nil {
 			raw = b
 		}
@@ -148,4 +127,32 @@ func SaveSummary(sessionID string, data any) {
 			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 	}
+}
+
+func filterByTimeField(summaryMap map[string]any, listField, timeField string, cutoff time.Time) {
+	items, ok := summaryMap[listField].([]any)
+	if !ok {
+		return
+	}
+	filtered := make([]any, 0, len(items))
+	for _, item := range items {
+		record, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		t, ok := record[timeField].(string)
+		if !ok {
+			filtered = append(filtered, item)
+			continue
+		}
+		parsed, err := time.ParseInLocation("2006-01-02 15:04", t, time.Local)
+		if err != nil {
+			filtered = append(filtered, item)
+			continue
+		}
+		if !parsed.Before(cutoff) {
+			filtered = append(filtered, item)
+		}
+	}
+	summaryMap[listField] = filtered
 }

@@ -18,6 +18,8 @@ require (
 	github.com/pardnchiu/go-scheduler v1.2.0
 )
 
+require mvdan.cc/sh/v3 v3.13.1 // indirect
+
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
