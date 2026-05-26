@@ -195,6 +195,11 @@ func addCompat() (string, string) {
 				slog.String("error", err.Error()))
 			os.Exit(1)
 		}
+		if err := session.SaveKey(keychainKey); err != nil {
+			slog.Error("session.SaveKey",
+				slog.String("error", err.Error()))
+			os.Exit(1)
+		}
 		fmt.Printf("[*] %s saved\n", keychainKey)
 	} else {
 		fmt.Printf("[*] No API key: %q\n", providor)
@@ -240,6 +245,11 @@ func addAPIKey(label, envKey string) {
 	}
 	if err := keychain.Set(envKey, apiKey); err != nil {
 		slog.Error("keychain.Set",
+			slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if err := session.SaveKey(envKey); err != nil {
+		slog.Error("session.SaveKey",
 			slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -638,6 +648,9 @@ func reLogin(b brokenModel) error {
 		}
 		if err := keychain.Set(envKey, apiKey); err != nil {
 			return fmt.Errorf("keychain.Set: %w", err)
+		}
+		if err := session.SaveKey(envKey); err != nil {
+			return fmt.Errorf("session.SaveKey: %w", err)
 		}
 		return nil
 	default:

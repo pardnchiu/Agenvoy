@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
@@ -78,12 +77,7 @@ func reloadDiscord() {
 	lastDiscordEnabled = newEnabled
 	lastDiscordToken = newToken
 
-	if !newEnabled {
-		slog.Info("discord disabled, skipped")
-		return
-	}
-	if newToken == "" {
-		slog.Info("discord enabled but token missing, run `/discord enable` in TUI")
+	if !newEnabled || newToken == "" {
 		return
 	}
 
@@ -117,12 +111,7 @@ func reloadTelegram() {
 	lastTelegramEnabled = newEnabled
 	lastTelegramToken = newToken
 
-	if !newEnabled {
-		slog.Info("telegram disabled, skipped")
-		return
-	}
-	if newToken == "" {
-		slog.Info("telegram enabled but token missing, run `/telegram enable` in TUI")
+	if !newEnabled || newToken == "" {
 		return
 	}
 
@@ -171,7 +160,7 @@ func reloadKuradb() {
 			}
 		}
 		if err := kuradb.Remove(); err != nil {
-			slog.Warn("kuradb.RemoveEndpoint",
+			slog.Warn("kuradb.Remove",
 				slog.String("error", err.Error()))
 		}
 		reloadKuradb()
@@ -186,6 +175,14 @@ func cmdDaemon() {
 		slog.Error("filesystem.Init",
 			slog.String("error", err.Error()))
 		return
+	}
+	if err := filesystem.LoadRuntime(); err != nil {
+		slog.Warn("filesystem.LoadRuntime",
+			slog.String("error", err.Error()))
+	}
+	if err := session.BackfillKeys(); err != nil {
+		slog.Warn("session.BackfillKeys",
+			slog.String("error", err.Error()))
 	}
 	if err := torii.Init(filesystem.StoreDir); err != nil {
 		slog.Error("store.Init",
@@ -254,9 +251,8 @@ func cmdDaemon() {
 		reloadKuradb()
 
 		route := routes.New()
-		port := go_pkg_utils.GetWithDefault("PORT", "17989")
 		server = &http.Server{
-			Addr:    ":" + port,
+			Addr:    ":" + filesystem.Port,
 			Handler: route,
 		}
 
@@ -275,7 +271,7 @@ func cmdDaemon() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	slog.Info("daemon shutting down")
+	slog.Info("⎯ daemon shutting down")
 
 	discordMu.Lock()
 	if discordBot != nil {
@@ -312,12 +308,12 @@ func watchConfig(ctx context.Context) func() {
 
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
-		slog.Warn("watchConfig.NewWatcher",
+		slog.Warn("fsnotify.NewWatcher",
 			slog.String("error", err.Error()))
 		return func() {}
 	}
 	if err := w.Add(configDir); err != nil {
-		slog.Warn("watchConfig.Add",
+		slog.Warn("fsnotify.Watcher Add",
 			slog.String("dir", configDir),
 			slog.String("error", err.Error()))
 		_ = w.Close()
@@ -352,7 +348,7 @@ func watchConfig(ctx context.Context) func() {
 					provider.SetReasoningLevel(cfg.ReasoningLevel)
 				}
 				if agents.Reload() {
-					slog.Info("host reloaded from config change")
+					slog.Info("⎯ host reloaded: config change")
 				}
 				reloadDiscord()
 				reloadTelegram()
@@ -361,7 +357,7 @@ func watchConfig(ctx context.Context) func() {
 				if !ok {
 					return
 				}
-				slog.Warn("watchConfig",
+				slog.Warn("fsnotify.Watcher",
 					slog.String("error", err.Error()))
 			}
 		}

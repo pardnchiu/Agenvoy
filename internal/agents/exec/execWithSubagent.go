@@ -10,22 +10,12 @@ import (
 	"time"
 
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
-
-const (
-	defaultSubagentTimeoutMin = 10
-	hardCapSubagentTimeoutMin = 60
-)
-
-var SubagentTimeoutMin = max(defaultSubagentTimeoutMin,
-	min(hardCapSubagentTimeoutMin,
-		go_pkg_utils.GetWithDefaultInt("MAX_SUBAGENT_TIMEOUT_MIN", defaultSubagentTimeoutMin)))
 
 func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPrompt string, excludedTools []string) (string, error) {
 	registry := agents.Registry()
@@ -103,7 +93,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 
 	SaveUserInputHistory(sessionID, userText)
 
-	subCtx, cancel := context.WithTimeout(ctx, time.Duration(SubagentTimeoutMin)*time.Minute)
+	subCtx, cancel := context.WithTimeout(ctx, time.Duration(filesystem.MaxSubagentTimeoutMin)*time.Minute)
 	defer cancel()
 
 	parentEvents, ok := ctx.Value(parentEventsKey{}).(chan<- agentTypes.Event)

@@ -568,10 +568,26 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err := keychain.Set("OPENAI_API_KEY", token); err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb keychain.Set: %v", err)) + "\n")
 		}
+		if err := session.SaveKey("OPENAI_API_KEY"); err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb session.SaveKey: %v", err)) + "\n")
+		}
 		return t, tea.Sequence(
 			tea.Println(hintStyle.Render("⎯ kuradb installing")+"\n"),
 			runKuradbEnableExec(),
 		)
+
+	case KeySelect:
+		next, cmd := t.openKeyValuePrompt(msg.key)
+		return next, cmd
+
+	case KeySubmit:
+		if msg.value == "" {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] key %s: value is required", msg.key)) + "\n")
+		}
+		if err := keychain.Set(msg.key, msg.value); err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] keychain.Set %s: %v", msg.key, err)) + "\n")
+		}
+		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ %s updated", msg.key)) + "\n")
 
 	case KuradbDone:
 		if msg.err != nil {

@@ -18,6 +18,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -165,10 +166,15 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		}
 	}
 
+	discordSessionID, err := sessionManager.GetDiscordSession(in.GuildID, in.ChannelID, in.UserID)
+	if err != nil {
+		return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetDiscordSession: %w", err)
+	}
+
 	var agent agentTypes.Agent
 	var fallbacks []agentTypes.Agent
 	if externalAgent == "" {
-		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, "")
+		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, discordSessionID)
 		if err != nil {
 			if _, sendErr := b.client.Send(ctx, in.ChannelID, in.MessageID, fmt.Sprintf("⚠️ %s", err.Error())); sendErr != nil {
 				slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.Send (ResolveAgent error reply)",

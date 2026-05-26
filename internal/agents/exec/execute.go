@@ -16,7 +16,6 @@ import (
 
 	go_pkg_keychain "github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
@@ -64,12 +63,6 @@ func StripModelResponse(text string) string {
 	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
-var MaxToolIterations = positiveEnvInt("MAX_TOOL_ITERATIONS", 16)
-var MaxSkillIterations = positiveEnvInt("MAX_SKILL_ITERATIONS", 128)
-var MaxEmptyResponses = positiveEnvInt("MAX_EMPTY_RESPONSES", 8)
-var MaxRetry = positiveEnvInt("MAX_SAME_PAYLOAD_RETRY", 3)
-var AgentSendTimeout = time.Duration(positiveEnvInt("AGENT_SEND_TIMEOUT_SECONDS", 600)) * time.Second
-
 func isSendTimeoutError(err error, sendCtxErr error) bool {
 	if errors.Is(sendCtxErr, context.DeadlineExceeded) {
 		return true
@@ -91,13 +84,6 @@ func isSendTimeoutError(err error, sendCtxErr error) bool {
 		return true
 	}
 	return false
-}
-
-func positiveEnvInt(key string, def int) int {
-	if n := go_pkg_utils.GetWithDefaultInt(key, def); n > 0 {
-		return n
-	}
-	return def
 }
 
 func hashPayload(parts ...any) string {
@@ -180,10 +166,13 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		isDcPush := hasPush && !isDcPushSuppressed(ctx)
 		var pushTextBuf strings.Builder
 		var pushDoneEv agentTypes.Event
+		stateless := session.Stateless
 		go func() {
 			defer close(done)
 			for ev := range teed {
-				sessionManager.Record(sid, ev)
+				if !stateless {
+					sessionManager.Record(sid, ev)
+				}
 				if isDcPush {
 					switch ev.Type {
 					case agentTypes.EventText:
@@ -282,7 +271,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		}
 	}
 
-	limit := MaxSkillIterations
+	limit := filesystem.MaxSkillIterations
 
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
@@ -297,7 +286,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		}
 		assembled := assembleMessages(session.SystemPrompts, session.OldHistories, session.SummaryMessage, session.UserInput, session.ToolHistories)
 		sendStart := time.Now()
-		sendCtx, cancelSend := context.WithTimeout(ctx, AgentSendTimeout)
+		sendCtx, cancelSend := context.WithTimeout(ctx, time.Duration(filesystem.AgentSendTimeoutSec)*time.Second)
 		resp, err := data.Agent.Send(sendCtx, assembled, exec.Tools)
 		sendElapsed := time.Since(sendStart).Round(time.Second)
 		sendCtxErr := sendCtx.Err()
@@ -321,17 +310,17 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 			if isContextLengthError(err) {
 				trimmedToolCalls = trimmedToolCalls || trimOnContextExceeded(&session.OldHistories, &session.ToolHistories)
-				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange",
+				slog.Debug("data.Agent.Send context length exceeded, trimming oldest exchange",
 					slog.String("session", session.ID))
 			} else {
-				slog.Warn("data.Agent.Send",
+				slog.Debug("data.Agent.Send",
 					slog.String("session", session.ID),
 					slog.String("error", err.Error()),
 					slog.Bool("timeout", isTimeout),
 					slog.Int("sameSigCount", sendFailCount))
 			}
 			modelName := data.Agent.Name()
-			if sendFailCount >= MaxRetry {
+			if sendFailCount >= filesystem.MaxRetry {
 				var nextAgent agentTypes.Agent
 				var nextName string
 				if !isContextLengthError(err) {
@@ -342,7 +331,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 							continue
 						}
 						if !ProbeAgent(ctx, cand, ProbeTimeout) {
-							slog.Warn("fallback probe failed",
+							slog.Debug("fallback probe failed",
 								slog.String("session", session.ID),
 								slog.String("name", cand.Name()))
 							continue
@@ -468,7 +457,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		}
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 
-		if len(session.Tools) > 0 {
+		if !session.Stateless && len(session.Tools) > 0 {
 			if data, err := json.Marshal(session.Tools); err == nil {
 				sessionManager.SaveToToolCall(session.ID, string(data))
 			}
@@ -589,6 +578,26 @@ func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *runtime.Skil
 	return prompts
 }
 
+func GetChatCompletionsSystemPrompt(workDir string, scanner *runtime.SkillScanner) string {
+	skillsSection := ""
+	if list := toolSearcher.ListBlock(scanner); list != "" {
+		skillsSection = "## Skills\n\n" +
+			"**Slash invocations (`/<name>`) are STRICT EXECUTION.** The user has explicitly authorized the skill's full procedure; every step in SKILL.md is binding and must complete via tool calls in order. The FIRST step (often `ask_user` for requirement gathering) must run before any other tool call — no exceptions, no \"the user input looks complete so I'll skip ahead\".\n\n" +
+			"The `activate_skill` tool path is advisory — consult, integrate parts that fit, ignore parts that don't. Consider activating a skill when its description matches the user's intent on each turn, even without an explicit `/<name>` invocation.\n\n" +
+			list
+	}
+
+	return strings.NewReplacer(
+		"{{.SystemOS}}", goRuntime.GOOS,
+		"{{.WorkPath}}", workDir,
+		"{{.AvailableSkills}}", skillsSection,
+	).Replace(configs.ChatCompletionsSystemPrompt)
+}
+
+func BuildChatCompletionsSystemPrompts(workDir string, scanner *runtime.SkillScanner) []agentTypes.Message {
+	return []agentTypes.Message{{Role: "system", Content: GetChatCompletionsSystemPrompt(workDir, scanner)}}
+}
+
 func buildPermissionModeSection(allowAll bool) string {
 	if allowAll {
 		return strings.TrimRight(configs.PermissionAlwaysAllow, "\n")
@@ -598,7 +607,7 @@ func buildPermissionModeSection(allowAll bool) string {
 
 func actionError(emptyCount *int, events chan<- agentTypes.Event) bool {
 	*emptyCount++
-	if *emptyCount >= MaxEmptyResponses {
+	if *emptyCount >= filesystem.MaxEmptyResponses {
 		sendText(events, "no usable data, retry later, or using other tools.")
 		events <- agentTypes.Event{Type: agentTypes.EventDone}
 		return true
@@ -618,6 +627,10 @@ func sendText(events chan<- agentTypes.Event, text string) {
 
 func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSession) error {
 	session.Histories = append(session.Histories, choice.Message)
+
+	if session.Stateless {
+		return nil
+	}
 
 	newHistories := make([]agentTypes.Message, 0, len(session.Histories))
 	for _, message := range session.Histories {

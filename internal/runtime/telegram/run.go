@@ -195,10 +195,19 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		}
 	}
 
+	routingSessionID := sessionOverride
+	if routingSessionID == "" {
+		cs, err := session.GetTelegramSession(in.ChatID)
+		if err != nil {
+			return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetTelegramSession: %w", err)
+		}
+		routingSessionID = cs
+	}
+
 	var agent agentTypes.Agent
 	var fallbacks []agentTypes.Agent
 	if externalAgent == "" {
-		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, "")
+		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, routingSessionID)
 		if err != nil {
 			if finishErr := b.client.FinishStatus(ctx, in.ChatID); finishErr != nil {
 				slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.FinishStatus",

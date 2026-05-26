@@ -4,17 +4,8 @@ import (
 	"context"
 	"sync"
 
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
-
-const (
-	defaultMaxConcurrentPerSession = 3
-	hardCapMaxConcurrentPerSession = 10
-)
-
-var MaxConcurrentPerSession = max(defaultMaxConcurrentPerSession,
-	min(hardCapMaxConcurrentPerSession,
-		go_pkg_utils.GetWithDefaultInt("MAX_SESSION_TASKS", defaultMaxConcurrentPerSession)))
 
 var (
 	concurrentMu    sync.Mutex
@@ -28,7 +19,7 @@ func AddConcurrent(ctx context.Context, sessionID string) error {
 	concurrentMu.Lock()
 	slot, ok := concurrentSlots[sessionID]
 	if !ok {
-		slot = make(chan struct{}, MaxConcurrentPerSession)
+		slot = make(chan struct{}, filesystem.MaxSessionTasks)
 		concurrentSlots[sessionID] = slot
 	}
 	concurrentMu.Unlock()

@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
 
-func run(ctx context.Context, req Request, sessionID, userContent string, events chan<- agentTypes.Event) {
+func run(ctx context.Context, req Request, userContent string, events chan<- agentTypes.Event) {
 	scanner := agents.Scanner()
 	if scanner != nil {
 		scanner.Scan()
@@ -26,54 +24,30 @@ func run(ctx context.Context, req Request, sessionID, userContent string, events
 		events <- agentTypes.Event{Type: agentTypes.EventUserInput, Text: trimContent}
 	}
 
-	externalAgent, externalEffective, externalReadOnly := external.MatchExternal(trimContent)
-	if externalAgent != "" {
-		trimContent = strings.TrimSpace(externalEffective)
-	}
-
-	var matchedSkill *filesystem.Skill
-	var skillResult agentTypes.Event
-	if externalAgent == "" && scanner != nil {
-		if m, effective := runtime.MatchSkill(scanner, trimContent); m != nil {
-			matchedSkill = m
-			trimContent = strings.TrimSpace(effective)
-			skillResult = agentTypes.Event{Type: agentTypes.EventSkillResult, Text: strings.TrimSpace(m.Name)}
-			events <- skillResult
-			sessionManager.Record(sessionID, skillResult)
-		}
-	}
-
 	events <- agentTypes.Event{Type: agentTypes.EventAgentSelect}
 
 	var agent agentTypes.Agent
 	var fallbacks []agentTypes.Agent
-	var agentResult agentTypes.Event
 	registry := agents.Registry()
-	if externalAgent != "" {
-		agentResult = agentTypes.Event{Type: agentTypes.EventAgentResult, Text: "external:" + externalAgent}
-	} else {
-		switch {
-		case req.Model == "" || req.Model == "auto":
-			primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), registry, trimContent, matchedSkill != nil, sessionID)
-			if err != nil {
-				events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
-				return
-			}
-			agent = primary
-			fallbacks = rest
-
-		default:
-			a, ok := registry.Registry[req.Model]
-			if !ok {
-				events <- agentTypes.Event{Type: agentTypes.EventError, Err: fmt.Errorf("model %q not found", req.Model)}
-				return
-			}
-			agent = a
+	switch {
+	case req.Model == "" || req.Model == "auto":
+		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), registry, trimContent, false, "")
+		if err != nil {
+			events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
+			return
 		}
-		agentResult = agentTypes.Event{Type: agentTypes.EventAgentResult, Text: strings.TrimSpace(agent.Name())}
+		agent = primary
+		fallbacks = rest
+
+	default:
+		a, ok := registry.Registry[req.Model]
+		if !ok {
+			events <- agentTypes.Event{Type: agentTypes.EventError, Err: fmt.Errorf("model %q not found", req.Model)}
+			return
+		}
+		agent = a
 	}
-	events <- agentResult
-	sessionManager.Record(sessionID, agentResult)
+	events <- agentTypes.Event{Type: agentTypes.EventAgentResult, Text: strings.TrimSpace(agent.Name())}
 
 	workDir := req.workDir
 	if workDir == "" {
@@ -83,28 +57,43 @@ func run(ctx context.Context, req Request, sessionID, userContent string, events
 		Agent:          agent,
 		FallbackAgents: fallbacks,
 		WorkDir:        workDir,
-		Skill:          matchedSkill,
 		Content:        trimContent,
-		SessionID:      sessionID,
 		AllowAll:       true,
 	}
 
-	sessionManager.SaveBot(sessionID, sessionID, false)
-
-	session, err := exec.GetSession(data)
-	if err != nil {
-		events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
-		return
-	}
-
-	if externalAgent != "" {
-		if err := exec.CallExternal(ctx, session.ID, externalAgent, trimContent, externalReadOnly, events); err != nil {
-			events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
-		}
-		return
-	}
+	session := buildStatelessSession(req, trimContent, workDir, scanner)
 
 	if err := exec.Execute(ctx, data, session, events, true); err != nil {
 		events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
+	}
+}
+
+func buildStatelessSession(req Request, userInput, workDir string, scanner *runtime.SkillScanner) *agentTypes.AgentSession {
+	systemPrompts := exec.BuildChatCompletionsSystemPrompts(workDir, scanner)
+	systemPrompts = append(systemPrompts, req.systemPrompts...)
+
+	lastUserIdx := -1
+	for i := len(req.Messages) - 1; i >= 0; i-- {
+		if req.Messages[i].Role == "user" {
+			lastUserIdx = i
+			break
+		}
+	}
+	var oldHistories []agentTypes.Message
+	if lastUserIdx > 0 {
+		oldHistories = append(oldHistories, req.Messages[:lastUserIdx]...)
+	}
+
+	wrappedUser := fmt.Sprintf("---\n當前時間: %s\n工作目錄: %s\n---\n%s",
+		time.Now().Format("2006-01-02 15:04:05"), workDir, userInput)
+
+	return &agentTypes.AgentSession{
+		SystemPrompts: systemPrompts,
+		OldHistories:  oldHistories,
+		Histories:     append([]agentTypes.Message{}, oldHistories...),
+		ToolHistories: []agentTypes.Message{},
+		Tools:         []agentTypes.Message{},
+		UserInput:     agentTypes.Message{Role: "user", Content: wrappedUser},
+		Stateless:     true,
 	}
 }

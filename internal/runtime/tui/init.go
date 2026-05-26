@@ -20,7 +20,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 )
 
 type TUIMode int
@@ -218,12 +217,11 @@ func getDaemonStatus() string {
 }
 
 func getHttpStatus() string {
-	port := go_pkg_utils.GetWithDefault("PORT", "17989")
 	r, err := runtime.Read()
 	if err != nil || r == nil || !runtime.IsAlive(r.PID) {
 		return textStyle.Render("http:     ") + errorStyle.Render("failed")
 	}
-	return textStyle.Render("http:     ") + okayStyle.Render(port)
+	return textStyle.Render("http:     ") + okayStyle.Render(filesystem.Port)
 }
 
 func loadSessionTail(sid string) []tea.Cmd {

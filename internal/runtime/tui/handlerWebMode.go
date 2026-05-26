@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -25,8 +24,7 @@ func (t TUI) webMode() (TUI, tea.Cmd, bool) {
 		return t, tea.Println(errorStyle.Render("⎯ /mode: " + err.Error())), true
 	}
 
-	port := go_pkg_utils.GetWithDefault("PORT", "17989")
-	url := "http://localhost:" + port + "/" + sid + "/"
+	url := "http://localhost:" + filesystem.Port + "/" + sid + "/"
 
 	if err := openBrowser(url); err != nil {
 		t.mode = webMode

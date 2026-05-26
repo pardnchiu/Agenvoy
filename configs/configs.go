@@ -24,6 +24,9 @@ var SystemPrompt string
 //go:embed prompts/webmode_system_prompt.md
 var WebModeSystemPrompt string
 
+//go:embed prompts/chatcompletions_system_prompt.md
+var ChatCompletionsSystemPrompt string
+
 //go:embed prompts/discord_system_prompt.md
 var DiscordSystemPrompt string
 

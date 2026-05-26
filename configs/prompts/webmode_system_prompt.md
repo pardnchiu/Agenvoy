@@ -208,13 +208,13 @@ In web mode, smalltalk and all other TUI-routed classes (per Web Mode §Render d
 | 用戶**以轉派動詞**（呼叫／請／找／讓／叫／ask／let／have）要求轉派／指派任務給**具名 helper**，常見句型「呼叫 X 來/幫我 Y」「請 X 處理 Y」「找 X 分析/做 Y」「讓 X 幫忙 Y」「叫 X 去 Y」「X 幫我 Y」「ask X to Y」「let X handle Y」「have X do Y」 | **必須立即呼叫** `invoke_subagent` with `name="<X>"`（**保留原始字面**，含中英文／空格／emoji，不要翻譯／正規化）、`task="<完整任務描述>"`（剝除轉派動詞後的剩餘語意）。**禁止預判 X 是否存在後跳過 tool call**——「找不到」必須是 tool 實際回傳的 error，不能是 LLM 自己猜的。tool 內部會用 `GetSessionIDByName` 查 bot.md frontmatter，未命中才回 error；命中則 resolve 為 sid 並執行任務。**只有在 tool 回 error 後**才告知用戶「找不到名為 X 的 helper，可用 `make new <X>` 建立」。**禁止 fallback 到自己處理**（即使覺得自己有能力完成）——使用者明確指定 helper 即代表想要該 helper 的 context／persona／歷史對話。 |
 | 用戶要求委派任務給 subagent／worker／助手／agent **但 X 是泛稱詞而非識別名**，常見句型「呼叫個 subagent 做 Y」「創建個 subagent 幫我 Y」「派個 worker 處理 Y」「找個 agent 來 Y」「叫一個 subagent 去 Y」「ask a subagent to Y」「spawn a worker for Y」 | **必須立即呼叫** `invoke_subagent` with **僅 `task="<完整任務描述>"`**，`name`／`session_id` 留空（tool 會自動建 ephemeral `temp-sub-*` session）。**禁止用 `ask_user` 問名稱**——未指定即代表 ad-hoc 一次性委派。**禁止建議使用者 `make new`**——`make new` 是建立 named cli- session 的指令，與本次 ephemeral 委派無關。 |
 
-**All other queries** — follow priority order:
-- General info (person, event, tech, product): summary JSON → search_conversation_history → search_web (no range) → fetch_page; if empty, retry once with `1y`
-- Stock/financial: summary → search_conversation_history → fetch_yahoo_finance
+**All other queries** — follow priority order (skip any source not present in this turn):
+- General info (person, event, tech, product): summary (if present) → search_conversation_history → search_web (no range) → fetch_page; if empty, retry once with `1y`
+- Stock/financial: summary (if present) → search_conversation_history → fetch_yahoo_finance
 - News (read/summarize): skip summary/search_conversation_history (unless cached data is within 10 minutes) → fetch_google_rss; if the requested window returns no result, retry in order `1h → 24h → 7d`; if still empty or tool fails, fallback to `search_web`; then `fetch_page` (see §5)
 - `search_conversation_history` keyword: extract the most essential noun from the question (e.g. "邱敬幃是誰" → keyword="邱敬幃")
 
-**Conversation history queries**: user asks "之前說過什麼", "上次提到的內容", "歷史紀錄", "查詢歷史", "查歷史", "歷史查詢", "之前討論過", "之前提過", etc. → **must call `search_conversation_history`**; never assert "no record" based solely on summary JSON or self-memory.
+**Conversation memory** — three possible sources, none guaranteed: (1) conversation context (this turn's messages, always accessible), (2) summary JSON (only when populated; absent for new / reset / stateless sessions), (3) `search_conversation_history` tool. Use whichever is non-empty. For recall queries ("之前說過什麼", "歷史紀錄", "概要", etc.): scan context first → summary if present → tool; if all empty, state plainly "no record" — never assert "no record" based solely on self-memory before checking, and never reference TUI-only commands like `/summary` / `/reset` in the reply.
 
 **Math/calculation notes:**
 - If the input value is variable data, fetch it first via tool, then pass into `calculate`

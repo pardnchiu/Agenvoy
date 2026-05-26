@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 
@@ -39,10 +38,6 @@ import (
 )
 
 func init() {
-	if err := godotenv.Load(); err != nil {
-		slog.Warn("godotenv.Load",
-			slog.String("error", err.Error()))
-	}
 	go_pkg_sandbox.New(configs.DeniedMap)
 	if err := go_pkg_filesystem.New(go_pkg_filesystem.Policy{
 		DeniedMap:   configs.DeniedMap,
@@ -115,6 +110,14 @@ func initCLI() {
 		slog.Error("filesystem.Init",
 			slog.String("error", err.Error()))
 		os.Exit(1)
+	}
+	if err := filesystem.LoadRuntime(); err != nil {
+		slog.Warn("filesystem.LoadRuntime",
+			slog.String("error", err.Error()))
+	}
+	if err := session.BackfillKeys(); err != nil {
+		slog.Warn("session.BackfillKeys",
+			slog.String("error", err.Error()))
 	}
 	if err := torii.Init(filesystem.StoreDir); err != nil {
 		slog.Error("store.Init",
