@@ -9,9 +9,19 @@ import (
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
+
+var providerStaticKeys = []string{
+	"CLAUDE_API_KEY",
+	"OPENAI_API_KEY",
+	"GEMINI_API_KEY",
+	"GROK_API_KEY",
+	"DEEPSEEK_API_KEY",
+	"NVIDIA_API_KEY",
+}
 
 type CompatEntry struct {
 	Provider string `json:"provider"`
@@ -117,6 +127,34 @@ func SaveKey(key string) error {
 		return nil
 	}
 	cfg.Keys = append(cfg.Keys, key)
+	return Save(cfg)
+}
+
+func BackfillKeys() error {
+	cfg, err := Load()
+	if err != nil {
+		return err
+	}
+
+	candidates := append([]string{}, providerStaticKeys...)
+	for _, c := range cfg.Compats {
+		candidates = append(candidates, "COMPAT_"+strings.ToUpper(c.Provider)+"_API_KEY")
+	}
+
+	changed := false
+	for _, k := range candidates {
+		if slices.Contains(cfg.Keys, k) {
+			continue
+		}
+		if keychain.Get(k) == "" {
+			continue
+		}
+		cfg.Keys = append(cfg.Keys, k)
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
 	return Save(cfg)
 }
 

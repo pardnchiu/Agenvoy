@@ -53,6 +53,7 @@ var commands = []Command{
 	{"log", "open / view raw action.log via $PAGER (less)"},
 	{"cmd", "run / exec shell command directly in cwd · sh -c"},
 	{"allow-skill", "dangerously skip permission · always-allow skill"},
+	{"key", "update / rotate keychain value · pick from recorded keys"},
 	{"clear", "clear visible transcript / history · memory untouched"},
 	{"exit", "exit / quit TUI · daemon keeps running"},
 }

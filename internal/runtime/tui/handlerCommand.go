@@ -95,6 +95,9 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 
 	case "/allow-skill":
 		return t.commandAllowSkill(parts)
+
+	case "/key":
+		return t.commandKey(parts)
 	}
 	return t, nil, false
 }

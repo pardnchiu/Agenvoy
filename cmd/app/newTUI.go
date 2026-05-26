@@ -42,6 +42,10 @@ func newTUI() {
 		slog.Warn("filesystem.LoadRuntime",
 			slog.String("error", err.Error()))
 	}
+	if err := session.BackfillKeys(); err != nil {
+		slog.Warn("session.BackfillKeys",
+			slog.String("error", err.Error()))
+	}
 	if err := torii.Init(filesystem.StoreDir); err != nil {
 		slog.Error("store.Init",
 			slog.String("error", err.Error()))
