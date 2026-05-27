@@ -171,6 +171,18 @@ func (t TUI) viewPopup() string {
 		body = append(body, field)
 		body = append(body, "")
 		body = append(body, hintStyle.Render("enter confirm · esc cancel · (input hidden)"))
+
+	case popupOAuth:
+		if p.oauth != nil {
+			if p.oauth.url != "" {
+				body = append(body, hintStyle.Render("url:  ")+textStyle.Render(p.oauth.url))
+			}
+			if p.oauth.userCode != "" {
+				body = append(body, hintStyle.Render("code: ")+systemStyle.Render(p.oauth.userCode))
+			}
+		}
+		body = append(body, "")
+		body = append(body, hintStyle.Render("enter re-open browser · esc cancel"))
 	}
 
 	if len(p.questions) > 1 {

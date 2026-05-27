@@ -31,6 +31,12 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Pending:
 			t.popupQueue = append(t.popupQueue, msg)
 			return t, nil
+		case OAuthInfo:
+			return t.runOAuthInfo(msg)
+		case OAuthSuccess:
+			return t.runOAuthSuccess(msg)
+		case OAuthFailed:
+			return t.runOAuthFailed(msg)
 		}
 		return t, nil
 	}
@@ -353,6 +359,39 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.currentSessionName = msg.name
 		}
 		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ bot saved: %s", msg.name)) + "\n")
+
+	case ModelAddProviderPick:
+		return t.runModelAddProviderPick(msg.provider)
+
+	case ModelAddAPIKeyReplace:
+		return t.runModelAddAPIKeyReplace(msg.replace)
+
+	case ModelAddAPIKeySubmit:
+		return t.runModelAddAPIKeySubmit(msg.key)
+
+	case ModelAddCompatNameSubmit:
+		return t.runModelAddCompatNameSubmit(msg.name)
+
+	case ModelAddCompatURLSubmit:
+		return t.runModelAddCompatURLSubmit(msg.url)
+
+	case ModelAddCompatKeySubmit:
+		return t.runModelAddCompatKeySubmit(msg.key)
+
+	case ModelAddModelPick:
+		return t.runModelAddModelPick(msg.name, msg.description)
+
+	case OAuthInfo:
+		return t.runOAuthInfo(msg)
+
+	case OAuthSuccess:
+		return t.runOAuthSuccess(msg)
+
+	case OAuthFailed:
+		return t.runOAuthFailed(msg)
+
+	case OAuthReLoginPick:
+		return t.runOAuthReLoginPick(msg.replace)
 
 	case ModelAddDone:
 		seq := []tea.Cmd{

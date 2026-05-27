@@ -1,13 +1,10 @@
-ifneq ($(filter cli run model,$(MAKECMDGOALS)),)
+ifneq ($(filter cli run,$(MAKECMDGOALS)),)
 
 cli:
 	@go run ./cmd/app/ cli $(filter-out $@,$(MAKECMDGOALS))
 
 run:
 	@go run ./cmd/app/ run $(filter-out $@,$(MAKECMDGOALS))
-
-model:
-	@go run ./cmd/app/ model $(filter-out $@,$(MAKECMDGOALS))
 
 %:
 	@:
@@ -23,7 +20,6 @@ help:
 	@echo "  make stop               Stop the running server daemon"
 	@echo "  make update             Update agen to the latest release (always overwrite)"
 	@echo "  make test               Run provider integration tests (skips when API keys missing)"
-	@echo "  make model [add|remove|list|dispatcher|reasoning]   Manage providers/models, dispatcher, reasoning"
 	@echo "  make cli <input...>     Run agent (requires tool confirmation)"
 	@echo "  make run <input...>     Run agent (allow all tools, no confirmation)"
 

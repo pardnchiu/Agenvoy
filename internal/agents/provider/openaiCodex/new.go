@@ -91,6 +91,23 @@ func Authenticate(ctx context.Context) error {
 	return nil
 }
 
+func AuthWithCallback(ctx context.Context, onURL func(string)) error {
+	workDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("os.Getwd: %w", err)
+	}
+	a := &Agent{
+		httpClient: newHTTPClient(),
+		workDir:    workDir,
+	}
+	token, err := a.LoginWithCallback(ctx, onURL)
+	if err != nil {
+		return fmt.Errorf("a.LoginWithCallback: %w", err)
+	}
+	a.token = token
+	return nil
+}
+
 func (a *Agent) Name() string {
 	return prefix + a.model
 }

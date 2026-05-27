@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -17,6 +18,7 @@ const (
 	popupSecret
 	popupSingleSelect
 	popupMultiSelect
+	popupOAuth
 )
 
 type Popup struct {
@@ -41,6 +43,15 @@ type Popup struct {
 	answers     []any
 
 	onConfirm func(chosen string) any
+
+	oauth *oauthState
+}
+
+type oauthState struct {
+	provider string
+	url      string
+	userCode string
+	cancel   context.CancelFunc
 }
 
 func (t TUI) closePopup() TUI {
@@ -72,6 +83,27 @@ func (t TUI) updatePopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case popupText, popupSecret:
 		return t.updateTextInputPopup(msg)
+
+	case popupOAuth:
+		return t.updateOAuthPopup(msg)
+	}
+	return t, nil
+}
+
+func (t TUI) updateOAuthPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	p := t.popup
+	if p.oauth == nil {
+		return t, nil
+	}
+	switch msg.Type {
+	case tea.KeyEsc:
+		if p.oauth.cancel != nil {
+			p.oauth.cancel()
+		}
+	case tea.KeyEnter:
+		if p.oauth.url != "" {
+			_ = openBrowser(p.oauth.url)
+		}
 	}
 	return t, nil
 }

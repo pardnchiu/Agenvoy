@@ -99,3 +99,20 @@ func Authenticate(ctx context.Context) error {
 	a.Token = token
 	return nil
 }
+
+func AuthWithCallback(ctx context.Context, onCode func(*DeviceCode)) error {
+	workDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("os.Getwd: %w", err)
+	}
+	a := &Agent{
+		httpClient: provider.NewHTTPClientNonStream(),
+		workDir:    workDir,
+	}
+	token, err := a.LoginWithCallback(ctx, onCode)
+	if err != nil {
+		return fmt.Errorf("a.LoginWithCallback: %w", err)
+	}
+	a.Token = token
+	return nil
+}
