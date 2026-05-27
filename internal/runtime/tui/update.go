@@ -382,6 +382,10 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd := t.runAllowSkillToggle(msg.scope, msg.name)
 		return next, cmd
 
+	case AllowCmdSubmit:
+		next, cmd := t.runAllowCmdAppend(msg.name)
+		return next, cmd
+
 	case ModelRemove:
 		next, cmd := t.runModelRemove(msg.name)
 		agents.Reload()

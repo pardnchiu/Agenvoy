@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
@@ -22,13 +21,8 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
-	var commands []string
-	if err := json.Unmarshal(configs.WhiteList, &commands); err != nil {
-		return nil, fmt.Errorf("json.Unmarshal: %w", err)
-	}
-
-	allowedCommand := make(map[string]bool, len(commands))
-	for _, cmd := range commands {
+	allowedCommand := make(map[string]bool, len(filesystem.WhiteList))
+	for _, cmd := range filesystem.WhiteList {
 		allowedCommand[cmd] = true
 	}
 

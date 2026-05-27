@@ -3,9 +3,13 @@ package filesystem
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
+
+	"github.com/pardnchiu/agenvoy/configs"
 )
 
 // * Runtime limits, loaded once from ~/.config/agenvoy/config.json `limits` section.
@@ -21,6 +25,19 @@ var (
 	MaxSessionTasks            = 3
 	MaxSubagentTimeoutMin      = 10
 	MaxExternalAgentTimeoutMin = 10
+)
+
+type DeniedConfig struct {
+	Dirs       []string `json:"dirs"`
+	Files      []string `json:"files"`
+	Prefixes   []string `json:"prefixes"`
+	Extensions []string `json:"extensions"`
+}
+
+var (
+	DeniedMap      DeniedConfig
+	DeniedMapBytes []byte
+	WhiteList      []string
 )
 
 const (
@@ -127,6 +144,45 @@ func LoadRuntime() error {
 	}
 	MaxExternalAgentTimeoutMin = min(hardCapMaxExternalAgentTimeoutMin, limits.MaxExternalAgentTimeoutMin)
 
+	if err := json.Unmarshal(configs.DeniedMap, &DeniedMap); err != nil {
+		return fmt.Errorf("embedded denied_map: %w", err)
+	}
+	if err := json.Unmarshal(configs.WhiteList, &WhiteList); err != nil {
+		return fmt.Errorf("embedded white_list: %w", err)
+	}
+	if data, ok := raw["denied_map"]; ok && len(data) > 0 {
+		var user DeniedConfig
+		if err := json.Unmarshal(data, &user); err != nil {
+			return fmt.Errorf("json.Unmarshal denied_map: %w", err)
+		}
+		DeniedMap.Dirs = merge(DeniedMap.Dirs, user.Dirs)
+		DeniedMap.Files = merge(DeniedMap.Files, user.Files)
+		DeniedMap.Prefixes = merge(DeniedMap.Prefixes, user.Prefixes)
+		DeniedMap.Extensions = merge(DeniedMap.Extensions, user.Extensions)
+	}
+	if data, ok := raw["white_list"]; ok && len(data) > 0 {
+		var user []string
+		if err := json.Unmarshal(data, &user); err != nil {
+			return fmt.Errorf("json.Unmarshal white_list: %w", err)
+		}
+		WhiteList = merge(WhiteList, user)
+	}
+
+	deniedBytes, err := json.Marshal(DeniedMap)
+	if err != nil {
+		return fmt.Errorf("json.Marshal denied_map: %w", err)
+	}
+	DeniedMapBytes = deniedBytes
+
+	go_pkg_sandbox.New(DeniedMapBytes)
+	if err := go_pkg_filesystem.New(go_pkg_filesystem.Policy{
+		DeniedMap:   DeniedMapBytes,
+		ExcludeList: configs.ExcludeList,
+	}); err != nil {
+		slog.Warn("go_pkg_filesystem New",
+			slog.String("error", err.Error()))
+	}
+
 	if !changed {
 		return nil
 	}
@@ -143,4 +199,24 @@ func LoadRuntime() error {
 		return fmt.Errorf("go_pkg_filesystem.WriteJSON: %w", err)
 	}
 	return nil
+}
+
+func merge(base, extra []string) []string {
+	seen := make(map[string]bool, len(base)+len(extra))
+	out := make([]string, 0, len(base)+len(extra))
+	for _, v := range base {
+		if v == "" || seen[v] {
+			continue
+		}
+		seen[v] = true
+		out = append(out, v)
+	}
+	for _, v := range extra {
+		if v == "" || seen[v] {
+			continue
+		}
+		seen[v] = true
+		out = append(out, v)
+	}
+	return out
 }

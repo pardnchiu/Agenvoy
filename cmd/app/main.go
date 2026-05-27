@@ -11,10 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
-	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
-
-	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/summary"
@@ -27,15 +23,6 @@ import (
 )
 
 func init() {
-	go_pkg_sandbox.New(configs.DeniedMap)
-	if err := go_pkg_filesystem.New(go_pkg_filesystem.Policy{
-		DeniedMap:   configs.DeniedMap,
-		ExcludeList: configs.ExcludeList,
-	}); err != nil {
-		slog.Error("go_pkg_filesystem.New",
-			slog.String("error", err.Error()))
-		os.Exit(1)
-	}
 	exec.RegisterPushHook("dc-", discord.PushDiscordResult)
 	exec.RegisterPushHook("tg-", telegram.PushTelegramResult)
 }

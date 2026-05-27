@@ -2,9 +2,7 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,25 +11,9 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
-	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
-
-type deniedConfig struct {
-	Dirs       []string `json:"dirs"`
-	Files      []string `json:"files"`
-	Prefixes   []string `json:"prefixes"`
-	Extensions []string `json:"extensions"`
-}
-
-var DeniedConfig = func() deniedConfig {
-	var cfg deniedConfig
-	if err := json.Unmarshal(configs.DeniedMap, &cfg); err != nil {
-		slog.Warn("json.Unmarshal",
-			slog.String("error", err.Error()))
-	}
-	return cfg
-}()
 
 var WorkDirChangeHook func(path string)
 
@@ -73,7 +55,7 @@ func changeWorkDir(e *toolTypes.Executor, args []string) (string, error) {
 	}
 	abs = filepath.Clean(abs)
 
-	for _, dir := range DeniedConfig.Dirs {
+	for _, dir := range filesystem.DeniedMap.Dirs {
 		needle := "/" + dir
 		if strings.Contains(abs, needle+"/") || strings.HasSuffix(abs, needle) {
 			return "", fmt.Errorf("access denied: %s", dir)
