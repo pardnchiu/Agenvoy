@@ -94,18 +94,5 @@ func SupportTemperature(providerName, model string) bool {
 }
 
 func NewHTTPClient() *http.Client {
-	base, ok := http.DefaultTransport.(*http.Transport)
-	if !ok {
-		base = &http.Transport{}
-	}
-	transport := base.Clone()
-	transport.ResponseHeaderTimeout = 10 * time.Second
-	return &http.Client{
-		Timeout:   5 * time.Minute,
-		Transport: transport,
-	}
-}
-
-func NewHTTPClientNonStream() *http.Client {
-	return &http.Client{Timeout: 5 * time.Minute}
+	return &http.Client{Timeout: 10 * time.Minute}
 }

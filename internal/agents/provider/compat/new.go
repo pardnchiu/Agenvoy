@@ -59,7 +59,7 @@ func New(model ...string) (*Agent, error) {
 	}
 
 	return &Agent{
-		httpClient: &http.Client{Timeout: 5 * time.Minute},
+		httpClient: &http.Client{Timeout: 10 * time.Minute},
 		model:      usedModel,
 		baseURL:    baseURL,
 		apiKey:     apiKey,

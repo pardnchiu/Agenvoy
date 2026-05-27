@@ -20,7 +20,7 @@ func newHTTPClient() *http.Client {
 		base = &http.Transport{}
 	}
 	transport := base.Clone()
-	transport.ResponseHeaderTimeout = 10 * time.Second
+	transport.ResponseHeaderTimeout = 15 * time.Second
 	return &http.Client{
 		Timeout:   10 * time.Minute,
 		Transport: transport,
@@ -72,23 +72,6 @@ func New(model ...string) (*Agent, error) {
 	}
 
 	return a, nil
-}
-
-func Authenticate(ctx context.Context) error {
-	workDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("os.Getwd: %w", err)
-	}
-	a := &Agent{
-		httpClient: newHTTPClient(),
-		workDir:    workDir,
-	}
-	token, err := a.Login(ctx)
-	if err != nil {
-		return fmt.Errorf("a.Login: %w", err)
-	}
-	a.token = token
-	return nil
 }
 
 func AuthWithCallback(ctx context.Context, onURL func(string)) error {

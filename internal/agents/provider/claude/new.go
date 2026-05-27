@@ -39,7 +39,7 @@ func New(model ...string) (*Agent, error) {
 	}
 
 	return &Agent{
-		httpClient: provider.NewHTTPClientNonStream(),
+		httpClient: provider.NewHTTPClient(),
 		model:      usedModel,
 		apiKey:     apiKey,
 		workDir:    workDir,

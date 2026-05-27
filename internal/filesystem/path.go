@@ -146,10 +146,6 @@ func AllowSkillProjectPath(workDir string) string {
 	return filepath.Join(workDir, "."+projectName, "allow_skill")
 }
 
-func AllowSkillProjectDir(workDir string) string {
-	return filepath.Join(workDir, "."+projectName, filepath.Dir("allow_skill"))
-}
-
 func AllowToolPath(workDir string) string {
 	return filepath.Join(workDir, "."+projectName, "allow_list")
 }

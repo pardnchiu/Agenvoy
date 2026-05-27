@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -51,25 +50,6 @@ func CreateSession(prefix string) (string, error) {
 	}
 	SaveBot(sessionID, sessionID, false)
 	return sessionID, nil
-}
-
-func LockConfig() (func(), error) {
-	// * lock file: kept on os.OpenFile because syscall.Flock needs the raw fd
-	lockPath := filepath.Join(filesystem.AgenvoyDir, "config.json.lock")
-	file, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		return nil, fmt.Errorf("os.OpenFile: %w", err)
-	}
-
-	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
-		file.Close()
-		return nil, fmt.Errorf("syscall.Flock: %w", err)
-	}
-
-	return func() {
-		_ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
-		file.Close()
-	}, nil
 }
 
 func GetTelegramSession(chatID int64) (string, error) {

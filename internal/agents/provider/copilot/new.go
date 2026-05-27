@@ -46,13 +46,8 @@ func New(model ...string) (*Agent, error) {
 		return nil, fmt.Errorf("os.Getwd: %w", err)
 	}
 
-	// configDir, err := utils.GetConfigDir()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("utils.ConfigDir(: %w", err)
-	// }
-
 	agent := &Agent{
-		httpClient: provider.NewHTTPClientNonStream(),
+		httpClient: provider.NewHTTPClient(),
 		model:      usedModel,
 		workDir:    workDir,
 	}
@@ -83,30 +78,13 @@ func ClearToken() error {
 	return keychain.Delete(tokenKey)
 }
 
-func Authenticate(ctx context.Context) error {
-	workDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("os.Getwd: %w", err)
-	}
-	a := &Agent{
-		httpClient: provider.NewHTTPClientNonStream(),
-		workDir:    workDir,
-	}
-	token, err := a.Login(ctx)
-	if err != nil {
-		return fmt.Errorf("a.Login: %w", err)
-	}
-	a.Token = token
-	return nil
-}
-
 func AuthWithCallback(ctx context.Context, onCode func(*DeviceCode)) error {
 	workDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("os.Getwd: %w", err)
 	}
 	a := &Agent{
-		httpClient: provider.NewHTTPClientNonStream(),
+		httpClient: provider.NewHTTPClient(),
 		workDir:    workDir,
 	}
 	token, err := a.LoginWithCallback(ctx, onCode)
