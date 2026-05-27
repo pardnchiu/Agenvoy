@@ -19,6 +19,15 @@ import (
 )
 
 func (a *Agent) Login(ctx context.Context) (*StoredToken, error) {
+	return a.LoginWithCallback(ctx, func(url string) {
+		fmt.Print("[x] OpenAI Codex OAuth: for dev testing, need ChatGPT Plus/Pro")
+		fmt.Printf("[x] url browser: %s│\n", url)
+		fmt.Print("[*] press Enter to open browser")
+		openBrowser(url)
+	})
+}
+
+func (a *Agent) LoginWithCallback(ctx context.Context, onURL func(string)) (*StoredToken, error) {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
 	if err != nil {
@@ -42,13 +51,11 @@ func (a *Agent) Login(ctx context.Context) (*StoredToken, error) {
 	}
 	defer srv.Shutdown(context.Background())
 
-	url := buildAuthURL(challenge, state, redirectURI)
+	authLink := buildAuthURL(challenge, state, redirectURI)
 
-	fmt.Print("[x] OpenAI Codex OAuth: for dev testing, need ChatGPT Pro/Max")
-	fmt.Printf("[x] url browser: %s│\n", url)
-	fmt.Print("[*] press Enter to open browser")
-
-	openBrowser(url)
+	if onURL != nil {
+		onURL(authLink)
+	}
 
 	select {
 	case <-ctx.Done():
@@ -208,8 +215,6 @@ func openBrowser(link string) {
 		cmd = exec.Command("open", link)
 	case "linux":
 		cmd = exec.Command("xdg-open", link)
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", link)
 	default:
 		return
 	}

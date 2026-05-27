@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 )
 
@@ -65,6 +66,9 @@ func cronOptions(crons []runtime.CronEntry) (labels, values []string) {
 func (t TUI) dispatchAgent(content string) (TUI, tea.Cmd) {
 	if content == "" {
 		return t, nil
+	}
+	if len(agents.Registry().Entries) == 0 {
+		return t, tea.Println(warnStyle.Render("⎯ no model configured · /model global add") + "\n")
 	}
 	t = t.recordInputHistory(content)
 	t.running = true

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -46,6 +47,12 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				close(wrapped)
+				done <- fmt.Errorf("exec.Run panic: %v", r)
+			}
+		}()
 		err := exec.Run(
 			ctx,
 			agents.Dispatcher(),

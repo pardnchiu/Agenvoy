@@ -23,14 +23,13 @@ import (
 	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/agents/summary"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/runtime/cli"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
 	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/plan"
@@ -54,21 +53,6 @@ func init() {
 func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		case "model":
-			initCLI()
-			runModel(os.Args[2:])
-			return
-
-		case "session":
-			initCLI()
-			cli.Session(os.Args[2:])
-			return
-
-		case "mcp":
-			initCLI()
-			cli.MCP(os.Args[2:])
-			return
-
 		case "cli", "run":
 			if len(os.Args) < 3 {
 				fmt.Fprintf(os.Stderr, "Usage: agen cli <input...>\n")
@@ -145,68 +129,8 @@ func modelCheck() {
 		os.Exit(1)
 	}
 	if len(cfg.Models) == 0 {
-		fmt.Println("[*] No model configured. Setting up first model…")
-		runAdd()
-
-		cfg, err = session.Load()
-		if err != nil || len(cfg.Models) == 0 {
-			fmt.Println("[!] No model added. Exiting.")
-			os.Exit(0)
-		}
-	}
-
-	checkModels()
-
-	cfg, err = session.Load()
-	if err != nil || len(cfg.Models) == 0 {
-		fmt.Println("[!] No model remaining after cleanup. Exiting.")
-		os.Exit(0)
-	}
-}
-
-func runModel(args []string) {
-	sub := ""
-	if len(args) > 0 {
-		sub = strings.ToLower(strings.TrimSpace(args[0]))
-	}
-	if sub == "" {
-		sub = cli.Pick("Select model action", []string{"add", "remove", "list", "dispatcher", "reasoning"})
-	}
-	switch sub {
-	case "add":
-		runAdd()
-	case "remove", "rm":
-		cli.RunRemove()
-	case "list":
-		runModelList()
-	case "dispatcher":
-		runDispatcher()
-	case "reasoning":
-		runReasoning()
-	default:
-		fmt.Fprintf(os.Stderr, "Usage: agen model [add|remove|list|dispatcher|reasoning]\n")
+		fmt.Println("[!] no model configured · /model global add")
 		os.Exit(1)
-	}
-}
-
-func runModelList() {
-	cfg, err := session.Load()
-	if err != nil {
-		slog.Error("session.Load", slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-
-	if len(cfg.Models) == 0 {
-		fmt.Println("No models configured.")
-		return
-	}
-
-	fmt.Printf("Found %d model(s):\n\n", len(cfg.Models))
-	for _, m := range cfg.Models {
-		fmt.Printf("• %s\n", m.Name)
-		if m.Description != "" {
-			fmt.Printf("  %s\n", m.Description)
-		}
 	}
 }
 
@@ -255,6 +179,9 @@ func setSummaryCron() {
 			}
 			bgCtx := context.Background()
 			summaryAgent := exec.SelectAgent(bgCtx, agents.Dispatcher(), agents.Registry(), "[summary] background summary cron", false, sid)
+			if summaryAgent == nil {
+				continue
+			}
 			summary.Generate(bgCtx, summaryAgent, sid, summaryHistories)
 		}
 	}
@@ -276,9 +203,6 @@ func printUsage() {
 	fmt.Println("  agen                                            Attach TUI; spawn server daemon if not running")
 	fmt.Println("  agen stop                                       Stop the running server daemon")
 	fmt.Println("  agen update                                     Update agen to the latest release")
-	fmt.Println("  agen model [add|remove|list|dispatcher|reasoning]  Manage providers/models, dispatcher, reasoning")
-	fmt.Println("  agen mcp [list|add|remove]                      Manage MCP servers")
-	fmt.Println("  agen session [new|config] [name]                Manage CLI sessions (interactive picker if no name)")
 	fmt.Println("  agen cli <input...>                             Run agent (requires tool confirmation)")
 	fmt.Println("  agen run <input...>                             Run agent (allow all tools)")
 }

@@ -57,10 +57,6 @@ func buildAgentRegistry() agentTypes.AgentRegistry {
 		}
 	}
 
-	if registry.Fallback == nil {
-		slog.Error("no agents initialized, please check API keys")
-	}
-
 	return registry
 }
 

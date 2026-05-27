@@ -20,9 +20,6 @@ func (t TUI) commandModelRemove() (TUI, tea.Cmd, bool) {
 	if len(cfg.Models) == 0 {
 		return t, tea.Println(hintStyle.Render("no models configured") + "\n"), true
 	}
-	if len(cfg.Models) == 1 {
-		return t, tea.Println(warnStyle.Render("[!] cannot remove last model · /model global add another first") + "\n"), true
-	}
 
 	options := make([]string, len(cfg.Models))
 	values := make([]string, len(cfg.Models))
@@ -56,8 +53,8 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n")
 	}
 
-	if len(cfg.Models) <= 1 {
-		return t, tea.Println(warnStyle.Render("[!] cannot remove last model · /model global add another first") + "\n")
+	if len(cfg.Models) == 0 {
+		return t, tea.Println(hintStyle.Render("no models configured") + "\n")
 	}
 
 	idx := -1
@@ -86,5 +83,8 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 	if clearedDispatcher {
 		lines = append(lines, warnStyle.Render("dispatcher cleared · run /model or set a new dispatcher"))
 	}
-	return t, tea.Println(strings.Join(lines, "\n") + "\n")
+	if len(cfg.Models) == 0 {
+		lines = append(lines, warnStyle.Render("⎯ no model configured · /model global add"))
+	}
+	return t, tea.Println(strings.Join(lines, "\n\n") + "\n")
 }

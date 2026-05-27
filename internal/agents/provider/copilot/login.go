@@ -33,40 +33,33 @@ type DeviceCode struct {
 }
 
 func (c *Agent) Login(ctx context.Context) (*Token, error) {
+	return c.LoginWithCallback(ctx, func(code *DeviceCode) {
+		expires := time.Now().Add(time.Duration(code.ExpiresIn) * time.Second)
+		fmt.Printf("[*] url:      %-36s\n", code.VerificationURI)
+		fmt.Printf("[*] code:     %-36s\n", code.UserCode)
+		fmt.Printf("[*] expires:  %-36s\n", expires.Format("2006-01-02 15:04:05"))
+		fmt.Print("[*] press Enter to open browser")
+		go func() {
+			var input string
+			fmt.Scanln(&input)
+			OpenBrowser(code.VerificationURI)
+		}()
+	})
+}
+
+func (c *Agent) LoginWithCallback(ctx context.Context, onCode func(*DeviceCode)) (*Token, error) {
 	code, _, err := go_pkg_http.POST[DeviceCode](ctx, nil, deviceCodeAPI,
 		map[string]string{},
 		map[string]any{
 			"client_id": clientID,
 		}, "form")
+	if err != nil {
+		return nil, fmt.Errorf("device-code: %w", err)
+	}
 
-	expires := time.Now().Add(time.Duration(code.ExpiresIn) * time.Second)
-	fmt.Printf("[*] url:      %-36s\n", code.VerificationURI)
-	fmt.Printf("[*] code:     %-36s\n", code.UserCode)
-	fmt.Printf("[*] expires:  %-36s\n", expires.Format("2006-01-02 15:04:05"))
-	fmt.Print("[*] press Enter to open browser")
-
-	go func() {
-		var input string
-		fmt.Scanln(&input)
-
-		url := code.VerificationURI
-
-		var cmd *exec.Cmd
-		switch runtime.GOOS {
-		case "darwin":
-			cmd = exec.Command("open", url)
-		case "windows":
-			cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-		case "linux":
-			cmd = exec.Command("xdg-open", url)
-		default:
-			fmt.Printf("[!] can not open browser, please open: %-48s\n", url)
-		}
-
-		if cmd != nil {
-			cmd.Start()
-		}
-	}()
+	if onCode != nil {
+		onCode(&code)
+	}
 
 	interval := time.Duration(code.Interval) * time.Second
 	deadline := time.Now().Add(time.Duration(code.ExpiresIn) * time.Second)
@@ -91,6 +84,22 @@ func (c *Agent) Login(ctx context.Context) (*Token, error) {
 		return token, nil
 	}
 	return nil, fmt.Errorf("device code expired")
+}
+
+func OpenBrowser(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "linux":
+		cmd = exec.Command("xdg-open", url)
+	default:
+		fmt.Printf("[!] can not open browser, please open: %-48s\n", url)
+		return
+	}
+	if cmd != nil {
+		_ = cmd.Start()
+	}
 }
 
 type GopilotAccessToken struct {

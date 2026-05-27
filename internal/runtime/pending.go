@@ -185,26 +185,6 @@ func Resolve(id string, r Reply) {
 	}
 }
 
-func Snapshot() []Request {
-	mu.Lock()
-	out := make([]Request, 0, len(entries))
-	for _, e := range entries {
-		out = append(out, e.req)
-	}
-	mu.Unlock()
-	slices.SortFunc(out, func(a, b Request) int {
-		switch {
-		case a.EnqueueAt.Before(b.EnqueueAt):
-			return -1
-		case a.EnqueueAt.After(b.EnqueueAt):
-			return 1
-		default:
-			return 0
-		}
-	})
-	return out
-}
-
 func signalFor(sessionID string) {
 	listenerMu.RLock()
 	defer listenerMu.RUnlock()

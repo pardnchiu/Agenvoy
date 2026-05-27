@@ -8,68 +8,71 @@ import (
 	"strings"
 
 	"github.com/manifoldco/promptui"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
-func Session(args []string) {
-	sub := ""
-	if len(args) > 0 {
-		sub = strings.ToLower(strings.TrimSpace(args[0]))
-	}
-	name := ""
-	if len(args) > 1 {
-		name = strings.TrimSpace(args[1])
-	}
-	if sub == "" {
-		sub = Pick("Select session action", []string{"new", "config"})
-	}
-
-	switch sub {
-	case "new":
-		NewSession(name)
-	case "config":
-		Config(name)
-	default:
-		fmt.Fprintf(os.Stderr, "Usage: agen session [new|config] [name]\n")
-		os.Exit(1)
-	}
+type sessionInfo struct {
+	id   string
+	name string
 }
 
-func pickSession(label string) (sid string, hasSessions bool) {
-	sessions := listSessions()
-	if len(sessions) == 0 {
-		return "", false
+func listSessions() []sessionInfo {
+	dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir)
+	if err != nil {
+		return nil
 	}
+	out := make([]sessionInfo, 0, len(dirs))
+	for _, d := range dirs {
+		sid := d.Name
+		if strings.HasPrefix(sid, "temp-") {
+			continue
+		}
+		name, _ := session.GetBot(sid)
+		out = append(out, sessionInfo{id: sid, name: name})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].id < out[j].id })
+	return out
+}
 
-	sort.SliceStable(sessions, func(i, j int) bool {
-		return sessions[i].id < sessions[j].id
-	})
+const pickSessionNew = "__new__"
 
-	labels := make([]string, len(sessions)+1)
-	for i, s := range sessions {
+func pickSession(label string) string {
+	sessions := listSessions()
+
+	labels := make([]string, 0, len(sessions)+2)
+	values := make([]string, 0, len(sessions)+2)
+
+	for _, s := range sessions {
 		short := utils.ShortenSessionID(s.id)
 		entry := short
 		if s.name != "" && s.name != s.id {
 			entry = fmt.Sprintf("%s (%s)", short, s.name)
 		}
-		labels[i] = entry
+		labels = append(labels, entry)
+		values = append(values, s.id)
 	}
-	labels[len(sessions)] = "exit"
+	labels = append(labels, "(new session)")
+	values = append(values, pickSessionNew)
+	labels = append(labels, "exit")
+	values = append(values, "")
 
 	sel := promptui.Select{
 		Label:        label,
 		Items:        labels,
 		HideSelected: true,
-		Size:         10,
+		Size:         min(8, len(labels)),
 	}
 	idx, _, err := sel.Run()
 	if err != nil {
 		slog.Error("promptui.Select.Run", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	if idx == len(sessions) {
+	if values[idx] == "" {
 		os.Exit(0)
 	}
-	return sessions[idx].id, true
+	return values[idx]
 }

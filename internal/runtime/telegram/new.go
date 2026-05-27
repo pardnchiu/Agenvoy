@@ -31,10 +31,6 @@ type Bot struct {
 
 var current atomic.Pointer[Bot]
 
-func Current() *Bot {
-	return current.Load()
-}
-
 func (b *Bot) Client() *telegram.Bot {
 	if b == nil {
 		return nil

@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
-	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -80,22 +80,6 @@ func Save(cfg *Config) error {
 		return fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
 	}
 	return go_pkg_filesystem.WriteJSON(configPath, cfg, false)
-}
-
-func UpsertModel(entry ModelEntry) error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-
-	for i, m := range cfg.Models {
-		if m.Name == entry.Name {
-			cfg.Models[i].Description = entry.Description
-			return Save(cfg)
-		}
-	}
-	cfg.Models = append(cfg.Models, entry)
-	return Save(cfg)
 }
 
 func UpsertCompat(provider, url string) error {

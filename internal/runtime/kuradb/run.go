@@ -37,7 +37,7 @@ func Run(ctx context.Context) {
 		}
 
 		go streamLog(stdout, slog.LevelInfo, "kura.stdout")
-		go streamLog(stderr, slog.LevelWarn, "kura.stderr")
+		go streamLog(stderr, slog.LevelInfo, "kura.stderr")
 
 		err := cmd.Wait()
 

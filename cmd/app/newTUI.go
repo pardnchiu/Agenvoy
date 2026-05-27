@@ -60,8 +60,6 @@ func newTUI() {
 	discordTool.Register()
 	kuradbTool.Register()
 
-	modelCheck()
-
 	if !runtime.IsCurrent() {
 		if err := newDaemon(); err != nil {
 			slog.Warn("daemon launch failed; running TUI without server",

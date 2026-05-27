@@ -243,30 +243,24 @@ func cmdDaemon() {
 	stopWatcher := watchConfig(context.Background())
 	defer stopWatcher()
 
-	var server *http.Server
+	reloadDiscord()
+	reloadTelegram()
+	reloadKuradb()
 
-	if selectorBot != nil {
-		reloadDiscord()
-		reloadTelegram()
-		reloadKuradb()
-
-		route := routes.New()
-		server = &http.Server{
-			Addr:    ":" + filesystem.Port,
-			Handler: route,
-		}
-
-		go func() {
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				slog.Error("server.ListenAndServe",
-					slog.String("error", err.Error()))
-			}
-		}()
-
-		go setSummaryCron()
-	} else {
-		slog.Warn("no agents configured, server, discord, and telegram disabled")
+	route := routes.New()
+	server := &http.Server{
+		Addr:    ":" + filesystem.Port,
+		Handler: route,
 	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server.ListenAndServe",
+				slog.String("error", err.Error()))
+		}
+	}()
+
+	go setSummaryCron()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

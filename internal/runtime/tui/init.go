@@ -64,6 +64,7 @@ type TUI struct {
 	popupQueue   []Pending
 	botBodyDraft string
 	mcpAdd       *mcpAddDraft
+	modelAdd     *modelAddItem
 
 	selector *CmdSelector
 

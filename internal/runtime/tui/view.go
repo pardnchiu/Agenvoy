@@ -88,10 +88,14 @@ func (t TUI) viewPopup() string {
 	switch p.kind {
 	case popupConfirm, popupSingleSelect:
 		total := len(p.options)
+		visible := p.maxVisible
+		if visible <= 0 && p.kind == popupSingleSelect {
+			visible = cmdSelectorMaxVisible
+		}
 		start, end := 0, total
-		windowed := p.maxVisible > 0 && total > p.maxVisible
+		windowed := visible > 0 && total > visible
 		if windowed {
-			start, end = windowRange(p.cursor, total, p.maxVisible)
+			start, end = windowRange(p.cursor, total, visible)
 		}
 		for i := start; i < end; i++ {
 			opt := p.options[i]
@@ -110,7 +114,18 @@ func (t TUI) viewPopup() string {
 		body = append(body, hintStyle.Render("↑/↓ select · enter confirm · esc cancel"))
 
 	case popupMultiSelect:
-		for i, opt := range p.options {
+		total := len(p.options)
+		visible := p.maxVisible
+		if visible <= 0 {
+			visible = cmdSelectorMaxVisible
+		}
+		start, end := 0, total
+		windowed := total > visible
+		if windowed {
+			start, end = windowRange(p.cursor, total, visible)
+		}
+		for i := start; i < end; i++ {
+			opt := p.options[i]
 			cursor := "  "
 			if i == p.cursor {
 				cursor = systemStyle.Render("> ")
@@ -120,6 +135,9 @@ func (t TUI) viewPopup() string {
 				check = systemStyle.Render("[x]")
 			}
 			body = append(body, fmt.Sprintf("%s%s %s", cursor, check, opt))
+		}
+		if windowed {
+			body = append(body, hintStyle.Render(fmt.Sprintf("  %d/%d", p.cursor+1, total)))
 		}
 		body = append(body, "")
 		body = append(body, hintStyle.Render("↑/↓ move · space toggle · enter confirm · esc cancel"))
@@ -153,6 +171,18 @@ func (t TUI) viewPopup() string {
 		body = append(body, field)
 		body = append(body, "")
 		body = append(body, hintStyle.Render("enter confirm · esc cancel · (input hidden)"))
+
+	case popupOAuth:
+		if p.oauth != nil {
+			if p.oauth.url != "" {
+				body = append(body, hintStyle.Render("url:  ")+textStyle.Render(p.oauth.url))
+			}
+			if p.oauth.userCode != "" {
+				body = append(body, hintStyle.Render("code: ")+systemStyle.Render(p.oauth.userCode))
+			}
+		}
+		body = append(body, "")
+		body = append(body, hintStyle.Render("enter re-open browser · esc cancel"))
 	}
 
 	if len(p.questions) > 1 {
