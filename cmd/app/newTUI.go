@@ -16,11 +16,11 @@ import (
 	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
 	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
 	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime/tui"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/plan"
@@ -28,7 +28,7 @@ import (
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 )
 
-func newTUI() {
+func newTUI(initialInput string, onceCall, allowAll bool) {
 	lipgloss.SetHasDarkBackground(true)
 
 	session.SetHash(session.Hash())
@@ -98,7 +98,7 @@ func newTUI() {
 		cancel()
 	}()
 
-	if err := tui.Run(ctx); err != nil {
+	if err := tui.Run(ctx, initialInput, onceCall, allowAll); err != nil {
 		fmt.Fprintf(os.Stderr, "tui.Run error: %v\n", err)
 	}
 }

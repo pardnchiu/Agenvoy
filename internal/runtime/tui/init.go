@@ -94,10 +94,35 @@ type TUI struct {
 	inputHistoryIdx int
 
 	quitting bool
+
+	onceCall     bool
+	userInput    string
+	allowAll     bool
+	awaitingExit bool
 }
 
 func (t TUI) Init() tea.Cmd {
-	seq := []tea.Cmd{
+	var seq []tea.Cmd
+	if t.onceCall {
+		// agen cli/run: keep the user's terminal scrollback intact, skip the
+		// header block (daemon/http/discord/telegram status), skip the
+		// action.log tailer, and skip the textarea.Blink (no visible
+		// textarea). Session selection mirrors `agen`: if currentSID is
+		// already set (1 existing session), auto-submit straight away; else
+		// fire StartupSelectSession popup and let the SessionSelect /
+		// SessionNewSubmit handlers chain the autoSubmit after the user
+		// picks. Skip LoadHistoryCheck (we don't render history tail in
+		// single-shot output).
+		if sid := strings.TrimSpace(t.currentSessionID); sid != "" {
+			if input := strings.TrimSpace(t.userInput); input != "" {
+				seq = append(seq, func() tea.Msg { return autoSubmit{input: input} })
+			}
+		} else {
+			seq = append(seq, func() tea.Msg { return StartupSelectSession{} })
+		}
+		return tea.Sequence(seq...)
+	}
+	seq = []tea.Cmd{
 		tea.ClearScreen,
 		tea.Batch(
 			textarea.Blink,
@@ -116,6 +141,22 @@ func (t TUI) Init() tea.Cmd {
 	return tea.Sequence(seq...)
 }
 
+type autoSubmit struct {
+	input string
+}
+
+// chainSingleShotSubmit appends an autoSubmit emit to the cmd returned by a
+// session-pick handler. Single-shot suppresses the picker's own ClearScreen +
+// header reprint (so `prior` is usually nil), but we still tea.Sequence to be
+// safe in case future picker paths add silent housekeeping cmds.
+func chainSingleShotSubmit(prior tea.Cmd, input string) tea.Cmd {
+	submit := func() tea.Msg { return autoSubmit{input: strings.TrimSpace(input)} }
+	if prior == nil {
+		return submit
+	}
+	return tea.Sequence(prior, submit)
+}
+
 type StartupSelectSession struct{}
 
 type LoadHistoryCheck struct {
@@ -127,7 +168,7 @@ type LoadHistorySelect struct {
 	load bool
 }
 
-func newModel(ctx context.Context) TUI {
+func newModel(ctx context.Context, userInput string, onceCall, allowAll bool) TUI {
 	textArea := textarea.New()
 	textArea.Placeholder = `Ask anything — research, planning, daily — or type / for commands`
 	textArea.CharLimit = 8000
@@ -161,8 +202,6 @@ func newModel(ctx context.Context) TUI {
 	if len(sessions) == 1 {
 		currentSID = sessions[0].id
 	}
-	// 0 or 2+ sessions: leave currentSID empty — Init() fires StartupSelectSession popup
-	// (popupSwitch always appends "(new session)" so 0-session case still gets an option)
 	if currentSID != "" {
 		currentName, _ = session.GetBot(currentSID)
 	}
@@ -182,6 +221,9 @@ func newModel(ctx context.Context) TUI {
 		currentSessionName: currentName,
 		inputHistory:       loadInputHistory(currentSID),
 		inputHistoryIdx:    -1,
+		onceCall:           onceCall,
+		userInput:          userInput,
+		allowAll:           allowAll,
 	}
 }
 

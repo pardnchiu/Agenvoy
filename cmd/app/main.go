@@ -17,23 +17,13 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/provider"
-	geminiStt "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/stt"
-	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
-	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/agents/summary"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
-	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
-	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
-	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
-	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
-	"github.com/pardnchiu/agenvoy/internal/tools/agent/plan"
-	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
 )
 
 func init() {
@@ -59,8 +49,8 @@ func main() {
 				fmt.Fprintf(os.Stderr, "       agen run <input...>\n")
 				os.Exit(1)
 			}
-			initCLI()
-			cmdAgent(os.Args[1] == "run")
+			input := strings.TrimSpace(strings.ReplaceAll(strings.Join(os.Args[2:], " "), `\n`, "\n"))
+			newTUI(input, true, os.Args[1] == "run")
 			return
 
 		case "stop":
@@ -81,57 +71,7 @@ func main() {
 		}
 	}
 
-	newTUI()
-}
-
-func initCLI() {
-	if err := go_pkg_sandbox.CheckDependence(); err != nil {
-		slog.Error("sandbox.CheckDependence",
-			slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-	if err := filesystem.Init(); err != nil {
-		slog.Error("filesystem.Init",
-			slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-	if err := filesystem.LoadRuntime(); err != nil {
-		slog.Warn("filesystem.LoadRuntime",
-			slog.String("error", err.Error()))
-	}
-	if err := session.BackfillKeys(); err != nil {
-		slog.Warn("session.BackfillKeys",
-			slog.String("error", err.Error()))
-	}
-	if err := torii.Init(filesystem.StoreDir); err != nil {
-		slog.Error("store.Init",
-			slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-	if cfg, err := session.Load(); err == nil {
-		provider.SetReasoningLevel(cfg.ReasoningLevel)
-	}
-	subagent.Register()
-	plan.Register()
-	codexImage2.Register()
-	geminiYoutube.Register()
-	geminiStt.Register()
-	telegramTool.Register()
-	discordTool.Register()
-	kuradbTool.Register()
-}
-
-func modelCheck() {
-	cfg, err := session.Load()
-	if err != nil {
-		slog.Error("session.Load",
-			slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-	if len(cfg.Models) == 0 {
-		fmt.Println("[!] no model configured · /model global add")
-		os.Exit(1)
-	}
+	newTUI("", false, false)
 }
 
 func runStop() {

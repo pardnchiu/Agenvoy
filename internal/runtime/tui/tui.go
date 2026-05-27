@@ -36,8 +36,8 @@ type WorkDir struct {
 	dir string
 }
 
-func Run(ctx context.Context) error {
-	prog := tea.NewProgram(newModel(ctx), tea.WithContext(ctx), tea.WithoutSignalHandler())
+func Run(ctx context.Context, userInput string, onceCall, allowAll bool) error {
+	prog := tea.NewProgram(newModel(ctx, userInput, onceCall, allowAll), tea.WithContext(ctx), tea.WithoutSignalHandler())
 	program.Store(prog)
 	defer program.Store(nil)
 
@@ -48,11 +48,15 @@ func Run(ctx context.Context) error {
 		tools.WorkDirChangeHook = nil
 	}()
 
-	restoreSlog := installSlogTUI(ctx)
-	defer restoreSlog()
+	if !onceCall {
+		restoreSlog := installSlogTUI(ctx)
+		defer restoreSlog()
+	}
 
 	go newPendingChannel(ctx)
-	go fetchProjectRelease(ctx)
+	if !onceCall {
+		go fetchProjectRelease(ctx)
+	}
 
 	if _, err := prog.Run(); err != nil {
 		return fmt.Errorf("prog.Run: %w", err)

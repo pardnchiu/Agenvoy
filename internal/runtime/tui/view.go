@@ -27,6 +27,16 @@ func (t TUI) viewIdle() string {
 		width = 80
 	}
 
+	if t.onceCall {
+		if t.awaitingExit {
+			return ""
+		}
+		if t.running {
+			return "\n" + t.viewThinking() + "\n"
+		}
+		return ""
+	}
+
 	left := hintStyle.Render(" / commands · enter send · alt+enter newline · esc cancel")
 	right := t.sessionTag()
 

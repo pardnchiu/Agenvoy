@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
-
-	"golang.org/x/term"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
@@ -78,42 +75,29 @@ func registStoreSecret() {
 }
 
 func readSecretValue(ctx context.Context, sessionID, question string) (string, error) {
-	if runtime.HasListener(sessionID) {
-		reply, err := runtime.Ask(ctx, runtime.Request{
-			Kind:      runtime.KindAskUser,
-			SessionID: sessionID,
-			ToolName:  "store_secret",
-			AskUser: &runtime.UserPayload{
-				Questions: []runtime.Question{{Question: question, Secret: true}},
-			},
-		})
-		if err != nil {
-			return "", fmt.Errorf("pending.Ask: %w", err)
-		}
-		if reply.Error != nil {
-			return "", reply.Error
-		}
-		if len(reply.Answers) == 0 {
-			return "", fmt.Errorf("pending.Ask returned no answers")
-		}
-		s, ok := reply.Answers[0].(string)
-		if !ok {
-			return "", fmt.Errorf("pending.Ask returned non-string answer: %T", reply.Answers[0])
-		}
-		return s, nil
+	if !runtime.HasListener(sessionID) {
+		return "", fmt.Errorf("store_secret requires an interactive channel (TUI / Telegram / Discord); current session %q has no listener", sessionID)
 	}
-
-	if strings.HasPrefix(sessionID, "cli-") {
-		if _, err := fmt.Fprintf(os.Stdout, "[?] %s: ", question); err != nil {
-			return "", fmt.Errorf("write prompt: %w", err)
-		}
-		raw, readErr := term.ReadPassword(int(os.Stdin.Fd()))
-		fmt.Fprintln(os.Stdout)
-		if readErr != nil {
-			return "", fmt.Errorf("term.ReadPassword: %w", readErr)
-		}
-		return strings.TrimSpace(string(raw)), nil
+	reply, err := runtime.Ask(ctx, runtime.Request{
+		Kind:      runtime.KindAskUser,
+		SessionID: sessionID,
+		ToolName:  "store_secret",
+		AskUser: &runtime.UserPayload{
+			Questions: []runtime.Question{{Question: question, Secret: true}},
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("pending.Ask: %w", err)
 	}
-
-	return "", fmt.Errorf("store_secret requires an interactive CLI session (current session %q has no stdin); ask the user to run agen cli to set this credential", sessionID)
+	if reply.Error != nil {
+		return "", reply.Error
+	}
+	if len(reply.Answers) == 0 {
+		return "", fmt.Errorf("pending.Ask returned no answers")
+	}
+	s, ok := reply.Answers[0].(string)
+	if !ok {
+		return "", fmt.Errorf("pending.Ask returned non-string answer: %T", reply.Answers[0])
+	}
+	return s, nil
 }

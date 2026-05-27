@@ -1,16 +1,10 @@
 package tools
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
-
-	"github.com/manifoldco/promptui"
-	"golang.org/x/term"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -74,183 +68,39 @@ func registAskUser() {
 			if len(params.Questions) == 0 {
 				return "", fmt.Errorf("ask_user requires at least one question in 'questions'")
 			}
-
-			if runtime.HasListener(e.SessionID) {
-				questions := make([]runtime.Question, 0, len(params.Questions))
-				for i, q := range params.Questions {
-					q.Question = strings.TrimSpace(q.Question)
-					if q.Question == "" {
-						return "", fmt.Errorf("question #%d is empty", i+1)
-					}
-					questions = append(questions, runtime.Question{
-						Question:    q.Question,
-						Options:     q.Options,
-						MultiSelect: q.MultiSelect,
-						Secret:      q.Secret,
-					})
-				}
-				reply, err := runtime.Ask(ctx, runtime.Request{
-					Kind:      runtime.KindAskUser,
-					SessionID: e.SessionID,
-					ToolName:  "ask_user",
-					AskUser:   &runtime.UserPayload{Questions: questions},
-				})
-				if err != nil {
-					return "", fmt.Errorf("pending.Ask: %w", err)
-				}
-				if reply.Error != nil {
-					return "", reply.Error
-				}
-				out, err := json.Marshal(map[string]any{"answers": reply.Answers})
-				if err != nil {
-					return "", fmt.Errorf("json.Marshal: %w", err)
-				}
-				return string(out), nil
+			if !runtime.HasListener(e.SessionID) {
+				return "", fmt.Errorf("ask_user requires an interactive channel (TUI / Telegram / Discord); current session %q has no listener", e.SessionID)
 			}
-
-			if !strings.HasPrefix(e.SessionID, "cli-") {
-				var sb strings.Builder
-				sb.WriteString("此 session 無互動 stdin（非 cli- session），無法即時收使用者輸入。請在你接下來的回覆中，直接以自然語言把以下問題傳達給使用者，等待使用者下一則訊息提供答案後再繼續：\n")
-				for i, q := range params.Questions {
-					question := strings.TrimSpace(q.Question)
-					if question == "" {
-						continue
-					}
-					fmt.Fprintf(&sb, "%d. %s", i+1, question)
-					if len(q.Options) > 0 {
-						sb.WriteString("（選項：")
-						sb.WriteString(strings.Join(q.Options, " / "))
-						if q.MultiSelect {
-							sb.WriteString("，可複選）")
-						} else {
-							sb.WriteString("）")
-						}
-					}
-					sb.WriteString("\n")
-				}
-				sb.WriteString("禁止自行猜測答案或代為填入預設值；缺資訊就先停下來問。")
-				return sb.String(), nil
-			}
-
-			reader := bufio.NewReader(os.Stdin)
-			answers := make([]any, 0, len(params.Questions))
+			questions := make([]runtime.Question, 0, len(params.Questions))
 			for i, q := range params.Questions {
 				q.Question = strings.TrimSpace(q.Question)
 				if q.Question == "" {
 					return "", fmt.Errorf("question #%d is empty", i+1)
 				}
-
-				switch {
-				case len(q.Options) == 0 && q.Secret:
-					ans, err := askWithSecretInput(q.Question)
-					if err != nil {
-						return "", err
-					}
-					answers = append(answers, ans)
-
-				case len(q.Options) == 0:
-					ans, err := askWithInput(reader, q.Question)
-					if err != nil {
-						return "", err
-					}
-					answers = append(answers, ans)
-
-				case q.MultiSelect:
-					ans, err := askWithMultiSelect(reader, q.Question, q.Options, i+1)
-					if err != nil {
-						return "", err
-					}
-					answers = append(answers, ans)
-
-				default:
-					ans, err := askWithSingleSelect(q.Question, q.Options)
-					if err != nil {
-						return "", err
-					}
-					answers = append(answers, ans)
-				}
+				questions = append(questions, runtime.Question{
+					Question:    q.Question,
+					Options:     q.Options,
+					MultiSelect: q.MultiSelect,
+					Secret:      q.Secret,
+				})
 			}
-
-			out, err := json.Marshal(map[string]any{"answers": answers})
+			reply, err := runtime.Ask(ctx, runtime.Request{
+				Kind:      runtime.KindAskUser,
+				SessionID: e.SessionID,
+				ToolName:  "ask_user",
+				AskUser:   &runtime.UserPayload{Questions: questions},
+			})
+			if err != nil {
+				return "", fmt.Errorf("pending.Ask: %w", err)
+			}
+			if reply.Error != nil {
+				return "", reply.Error
+			}
+			out, err := json.Marshal(map[string]any{"answers": reply.Answers})
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
 			return string(out), nil
 		},
 	})
-}
-
-func askWithInput(reader *bufio.Reader, question string) (string, error) {
-	if _, err := fmt.Fprintf(os.Stdout, "[?] %s\n> ", question); err != nil {
-		return "", fmt.Errorf("write prompt: %w", err)
-	}
-	line, err := reader.ReadString('\n')
-	if err != nil {
-		return "", fmt.Errorf("read input: %w", err)
-	}
-	return strings.TrimRight(line, "\r\n"), nil
-}
-
-func askWithSecretInput(question string) (string, error) {
-	if _, err := fmt.Fprintf(os.Stdout, "[?] %s: ", question); err != nil {
-		return "", fmt.Errorf("write prompt: %w", err)
-	}
-	raw, readErr := term.ReadPassword(int(os.Stdin.Fd()))
-	fmt.Fprintln(os.Stdout)
-	if readErr != nil {
-		return "", fmt.Errorf("term.ReadPassword: %w", readErr)
-	}
-	return strings.TrimSpace(string(raw)), nil
-}
-
-func askWithSingleSelect(question string, options []string) (string, error) {
-	prompt := promptui.Select{
-		Label:        question,
-		Items:        options,
-		Size:         len(options),
-		HideSelected: false,
-	}
-	_, chosen, err := prompt.Run()
-	if err != nil {
-		return "", fmt.Errorf("promptui.Select: %w", err)
-	}
-	return chosen, nil
-}
-
-func askWithMultiSelect(reader *bufio.Reader, question string, options []string, qIdx int) ([]string, error) {
-	if _, err := fmt.Fprintf(os.Stdout, "[?] %s (multi-select, comma-separated indices)\n", question); err != nil {
-		return nil, fmt.Errorf("write prompt: %w", err)
-	}
-	for i, opt := range options {
-		if _, err := fmt.Fprintf(os.Stdout, "  %d) %s\n", i+1, opt); err != nil {
-			return nil, fmt.Errorf("write prompt: %w", err)
-		}
-	}
-	if _, err := fmt.Fprint(os.Stdout, "> "); err != nil {
-		return nil, fmt.Errorf("write prompt: %w", err)
-	}
-	line, err := reader.ReadString('\n')
-	if err != nil {
-		return nil, fmt.Errorf("read input: %w", err)
-	}
-	line = strings.TrimSpace(line)
-
-	seen := make(map[int]bool, len(options))
-	selected := make([]string, 0, len(options))
-	for _, tok := range strings.Split(line, ",") {
-		tok = strings.TrimSpace(tok)
-		if tok == "" {
-			continue
-		}
-		idx, err := strconv.Atoi(tok)
-		if err != nil || idx < 1 || idx > len(options) {
-			return nil, fmt.Errorf("invalid multi-select input %q for question #%d: expected comma-separated integers in 1..%d", line, qIdx, len(options))
-		}
-		if seen[idx] {
-			continue
-		}
-		seen[idx] = true
-		selected = append(selected, options[idx-1])
-	}
-	return selected, nil
 }
