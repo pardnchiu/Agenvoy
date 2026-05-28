@@ -56,6 +56,7 @@ var commands = []Command{
 	{"cmd", "run / exec shell command directly in cwd · sh -c"},
 	{"allow-skill", "!(dangerously) skip permission · always-allow skill"},
 	{"allow-cmd", "!(dangerously) append binary to config.white_list · daemon restart required"},
+	{"allow-report", "!(exposes logs) enable / disable daily upload of daemon WARN/ERROR to developer"},
 	{"key", "update / rotate keychain value · pick from recorded keys"},
 	{"clear", "clear visible transcript / history · memory untouched"},
 	{"exit", "exit / quit TUI · daemon keeps running"},
@@ -113,9 +114,16 @@ func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 			label: "/" + c.name,
 			desc:  c.desc,
 		}
-		if c.name == "allow-skill" || c.name == "allow-cmd" {
+		if strings.HasPrefix(c.name, "allow-") {
 			item.isAllow = true
-			item.descStyled = errorStyle.Render("!(dangerously)") + hintStyle.Render(strings.TrimPrefix(c.desc, "!(dangerously)"))
+			if strings.HasPrefix(c.desc, "!(") {
+				if i := strings.IndexByte(c.desc, ')'); i >= 0 {
+					item.descStyled = errorStyle.Render(c.desc[:i+1]) + hintStyle.Render(c.desc[i+1:])
+				}
+			}
+			if item.descStyled == "" {
+				item.descStyled = errorStyle.Render(c.desc)
+			}
 		}
 		switch {
 		case query == "" || strings.Contains(c.name, query):

@@ -34,8 +34,7 @@ func run(ctx context.Context) {
 	ticker := time.NewTicker(tickInterval)
 	defer ticker.Stop()
 
-	lastCPU, hasCPU := sampleCPUSeconds()
-	lastTick := time.Now()
+	lastTotal, lastIdle, hasCPU := sampleCPU()
 
 	var cpuOver, ramOver, netDown bool
 
@@ -43,31 +42,29 @@ func run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case now := <-ticker.C:
-			if cur, ok := sampleCPUSeconds(); ok {
-				if hasCPU {
-					elapsed := now.Sub(lastTick).Seconds()
-					if elapsed > 0 {
-						pct := (cur - lastCPU) / elapsed / float64(goruntime.NumCPU()) * 100
-						if pct >= cpuWarnPercent {
-							attrs := []any{
-								slog.Float64("percent", pct),
-								slog.Int("cpus", goruntime.NumCPU()),
-							}
-							if top := topCPU(ctx, topProcessCount); top != "" {
-								attrs = append(attrs, slog.String("top", top))
-							}
-							slog.Warn("monitor: high CPU", attrs...)
-							cpuOver = true
-						} else if cpuOver {
-							slog.Info("monitor: CPU recovered",
-								slog.Float64("percent", pct))
-							cpuOver = false
+		case <-ticker.C:
+			if curTotal, curIdle, ok := sampleCPU(); ok {
+				if hasCPU && curTotal > lastTotal {
+					dTotal := curTotal - lastTotal
+					dIdle := curIdle - lastIdle
+					pct := min(max((dTotal-dIdle)/dTotal*100, 0), 100)
+					if pct >= cpuWarnPercent {
+						attrs := []any{
+							slog.Float64("percent", pct),
+							slog.Int("cpus", goruntime.NumCPU()),
 						}
+						if top := topCPU(ctx, topProcessCount); top != "" {
+							attrs = append(attrs, slog.String("top", top))
+						}
+						slog.Warn("monitor: high CPU", attrs...)
+						cpuOver = true
+					} else if cpuOver {
+						slog.Info("monitor: CPU recovered",
+							slog.Float64("percent", pct))
+						cpuOver = false
 					}
 				}
-				lastCPU = cur
-				lastTick = now
+				lastTotal, lastIdle = curTotal, curIdle
 				hasCPU = true
 			}
 
@@ -98,13 +95,16 @@ func run(ctx context.Context) {
 	}
 }
 
-func sampleCPUSeconds() (float64, bool) {
-	samples := []metrics.Sample{{Name: "/cpu/classes/total:cpu-seconds"}}
-	metrics.Read(samples)
-	if samples[0].Value.Kind() != metrics.KindFloat64 {
-		return 0, false
+func sampleCPU() (total, idle float64, ok bool) {
+	samples := []metrics.Sample{
+		{Name: "/cpu/classes/total:cpu-seconds"},
+		{Name: "/cpu/classes/idle:cpu-seconds"},
 	}
-	return samples[0].Value.Float64(), true
+	metrics.Read(samples)
+	if samples[0].Value.Kind() != metrics.KindFloat64 || samples[1].Value.Kind() != metrics.KindFloat64 {
+		return 0, 0, false
+	}
+	return samples[0].Value.Float64(), samples[1].Value.Float64(), true
 }
 
 func topCPU(ctx context.Context, n int) string {
