@@ -352,7 +352,7 @@ func newPopup(id string, req runtime.Request) *Popup {
 func (p *Popup) loadCurrentQuestion() {
 	q := p.questions[p.questionIdx]
 	p.title = q.Question
-	p.subtitle = ""
+	p.subtitle = q.Detail
 	p.input = ""
 	p.cursor = 0
 	p.multi = nil

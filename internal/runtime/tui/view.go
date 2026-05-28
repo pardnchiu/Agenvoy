@@ -105,9 +105,9 @@ func (t TUI) viewPopup() string {
 		return ""
 	}
 
-	body := []string{systemStyle.Bold(true).Render("⏺ " + p.title)}
+	body := []string{whiteStyle.Render("⏺ " + p.title)}
 	if p.subtitle != "" {
-		body = append(body, hintStyle.Render(p.subtitle))
+		body = append(body, textStyle.Render(p.subtitle))
 		body = append(body, "")
 	} else {
 		body = append(body, "")

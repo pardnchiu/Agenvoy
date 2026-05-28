@@ -13,6 +13,7 @@ import (
 
 type askQuestion struct {
 	Question    string   `json:"question"`
+	Detail      string   `json:"detail,omitempty"`
 	Options     []string `json:"options,omitempty"`
 	MultiSelect bool     `json:"multi_select,omitempty"`
 	Secret      bool     `json:"secret,omitempty"`
@@ -36,7 +37,11 @@ func registAskUser() {
 						"properties": map[string]any{
 							"question": map[string]any{
 								"type":        "string",
-								"description": "The prompt text shown to the user.",
+								"description": "Short prompt shown as the popup title (the actual question, e.g. 'Confirm?').",
+							},
+							"detail": map[string]any{
+								"type":        "string",
+								"description": "Optional multi-line context / details rendered as popup subtitle in hint style above the input. Use this for the supporting info (list of detected items, current values, etc.) — keep `question` short.",
 							},
 							"options": map[string]any{
 								"type":        "array",
@@ -79,6 +84,7 @@ func registAskUser() {
 				}
 				questions = append(questions, runtime.Question{
 					Question:    q.Question,
+					Detail:      strings.TrimSpace(q.Detail),
 					Options:     q.Options,
 					MultiSelect: q.MultiSelect,
 					Secret:      q.Secret,

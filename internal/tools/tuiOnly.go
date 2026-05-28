@@ -5,6 +5,6 @@ var TUIOnlyTools = []string{
 }
 
 var TUIOnlySkills = []string{
-	"extension-package",
+	"extension-upload",
 	"extension-install",
 }

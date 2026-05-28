@@ -34,18 +34,17 @@ type ModelEntry struct {
 }
 
 type Config struct {
-	DispatcherModel  string        `json:"dispatcher_model,omitempty"`
-	ReasoningLevel   string        `json:"reasoning_level,omitempty"`
-	Models           []ModelEntry  `json:"models,omitempty"`
-	Compats          []CompatEntry `json:"compats,omitempty"`
-	Keys             []string      `json:"keys,omitempty"`
-	DiscordGuildID   string        `json:"discord_guild_id,omitempty"`
-	DiscordEnabled   bool          `json:"discord_enabled,omitempty"`
-	DiscordUsername  string        `json:"discord_username,omitempty"`
-	TelegramEnabled  bool          `json:"telegram_enabled,omitempty"`
-	TelegramUsername string        `json:"telegram_username,omitempty"`
-	KuradbEnabled    bool          `json:"kuradb_enabled,omitempty"`
-	RegistryEmail    string        `json:"registry_email,omitempty"`
+	DispatcherModel  string        `json:"dispatcher_model"`
+	ReasoningLevel   string        `json:"reasoning_level"`
+	Models           []ModelEntry  `json:"models"`
+	Compats          []CompatEntry `json:"compats"`
+	Keys             []string      `json:"keys"`
+	DiscordGuildID   string        `json:"discord_guild_id"`
+	DiscordEnabled   bool          `json:"discord_enabled"`
+	DiscordUsername  string        `json:"discord_username"`
+	TelegramEnabled  bool          `json:"telegram_enabled"`
+	TelegramUsername string        `json:"telegram_username"`
+	KuradbEnabled    bool          `json:"kuradb_enabled"`
 }
 
 func (c *Config) UnmarshalJSON(data []byte) error {
@@ -80,7 +79,28 @@ func Save(cfg *Config) error {
 	if err := go_pkg_filesystem.CheckDir(filepath.Dir(configPath), true); err != nil {
 		return fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
 	}
-	return go_pkg_filesystem.WriteJSON(configPath, cfg, false)
+
+	existing := map[string]any{}
+	if go_pkg_filesystem_reader.Exists(configPath) {
+		if m, err := go_pkg_filesystem.ReadJSON[map[string]any](configPath); err == nil && m != nil {
+			existing = m
+		}
+	}
+
+	cfgBytes, err := json.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("json.Marshal cfg: %w", err)
+	}
+	var cfgMap map[string]any
+	if err := json.Unmarshal(cfgBytes, &cfgMap); err != nil {
+		return fmt.Errorf("json.Unmarshal cfg: %w", err)
+	}
+	for k, v := range cfgMap {
+		existing[k] = v
+	}
+	delete(existing, "planner_model")
+
+	return go_pkg_filesystem.WriteJSON(configPath, existing, false)
 }
 
 func UpsertCompat(provider, url string) error {

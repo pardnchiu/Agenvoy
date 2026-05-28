@@ -20,6 +20,7 @@ const (
 
 type Question struct {
 	Question    string   `json:"question"`
+	Detail      string   `json:"detail,omitempty"`
 	Options     []string `json:"options,omitempty"`
 	MultiSelect bool     `json:"multi_select,omitempty"`
 	Secret      bool     `json:"secret,omitempty"`
