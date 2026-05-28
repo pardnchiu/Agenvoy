@@ -35,9 +35,11 @@ Built for people who want their own always-on assistant, not another SaaS subscr
 
 **Teach the agent to build its own tools — no programming required.** Just describe what you need; the agent writes a script or wires up an API, sandboxes it, and loads it as a tool. Next time you ask, it just runs.
 
-| Demo · Auto-generate tools | Demo · Skill-based scheduler | Demo · Sub-agents co-work |
-| --- | --- | --- |
-| [![](https://i.ytimg.com/vi/WBCjLQ-nQFo/maxresdefault.jpg)](https://www.youtube.com/watch?v=WBCjLQ-nQFo) | [![](https://i.ytimg.com/vi/bO9AMrW3L9c/maxresdefault.jpg)](https://www.youtube.com/watch?v=bO9AMrW3L9c) | [![](https://i.ytimg.com/vi/wM3NU4ARz4w/maxresdefault.jpg)](https://www.youtube.com/watch?v=wM3NU4ARz4w) |
+| Demo · Auto-generate tools | Demo · Skill-based scheduler |
+| --- | --- |
+| [![](https://i.ytimg.com/vi/WBCjLQ-nQFo/maxresdefault.jpg)](https://www.youtube.com/watch?v=WBCjLQ-nQFo) | [![](https://i.ytimg.com/vi/bO9AMrW3L9c/maxresdefault.jpg)](https://www.youtube.com/watch?v=bO9AMrW3L9c) |
+| **Demo · Sub-agents co-work** | **Demo · Tool install from registry** |
+| [![](https://i.ytimg.com/vi/wM3NU4ARz4w/maxresdefault.jpg)](https://www.youtube.com/watch?v=wM3NU4ARz4w) | [![](https://i.ytimg.com/vi/UrR5i7YAHRc/maxresdefault.jpg)](https://www.youtube.com/watch?v=UrR5i7YAHRc) |
 
 Out of the box it also:
 
@@ -47,6 +49,7 @@ Out of the box it also:
 - **Picks the right model per task** — Claude for coding, Gemini for video, GPT for research, routed automatically.
 - **Searches your files semantically** — KuraDB indexes your local docs / notes (file → embedding vector); the agent answers from your own knowledge base, not generic training data.
 - **Remembers across sessions** — past conversations searchable by meaning, not just keywords.
+- **Publishes and installs custom tools** — share AI-built tools across machines through the pkg.agenvoy.com registry; email-verified uploads with downgrade-proof versioning, one-popup install with dependency auto-resolve.
 
 ## One-line install
 
@@ -209,6 +212,7 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | MCP support | ✅ client | ✅ client | ✅ client + server | ✅ client | ❌ | ✅ client |
 | Custom tools (script-tool-add) | ✅ AI-generated | ❌ | ✅ auto-creates skill | ❌ | ❌ | ❌ |
 | API tool discovery (search-api → add) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Tool registry (publish + install across machines) | ✅ pkg.agenvoy.com (Cloudflare Worker + R2 + D1, email verification + downgrade guard) | ❌ | ⚠️ agentskills.io (skills only) | ❌ | ❌ | ❌ |
 | Skill system | ✅ SKILL.md lazy-load | ✅ SKILL.md 5400+ community | ✅ SKILL.md agentskills.io | ✅ CLAUDE.md | ❌ | ❌ |
 | Format reference as lazy-load tool | ✅ `telegram_format` / `discord_format` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Image generation | ✅ DALL-E/Codex Image | ❌ | ❌ | ❌ | ❌ | ❌ |

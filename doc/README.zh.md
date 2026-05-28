@@ -35,9 +35,11 @@
 
 **讓 Agent 自己生成工具——不需編程能力。** 你只要描述需求，Agent 會寫 script 或串接 API、放進沙箱、註冊為工具。下次你再叫它，它就直接執行。
 
-| Demo · 自動生成工具 | Demo · 以 Skill 為核心的排程器 | Demo · 召喚 sub-agent 協作 |
-| --- | --- | --- |
-| [![](https://i.ytimg.com/vi/WBCjLQ-nQFo/maxresdefault.jpg)](https://www.youtube.com/watch?v=WBCjLQ-nQFo) | [![](https://i.ytimg.com/vi/bO9AMrW3L9c/maxresdefault.jpg)](https://www.youtube.com/watch?v=bO9AMrW3L9c) | [![](https://i.ytimg.com/vi/wM3NU4ARz4w/maxresdefault.jpg)](https://www.youtube.com/watch?v=wM3NU4ARz4w) |
+| Demo · 自動生成工具 | Demo · 以 Skill 為核心的排程器 |
+| --- | --- |
+| [![](https://i.ytimg.com/vi/WBCjLQ-nQFo/maxresdefault.jpg)](https://www.youtube.com/watch?v=WBCjLQ-nQFo) | [![](https://i.ytimg.com/vi/bO9AMrW3L9c/maxresdefault.jpg)](https://www.youtube.com/watch?v=bO9AMrW3L9c) |
+| **Demo · 召喚 sub-agent 協作** | **Demo · 從 registry 安裝工具** |
+| [![](https://i.ytimg.com/vi/wM3NU4ARz4w/maxresdefault.jpg)](https://www.youtube.com/watch?v=wM3NU4ARz4w) | [![](https://i.ytimg.com/vi/UrR5i7YAHRc/maxresdefault.jpg)](https://www.youtube.com/watch?v=UrR5i7YAHRc) |
 
 開箱即用的還有：
 
@@ -47,6 +49,7 @@
 - **依任務挑模型**——Claude 寫程式、Gemini 處理影音、GPT 做研究，自動路由。
 - **語意搜尋你的檔案**——KuraDB 把本機文件／筆記做成向量索引（file → embedding），Agent 從你的知識庫回答，而非通用訓練資料。
 - **跨 session 記憶**——過去對話依語意搜尋，而非只是關鍵字。
+- **發布／安裝自訂工具**——透過 pkg.agenvoy.com registry 跨機器分享 AI 生成工具；上傳走 email 驗證碼 gate、版本嚴格遞增、安裝走單一 popup 並自動安裝依賴。
 
 ## 一鍵安裝
 
@@ -207,6 +210,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | MCP 支援 | ✅ client | ✅ client | ✅ client + server | ✅ client | ❌ | ✅ client |
 | 自訂工具（script-tool-add） | ✅ AI 生成 | ❌ | ✅ 自動建立 skill | ❌ | ❌ | ❌ |
 | API 工具自動探索（search-api → add） | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 工具 registry（跨機器發布／安裝） | ✅ pkg.agenvoy.com（Cloudflare Worker + R2 + D1，email 驗證碼 + 降版本封鎖） | ❌ | ⚠️ agentskills.io（僅 skill） | ❌ | ❌ | ❌ |
 | Skill 系統 | ✅ SKILL.md lazy-load | ✅ SKILL.md 5400+ 社群 | ✅ SKILL.md agentskills.io | ✅ CLAUDE.md | ❌ | ❌ |
 | Format reference 作為 lazy-load tool | ✅ `telegram_format` / `discord_format` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | 圖像生成 | ✅ DALL-E／Codex Image | ❌ | ❌ | ❌ | ❌ | ❌ |
