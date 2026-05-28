@@ -29,6 +29,7 @@ import (
 	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
 	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
+	"github.com/pardnchiu/agenvoy/internal/runtime/monitor"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
@@ -246,6 +247,7 @@ func cmdDaemon() {
 	reloadDiscord()
 	reloadTelegram()
 	reloadKuradb()
+	monitor.Start(context.Background())
 
 	route := routes.New()
 	server := &http.Server{

@@ -311,10 +311,10 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 			if isContextLengthError(err) {
 				trimmedToolCalls = trimmedToolCalls || trimOnContextExceeded(&session.OldHistories, &session.ToolHistories)
-				slog.Debug("data.Agent.Send context length exceeded, trimming oldest exchange",
+				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange",
 					slog.String("session", session.ID))
 			} else {
-				slog.Debug("data.Agent.Send",
+				slog.Warn("data.Agent.Send",
 					slog.String("session", session.ID),
 					slog.String("error", err.Error()),
 					slog.Bool("timeout", isTimeout),
@@ -332,7 +332,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 							continue
 						}
 						if !ProbeAgent(ctx, cand, ProbeTimeout) {
-							slog.Debug("fallback probe failed",
+							slog.Warn("fallback probe failed",
 								slog.String("session", session.ID),
 								slog.String("name", cand.Name()))
 							continue

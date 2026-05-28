@@ -3,6 +3,7 @@ package filesystem
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"strings"
 	"time"
@@ -151,12 +152,23 @@ func RunCommitSkillDir(ctx context.Context, path string, isNew bool) {
 	if isNew {
 		act = "add"
 	}
-	_ = CommitSkillDir(ctx, act, GetSkillName(path))
+	name := GetSkillName(path)
+	if err := CommitSkillDir(ctx, act, name); err != nil {
+		slog.Warn("CommitSkillDir",
+			slog.String("action", act),
+			slog.String("name", name),
+			slog.String("error", err.Error()))
+	}
 }
 
 func RunTrashCommitSkillDir(ctx context.Context, name string) {
 	if err := CheckSkillGitDir(ctx); err != nil {
 		return
 	}
-	_ = CommitSkillDir(ctx, "trash", name)
+	if err := CommitSkillDir(ctx, "trash", name); err != nil {
+		slog.Warn("CommitSkillDir",
+			slog.String("action", "trash"),
+			slog.String("name", name),
+			slog.String("error", err.Error()))
+	}
 }

@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -218,5 +219,9 @@ func openBrowser(link string) {
 	default:
 		return
 	}
-	_ = cmd.Start()
+	if err := cmd.Start(); err != nil {
+		slog.Warn("openBrowser cmd.Start",
+			slog.String("url", link),
+			slog.String("error", err.Error()))
+	}
 }

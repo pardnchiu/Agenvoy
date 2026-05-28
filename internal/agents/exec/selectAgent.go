@@ -102,7 +102,7 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 				if sendErr == nil {
 					break
 				}
-				slog.Debug("dispatcher routing attempt failed",
+				slog.Warn("dispatcher routing attempt failed",
 					slog.String("name", bot.Name()),
 					slog.String("error", sendErr.Error()))
 			}
@@ -205,7 +205,7 @@ func ResolveAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes
 			return a, rest, nil
 		}
 		dead[a.Name()] = true
-		slog.Debug("agent probe failed",
+		slog.Warn("agent probe failed",
 			slog.String("name", a.Name()),
 			slog.Duration("timeout", ProbeTimeout))
 	}

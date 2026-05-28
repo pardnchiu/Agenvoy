@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os/exec"
 	"runtime"
@@ -98,7 +99,11 @@ func OpenBrowser(url string) {
 		return
 	}
 	if cmd != nil {
-		_ = cmd.Start()
+		if err := cmd.Start(); err != nil {
+			slog.Warn("openBrowser cmd.Start",
+				slog.String("url", url),
+				slog.String("error", err.Error()))
+		}
 	}
 }
 

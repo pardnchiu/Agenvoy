@@ -84,7 +84,11 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		if exec.StubTools[toolName] || activatedInBatch[toolName] {
 			if exec.StubTools[toolName] {
 				activateArgs, _ := json.Marshal(map[string]any{"query": "select:" + toolName})
-				_, _ = toolRegister.Dispatch(ctx, exec, "search_tools", activateArgs)
+				if _, err := toolRegister.Dispatch(ctx, exec, "search_tools", activateArgs); err != nil {
+					slog.Warn("stub tool activation failed",
+						slog.String("name", toolName),
+						slog.String("error", err.Error()))
+				}
 				delete(exec.StubTools, toolName)
 			}
 			activatedInBatch[toolName] = true

@@ -250,7 +250,7 @@ func (l *Listener[CID, MID]) OnCallback(ctx context.Context, chatID CID, msgID M
 	state := l.cur[chatID]
 	if state == nil {
 		l.mu.Unlock()
-		slog.Debug("connector.OnCallback miss (no state)",
+		slog.Warn("connector.OnCallback miss (no state)",
 			slog.String("prefix", l.prefix),
 			slog.Any("chat", chatID),
 			slog.Any("msg", msgID))
@@ -259,7 +259,7 @@ func (l *Listener[CID, MID]) OnCallback(ctx context.Context, chatID CID, msgID M
 	if state.message != msgID {
 		expected := state.message
 		l.mu.Unlock()
-		slog.Debug("connector.OnCallback miss (msg mismatch)",
+		slog.Warn("connector.OnCallback miss (msg mismatch)",
 			slog.String("prefix", l.prefix),
 			slog.Any("chat", chatID),
 			slog.Any("got_msg", msgID),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sort"
 
 	"github.com/pardnchiu/agenvoy/extensions"
@@ -145,7 +146,11 @@ func Execute(ctx context.Context, e *toolTypes.Executor, name string, args json.
 
 	if e.StubTools[name] {
 		activateArgs, _ := json.Marshal(map[string]any{"query": "select:" + name})
-		_, _ = toolRegister.Dispatch(ctx, e, "search_tools", activateArgs)
+		if _, err := toolRegister.Dispatch(ctx, e, "search_tools", activateArgs); err != nil {
+			slog.Warn("stub tool activation failed",
+				slog.String("name", name),
+				slog.String("error", err.Error()))
+		}
 		delete(e.StubTools, name)
 	}
 

@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -103,7 +104,10 @@ func disableTelegram() tea.Cmd {
 		if !cfg.TelegramEnabled && keychain.Get(telegram.Key) == "" {
 			return TelegramDone{action: "disable"}
 		}
-		_ = keychain.Delete(telegram.Key)
+		if err := keychain.Delete(telegram.Key); err != nil {
+			slog.Warn("keychain.Delete telegram token",
+				slog.String("error", err.Error()))
+		}
 		cfg.TelegramEnabled = false
 		if err := session.Save(cfg); err != nil {
 			return TelegramDone{action: "disable", err: fmt.Errorf("session.Save: %w", err)}

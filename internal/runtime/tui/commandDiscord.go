@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -103,7 +104,10 @@ func disableDiscord() tea.Cmd {
 		if !cfg.DiscordEnabled && keychain.Get(discord.Key) == "" {
 			return DiscordDone{action: "disable"}
 		}
-		_ = keychain.Delete(discord.Key)
+		if err := keychain.Delete(discord.Key); err != nil {
+			slog.Warn("keychain.Delete discord token",
+				slog.String("error", err.Error()))
+		}
 		cfg.DiscordEnabled = false
 		if err := session.Save(cfg); err != nil {
 			return DiscordDone{action: "disable", err: fmt.Errorf("session.Save: %w", err)}
