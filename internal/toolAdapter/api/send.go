@@ -1,11 +1,17 @@
 package apiAdapter
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"net/url"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -21,9 +27,69 @@ var methods = []string{
 	"GET", "POST", "PUT", "DELETE", "PATCH",
 }
 
-func Send(api, method string, headers map[string]string, body map[string]any, contentType string, timeout int) (string, error) {
+func buildMultipart(body map[string]any) (*bytes.Buffer, string, error) {
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+
+	if fields, ok := body["fields"].(map[string]any); ok {
+		for k, v := range fields {
+			if err := w.WriteField(k, fmt.Sprint(v)); err != nil {
+				return nil, "", fmt.Errorf("WriteField %q: %w", k, err)
+			}
+		}
+	}
+
+	if files, ok := body["files"].([]any); ok {
+		for i, f := range files {
+			fmap, ok := f.(map[string]any)
+			if !ok {
+				return nil, "", fmt.Errorf("files[%d] is not an object", i)
+			}
+			name, _ := fmap["name"].(string)
+			path, _ := fmap["path"].(string)
+			if name == "" || path == "" {
+				return nil, "", fmt.Errorf("files[%d] requires name and path", i)
+			}
+			ct, _ := fmap["content_type"].(string)
+			if ct == "" {
+				ct = "application/octet-stream"
+			}
+
+			file, err := os.Open(path)
+			if err != nil {
+				return nil, "", fmt.Errorf("open %q: %w", path, err)
+			}
+
+			h := make(textproto.MIMEHeader)
+			h.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, name, filepath.Base(path)))
+			h.Set("Content-Type", ct)
+
+			part, err := w.CreatePart(h)
+			if err != nil {
+				file.Close()
+				return nil, "", fmt.Errorf("CreatePart %q: %w", name, err)
+			}
+			if _, err := io.Copy(part, file); err != nil {
+				file.Close()
+				return nil, "", fmt.Errorf("copy %q: %w", path, err)
+			}
+			file.Close()
+		}
+	}
+
+	if err := w.Close(); err != nil {
+		return nil, "", fmt.Errorf("Writer.Close: %w", err)
+	}
+
+	return &buf, w.FormDataContentType(), nil
+}
+
+func Send(ctx context.Context, api, method string, headers map[string]string, body map[string]any, contentType string, timeout int) (string, error) {
 	if api == "" {
 		return "", fmt.Errorf("url is required")
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
 	if method == "" {
@@ -45,37 +111,53 @@ func Send(api, method string, headers map[string]string, body map[string]any, co
 		timeout = 300
 	}
 
+	reqCtx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	defer cancel()
+
 	var req *http.Request
 	var err error
 
 	switch method {
 	case "GET", "DELETE":
-		req, err = http.NewRequest(method, api, nil)
+		req, err = http.NewRequestWithContext(reqCtx, method, api, nil)
 		if err != nil {
-			return "", fmt.Errorf("http.NewRequest: %w", err)
+			return "", fmt.Errorf("http.NewRequestWithContext: %w", err)
 		}
 
 	case "POST", "PUT", "PATCH":
-		if contentType == "form" {
+		switch contentType {
+		case "form":
 			requestBody := url.Values{}
 			for k, v := range body {
 				requestBody.Set(k, fmt.Sprint(v))
 			}
 
-			req, err = http.NewRequest(method, api, strings.NewReader(requestBody.Encode()))
+			req, err = http.NewRequestWithContext(reqCtx, method, api, strings.NewReader(requestBody.Encode()))
 			if err != nil {
-				return "", fmt.Errorf("http.NewRequest: %w", err)
+				return "", fmt.Errorf("http.NewRequestWithContext: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		} else {
+
+		case "multipart":
+			buf, ct, err := buildMultipart(body)
+			if err != nil {
+				return "", fmt.Errorf("buildMultipart: %w", err)
+			}
+			req, err = http.NewRequestWithContext(reqCtx, method, api, buf)
+			if err != nil {
+				return "", fmt.Errorf("http.NewRequestWithContext: %w", err)
+			}
+			req.Header.Set("Content-Type", ct)
+
+		default:
 			requestBody, err := json.Marshal(body)
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
 
-			req, err = http.NewRequest(method, api, strings.NewReader(string(requestBody)))
+			req, err = http.NewRequestWithContext(reqCtx, method, api, strings.NewReader(string(requestBody)))
 			if err != nil {
-				return "", fmt.Errorf("http.NewRequest: %w", err)
+				return "", fmt.Errorf("http.NewRequestWithContext: %w", err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 		}

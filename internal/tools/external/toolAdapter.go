@@ -21,7 +21,7 @@ func Register() {
 		Name:        "send_http_request",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: "Send an HTTP request (GET/POST/PUT/PATCH/DELETE) to any URL. Use when no dedicated api_* tool covers the endpoint; prefer fetch_page for human-readable HTML.",
+		Description: "Send an HTTP request (GET/POST/PUT/PATCH/DELETE) to any URL with optional multipart upload. Use when no dedicated api_* tool covers the endpoint; prefer fetch_page for human-readable HTML.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -42,13 +42,13 @@ func Register() {
 				},
 				"body": map[string]any{
 					"type":        "object",
-					"description": "Request body (POST/PUT/PATCH).",
+					"description": "Request body (POST/PUT/PATCH). content_type=json/form: flat key-value object. content_type=multipart: {\"fields\":{key:value,...},\"files\":[{\"name\":\"field\",\"path\":\"/abs/path\",\"content_type\":\"application/gzip\"},...]}. File path must be absolute; binary read from disk.",
 					"default":     map[string]any{},
 				},
 				"content_type": map[string]any{
 					"type":        "string",
-					"description": "Body encoding.",
-					"enum":        []string{"json", "form"},
+					"description": "Body encoding. multipart for file uploads (binary).",
+					"enum":        []string{"json", "form", "multipart"},
 					"default":     "json",
 				},
 				"timeout": map[string]any{
@@ -71,7 +71,7 @@ func Register() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			return apiAdapter.Send(params.URL, params.Method, params.Headers, params.Body, params.ContentType, params.Timeout)
+			return apiAdapter.Send(ctx, params.URL, params.Method, params.Headers, params.Body, params.ContentType, params.Timeout)
 		},
 	})
 }
