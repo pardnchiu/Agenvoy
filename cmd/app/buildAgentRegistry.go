@@ -69,7 +69,16 @@ func dispatcherSelector(registry agentTypes.AgentRegistry) agentTypes.Agent {
 	return registry.Fallback
 }
 
-func refreshHost() (agentTypes.Agent, agentTypes.AgentRegistry) {
+func summarySelector(registry agentTypes.AgentRegistry) agentTypes.Agent {
+	if cfg, err := session.Load(); err == nil && cfg.SummaryModel != "" {
+		if a, ok := registry.Registry[cfg.SummaryModel]; ok {
+			return a
+		}
+	}
+	return nil
+}
+
+func refreshHost() (agentTypes.Agent, agentTypes.Agent, agentTypes.AgentRegistry) {
 	registry := buildAgentRegistry()
-	return dispatcherSelector(registry), registry
+	return dispatcherSelector(registry), summarySelector(registry), registry
 }

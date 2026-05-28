@@ -84,8 +84,9 @@ func newTUI(initialInput string, onceCall, allowAll bool) {
 	registry := buildAgentRegistry()
 	scanner := runtime.NewSkillScanner()
 	selectorBot := dispatcherSelector(registry)
+	summaryBot := summarySelector(registry)
 
-	agents.Set(selectorBot, registry, scanner)
+	agents.Set(selectorBot, summaryBot, registry, scanner)
 	agents.SetRefresher(refreshHost)
 
 	ctx, cancel := context.WithCancel(context.Background())

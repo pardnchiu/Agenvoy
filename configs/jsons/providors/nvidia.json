@@ -2,10 +2,13 @@
   "openai/gpt-oss-120b": {
     "description": "OpenAI 開源 120B 模型，平衡效能與推理能力"
   },
-  "meta/llama-3.3-70b-instruct": {
-    "description": "OpenAI 開源 120B 模型，平衡效能與推理能力"
-  },
   "nvidia/nemotron-3-super-120b-a12b": {
     "description": "NVIDIA Nemotron-3 Super 120B（12B active）Hybrid LatentMoE 模型，支援 Tool Use、多語言與 Agentic 推理工作流"
+  },
+  "deepseek-ai/deepseek-v4-flash": {
+    "description": "DeepSeek V4 Flash 模型，專為高效推理和多模態任務設計，適合需要快速響應的應用"
+  },
+  "deepseek-ai/deepseek-v4-pro": {
+    "description": "DeepSeek V4 Pro 模型，提供更強大的推理能力和更高的準確性，適合需要深入分析和複雜任務的應用"
   }
 }

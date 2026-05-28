@@ -24,6 +24,7 @@ type CmdSelectorItem struct {
 	descStyled  string
 	isSkill     bool
 	isScheduler bool
+	isAllow     bool
 }
 
 type Command struct {
@@ -34,7 +35,8 @@ type Command struct {
 var commands = []Command{
 	{"model", "add / remove provider · pick session model"},
 	{"mcp", "add / remove MCP server · global or session scope"},
-	{"dispatcher", "pick / set dispatcher model from registry"},
+	{"dispatcher-model", "pick / set dispatcher model from registry"},
+	{"summary-model", "pick / set summary model · falls back to dispatcher if unset"},
 	{"reasoning", "set reasoning depth · global (dispatcher) / session"},
 	{"switch", "switch / change current session via picker"},
 	{"new", "create / add new session · name conflict-checked"},
@@ -54,6 +56,7 @@ var commands = []Command{
 	{"cmd", "run / exec shell command directly in cwd · sh -c"},
 	{"allow-skill", "!(dangerously) skip permission · always-allow skill"},
 	{"allow-cmd", "!(dangerously) append binary to config.white_list · daemon restart required"},
+	{"allow-report", "!(exposes logs) enable / disable daily upload of daemon WARN/ERROR to developer"},
 	{"key", "update / rotate keychain value · pick from recorded keys"},
 	{"clear", "clear visible transcript / history · memory untouched"},
 	{"exit", "exit / quit TUI · daemon keeps running"},
@@ -111,8 +114,16 @@ func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 			label: "/" + c.name,
 			desc:  c.desc,
 		}
-		if c.name == "allow-skill" || c.name == "allow-cmd" {
-			item.descStyled = errorStyle.Render("!(dangerously)") + hintStyle.Render(strings.TrimPrefix(c.desc, "!(dangerously)"))
+		if strings.HasPrefix(c.name, "allow-") {
+			item.isAllow = true
+			if strings.HasPrefix(c.desc, "!(") {
+				if i := strings.IndexByte(c.desc, ')'); i >= 0 {
+					item.descStyled = errorStyle.Render(c.desc[:i+1]) + hintStyle.Render(c.desc[i+1:])
+				}
+			}
+			if item.descStyled == "" {
+				item.descStyled = errorStyle.Render(c.desc)
+			}
 		}
 		switch {
 		case query == "" || strings.Contains(c.name, query):
@@ -206,7 +217,12 @@ func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 	byLabel := func(s []CmdSelectorItem) func(i, j int) bool {
 		return func(i, j int) bool { return s[i].label < s[j].label }
 	}
-	sort.SliceStable(cmdNameItems, byLabel(cmdNameItems))
+	sort.SliceStable(cmdNameItems, func(i, j int) bool {
+		if cmdNameItems[i].isAllow != cmdNameItems[j].isAllow {
+			return !cmdNameItems[i].isAllow
+		}
+		return cmdNameItems[i].label < cmdNameItems[j].label
+	})
 	sort.SliceStable(cmdDescItems, byLabel(cmdDescItems))
 	sort.SliceStable(skillItems, byLabel(skillItems))
 	sort.SliceStable(schedulerItems, byLabel(schedulerItems))
@@ -278,6 +294,9 @@ func renderCmdSelector(p *CmdSelector) string {
 		it := p.items[i]
 		marker := "  "
 		labelStyle := textStyle
+		if it.isAllow {
+			labelStyle = errorStyle
+		}
 		if i == p.cursor {
 			marker = systemStyle.Render("> ")
 			labelStyle = systemStyle
@@ -286,6 +305,8 @@ func renderCmdSelector(p *CmdSelector) string {
 				labelStyle = warnStyle
 			case it.isSkill:
 				labelStyle = skillStyle
+			case it.isAllow:
+				labelStyle = errorStyle
 			}
 		}
 		pad := strings.Repeat(" ", maxLabel-lipgloss.Width(it.label))

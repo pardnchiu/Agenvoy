@@ -35,6 +35,7 @@ type ModelEntry struct {
 
 type Config struct {
 	DispatcherModel  string        `json:"dispatcher_model"`
+	SummaryModel     string        `json:"summary_model"`
 	ReasoningLevel   string        `json:"reasoning_level"`
 	Models           []ModelEntry  `json:"models"`
 	Compats          []CompatEntry `json:"compats"`

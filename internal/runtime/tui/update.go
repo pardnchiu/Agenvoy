@@ -691,6 +691,21 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			runKuradbEnableExec(),
 		)
 
+	case AllowReportAction:
+		next, cmd := t.openAllowReportConfirm(msg.action)
+		return next, cmd
+
+	case AllowReportConfirm:
+		if !msg.yes {
+			return t, tea.Println(hintStyle.Render("⎯ allow-report cancelled") + "\n")
+		}
+		if msg.action == "enable" {
+			next, cmd := t.runAllowReportEnable()
+			return next, cmd
+		}
+		next, cmd := t.runAllowReportDisable()
+		return next, cmd
+
 	case KeySelect:
 		next, cmd := t.openKeyValuePrompt(msg.key)
 		return next, cmd
@@ -716,6 +731,11 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case DispatcherSelect:
 		next, cmd := t.runDispatcherSelect(msg.name)
+		agents.Reload()
+		return next, cmd
+
+	case SummaryModelSelect:
+		next, cmd := t.runSummaryModelSelect(msg.name)
 		agents.Reload()
 		return next, cmd
 

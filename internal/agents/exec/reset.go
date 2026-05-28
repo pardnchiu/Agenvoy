@@ -6,8 +6,16 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/summary"
+	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 )
+
+func summaryRouter() agentTypes.Agent {
+	if a := agents.Summary(); a != nil {
+		return a
+	}
+	return agents.Dispatcher()
+}
 
 func ForceSummary(ctx context.Context, sessionID string) (int, error) {
 	if sessionID == "" {
@@ -20,7 +28,7 @@ func ForceSummary(ctx context.Context, sessionID string) (int, error) {
 		return 0, nil
 	}
 
-	agent := SelectAgent(ctx, agents.Dispatcher(), agents.Registry(), "[summary] force refresh", false, sessionID)
+	agent := SelectAgent(ctx, summaryRouter(), agents.Registry(), "[summary] force refresh", false, sessionID)
 	if agent == nil {
 		return 0, fmt.Errorf("no agent available for summary refresh")
 	}
@@ -39,7 +47,7 @@ func ResetSessionWithSummary(ctx context.Context, sessionID string) (int, error)
 	summaryHistories := summary.Get(histories)
 
 	if len(summaryHistories) > 0 {
-		agent := SelectAgent(ctx, agents.Dispatcher(), agents.Registry(), "[summary] reset session", false, sessionID)
+		agent := SelectAgent(ctx, summaryRouter(), agents.Registry(), "[summary] reset session", false, sessionID)
 		if agent == nil {
 			return 0, fmt.Errorf("no agent available for summary refresh; reset aborted")
 		}

@@ -31,6 +31,9 @@ func (t TUI) commandModelRemove() (TUI, tea.Cmd, bool) {
 		if cfg.DispatcherModel != "" && m.Name == cfg.DispatcherModel {
 			label += "  " + warnStyle.Render("[dispatcher]")
 		}
+		if cfg.SummaryModel != "" && m.Name == cfg.SummaryModel {
+			label += "  " + warnStyle.Render("[summary]")
+		}
 		options[i] = label
 		values[i] = m.Name
 	}
@@ -74,6 +77,11 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 		cfg.DispatcherModel = ""
 		clearedDispatcher = true
 	}
+	clearedSummary := false
+	if cfg.SummaryModel == name {
+		cfg.SummaryModel = ""
+		clearedSummary = true
+	}
 
 	if err := session.Save(cfg); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Save: %v", err)) + "\n")
@@ -82,6 +90,9 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 	lines := []string{hintStyle.Render(fmt.Sprintf("⎯ removed: %s", name))}
 	if clearedDispatcher {
 		lines = append(lines, warnStyle.Render("dispatcher cleared · run /model or set a new dispatcher"))
+	}
+	if clearedSummary {
+		lines = append(lines, warnStyle.Render("summary model cleared · falls back to dispatcher"))
 	}
 	if len(cfg.Models) == 0 {
 		lines = append(lines, warnStyle.Render("⎯ no model configured · /model global add"))
