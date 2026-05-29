@@ -16,6 +16,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
+	"github.com/pardnchiu/agenvoy/internal/runtime/line"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -87,6 +88,7 @@ type TUI struct {
 	httpStatus     string
 	discordStatus  string
 	telegramStatus string
+	lineStatus     string
 	runTarget      string
 	streaming      bool
 
@@ -126,7 +128,7 @@ func (t TUI) Init() tea.Cmd {
 		tea.ClearScreen,
 		tea.Batch(
 			textarea.Blink,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus)),
 		),
 	}
 	seq = append(seq, func() tea.Msg { return initTailer{} })
@@ -215,6 +217,7 @@ func newModel(ctx context.Context, userInput string, onceCall, allowAll bool) TU
 		httpStatus:         getHttpStatus(),
 		discordStatus:      getDiscordStatus(),
 		telegramStatus:     getTelegramStatus(),
+		lineStatus:         getLineStatus(),
 		mode:               cliMode,
 		width:              80,
 		currentSessionID:   currentSID,
@@ -249,6 +252,18 @@ func getTelegramStatus() string {
 		name = "enabled"
 	}
 	return textStyle.Render("telegram: ") + okayStyle.Render(name)
+}
+
+func getLineStatus() string {
+	cfg, err := session.Load()
+	if err != nil || cfg == nil || !cfg.LineEnabled || keychain.Get(line.SecretKey) == "" || keychain.Get(line.TokenKey) == "" {
+		return textStyle.Render("line:     ") + hintStyle.Render("disable")
+	}
+	name := cfg.LineUsername
+	if name == "" {
+		name = "enabled"
+	}
+	return textStyle.Render("line:     ") + okayStyle.Render(name)
 }
 
 func getDaemonStatus() string {

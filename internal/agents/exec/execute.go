@@ -574,6 +574,8 @@ func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *runtime.Skil
 		prompts = append(prompts, agentTypes.Message{Role: "system", Content: configs.TelegramSystemPrompt})
 	case strings.HasPrefix(sessionID, "dc-"):
 		prompts = append(prompts, agentTypes.Message{Role: "system", Content: configs.DiscordSystemPrompt})
+	case strings.HasPrefix(sessionID, "ln-"):
+		prompts = append(prompts, agentTypes.Message{Role: "system", Content: configs.LineSystemPrompt})
 	}
 	prompts = append(prompts, agentTypes.Message{Role: "system", Content: GetSystemPrompt(workDir, extraSystemPrompt, scanner, sessionID, allowAll, webMode, excludeSkills)})
 	return prompts

@@ -109,6 +109,12 @@ func renderLogLine(e Log) string {
 		line := fmt.Sprintf("$ Discord Verification Code: %s (%s)", code, username)
 		return systemStyle.Render(line) + "\n"
 	}
+	if strings.HasPrefix(e.Msg, "LINE Verification Code") {
+		code := extractField(body, "code=")
+		username := extractField(body, "name=")
+		line := fmt.Sprintf("$ LINE Verification Code: %s (%s)", code, username)
+		return systemStyle.Render(line) + "\n"
+	}
 	line := "$ [" + e.Source + "] " + body + " - " + e.Time.Format("15:04:05")
 	return levelLineStyle(e.Level).Render(line) + "\n"
 }

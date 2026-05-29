@@ -76,7 +76,7 @@ func (t TUI) runCreateSession(name string) (TUI, tea.Cmd) {
 
 	return t, tea.Sequence(
 		tea.ClearScreen,
-		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
+		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus)),
 		tea.Println(strings.Join(lines, "\n")+"\n"),
 	)
 }

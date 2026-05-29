@@ -31,6 +31,7 @@ var (
 	CronsPath             string
 	TelegramAuthPath      string
 	DiscordAuthPath       string
+	LineAuthPath          string
 	SkillsDir             string
 	SkillGitDir           string
 	SkillGitignorePath    string
@@ -88,6 +89,7 @@ func Init() error {
 		CronsPath = filepath.Join(AgenvoyDir, "crons.json")
 		TelegramAuthPath = filepath.Join(AgenvoyDir, ".telegram")
 		DiscordAuthPath = filepath.Join(AgenvoyDir, ".discord")
+		LineAuthPath = filepath.Join(AgenvoyDir, ".line")
 
 		SkillsDir = filepath.Join(AgenvoyDir, "skills")
 		SkillGitDir = filepath.Join(SkillsDir, ".git")

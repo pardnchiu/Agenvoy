@@ -117,6 +117,55 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 	return sessionID, nil
 }
 
+func GetLineSession(sourceType, userID, groupID, roomID string) (string, error) {
+	var key, target string
+	switch {
+	case groupID != "":
+		key = "ln_g_" + groupID
+		target = groupID
+	case roomID != "":
+		key = "ln_r_" + roomID
+		target = roomID
+	default:
+		key = "ln_u_" + userID
+		target = userID
+	}
+	config := map[string]string{
+		"line_target":      target,
+		"line_source_type": sourceType,
+	}
+	sum := sha256.Sum256([]byte(key))
+
+	sessionID := "ln-" + hex.EncodeToString(sum[:])
+	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+	configPath := filepath.Join(sessionDir, "config.json")
+
+	if !go_pkg_filesystem_reader.Exists(configPath) {
+		if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
+		}
+		if err := go_pkg_filesystem.WriteJSON(configPath, config, false); err != nil {
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteJSON: %w", err)
+		}
+	}
+
+	SaveBot(sessionID, sessionID, false)
+	return sessionID, nil
+}
+
+func GetLineTarget(sessionID string) (string, error) {
+	if sessionID == "" {
+		return "", fmt.Errorf("sessionID is required")
+	}
+
+	configPath := filepath.Join(filesystem.SessionsDir, sessionID, "config.json")
+	config, err := go_pkg_filesystem.ReadJSON[map[string]string](configPath)
+	if err != nil {
+		return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem ReadJSON: %w", err)
+	}
+	return config["line_target"], nil
+}
+
 func GetChannelID(sessionID string) (string, error) {
 	if sessionID == "" {
 		return "", fmt.Errorf("sessionID is required")

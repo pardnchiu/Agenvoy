@@ -16,6 +16,7 @@ import (
 // * Defaults below are the only fallback; env vars are no longer read.
 var (
 	Port                       = "17989"
+	LinePort                   = "16722"
 	MaxToolIterations          = 16
 	MaxSkillIterations         = 128
 	MaxEmptyResponses          = 8
@@ -48,6 +49,7 @@ const (
 
 type RuntimeLimits struct {
 	Port                       string `json:"port,omitempty"`
+	LinePort                   string `json:"line_port,omitempty"`
 	MaxToolIterations          int    `json:"max_tool_iterations,omitempty"`
 	MaxSkillIterations         int    `json:"max_skill_iterations,omitempty"`
 	MaxEmptyResponses          int    `json:"max_empty_responses,omitempty"`
@@ -89,6 +91,12 @@ func LoadRuntime() error {
 		changed = true
 	}
 	Port = limits.Port
+
+	if limits.LinePort == "" {
+		limits.LinePort = LinePort
+		changed = true
+	}
+	LinePort = limits.LinePort
 
 	if limits.MaxToolIterations <= 0 {
 		limits.MaxToolIterations = MaxToolIterations

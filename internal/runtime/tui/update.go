@@ -468,7 +468,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ModelAddDone:
 		seq := []tea.Cmd{
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus)),
 		}
 		if msg.err != nil {
 			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] add-model: %v", msg.err))+"\n"))
@@ -514,6 +514,29 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t, tea.Sequence(
 			tea.Println(hintStyle.Render("⎯ telegram verifying token (≤10s)")+"\n"),
 			enableTelegram(msg.token),
+		)
+
+	case LineAction:
+		switch msg.action {
+		case "enable":
+			next, cmd := t.openLineSecretPrompt()
+			return next, cmd
+		case "disable":
+			return t, tea.Sequence(
+				tea.Println(hintStyle.Render("⎯ line disabling")+"\n"),
+				disableLine(),
+			)
+		}
+		return t, nil
+
+	case LineSecretSubmit:
+		next, cmd := t.openLineTokenPrompt(msg.secret)
+		return next, cmd
+
+	case LineTokenSubmit:
+		return t, tea.Sequence(
+			tea.Println(hintStyle.Render("⎯ line verifying token (≤10s)")+"\n"),
+			enableLine(msg.secret, msg.token),
 		)
 
 	case CronAction:
@@ -634,7 +657,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.discordStatus = getDiscordStatus()
 		seq := []tea.Cmd{
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus)),
 		}
 		if msg.err != nil {
 			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] discord %s: %v", msg.action, msg.err))+"\n"))
@@ -647,12 +670,25 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.telegramStatus = getTelegramStatus()
 		seq := []tea.Cmd{
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus)),
 		}
 		if msg.err != nil {
 			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] telegram %s: %v", msg.action, msg.err))+"\n"))
 		} else {
 			seq = append(seq, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ telegram %sd · daemon reloading", msg.action))+"\n"))
+		}
+		return t, tea.Sequence(seq...)
+
+	case LineDone:
+		t.lineStatus = getLineStatus()
+		seq := []tea.Cmd{
+			tea.ClearScreen,
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus)),
+		}
+		if msg.err != nil {
+			seq = append(seq, tea.Println(errorStyle.Render(fmt.Sprintf("[!] line %s: %v", msg.action, msg.err))+"\n"))
+		} else {
+			seq = append(seq, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ line %sd · daemon reloading", msg.action))+"\n"))
 		}
 		return t, tea.Sequence(seq...)
 
@@ -774,13 +810,13 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return t, tea.Sequence(
 				tea.ClearScreen,
-				tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
+				tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus)),
 				tea.Println(errorStyle.Render(fmt.Sprintf("[!] log: %v", msg.err))+"\n"),
 			)
 		}
 		return t, tea.Sequence(
 			tea.ClearScreen,
-			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus)),
 		)
 
 	case StartupSelectSession:

@@ -17,6 +17,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
+	"github.com/pardnchiu/agenvoy/internal/runtime/line"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
@@ -25,6 +26,7 @@ import (
 func init() {
 	exec.RegisterPushHook("dc-", discord.PushDiscordResult)
 	exec.RegisterPushHook("tg-", telegram.PushTelegramResult)
+	exec.RegisterPushHook("ln-", line.PushLineResult)
 }
 
 func main() {

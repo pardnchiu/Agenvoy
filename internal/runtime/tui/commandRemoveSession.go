@@ -107,7 +107,7 @@ func (t TUI) runRemoveSession(sid string) (TUI, tea.Cmd) {
 
 	seq := []tea.Cmd{
 		tea.ClearScreen,
-		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
+		tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus)),
 	}
 	seq = append(seq, loadSessionTail(fallback)...)
 	seq = append(seq, tea.Println(strings.Join(lines, "\n")+"\n"))

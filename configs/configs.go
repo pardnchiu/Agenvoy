@@ -39,6 +39,9 @@ var TelegramSystemPrompt string
 //go:embed prompts/telegram_format.md
 var TelegramFormat string
 
+//go:embed prompts/line_system_prompt.md
+var LineSystemPrompt string
+
 //go:embed prompts/default_session_prompt.md
 var DefaultSessionPrompt string
 

@@ -29,6 +29,7 @@ import (
 	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
 	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
+	"github.com/pardnchiu/agenvoy/internal/runtime/line"
 	"github.com/pardnchiu/agenvoy/internal/runtime/monitor"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
@@ -51,6 +52,12 @@ var (
 	telegramBot         *telegram.Bot
 	lastTelegramEnabled bool
 	lastTelegramToken   string
+
+	lineMu          sync.Mutex
+	lineBot         *line.Bot
+	lastLineEnabled bool
+	lastLineSecret  string
+	lastLineToken   string
 
 	kuradbMu          sync.Mutex
 	kuradbCancel      context.CancelFunc
@@ -123,6 +130,42 @@ func reloadTelegram() {
 		return
 	}
 	telegramBot = bot
+}
+
+func reloadLine() {
+	newSecret := keychain.Get(line.SecretKey)
+	newToken := keychain.Get(line.TokenKey)
+	newEnabled := false
+	if cfg, err := session.Load(); err == nil && cfg != nil {
+		newEnabled = cfg.LineEnabled
+	}
+
+	lineMu.Lock()
+	defer lineMu.Unlock()
+
+	if newEnabled == lastLineEnabled && newSecret == lastLineSecret && newToken == lastLineToken {
+		return
+	}
+
+	if lineBot != nil {
+		_ = line.Close(lineBot)
+		lineBot = nil
+	}
+	lastLineEnabled = newEnabled
+	lastLineSecret = newSecret
+	lastLineToken = newToken
+
+	if !newEnabled || newSecret == "" || newToken == "" {
+		return
+	}
+
+	bot, err := line.New()
+	if err != nil {
+		slog.Error("line.New",
+			slog.String("error", err.Error()))
+		return
+	}
+	lineBot = bot
 }
 
 func reloadKuradb() {
@@ -247,6 +290,7 @@ func cmdDaemon() {
 
 	reloadDiscord()
 	reloadTelegram()
+	reloadLine()
 	reloadKuradb()
 	monitor.Start(context.Background())
 
@@ -282,6 +326,12 @@ func cmdDaemon() {
 		telegramBot = nil
 	}
 	telegramMu.Unlock()
+	lineMu.Lock()
+	if lineBot != nil {
+		_ = line.Close(lineBot)
+		lineBot = nil
+	}
+	lineMu.Unlock()
 	kuradbMu.Lock()
 	if kuradbCancel != nil {
 		kuradbCancel()
@@ -349,6 +399,7 @@ func watchConfig(ctx context.Context) func() {
 				}
 				reloadDiscord()
 				reloadTelegram()
+				reloadLine()
 				reloadKuradb()
 			case err, ok := <-w.Errors:
 				if !ok {
