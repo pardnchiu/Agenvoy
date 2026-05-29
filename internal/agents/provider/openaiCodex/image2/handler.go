@@ -105,6 +105,6 @@ func handler(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (
 	if revised != "" {
 		msg = "(revised: " + revised + ")\n\n"
 	}
-	msg += "FILE: " + outPath
+	msg += "[SEND_FILE:" + outPath + "]"
 	return msg, nil
 }

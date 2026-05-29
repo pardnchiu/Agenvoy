@@ -166,7 +166,7 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 		return hintStyle.Render("⏵ " + srcPrefix + "summarizing…"), true
 
 	case agentTypes.EventDone:
-		footer := utils.FormatFooter(ev.Duration, ev.Model, ev.Usage)
+		footer := utils.FormatEventFooter(ev.Duration, ev.Model, ev.Usage)
 		if sessionLabel != "" {
 			if footer != "" {
 				footer = footer + " · [" + sessionLabel + "]"

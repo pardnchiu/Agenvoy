@@ -10,14 +10,12 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
-	goRuntime "runtime"
 	"strings"
 	"time"
 
 	go_pkg_keychain "github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
-	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	allowSkill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
 	allowTool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
@@ -86,16 +84,6 @@ func isSendTimeoutError(err error, sendCtxErr error) bool {
 	return false
 }
 
-func hashPayload(parts ...any) string {
-	h := sha256.New()
-	for _, p := range parts {
-		b, _ := json.Marshal(p)
-		h.Write(b)
-		h.Write([]byte{0})
-	}
-	return hex.EncodeToString(h.Sum(nil))
-}
-
 type ExecData struct {
 	Agent             agentTypes.Agent
 	FallbackAgents    []agentTypes.Agent
@@ -119,11 +107,6 @@ type (
 	parentEventsKey   struct{}
 	parentWorkDirKey  struct{}
 )
-
-func getAllowList(ctx context.Context) []allowTool.ToolRule {
-	rules, _ := ctx.Value(allowListRulesKey{}).([]allowTool.ToolRule)
-	return rules
-}
 
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
 	executeStart := time.Now()
@@ -279,16 +262,80 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	toolFailCount := make(map[string]int)
 	emptyCount := 0
 	trimmedToolCalls := false
-	var lastSendSig string
+	type sendOutcome struct {
+		resp *agentTypes.Output
+		err  error
+	}
 	sendFailCount := 0
-	for i := 0; i < limit; i++ {
+	for range limit {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 		assembled := assembleMessages(session.SystemPrompts, session.OldHistories, session.SummaryMessage, session.UserInput, session.ToolHistories)
 		sendStart := time.Now()
 		sendCtx, cancelSend := context.WithTimeout(ctx, time.Duration(filesystem.AgentSendTimeoutSec)*time.Second)
-		resp, err := data.Agent.Send(sendCtx, assembled, exec.Tools)
+		sendAgent := data.Agent
+		resultCh := make(chan sendOutcome, 1)
+		go func() {
+			r, e := sendAgent.Send(sendCtx, assembled, exec.Tools)
+			resultCh <- sendOutcome{resp: r, err: e}
+		}()
+
+		watchdog := time.NewTicker(UnresponsiveProbeInterval)
+		var resp *agentTypes.Output
+		var err error
+		switched := false
+	waitSend:
+		for {
+			select {
+			case <-ctx.Done():
+				watchdog.Stop()
+				cancelSend()
+				return ctx.Err()
+			case out := <-resultCh:
+				resp, err = out.resp, out.err
+				break waitSend
+			case <-watchdog.C:
+				if utils.CheckAgentEndpointAlive(ctx, data.Agent, HealthCheckTimeout) {
+					continue
+				}
+				next, nextName := pickHealthyFallback(ctx, &data.FallbackAgents)
+				if next == nil {
+					watchdog.Stop()
+					cancelSend()
+					deadName := data.Agent.Name()
+					slog.Error("agent unresponsive, no healthy fallback; aborting",
+						slog.String("session", session.ID),
+						slog.String("name", deadName))
+					sendText(events, fmt.Sprintf("upstream %s is unresponsive and no healthy fallback model is available.", deadName))
+					events <- agentTypes.Event{
+						Type:     agentTypes.EventDone,
+						Model:    deadName,
+						Usage:    &usage,
+						Duration: time.Since(executeStart),
+					}
+					return fmt.Errorf("agent %s unresponsive, no healthy fallback", deadName)
+				}
+				slog.Warn("agent unresponsive, switching model",
+					slog.String("session", session.ID),
+					slog.String("from", data.Agent.Name()),
+					slog.String("to", nextName))
+				events <- agentTypes.Event{
+					Type:  agentTypes.EventAgentResult,
+					Text:  nextName,
+					Model: nextName,
+				}
+				data.Agent = next
+				switched = true
+				break waitSend
+			}
+		}
+		watchdog.Stop()
+		if switched {
+			cancelSend()
+			sendFailCount = 0
+			continue
+		}
 		sendElapsed := time.Since(sendStart).Round(time.Second)
 		sendCtxErr := sendCtx.Err()
 		cancelSend()
@@ -297,92 +344,68 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				return ctx.Err()
 			}
 			isTimeout := isSendTimeoutError(err, sendCtxErr)
-			if isTimeout {
-				sendFailCount++
-				lastSendSig = ""
-			} else {
-				sig := hashPayload(assembled, exec.Tools)
-				if sig == lastSendSig {
-					sendFailCount++
-				} else {
-					sendFailCount = 1
-					lastSendSig = sig
-				}
-			}
+			modelName := data.Agent.Name()
+
 			if isContextLengthError(err) {
+				sendFailCount++
 				trimmedToolCalls = trimmedToolCalls || trimOnContextExceeded(&session.OldHistories, &session.ToolHistories)
 				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange",
-					slog.String("session", session.ID))
-			} else {
-				slog.Warn("data.Agent.Send",
 					slog.String("session", session.ID),
-					slog.String("error", err.Error()),
-					slog.Bool("timeout", isTimeout),
-					slog.Int("sameSigCount", sendFailCount))
-			}
-			modelName := data.Agent.Name()
-			if sendFailCount >= filesystem.MaxRetry {
-				var nextAgent agentTypes.Agent
-				var nextName string
-				if !isContextLengthError(err) {
-					for len(data.FallbackAgents) > 0 {
-						cand := data.FallbackAgents[0]
-						data.FallbackAgents = data.FallbackAgents[1:]
-						if cand == nil {
-							continue
-						}
-						if !ProbeAgent(ctx, cand, ProbeTimeout) {
-							slog.Warn("fallback probe failed",
-								slog.String("session", session.ID),
-								slog.String("name", cand.Name()))
-							continue
-						}
-						nextAgent = cand
-						nextName = cand.Name()
-						break
-					}
-				}
-				if nextAgent != nil {
-					slog.Warn("data.Agent.Send exhausted, switching model",
-						slog.String("session", session.ID),
-						slog.String("from", modelName),
-						slog.String("to", nextName),
-						slog.Int("attempts", sendFailCount))
-					events <- agentTypes.Event{
-						Type:  agentTypes.EventAgentResult,
-						Text:  nextName,
-						Model: nextName,
-					}
-					data.Agent = nextAgent
-					sendFailCount = 0
-					lastSendSig = ""
-					continue
-				}
-				var userMsg string
-				switch {
-				case isTimeout:
-					userMsg = fmt.Sprintf("upstream %s timed out %d times in a row (last attempt bailed at %s). No fallback model available.", modelName, sendFailCount, sendElapsed)
-				case isContextLengthError(err):
-					userMsg = fmt.Sprintf("upstream %s context exceeded after %d trim attempts. Start a new session or switch to a larger-context model.", modelName, sendFailCount)
-				default:
-					userMsg = fmt.Sprintf("upstream %s failed %d times in a row: %s", modelName, sendFailCount, err.Error())
-				}
-				slog.Error("data.Agent.Send exhausted",
-					slog.String("session", session.ID),
-					slog.String("error", err.Error()),
 					slog.Int("attempts", sendFailCount))
-				sendText(events, userMsg)
-				events <- agentTypes.Event{
-					Type:     agentTypes.EventDone,
-					Model:    modelName,
-					Usage:    &usage,
-					Duration: time.Since(executeStart),
+				if sendFailCount >= filesystem.MaxRetry {
+					slog.Error("data.Agent.Send exhausted",
+						slog.String("session", session.ID),
+						slog.String("error", err.Error()),
+						slog.Int("attempts", sendFailCount))
+					sendText(events, fmt.Sprintf("upstream %s context exceeded after %d trim attempts. Start a new session or switch to a larger-context model.", modelName, sendFailCount))
+					events <- agentTypes.Event{
+						Type:     agentTypes.EventDone,
+						Model:    modelName,
+						Usage:    &usage,
+						Duration: time.Since(executeStart),
+					}
+					return fmt.Errorf("data.Agent.Send context exceeded after %d trims: %w", sendFailCount, err)
 				}
-				return fmt.Errorf("data.Agent.Send failed %d times: %w", sendFailCount, err)
+				continue
 			}
-			continue
+
+			slog.Warn("data.Agent.Send",
+				slog.String("session", session.ID),
+				slog.String("error", err.Error()),
+				slog.Bool("timeout", isTimeout))
+			next, nextName := pickHealthyFallback(ctx, &data.FallbackAgents)
+			if next != nil {
+				slog.Warn("data.Agent.Send failed, switching model",
+					slog.String("session", session.ID),
+					slog.String("from", modelName),
+					slog.String("to", nextName))
+				events <- agentTypes.Event{
+					Type:  agentTypes.EventAgentResult,
+					Text:  nextName,
+					Model: nextName,
+				}
+				data.Agent = next
+				continue
+			}
+
+			var userMsg string
+			if isTimeout {
+				userMsg = fmt.Sprintf("upstream %s timed out (%s) and no healthy fallback model is available.", modelName, sendElapsed)
+			} else {
+				userMsg = fmt.Sprintf("upstream %s failed and no healthy fallback model is available: %s", modelName, err.Error())
+			}
+			slog.Error("data.Agent.Send failed, no fallback",
+				slog.String("session", session.ID),
+				slog.String("error", err.Error()))
+			sendText(events, userMsg)
+			events <- agentTypes.Event{
+				Type:     agentTypes.EventDone,
+				Model:    modelName,
+				Usage:    &usage,
+				Duration: time.Since(executeStart),
+			}
+			return fmt.Errorf("data.Agent.Send failed: %w", err)
 		}
-		lastSendSig = ""
 		sendFailCount = 0
 
 		usage.Input += resp.Usage.Input
@@ -499,113 +522,6 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	return nil
 }
 
-func GetSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.SkillScanner, sessionID string, allowAll bool, webMode bool, excludeSkills []string) string {
-	systemOS := goRuntime.GOOS
-	// var skillPath string
-	// var skillExt string
-	// var content string
-	// if data.Skill == nil {
-	// 	skillPath = "None"
-	// } else {
-	// 	skillPath = data.Skill.Path
-	// 	skillExt = configs.SkillExecution
-	// 	content = data.Skill.Content
-
-	// 	// * add skill path, ensure path is correct
-	// 	for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
-	// 		resolved := filepath.Join(data.Skill.Path, prefix)
-
-	// 		if _, err := os.Stat(resolved); err == nil {
-	// 			content = strings.ReplaceAll(content, prefix, resolved+string(filepath.Separator))
-	// 		}
-	// 	}
-	// }
-	var extraSection string
-	if extra := strings.TrimSpace(extraSystemPrompt); extra != "" {
-		extraSection = "---\n\n## Additional Instructions\n\n" + extra + "\n\n---\n\n"
-	}
-
-	template := configs.SystemPrompt
-	if webMode {
-		template = configs.WebModeSystemPrompt
-	}
-
-	skillsSection := ""
-	if list := toolSearcher.ListBlock(scanner, excludeSkills); list != "" {
-		skillsSection = "## Skills\n\n" +
-			"**Slash invocations (`/<name>`) are STRICT EXECUTION.** The user has explicitly authorized the skill's full procedure; every step in SKILL.md is binding and must complete via tool calls in order. The FIRST step (often `ask_user` for requirement gathering) must run before any other tool call — no exceptions, no \"the user input looks complete so I'll skip ahead\".\n\n" +
-			"The `activate_skill` tool path is advisory — consult, integrate parts that fit, ignore parts that don't. Consider activating a skill when its description matches the user's intent on each turn, even without an explicit `/<name>` invocation.\n\n" +
-			list
-	}
-
-	personaSection := ""
-	if sessionID != "" {
-		sessionManager.SaveBot(sessionID, sessionID, false)
-	}
-	if name, body := sessionManager.GetBot(sessionID); body != "" {
-		var sb strings.Builder
-		sb.WriteString("## Bot Persona\n\n")
-		if name != "" {
-			fmt.Fprintf(&sb, "Your operating identity for this session is `%s`. Internalise the role description below and apply it to every reply unless an explicit user instruction overrides it.\n\n", name)
-		} else {
-			sb.WriteString("Internalise the role description below and apply it to every reply unless an explicit user instruction overrides it.\n\n")
-		}
-		sb.WriteString(body)
-		sb.WriteString("\n\n---\n\n")
-		personaSection = sb.String()
-	}
-
-	return strings.NewReplacer(
-		"{{.SystemOS}}", systemOS,
-		"{{.WorkPath}}", workDir,
-		"{{.BotPersona}}", personaSection,
-		"{{.PermissionMode}}", buildPermissionModeSection(allowAll),
-		"{{.AvailableSkills}}", skillsSection,
-		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
-		"{{.CrossChannelSending}}", buildCrossChannelPrompt(),
-		"{{.ExtraSystemPrompt}}", extraSection,
-	).Replace(template)
-}
-
-func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *runtime.SkillScanner, sessionID string, allowAll, webMode bool, excludeSkills []string) []agentTypes.Message {
-	var prompts []agentTypes.Message
-	switch {
-	case strings.HasPrefix(sessionID, "tg-"):
-		prompts = append(prompts, agentTypes.Message{Role: "system", Content: configs.TelegramSystemPrompt})
-	case strings.HasPrefix(sessionID, "dc-"):
-		prompts = append(prompts, agentTypes.Message{Role: "system", Content: configs.DiscordSystemPrompt})
-	}
-	prompts = append(prompts, agentTypes.Message{Role: "system", Content: GetSystemPrompt(workDir, extraSystemPrompt, scanner, sessionID, allowAll, webMode, excludeSkills)})
-	return prompts
-}
-
-func GetChatCompletionsSystemPrompt(workDir string, scanner *runtime.SkillScanner, excludeSkills []string) string {
-	skillsSection := ""
-	if list := toolSearcher.ListBlock(scanner, excludeSkills); list != "" {
-		skillsSection = "## Skills\n\n" +
-			"**Slash invocations (`/<name>`) are STRICT EXECUTION.** The user has explicitly authorized the skill's full procedure; every step in SKILL.md is binding and must complete via tool calls in order. The FIRST step (often `ask_user` for requirement gathering) must run before any other tool call — no exceptions, no \"the user input looks complete so I'll skip ahead\".\n\n" +
-			"The `activate_skill` tool path is advisory — consult, integrate parts that fit, ignore parts that don't. Consider activating a skill when its description matches the user's intent on each turn, even without an explicit `/<name>` invocation.\n\n" +
-			list
-	}
-
-	return strings.NewReplacer(
-		"{{.SystemOS}}", goRuntime.GOOS,
-		"{{.WorkPath}}", workDir,
-		"{{.AvailableSkills}}", skillsSection,
-	).Replace(configs.ChatCompletionsSystemPrompt)
-}
-
-func BuildChatCompletionsSystemPrompts(workDir string, scanner *runtime.SkillScanner, excludeSkills []string) []agentTypes.Message {
-	return []agentTypes.Message{{Role: "system", Content: GetChatCompletionsSystemPrompt(workDir, scanner, excludeSkills)}}
-}
-
-func buildPermissionModeSection(allowAll bool) string {
-	if allowAll {
-		return strings.TrimRight(configs.PermissionAlwaysAllow, "\n")
-	}
-	return strings.TrimRight(configs.PermissionSingleConfirm, "\n")
-}
-
 func actionError(emptyCount *int, events chan<- agentTypes.Event) bool {
 	*emptyCount++
 	if *emptyCount >= filesystem.MaxEmptyResponses {
@@ -686,7 +602,7 @@ func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
 }
 
 func assignBindingSkill(session *agentTypes.AgentSession, s *filesystem.Skill) {
-	id := "skill-assign-" + utils.NewID("skill", s.Name)
+	id := "skill-assign-" + newID("skill", s.Name)
 	argsJSON, _ := json.Marshal(map[string]string{"skill": s.Name})
 	call := agentTypes.ToolCall{
 		ID:   id,
@@ -715,6 +631,11 @@ func assignBindingSkill(session *agentTypes.AgentSession, s *filesystem.Skill) {
 		Role:    "system",
 		Content: bindingHeader + toolSearcher.RenderActivation(s),
 	})
+}
+
+func newID(parts ...string) string {
+	h := sha256.Sum256([]byte(strings.Join(parts, "|") + fmt.Sprint(time.Now().UnixNano())))
+	return hex.EncodeToString(h[:])[:8]
 }
 
 func buildCrossChannelPrompt() string {

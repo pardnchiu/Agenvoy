@@ -51,11 +51,12 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	}
 
 	newTools := a.convertToTools(tools)
-	apiURL := fmt.Sprintf("%s%s:generateContent?key=%s", baseAPI, a.model, a.apiKey)
+	apiURL := fmt.Sprintf("%s%s:generateContent", baseAPI, a.model)
 	requestBody := a.generateRequestBody(newMessages, systemPrompt, newTools)
 
 	result, _, err := go_pkg_http.POST[Output](ctx, a.httpClient, apiURL, map[string]string{
-		"Content-Type": "application/json",
+		"Content-Type":   "application/json",
+		"x-goog-api-key": a.apiKey,
 	}, requestBody, "json")
 	if err != nil {
 		return nil, fmt.Errorf("http.POST: %w", err)

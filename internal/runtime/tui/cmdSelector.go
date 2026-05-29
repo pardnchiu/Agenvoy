@@ -221,6 +221,11 @@ func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 		if cmdNameItems[i].isAllow != cmdNameItems[j].isAllow {
 			return !cmdNameItems[i].isAllow
 		}
+		pi := strings.HasPrefix(strings.TrimPrefix(cmdNameItems[i].label, "/"), query)
+		pj := strings.HasPrefix(strings.TrimPrefix(cmdNameItems[j].label, "/"), query)
+		if pi != pj {
+			return pi
+		}
 		return cmdNameItems[i].label < cmdNameItems[j].label
 	})
 	sort.SliceStable(cmdDescItems, byLabel(cmdDescItems))

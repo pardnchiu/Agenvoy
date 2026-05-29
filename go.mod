@@ -12,7 +12,7 @@ require (
 	github.com/pardnchiu/ToriiDB v0.5.1
 	github.com/pardnchiu/go-bot v0.3.6
 	github.com/pardnchiu/go-browser v0.1.3
-	github.com/pardnchiu/go-pkg v0.13.0
+	github.com/pardnchiu/go-pkg v0.13.2
 	github.com/pardnchiu/go-scheduler v1.2.0
 )
 
