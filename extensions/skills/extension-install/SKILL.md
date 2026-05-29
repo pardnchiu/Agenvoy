@@ -128,7 +128,7 @@ Every path in `files` must exist in the staging subdirectory; any missing file â
 For each `<dep>` in `manifest.dependence`, call:
 
 ```
-install_dependence(name="<dep>")
+install_dependence(package="<dep>")
 ```
 
 The tool internally:

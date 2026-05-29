@@ -1,4 +1,4 @@
-package userData
+package interactive
 
 import (
 	"context"
@@ -38,7 +38,7 @@ func registStoreSecret() {
 				Question string `json:"question"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
+				return "", fmt.Errorf("json Unmarshal: %w", err)
 			}
 
 			key := strings.TrimSpace(params.Key)

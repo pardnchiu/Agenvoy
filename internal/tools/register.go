@@ -10,6 +10,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/errorMemory"
 	"github.com/pardnchiu/agenvoy/internal/tools/external"
 	"github.com/pardnchiu/agenvoy/internal/tools/file"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolScheduler "github.com/pardnchiu/agenvoy/internal/tools/scheduler"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
@@ -31,11 +32,10 @@ func init() {
 	toolScheduler.Register()
 	toolSearcher.Register()
 	userData.Register()
+	interactive.Register()
 
 	registRunCommand()
-	registAskUser()
 	registUpdatePage()
-	registInstallDependence()
 	registDownloadFile()
 
 	toolRegister.RegistGroup("api_", func(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
