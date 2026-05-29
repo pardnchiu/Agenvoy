@@ -77,7 +77,7 @@ func handler(ctx context.Context, path, prompt string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	resp, _, err := go_pkg_http.POST[data](ctx, nil, endpoint+"?key="+apiKey, nil, map[string]any{
+	resp, _, err := go_pkg_http.POST[data](ctx, nil, endpoint, map[string]string{"x-goog-api-key": apiKey}, map[string]any{
 		"contents": []any{
 			map[string]any{
 				"parts": []any{

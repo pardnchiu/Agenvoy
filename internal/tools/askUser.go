@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -24,6 +25,7 @@ func registAskUser() {
 		Name:        "ask_user",
 		AlwaysAllow: true,
 		AlwaysLoad:  true,
+		Timeout:     10 * time.Minute,
 		Description: "Ask the user one or more questions and return their answers.",
 		Parameters: map[string]any{
 			"type": "object",

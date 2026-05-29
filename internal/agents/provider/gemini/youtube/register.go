@@ -17,7 +17,7 @@ func Register() {
 		Name:        "fetch_youtube_transcript",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Timeout:     5 * time.Minute,
+		Timeout:     15 * time.Minute,
 		Description: `[system-default]
 Transcribe YouTube video with timestamps.
 Video to text for analysis, summarization, quote extraction.`,

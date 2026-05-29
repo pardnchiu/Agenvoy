@@ -48,10 +48,10 @@ func handler(ctx context.Context, videoURL, prompt string) (string, error) {
 
 	prompt = strings.TrimSpace(defaultPrompt + "\n" + prompt)
 
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 
-	resp, _, err := go_pkg_http.POST[data](ctx, nil, path+"?key="+apiKey, nil, map[string]any{
+	resp, _, err := go_pkg_http.POST[data](ctx, nil, path, map[string]string{"x-goog-api-key": apiKey}, map[string]any{
 		"contents": []any{
 			map[string]any{
 				"parts": []any{
