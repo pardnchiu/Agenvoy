@@ -79,7 +79,7 @@ func stream(c *gin.Context, id string, created int64, model string, events <-cha
 		return emitReasoningLine(line)
 	}
 	formatToolLine := func(name, args string) string {
-		arg := internalUtils.FormatTool(name, args)
+		arg := internalUtils.FormatToolEvent(name, args)
 		if arg == "" {
 			return name
 		}

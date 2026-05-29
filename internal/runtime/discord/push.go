@@ -74,7 +74,7 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 }
 
 func buildPushFooter(duration time.Duration, model string, usage *agentTypes.Usage) string {
-	footer := utils.FormatFooter(duration, model, usage)
+	footer := utils.FormatEventFooter(duration, model, usage)
 	if footer == "" {
 		return ""
 	}

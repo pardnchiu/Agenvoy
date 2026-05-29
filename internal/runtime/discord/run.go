@@ -233,7 +233,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		close(events)
 	}()
 
-	result := utils.FormatAgentEventMessage(events, "[Discord]", sess.ID, markStatus, func(toolName, text string) string {
+	result := utils.FormatChatbotEvent(events, "[Discord]", sess.ID, markStatus, func(toolName, text string) string {
 		return fmt.Sprintf("`%s`: %s", toolName, text)
 	})
 	replyText := result.ReplyText
@@ -267,7 +267,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	if model == "" && agent != nil {
 		model = agent.Name()
 	}
-	footer := utils.FormatFooter(doneEvent.Duration, model, doneEvent.Usage)
+	footer := utils.FormatEventFooter(doneEvent.Duration, model, doneEvent.Usage)
 	if len(attachmentPaths) > 0 || len(voiceTexts) > 0 {
 		footer = "🔗 " + footer
 	}

@@ -261,7 +261,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		close(events)
 	}()
 
-	result := utils.FormatAgentEventMessage(events, "[Telegram]", sess.ID, markStatus, func(toolName, text string) string {
+	result := utils.FormatChatbotEvent(events, "[Telegram]", sess.ID, markStatus, func(toolName, text string) string {
 		return fmt.Sprintf("<code>%s</code>: <code>%s</code>", toolName, text)
 	})
 	replyText := result.ReplyText
@@ -296,7 +296,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	if model == "" && agent != nil {
 		model = agent.Name()
 	}
-	footer := utils.FormatFooter(doneEvent.Duration, model, doneEvent.Usage)
+	footer := utils.FormatEventFooter(doneEvent.Duration, model, doneEvent.Usage)
 	if len(photoPaths) > 0 || len(docPaths) > 0 || len(voiceTexts) > 0 {
 		footer = "🔗 " + footer
 	}

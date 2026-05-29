@@ -154,7 +154,7 @@ func pickHealthyFallback(ctx context.Context, fallbacks *[]agentTypes.Agent) (ag
 		if cand == nil {
 			continue
 		}
-		if utils.CheckHealth(ctx, cand, HealthCheckTimeout) {
+		if utils.CheckAgentEndpointAlive(ctx, cand, HealthCheckTimeout) {
 			return cand, cand.Name()
 		}
 		slog.Warn("fallback health check failed",
@@ -186,7 +186,7 @@ func ResolveAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes
 		return candidates[0], nil, nil
 	}
 	for i, a := range candidates {
-		if utils.CheckHealth(ctx, a, ProbeTimeout) {
+		if utils.CheckAgentEndpointAlive(ctx, a, ProbeTimeout) {
 			rest := make([]agentTypes.Agent, 0, len(candidates)-i-1)
 			for _, b := range candidates[i+1:] {
 				if dead[b.Name()] {

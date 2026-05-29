@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
+
+	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 )
 
-func FormatTool(name, raw string) string {
+func FormatToolEvent(name, raw string) string {
 	if raw == "" {
 		return ""
 	}
@@ -19,11 +23,12 @@ func FormatTool(name, raw string) string {
 	if len(argMap) == 0 {
 		return ""
 	}
+
 	arg := func(keys ...string) string {
-		for _, k := range keys {
-			if v, ok := argMap[k]; ok {
-				if s, ok := v.(string); ok && strings.TrimSpace(s) != "" {
-					return s
+		for _, key := range keys {
+			if aryVal, ok := argMap[key]; ok {
+				if str, ok := aryVal.(string); ok && strings.TrimSpace(str) != "" {
+					return str
 				}
 			}
 		}
@@ -139,4 +144,23 @@ func FormatTool(name, raw string) string {
 		return strings.Join(parts, " ")
 	}
 	return raw
+}
+
+func FormatEventFooter(duration time.Duration, model string, usage *agentTypes.Usage) string {
+	var parts []string
+	if duration > 0 {
+		parts = append(parts, duration.Round(100*time.Millisecond).String())
+	}
+
+	if model = strings.TrimSpace(model); model != "" {
+		if _, after, ok := strings.Cut(model, "@"); ok {
+			model = after
+		}
+		parts = append(parts, model)
+	}
+
+	if usage != nil && (usage.Input > 0 || usage.Output > 0) {
+		parts = append(parts, fmt.Sprintf("↑%s ↓%s", go_pkg_utils.CompactNumber(usage.Input), go_pkg_utils.CompactNumber(usage.Output)))
+	}
+	return strings.Join(parts, " · ")
 }

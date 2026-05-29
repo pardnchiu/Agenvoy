@@ -2,7 +2,9 @@ package exec
 
 import (
 	"context"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -294,7 +296,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				resp, err = out.resp, out.err
 				break waitSend
 			case <-watchdog.C:
-				if utils.CheckHealth(ctx, data.Agent, HealthCheckTimeout) {
+				if utils.CheckAgentEndpointAlive(ctx, data.Agent, HealthCheckTimeout) {
 					continue
 				}
 				next, nextName := pickHealthyFallback(ctx, &data.FallbackAgents)
@@ -600,7 +602,7 @@ func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
 }
 
 func assignBindingSkill(session *agentTypes.AgentSession, s *filesystem.Skill) {
-	id := "skill-assign-" + utils.NewID("skill", s.Name)
+	id := "skill-assign-" + newID("skill", s.Name)
 	argsJSON, _ := json.Marshal(map[string]string{"skill": s.Name})
 	call := agentTypes.ToolCall{
 		ID:   id,
@@ -629,6 +631,11 @@ func assignBindingSkill(session *agentTypes.AgentSession, s *filesystem.Skill) {
 		Role:    "system",
 		Content: bindingHeader + toolSearcher.RenderActivation(s),
 	})
+}
+
+func newID(parts ...string) string {
+	h := sha256.Sum256([]byte(strings.Join(parts, "|") + fmt.Sprint(time.Now().UnixNano())))
+	return hex.EncodeToString(h[:])[:8]
 }
 
 func buildCrossChannelPrompt() string {
