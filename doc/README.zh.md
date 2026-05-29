@@ -291,7 +291,8 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `/bot` | 編輯當前 session 的 bot，走兩個串接 popup：name textfield（與其他 session 衝突檢查；衝突即 abort）→ description textarea（`Ctrl+S` 確認、`Enter` 換行、`Esc` 取消）。 |
 | `/model [global\|session]` | Scope picker；`global` → `[add, remove]`（registry），`session` → 從已設定 model 挑一個。Inline arg 跳過 scope popup。 |
 | `/mcp [add\|remove]` | Action picker；`add` 走串接 popup 表單（name → transport → command/args/env 或 url/headers → scope → 選擇性 session pick），`remove` 列出 global 與 session scope 內的 server。改動需重啟 daemon 生效。Inline arg 跳過 action popup。 |
-| `/dispatcher` | 從 `cfg.Models` 透過 popup 挑 dispatcher model。無 inline arg。 |
+| `/dispatcher-model` | 從 `cfg.Models` 透過 popup 挑 dispatcher model。無 inline arg。 |
+| `/summary-model` | 從 `cfg.Models` 挑 summary 用的 model（選 `(use dispatcher)` 即回退到 dispatcher）。無 inline arg。 |
 | `/reasoning [global\|session]` | 為 dispatcher（global）或當前 session 挑 `low`／`medium`／`high`。Inline arg 跳過 scope popup。 |
 | `/discord [enable\|disable]` | 切換 Discord bot 連線（token 輸入、驗證、keychain 寫入、daemon reload 全在 TUI 內完成）。Inline arg 直接切換不開 popup。 |
 | `/telegram [enable\|disable]` | 切換 Telegram bot 連線（與 `/discord` 同樣 in-TUI popup chain；第一個 chat 來訊息時必須通過 in-chat 驗證碼）。Inline arg 直接切換不開 popup。 |

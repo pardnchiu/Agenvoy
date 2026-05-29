@@ -88,7 +88,8 @@ The TUI auto-tails the active session's `action.log` (foreign-process writes pre
 | `/bot [name body...]` | Edit bot persona — two-popup form (name then multiline body), or inline `parts≥3` for fast path. |
 | `/model [global\|session]` | `global` → add / remove from registry, `session` → pick from `cfg.Models`. |
 | `/mcp [add\|remove]` | Chained popup form for MCP server config; restart daemon to apply. |
-| `/dispatcher` | Pick the dispatcher model from `cfg.Models`. |
+| `/dispatcher-model` | Pick the dispatcher model from `cfg.Models`. |
+| `/summary-model` | Pick the model used for summary generation (or `(use dispatcher)` to fall back). |
 | `/reasoning [global\|session]` | `low` / `medium` / `high`. |
 | `/discord [enable\|disable]` | Toggle Discord bot connection (in-TUI popup chain: token entry → verification → keychain write → daemon fsnotify reload). |
 | `/telegram [enable\|disable]` | Toggle Telegram bot connection (same in-TUI popup chain as `/discord`; first chat to message the bot must pass an in-chat 6-digit OTP, then chat ID is appended to `~/.config/agenvoy/.telegram`). |

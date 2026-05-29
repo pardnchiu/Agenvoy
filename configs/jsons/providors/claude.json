@@ -32,6 +32,10 @@
     "thinking_type": "adaptive"
   },
   "claude-opus-4-7": {
+    "description": "Advanced reasoning capability with adaptive thinking",
+    "thinking_type": "adaptive"
+  },
+  "claude-opus-4-8": {
     "description": "Strongest reasoning capability with adaptive thinking",
     "thinking_type": "adaptive"
   }

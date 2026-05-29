@@ -29,6 +29,9 @@ document.addEventListener("DOMContentLoaded", (_) => {
         // 區塊5
         plan_mode_title: "預規劃模式",
         plan_mode_content: "只需提出需求，並依據問題回答，Agent 會依據需求自動規劃任務流程後再開始執行。",
+        // 區塊6
+        extension_market_title: "工具擴充市集",
+        extension_market_content: "社群開發的工具擴充，經過驗證後即可上架，讓你一鍵安裝使用。",
       },
       en: {
         title: "Your Personal AI Assistant That Actually Works",
@@ -51,6 +54,10 @@ document.addEventListener("DOMContentLoaded", (_) => {
         plan_mode_title: "Pre-Planning Mode",
         plan_mode_content:
           "Just ask for what you need, and the Agent will automatically plan the task flow based on the requirements before starting execution.",
+        // 區塊6
+        extension_market_title: "Tool Extension Marketplace",
+        extension_market_content:
+          "Community-developed tool extensions, verified and listed for you to install and use with one click.",
       },
     },
     i18nLang: isZh ? "zh" : "en",
@@ -66,6 +73,7 @@ document.addEventListener("DOMContentLoaded", (_) => {
           "demo-co-work": "wM3NU4ARz4w",
           "demo-tool-generator": "wF3_q-iqsgg",
           "demo-plan-mode": "05rri8gNuTM",
+          "demo-extension-market": "UrR5i7YAHRc",
         };
         i = 0;
         for (const e of Object.keys(record)) {

@@ -293,7 +293,8 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | `/bot` | Edit the current session's bot via two sequential popups: name textfield (conflict-checked against other sessions; abort on conflict) → description textarea (`Ctrl+S` confirms, `Enter` newline, `Esc` cancels). |
 | `/model [global\|session]` | Scope picker; `global` → `[add, remove]` (registry), `session` → pick a configured model. Inline arg skips the scope popup. |
 | `/mcp [add\|remove]` | Action picker; `add` walks a chained popup form (name → transport → command/args/env or url/headers → scope → optional session pick), `remove` lists configured servers across global and session scopes. Restart the daemon to apply changes. Inline arg skips the action popup. |
-| `/dispatcher` | Pick the dispatcher model from `cfg.Models` via popup. No inline arg. |
+| `/dispatcher-model` | Pick the dispatcher model from `cfg.Models` via popup. No inline arg. |
+| `/summary-model` | Pick the model used for summary generation from `cfg.Models` (or `(use dispatcher)` to fall back). No inline arg. |
 | `/reasoning [global\|session]` | Pick `low` / `medium` / `high` for the dispatcher (global) or the active session. Inline arg skips the scope popup. |
 | `/discord [enable\|disable]` | Toggle Discord bot connection (token entry, verification, keychain write, daemon reload all happen in-TUI). Inline arg switches without the popup. |
 | `/telegram [enable\|disable]` | Toggle Telegram bot connection (same in-TUI popup chain as `/discord`; first chat to message the bot must pass an in-chat verification code). Inline arg switches without the popup. |

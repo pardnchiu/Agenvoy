@@ -58,6 +58,24 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1${2:+ ($2)}"
 }
 
+ensure_homebrew_darwin() {
+  [ "$(uname -s)" = "Darwin" ] || return 0
+  command -v brew >/dev/null 2>&1 && { ok "Homebrew already installed"; return 0; }
+
+  warn "Homebrew not found, installing"
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+  local brew_bin=""
+  if   [ -x /opt/homebrew/bin/brew ]; then brew_bin=/opt/homebrew/bin/brew
+  elif [ -x /usr/local/bin/brew ];   then brew_bin=/usr/local/bin/brew
+  else die "Homebrew install completed but brew binary not found in /opt/homebrew/bin or /usr/local/bin"
+  fi
+
+  eval "$("$brew_bin" shellenv)"
+  command -v brew >/dev/null 2>&1 || die "brew still not on PATH after eval shellenv"
+  ok "Homebrew installed: $(brew --version | head -n 1)"
+}
+
 detect_pkg_mgr() {
   if [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
     SUDO="sudo"
@@ -159,6 +177,34 @@ current_go_version() {
   go version 2>/dev/null | awk '{print $3}' | sed 's/^go//'
 }
 
+persist_go_path() {
+  local rc="" os
+  os="$(uname -s)"
+  case "${SHELL##*/}" in
+    zsh)  rc="${HOME}/.zshrc" ;;
+    bash) [ "$os" = "Darwin" ] && rc="${HOME}/.bash_profile" || rc="${HOME}/.bashrc" ;;
+    *)    rc="${HOME}/.profile" ;;
+  esac
+
+  local marker_begin="# >>> agenvoy go path >>>"
+  local marker_end="# <<< agenvoy go path <<<"
+  local export_line="export PATH=\"${GO_INSTALL_DIR}/bin:\$PATH\""
+
+  if [ -f "$rc" ] && grep -Fq "$marker_begin" "$rc"; then
+    ok "Go PATH already persisted in $rc"
+    return 0
+  fi
+
+  mkdir -p "$(dirname "$rc")"
+  {
+    printf '\n%s\n' "$marker_begin"
+    printf '%s\n' "$export_line"
+    printf '%s\n' "$marker_end"
+  } >> "$rc"
+  ok "Persisted Go PATH to $rc"
+  warn "Open a new shell or run: source $rc"
+}
+
 install_go() {
   local platform="$1"
   local version url tarball
@@ -180,16 +226,27 @@ install_go() {
 
   export PATH="${GO_INSTALL_DIR}/bin:${PATH}"
   ok "Installed $(go version 2>/dev/null || echo "$version")"
-  warn "Add this to your shell rc to keep Go on PATH:"
-  printf '       export PATH="%s/bin:$PATH"\n' "$GO_INSTALL_DIR"
+  persist_go_path
 }
 
 ensure_go() {
   local platform="$1"
   local current
+
+  # Prefer existing go on PATH; otherwise probe the canonical install dir
+  # so subsequent invocations (and `agen update` subprocesses) can find it
+  # even when the user's shell rc was never updated.
+  if ! command -v go >/dev/null 2>&1 && [ -x "${GO_INSTALL_DIR}/bin/go" ]; then
+    export PATH="${GO_INSTALL_DIR}/bin:${PATH}"
+  fi
+
   if current="$(current_go_version)" && [ -n "$current" ]; then
     if go_version_ok "$current"; then
       ok "Go $current already meets >= ${REQUIRED_GO_MAJOR}.${REQUIRED_GO_MINOR}"
+      # Still persist PATH if go was found via probe but rc isn't wired
+      if [ "$(command -v go)" = "${GO_INSTALL_DIR}/bin/go" ]; then
+        persist_go_path
+      fi
       return 0
     fi
     warn "Go $current < ${REQUIRED_GO_MAJOR}.${REQUIRED_GO_MINOR}, upgrading"
@@ -280,6 +337,7 @@ main() {
   require_cmd uname
   require_cmd tar
 
+  ensure_homebrew_darwin
   detect_pkg_mgr
   ensure_cmd git
   ensure_cmd make
