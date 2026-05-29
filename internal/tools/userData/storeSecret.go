@@ -1,4 +1,4 @@
-package tools
+package userData
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -25,7 +25,7 @@ func registStoreSecret() {
 					"type":        "string",
 					"description": "Keychain entry name (e.g. OPENAI_API_KEY).",
 				},
-				"prompt": map[string]any{
+				"question": map[string]any{
 					"type":        "string",
 					"description": "Optional question text shown to the user. Defaults to a generic prompt referencing the key.",
 				},
@@ -34,50 +34,53 @@ func registStoreSecret() {
 		},
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
-				Key    string `json:"key"`
-				Prompt string `json:"prompt"`
+				Key      string `json:"key"`
+				Question string `json:"question"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			params.Key = strings.TrimSpace(params.Key)
-			if params.Key == "" {
+
+			key := strings.TrimSpace(params.Key)
+			if key == "" {
 				return "", fmt.Errorf("key is required")
 			}
 
-			question := strings.TrimSpace(params.Prompt)
+			question := strings.TrimSpace(params.Question)
 			if question == "" {
-				question = fmt.Sprintf("請輸入 %s 的值", params.Key)
+				question = fmt.Sprintf("%s is required", key)
 			}
 
-			value, err := readSecretValue(ctx, e.SessionID, question)
+			value, err := SecretPrompt(ctx, e.SessionID, question)
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("SecretPrompt: %w", err)
 			}
 			if value == "" {
-				return "", fmt.Errorf("user provided empty value")
+				return "", fmt.Errorf("%s is empty", key)
 			}
 
-			if err := keychain.Set(params.Key, value); err != nil {
-				return "", fmt.Errorf("keychain.Set: %w", err)
-			}
-			if err := sessionManager.SaveKey(params.Key); err != nil {
-				return "", fmt.Errorf("sessionManager.SaveKey: %w", err)
+			if err := keychain.Set(key, value); err != nil {
+				return "", fmt.Errorf("keychain Set: %w", err)
 			}
 
-			out, err := json.Marshal(map[string]any{"ok": true, "key": params.Key})
+			if err := session.SaveKey(key); err != nil {
+				return "", fmt.Errorf("session SaveKey: %w", err)
+			}
+
+			bytes, err := json.Marshal(map[string]any{"ok": true, "key": key})
 			if err != nil {
-				return "", fmt.Errorf("json.Marshal: %w", err)
+				return "", fmt.Errorf("json Marshal: %w", err)
 			}
-			return string(out), nil
+			return string(bytes), nil
 		},
 	})
 }
 
-func readSecretValue(ctx context.Context, sessionID, question string) (string, error) {
+func SecretPrompt(ctx context.Context, sessionID, question string) (string, error) {
 	if !runtime.HasListener(sessionID) {
-		return "", fmt.Errorf("store_secret requires an interactive channel (TUI / Telegram / Discord); current session %q has no listener", sessionID)
+		return "", fmt.Errorf("store_secret requires an interactive channel (TUI / Telegram / Discord)")
 	}
+
 	reply, err := runtime.Ask(ctx, runtime.Request{
 		Kind:      runtime.KindAskUser,
 		SessionID: sessionID,
@@ -87,17 +90,18 @@ func readSecretValue(ctx context.Context, sessionID, question string) (string, e
 		},
 	})
 	if err != nil {
-		return "", fmt.Errorf("pending.Ask: %w", err)
+		return "", fmt.Errorf("runtime Ask: %w", err)
 	}
 	if reply.Error != nil {
-		return "", reply.Error
+		return "", fmt.Errorf("runtime Ask: %s", reply.Error)
 	}
 	if len(reply.Answers) == 0 {
-		return "", fmt.Errorf("pending.Ask returned no answers")
+		return "", fmt.Errorf("no answers")
 	}
-	s, ok := reply.Answers[0].(string)
+
+	str, ok := reply.Answers[0].(string)
 	if !ok {
-		return "", fmt.Errorf("pending.Ask returned non-string answer: %T", reply.Answers[0])
+		return "", fmt.Errorf("non-string answer: %T", reply.Answers[0])
 	}
-	return s, nil
+	return str, nil
 }
