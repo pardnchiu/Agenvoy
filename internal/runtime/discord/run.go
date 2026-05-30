@@ -110,6 +110,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		slog.Info("Discord Verification Code",
 			slog.String("name", channelName(in)),
 			slog.String("code", code))
+		exec.NotifyAdminCode(ctx, code, "Discord "+channelName(in))
 		prompt, err := b.client.SendInput(ctx, in.ChannelID, "", "Enter the 6-digit verification code printed in the daemon log.")
 		if err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.SendInput",

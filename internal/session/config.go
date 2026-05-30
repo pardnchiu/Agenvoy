@@ -46,6 +46,7 @@ type Config struct {
 	TelegramEnabled  bool          `json:"telegram_enabled"`
 	TelegramUsername string        `json:"telegram_username"`
 	KuradbEnabled    bool          `json:"kuradb_enabled"`
+	AdminChannel     string        `json:"admin_channel"`
 }
 
 func (c *Config) UnmarshalJSON(data []byte) error {

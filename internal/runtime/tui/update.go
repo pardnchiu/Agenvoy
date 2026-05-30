@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -672,6 +673,11 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				tea.Println(hintStyle.Render("⎯ kuradb removing")+"\n"),
 				runKuradbDisableExec(),
 			)
+		case "update":
+			return t, tea.Sequence(
+				tea.Println(hintStyle.Render("⎯ kuradb updating")+"\n"),
+				runKuradbUpdateExec(),
+			)
 		}
 		return t, nil
 
@@ -690,6 +696,26 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			tea.Println(hintStyle.Render("⎯ kuradb installing")+"\n"),
 			runKuradbEnableExec(),
 		)
+
+	case AdminChannelSubmit:
+		value := strings.TrimSpace(msg.value)
+		if value != "" {
+			if _, _, ok := exec.ParseAdminChannel(value); !ok {
+				return t, tea.Println(errorStyle.Render("[!] admin-channel: format must be tg@<chatID> or dc@<channelID>") + "\n")
+			}
+		}
+		cfg, err := session.Load()
+		if err != nil || cfg == nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] admin-channel: session.Load: %v", err)) + "\n")
+		}
+		cfg.AdminChannel = value
+		if err := session.Save(cfg); err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] admin-channel: session.Save: %v", err)) + "\n")
+		}
+		if value == "" {
+			return t, tea.Println(hintStyle.Render("⎯ admin-channel cleared") + "\n")
+		}
+		return t, tea.Println(hintStyle.Render("⎯ admin-channel set · "+value) + "\n")
 
 	case AllowReportAction:
 		next, cmd := t.openAllowReportConfirm(msg.action)

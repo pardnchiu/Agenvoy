@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -36,17 +37,24 @@ func chatName(in go_bot_telegram.Input) string {
 	return in.Username
 }
 
-func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
+func inputHasAttachment(in go_bot_telegram.Input) bool {
+	if len(in.Photo) > 0 || in.Document != nil {
+		return true
+	}
+	if in.Raw != nil && in.Raw.Message != nil {
+		m := in.Raw.Message
+		return m.Voice != nil || m.Audio != nil || m.Video != nil || m.VideoNote != nil
+	}
+	return false
+}
+
+func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []go_bot_telegram.Input) error {
 	isCallback := in.CallbackData != "" || len(in.CallbackPicks) > 0
 	content := strings.TrimSpace(in.Text)
 	if content == "" {
 		content = strings.TrimSpace(in.Caption)
 	}
-	hasAttachment := len(in.Photo) > 0 || in.Document != nil
-	if !hasAttachment && in.Raw != nil && in.Raw.Message != nil {
-		m := in.Raw.Message
-		hasAttachment = m.Voice != nil || m.Audio != nil || m.Video != nil || m.VideoNote != nil
-	}
+	hasAttachment := slices.ContainsFunc(attachInputs, inputHasAttachment)
 	if !isCallback && content == "" && !hasAttachment {
 		return nil
 	}
@@ -113,6 +121,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 		slog.Info("Telegram Verification Code",
 			slog.String("name", chatName(in)),
 			slog.String("code", code))
+		exec.NotifyAdminCode(ctx, code, "Telegram "+chatName(in))
 		prompt, err := b.client.SendInput(ctx, in.ChatID, 0, "Enter the 6-digit verification code printed in the daemon log.")
 		if err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendInput",
@@ -133,7 +142,10 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input) error {
 	}
 
 	if hasAttachment {
-		paths := saveAttachments(ctx, b, in)
+		var paths []string
+		for _, ai := range attachInputs {
+			paths = append(paths, saveAttachments(ctx, b, ai)...)
+		}
 		if len(paths) > 0 {
 			var lines []string
 			if content != "" {

@@ -85,6 +85,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 
 	oldHistory, maxHistory := sessionManager.GetHistory(overrideID)
 	session.Histories = oldHistory
+	session.BaseLen = len(oldHistory)
 
 	session.SystemPrompts = BuildSystemPrompts(execData.WorkDir, execData.ExtraSystemPrompt, scanner, overrideID, execData.AllowAll, execData.WebMode, execData.ExcludeSkills)
 	if summary := sessionManager.GetSummaryPrompt(overrideID, OldestMessageTime(maxHistory)); summary != "" {

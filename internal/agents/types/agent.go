@@ -33,6 +33,7 @@ type AgentSession struct {
 	ToolHistories   []Message
 	Tools           []Message
 	Histories       []Message
+	BaseLen         int
 	Stateless       bool
 	VerifyRounds    int
 	VerifyFeedbacks []string
