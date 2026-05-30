@@ -4,12 +4,14 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -18,6 +20,42 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
+
+var (
+	historyMuMap sync.Map
+)
+
+func AppendHistory(sessionID string, delta []agentTypes.Message) error {
+	if sessionID == "" || len(delta) == 0 {
+		return nil
+	}
+
+	mu, _ := historyMuMap.LoadOrStore(sessionID, &sync.Mutex{})
+	lock := mu.(*sync.Mutex)
+	lock.Lock()
+	defer lock.Unlock()
+
+	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+	if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
+	}
+	historyPath := filepath.Join(sessionDir, "history.json")
+
+	latest, err := go_pkg_filesystem.ReadJSON[[]agentTypes.Message](historyPath)
+	if err != nil {
+		latest = nil // first turn / missing file: start fresh
+	}
+	latest = append(latest, delta...)
+
+	data, err := json.Marshal(latest)
+	if err != nil {
+		return fmt.Errorf("json.Marshal: %w", err)
+	}
+	if err := go_pkg_filesystem.WriteFile(historyPath, string(data), 0644); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteFile: %w", err)
+	}
+	return nil
+}
 
 func SaveToToolCall(sessionID, content string) {
 	now := time.Now()
@@ -250,15 +288,3 @@ func latestModTime(dir string) time.Time {
 	return latest
 }
 
-func SaveHistory(sessionID, content string) error {
-	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
-	if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
-		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
-	}
-
-	historyPath := filepath.Join(sessionDir, "history.json")
-	if err := go_pkg_filesystem.WriteFile(historyPath, content, 0644); err != nil {
-		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteFile: %w", err)
-	}
-	return nil
-}

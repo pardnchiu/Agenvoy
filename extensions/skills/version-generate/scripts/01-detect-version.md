@@ -3,7 +3,8 @@
 取得最新語義化標籤，並組出 GitHub compare link 前綴。
 
 ```bash
-git fetch --tags --quiet 2>/dev/null
+# --force 覆蓋遠端已移動的 tag（避免 "would clobber existing tag" 讓本地殘留舊值）
+git fetch --tags --force --quiet 2>/dev/null
 
 LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
 

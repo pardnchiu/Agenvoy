@@ -27,6 +27,8 @@ func init() {
 	exec.RegisterPushHook("dc-", discord.PushDiscordResult)
 	exec.RegisterPushHook("tg-", telegram.PushTelegramResult)
 	exec.RegisterPushHook("ln-", line.PushLineResult)
+	exec.RegisterAdminSender("tg", telegram.SendAdminCode)
+	exec.RegisterAdminSender("dc", discord.SendAdminCode)
 }
 
 func main() {

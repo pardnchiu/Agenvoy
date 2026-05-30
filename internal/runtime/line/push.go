@@ -55,7 +55,7 @@ func PushLineResult(ctx context.Context, payload exec.PushPayload) {
 	if message == "" {
 		return
 	}
-	if footer := utils.FormatFooter(payload.Duration, payload.Model, payload.Usage); footer != "" {
+	if footer := utils.FormatEventFooter(payload.Duration, payload.Model, payload.Usage); footer != "" {
 		message = message + "\n\n" + footer
 	}
 	if prefix := strings.TrimSpace(payload.Prefix); prefix != "" {

@@ -1,10 +1,11 @@
-package tools
+package interactive
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -24,6 +25,7 @@ func registAskUser() {
 		Name:        "ask_user",
 		AlwaysAllow: true,
 		AlwaysLoad:  true,
+		Timeout:     10 * time.Minute,
 		Description: "Ask the user one or more questions and return their answers.",
 		Parameters: map[string]any{
 			"type": "object",
@@ -68,14 +70,12 @@ func registAskUser() {
 				Questions []askQuestion `json:"questions"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
+				return "", fmt.Errorf("json Unmarshal: %w", err)
 			}
 			if len(params.Questions) == 0 {
 				return "", fmt.Errorf("ask_user requires at least one question in 'questions'")
 			}
-			if !runtime.HasListener(e.SessionID) {
-				return "", fmt.Errorf("ask_user requires an interactive channel (TUI / Telegram / Discord); current session %q has no listener", e.SessionID)
-			}
+
 			questions := make([]runtime.Question, 0, len(params.Questions))
 			for i, q := range params.Questions {
 				q.Question = strings.TrimSpace(q.Question)
@@ -90,23 +90,37 @@ func registAskUser() {
 					Secret:      q.Secret,
 				})
 			}
-			reply, err := runtime.Ask(ctx, runtime.Request{
-				Kind:      runtime.KindAskUser,
-				SessionID: e.SessionID,
-				ToolName:  "ask_user",
-				AskUser:   &runtime.UserPayload{Questions: questions},
-			})
+
+			answers, err := AskPrompt(ctx, e.SessionID, questions)
 			if err != nil {
-				return "", fmt.Errorf("pending.Ask: %w", err)
+				return "", err
 			}
-			if reply.Error != nil {
-				return "", reply.Error
-			}
-			out, err := json.Marshal(map[string]any{"answers": reply.Answers})
+
+			bytes, err := json.Marshal(map[string]any{"answers": answers})
 			if err != nil {
-				return "", fmt.Errorf("json.Marshal: %w", err)
+				return "", fmt.Errorf("json Marshal: %w", err)
 			}
-			return string(out), nil
+			return string(bytes), nil
 		},
 	})
+}
+
+func AskPrompt(ctx context.Context, sessionID string, questions []runtime.Question) ([]any, error) {
+	if !runtime.HasListener(sessionID) {
+		return nil, fmt.Errorf("ask_user requires an interactive channel (TUI / Telegram / Discord)")
+	}
+
+	reply, err := runtime.Ask(ctx, runtime.Request{
+		Kind:      runtime.KindAskUser,
+		SessionID: sessionID,
+		ToolName:  "ask_user",
+		AskUser:   &runtime.UserPayload{Questions: questions},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("runtime Ask: %w", err)
+	}
+	if reply.Error != nil {
+		return nil, fmt.Errorf("runtime Ask: %w", reply.Error)
+	}
+	return reply.Answers, nil
 }

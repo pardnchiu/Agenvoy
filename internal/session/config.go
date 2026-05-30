@@ -48,6 +48,7 @@ type Config struct {
 	LineEnabled      bool          `json:"line_enabled"`
 	LineUsername     string        `json:"line_username"`
 	KuradbEnabled    bool          `json:"kuradb_enabled"`
+	AdminChannel     string        `json:"admin_channel"`
 }
 
 func (c *Config) UnmarshalJSON(data []byte) error {

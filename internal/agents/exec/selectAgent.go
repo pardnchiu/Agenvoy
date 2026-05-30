@@ -16,12 +16,14 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 const (
-	ProbeTimeout          = 15 * time.Second
-	DispatcherCallTimeout = 10 * time.Second
-	DispatcherMaxRetry    = 3
+	ProbeTimeout              = 15 * time.Second
+	DispatcherCallTimeout     = 10 * time.Second
+	UnresponsiveProbeInterval = 3 * time.Minute
+	HealthCheckTimeout        = 10 * time.Second
 )
 
 type AgentConfig struct {
@@ -93,22 +95,12 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 				{Role: "system", Content: strings.TrimSpace(configs.AgentSelector)},
 				{Role: "user", Content: fmt.Sprintf("Available agents:\n%s\nUser request: %s", string(agentJson), userContent)},
 			}
-			var resp *agentTypes.Output
-			var sendErr error
-			for attempt := 1; attempt <= DispatcherMaxRetry; attempt++ {
-				routingCtx, cancel := context.WithTimeout(ctx, DispatcherCallTimeout)
-				resp, sendErr = bot.Send(routingCtx, messages, nil)
-				cancel()
-				if sendErr == nil {
-					break
-				}
-				slog.Warn("dispatcher routing attempt failed",
-					slog.String("name", bot.Name()),
-					slog.String("error", sendErr.Error()))
-			}
+			routingCtx, cancel := context.WithTimeout(ctx, DispatcherCallTimeout)
+			resp, sendErr := bot.Send(routingCtx, messages, nil)
+			cancel()
 			if sendErr != nil {
 				dead[bot.Name()] = true
-				slog.Warn("dispatcher routing exhausted, falling back to registry order",
+				slog.Warn("dispatcher routing failed, falling back to registry order",
 					slog.String("name", bot.Name()),
 					slog.String("error", sendErr.Error()))
 			} else if resp != nil && len(resp.Choices) > 0 {
@@ -155,21 +147,21 @@ func SelectAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.
 	return registry.Fallback
 }
 
-func ProbeAgent(ctx context.Context, a agentTypes.Agent, timeout time.Duration) bool {
-	if a == nil {
-		return false
+func pickHealthyFallback(ctx context.Context, fallbacks *[]agentTypes.Agent) (agentTypes.Agent, string) {
+	for len(*fallbacks) > 0 {
+		cand := (*fallbacks)[0]
+		*fallbacks = (*fallbacks)[1:]
+		if cand == nil {
+			continue
+		}
+		if utils.CheckAgentEndpointAlive(ctx, cand, HealthCheckTimeout) {
+			return cand, cand.Name()
+		}
+		slog.Warn("fallback health check failed",
+			slog.String("name", cand.Name()),
+			slog.Duration("timeout", HealthCheckTimeout))
 	}
-	probeCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	resp, err := a.Send(probeCtx, []agentTypes.Message{
-		{Role: "system", Content: "Reply with only: ok"},
-		{Role: "user", Content: "ping"},
-	}, nil)
-	if err != nil || resp == nil || len(resp.Choices) == 0 {
-		return false
-	}
-	content, _ := resp.Choices[0].Message.Content.(string)
-	return strings.TrimSpace(content) != ""
+	return nil, ""
 }
 
 func ResolveAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, userInput string, hasSkill bool, sessionID string) (agentTypes.Agent, []agentTypes.Agent, error) {
@@ -194,7 +186,7 @@ func ResolveAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes
 		return candidates[0], nil, nil
 	}
 	for i, a := range candidates {
-		if ProbeAgent(ctx, a, ProbeTimeout) {
+		if utils.CheckAgentEndpointAlive(ctx, a, ProbeTimeout) {
 			rest := make([]agentTypes.Agent, 0, len(candidates)-i-1)
 			for _, b := range candidates[i+1:] {
 				if dead[b.Name()] {

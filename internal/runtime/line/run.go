@@ -166,7 +166,7 @@ func run(ctx context.Context, b *Bot, in go_bot_line.Input) error {
 		close(events)
 	}()
 
-	result := utils.FormatAgentEventMessage(events, "[LINE]", sess.ID, func(string) {}, func(toolName, text string) string {
+	result := utils.FormatChatbotEvent(events, "[LINE]", sess.ID, func(string) {}, func(toolName, text string) string {
 		return fmt.Sprintf("%s: %s", toolName, text)
 	})
 
@@ -180,7 +180,7 @@ func run(ctx context.Context, b *Bot, in go_bot_line.Input) error {
 	if model == "" && primary != nil {
 		model = primary.Name()
 	}
-	if footer := utils.FormatFooter(result.Done.Duration, model, result.Done.Usage); footer != "" {
+	if footer := utils.FormatEventFooter(result.Done.Duration, model, result.Done.Usage); footer != "" {
 		replyText = replyText + "\n\n" + footer
 	}
 	if len(result.ExecErrors) > 0 {

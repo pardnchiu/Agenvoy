@@ -24,9 +24,10 @@ import (
 const Key = "TELEGRAM_TOKEN"
 
 type Bot struct {
-	client   *telegram.Bot
-	cancel   context.CancelFunc
-	listener *runtime.Listener[int64, int]
+	client    *telegram.Bot
+	cancel    context.CancelFunc
+	listener  *runtime.Listener[int64, int]
+	fileGroup *fileGroupBuffer
 }
 
 var current atomic.Pointer[Bot]
@@ -55,10 +56,14 @@ func New() (*Bot, error) {
 		return nil, fmt.Errorf("github.com/pardnchiu/go-bot/telegram New: %w", err)
 	}
 
-	bot := &Bot{client: client}
+	bot := &Bot{client: client, fileGroup: newFileGroupBuffer()}
 
 	client.Reply(func(ctx context.Context, in telegram.Input) string {
-		if err := run(ctx, bot, in); err != nil {
+		if gid := fileGroupID(in); gid != "" {
+			bot.fileGroup.add(bot, gid, in)
+			return ""
+		}
+		if err := run(ctx, bot, in, []telegram.Input{in}); err != nil {
 			slog.Warn("run",
 				slog.String("chat", chatName(in)),
 				slog.String("error", err.Error()))

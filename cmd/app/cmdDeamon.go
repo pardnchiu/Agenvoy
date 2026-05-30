@@ -194,21 +194,23 @@ func reloadKuradb() {
 	ctx, cancel := context.WithCancel(context.Background())
 	kuradbCancel = cancel
 
-	go kuradb.Run(ctx)
-	go kuradb.Health(ctx, func() {
-		if cfg, err := session.Load(); err == nil && cfg != nil {
-			cfg.KuradbEnabled = false
-			if err := session.Save(cfg); err != nil {
-				slog.Warn("session.Save",
-					slog.String("error", err.Error()))
-			}
-		}
-		if err := kuradb.Remove(); err != nil {
-			slog.Warn("kuradb.Remove",
+	go kuradb.Run(ctx, disableKuradb)
+	go kuradb.Health(ctx, disableKuradb)
+}
+
+func disableKuradb() {
+	if cfg, err := session.Load(); err == nil && cfg != nil {
+		cfg.KuradbEnabled = false
+		if err := session.Save(cfg); err != nil {
+			slog.Warn("session.Save",
 				slog.String("error", err.Error()))
 		}
-		reloadKuradb()
-	})
+	}
+	if err := kuradb.Remove(); err != nil {
+		slog.Warn("kuradb.Remove",
+			slog.String("error", err.Error()))
+	}
+	reloadKuradb()
 }
 
 func cmdDaemon() {

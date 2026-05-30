@@ -13,35 +13,35 @@ import (
 )
 
 var (
-	filesystemOnce        sync.Once
-	AgenvoyDir            string
-	ConfigPath            string
-	UsagePath             string
-	McpPath               string
-	StoreDir              string
-	SessionsDir           string
+	filesystemOnce          sync.Once
+	AgenvoyDir              string
+	ConfigPath              string
+	UsagePath               string
+	McpPath                 string
+	StoreDir                string
+	SessionsDir             string
 	ToolsDir                string
 	APIToolsDir             string
 	ScriptToolsDir          string
 	SystemToolsDir          string
 	ExtensionAPIToolsDir    string
 	ExtensionScriptToolsDir string
-	ErrorsDir             string
-	TasksPath             string
-	CronsPath             string
-	TelegramAuthPath      string
-	DiscordAuthPath       string
-	LineAuthPath          string
-	SkillsDir             string
-	SkillGitDir           string
-	SkillGitignorePath    string
-	SystemSkillsDir       string
-	ScheduleSkillsDir     string
-	ScheduleSkillTrashDir string
-	DownloadDir           string
-	AllowSkillGlobalPath  string
-	KuradbDir             string
-	KuradbEndpointPath    string
+	ErrorsDir               string
+	TasksPath               string
+	CronsPath               string
+	TelegramAuthPath        string
+	DiscordAuthPath         string
+	LineAuthPath            string
+	SkillsDir               string
+	SkillGitDir             string
+	SkillGitignorePath      string
+	SystemSkillsDir         string
+	ScheduleSkillsDir       string
+	ScheduleSkillTrashDir   string
+	DownloadDir             string
+	AllowSkillGlobalPath    string
+	KuradbDir               string
+	KuradbEndpointPath      string
 
 	WorkAgenvoyDir     string
 	WorkAPIToolsDir    string

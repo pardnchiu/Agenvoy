@@ -11,15 +11,18 @@ import (
 )
 
 const (
-	restartBackoff = 5 * time.Second
+	restartBackoff   = 5 * time.Second
+	minHealthyUptime = 10 * time.Second
+	maxFastExits     = 3
 )
 
-func Run(ctx context.Context) {
+func Run(ctx context.Context, onFatal func()) {
 	if !IsInstalled() {
 		slog.Warn("KuraDB not installed")
 		return
 	}
 
+	fastExits := 0
 	for {
 		if err := ctx.Err(); err != nil {
 			return
@@ -29,6 +32,7 @@ func Run(ctx context.Context) {
 		stdout, _ := cmd.StdoutPipe()
 		stderr, _ := cmd.StderrPipe()
 
+		start := time.Now()
 		if err := cmd.Start(); err != nil {
 			slog.Warn("KuraDB start failed",
 				slog.String("error", err.Error()))
@@ -40,6 +44,7 @@ func Run(ctx context.Context) {
 		go streamLog(stderr, slog.LevelInfo, "kura.stderr")
 
 		err := cmd.Wait()
+		uptime := time.Since(start)
 
 		if ctx.Err() != nil {
 			return
@@ -53,6 +58,20 @@ func Run(ctx context.Context) {
 				slog.String("error", err.Error()))
 		} else {
 			slog.Warn("KuraDB restarting")
+		}
+
+		if uptime < minHealthyUptime {
+			fastExits++
+			if fastExits >= maxFastExits {
+				slog.Error("kuradb.Run: repeated startup failure, disabling",
+					slog.Int("fast_exits", fastExits))
+				if onFatal != nil {
+					onFatal()
+				}
+				return
+			}
+		} else {
+			fastExits = 0
 		}
 
 		waitBackoff(ctx)

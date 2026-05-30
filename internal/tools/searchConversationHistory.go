@@ -14,7 +14,7 @@ import (
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
-	"github.com/pardnchiu/agenvoy/internal/utils"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 )
 
 type historyHit struct {
@@ -52,7 +52,7 @@ func registSearchConversationHistory() {
 				"time_range": map[string]any{
 					"type":        "string",
 					"description": "Keyword time window. Semantic match ignores this. Widen only if empty.",
-					"enum":        utils.Keys(historyTimeRanges),
+					"enum":        go_pkg_utils.GetKeys(historyTimeRanges),
 					"default":     "1d",
 				},
 				"limit": map[string]any{

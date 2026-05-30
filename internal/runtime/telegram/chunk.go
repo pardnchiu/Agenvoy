@@ -63,9 +63,6 @@ func chunk(text string) []string {
 	return chunks
 }
 
-// scanOpenTags walks tags in order; opening tags push onto stack, closing
-// tags pop the most recent matching name. Voids/self-closing tags are
-// ignored. Returns tags still open at end of input.
 func scanOpenTags(s string) []openTag {
 	var stack []openTag
 	matches := tagRegex.FindAllStringSubmatch(s, -1)

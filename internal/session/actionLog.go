@@ -107,7 +107,7 @@ func formatActionEvent(ev agentTypes.Event) string {
 		return formatActionLine("assistant", flatten(text))
 	case agentTypes.EventToolCall:
 		body := ev.ToolName
-		if display := utils.FormatTool(ev.ToolName, ev.ToolArgs); display != "" {
+		if display := utils.FormatToolEvent(ev.ToolName, ev.ToolArgs); display != "" {
 			body = fmt.Sprintf("%s %s", body, flatten(display))
 		}
 		return formatActionLine("tool_call", body)

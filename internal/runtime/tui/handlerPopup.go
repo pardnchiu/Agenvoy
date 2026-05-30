@@ -316,7 +316,7 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func newPopup(id string, req runtime.Request) *Popup {
 	switch req.Kind {
 	case runtime.KindToolConfirm:
-		display := utils.FormatTool(req.ToolName, req.ToolArgs)
+		display := utils.FormatToolEvent(req.ToolName, req.ToolArgs)
 		if display == "" {
 			display = req.ToolArgs
 		}

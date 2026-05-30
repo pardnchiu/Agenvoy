@@ -47,7 +47,8 @@ var commands = []Command{
 	{"discord", "enable / disable Discord bot · gateway validated on enable"},
 	{"telegram", "enable / disable Telegram bot · getMe validated on enable"},
 	{"line", "enable / disable LINE bot · Q&A only · channel secret + access token on enable"},
-	{"kuradb", "enable / disable KuraDB RAG · install.sh + OPENAI_API_KEY on enable"},
+	{"kuradb", "enable / disable / update KuraDB RAG · install.sh + OPENAI_API_KEY on enable"},
+	{"admin-channel", "set / clear relay for new-chat verification codes · pick authorized chat or tg@<id>/dc@<id>"},
 	{"cron", "add / remove / edit scheduled recurring task"},
 	{"task", "add / remove / edit one-shot scheduled task"},
 	{"update", "update / upgrade · fetch latest release · rebuild · quit TUI"},
@@ -221,6 +222,11 @@ func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 	sort.SliceStable(cmdNameItems, func(i, j int) bool {
 		if cmdNameItems[i].isAllow != cmdNameItems[j].isAllow {
 			return !cmdNameItems[i].isAllow
+		}
+		pi := strings.HasPrefix(strings.TrimPrefix(cmdNameItems[i].label, "/"), query)
+		pj := strings.HasPrefix(strings.TrimPrefix(cmdNameItems[j].label, "/"), query)
+		if pi != pj {
+			return pi
 		}
 		return cmdNameItems[i].label < cmdNameItems[j].label
 	})
