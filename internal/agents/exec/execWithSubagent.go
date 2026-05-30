@@ -88,6 +88,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 		ToolHistories: []agentTypes.Message{},
 		Tools:         []agentTypes.Message{},
 		Histories:     histories,
+		BaseLen:       len(oldHistory),
 		UserInput:     agentTypes.Message{Role: "user", Content: userText},
 	}
 	if summary := sessionManager.GetSummaryPrompt(sessionID, OldestMessageTime(maxHistory)); summary != "" {

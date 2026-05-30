@@ -174,6 +174,7 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 
 	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
 	session.Histories = oldHistory
+	session.BaseLen = len(oldHistory)
 	session.OldHistories = maxHistory
 
 	if summary := sessionManager.GetSummaryPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {

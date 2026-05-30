@@ -549,23 +549,19 @@ func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSe
 		return nil
 	}
 
-	newHistories := make([]agentTypes.Message, 0, len(session.Histories))
-	for _, message := range session.Histories {
+	base := min(max(session.BaseLen, 0), len(session.Histories))
+	delta := make([]agentTypes.Message, 0, len(session.Histories)-base)
+	for _, message := range session.Histories[base:] {
 		if message.Role == "system" ||
 			message.Role == "tool" ||
 			(message.Role == "assistant" && len(message.ToolCalls) > 0) {
 			continue
 		}
-		newHistories = append(newHistories, message)
+		delta = append(delta, message)
 	}
 
-	historyBytes, err := json.Marshal(newHistories)
-	if err != nil {
-		return fmt.Errorf("json.Marshal: %w", err)
-	}
-
-	if err = sessionManager.SaveHistory(session.ID, string(historyBytes)); err != nil {
-		return fmt.Errorf("sessionManager.SaveHistory: %w", err)
+	if err := sessionManager.AppendHistory(session.ID, delta); err != nil {
+		return fmt.Errorf("sessionManager.AppendHistory: %w", err)
 	}
 
 	writeSessionHistEntry(session.ID, choice.Message)
