@@ -3,22 +3,21 @@ package handler
 import (
 	"math"
 	"net/http"
-	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionStatus "github.com/pardnchiu/agenvoy/internal/session/status"
 )
 
-type sessionStatus struct {
-	State   string                `json:"state"`
-	Active  []sessionManager.Task `json:"active"`
-	EndedAt string                `json:"ended_at"`
-	Limit   int                   `json:"limit"`
-	Usage   float64               `json:"usage"`
+type SessionStatus struct {
+	State   string               `json:"state"`
+	Active  []sessionStatus.Task `json:"active"`
+	EndedAt string               `json:"ended_at"`
+	Limit   int                  `json:"limit"`
+	Usage   float64              `json:"usage"`
 }
 
 func GetSessionStatus() gin.HandlerFunc {
@@ -29,23 +28,23 @@ func GetSessionStatus() gin.HandlerFunc {
 			return
 		}
 
-		dir := filepath.Join(filesystem.SessionsDir, sessionID)
+		dir := filesystem.SessionDir(sessionID)
 		if !go_pkg_filesystem_reader.Exists(dir) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
 			return
 		}
 
-		status := sessionManager.ReadStatus(sessionID)
+		status := sessionStatus.Get(sessionID)
 		limit := filesystem.MaxSessionTasks
 		usage := 0.0
 		if limit > 0 {
 			usage = math.Round(float64(len(status.Active))/float64(limit)*10000) / 100
 		}
 		if status.Active == nil {
-			status.Active = []sessionManager.Task{}
+			status.Active = []sessionStatus.Task{}
 		}
 
-		c.JSON(http.StatusOK, sessionStatus{
+		c.JSON(http.StatusOK, SessionStatus{
 			State:   status.State,
 			Active:  status.Active,
 			EndedAt: status.EndedAt,

@@ -78,7 +78,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	if overrideID == "" {
 		return nil, fmt.Errorf("execData.SessionID is required")
 	}
-	sessionDir := filepath.Join(filesystem.SessionsDir, overrideID)
+	sessionDir := filesystem.SessionDir(overrideID)
 	if !go_pkg_filesystem_reader.IsDir(sessionDir) {
 		return nil, fmt.Errorf("session %q does not exist", overrideID)
 	}

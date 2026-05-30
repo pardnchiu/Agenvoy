@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 )
 
 type BotNameSubmit struct {
@@ -38,7 +39,7 @@ func (t TUI) commandBot(parts []string) (TUI, tea.Cmd, bool) {
 		return t, t.botSaveCmd(sid, name, body), true
 	}
 
-	existingName, existingBody := session.GetBot(sid)
+	existingName, existingBody := sessionBot.Get(sid)
 	t.popup = &Popup{
 		kind:  popupText,
 		title: "Bot name",
@@ -55,7 +56,7 @@ func (t TUI) botCheckConflict(sid, name string) (tea.Cmd, bool) {
 	if name == "" {
 		return tea.Println(errorStyle.Render("[!] bot name required") + "\n"), false
 	}
-	if owner := session.GetSessionIDByName(name); owner != "" && owner != sid {
+	if owner := session.GetSessionID(name); owner != "" && owner != sid {
 		return tea.Println(errorStyle.Render(fmt.Sprintf("[!] bot name %q already used by session %s", name, owner)) + "\n"), false
 	}
 	return nil, true
@@ -76,6 +77,6 @@ func (t TUI) openBotBodyPopup(name string) (TUI, tea.Cmd) {
 }
 
 func (t TUI) botSaveCmd(sid, name, body string) tea.Cmd {
-	err := session.SaveBotFull(sid, name, body)
+	err := sessionBot.Save(sid, name, body, true)
 	return func() tea.Msg { return BotSaved{name: name, err: err} }
 }

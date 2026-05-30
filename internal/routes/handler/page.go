@@ -31,7 +31,7 @@ func PageListener() gin.HandlerFunc {
 			return
 		}
 
-		sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+		sessionDir := filesystem.SessionDir(sessionID)
 		if !go_pkg_filesystem_reader.Exists(sessionDir) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
 			return
@@ -163,7 +163,7 @@ func PageView() gin.HandlerFunc {
 			return
 		}
 
-		sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+		sessionDir := filesystem.SessionDir(sessionID)
 		if !go_pkg_filesystem_reader.Exists(sessionDir) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
 			return

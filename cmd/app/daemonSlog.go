@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/pubsub"
 )
 
 const (
@@ -33,7 +33,7 @@ func (h *daemonSlogHandler) Handle(ctx context.Context, r slog.Record) error {
 		sb.WriteString(fmt.Sprintf("%v", a.Value.Any()))
 		return true
 	})
-	sessionManager.Publish(daemonLogChannel, agentTypes.Event{
+	pubsub.Pub(daemonLogChannel, agentTypes.Event{
 		Type:   agentTypes.EventDaemonLog,
 		Source: r.Level.String(),
 		Text:   strings.TrimSpace(sb.String()),

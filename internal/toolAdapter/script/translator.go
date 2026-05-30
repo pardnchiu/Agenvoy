@@ -61,7 +61,7 @@ func (t *Translator) Scan(dir string) error {
 		doc, scriptPath, lang, err := loadDir(toolDir)
 		if err != nil {
 			slog.Warn("loadDir",
-				slog.String("err", err.Error()))
+				slog.String("error", err.Error()))
 			continue
 		}
 		t.scripts[doc.Name] = &Script{

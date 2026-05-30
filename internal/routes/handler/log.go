@@ -10,15 +10,15 @@ import (
 	"github.com/gin-gonic/gin"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/pubsub"
 )
 
 const logHeartbeat = 25 * time.Second
 
 func StreamSessionLog() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		sessionID := strings.TrimSpace(c.Param("session_id"))
-		if sessionID == "" {
+		sid := strings.TrimSpace(c.Param("session_id"))
+		if sid == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "session_id is required"})
 			return
 		}
@@ -31,10 +31,10 @@ func StreamSessionLog() gin.HandlerFunc {
 		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.Flush()
 
-		sub := sessionManager.Subscribe(sessionID, 64)
+		sub := pubsub.Sub(sid, 64)
 		defer sub.Close()
 
-		if data, err := json.Marshal(agentTypes.Event{Type: agentTypes.EventConnected, Text: sessionID}); err == nil {
+		if data, err := json.Marshal(agentTypes.Event{Type: agentTypes.EventConnected, Text: sid}); err == nil {
 			if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", data); err != nil {
 				return
 			}

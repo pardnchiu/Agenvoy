@@ -2,11 +2,13 @@ package tui
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -33,7 +35,7 @@ func (t TUI) commandNew(parts []string) (TUI, tea.Cmd, bool) {
 
 func (t TUI) runCreateSession(name string) (TUI, tea.Cmd) {
 	if name != "" {
-		if owner := session.GetSessionIDByName(name); owner != "" {
+		if owner := session.GetSessionID(name); owner != "" {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] name %q already used by session %s", name, owner)) + "\n")
 		}
 	}
@@ -44,12 +46,14 @@ func (t TUI) runCreateSession(name string) (TUI, tea.Cmd) {
 	}
 
 	if name != "" {
-		session.SaveBot(id, name, true)
+		if err := sessionBot.Save(id, name, "", true); err != nil {
+			slog.Warn("sessionBot.Save", slog.String("session", id), slog.String("error", err.Error()))
+		}
 	}
 
 	previous := t.currentSessionID
 	t.currentSessionID = id
-	t.currentSessionName, _ = session.GetBot(id)
+	t.currentSessionName, _ = sessionBot.Get(id)
 
 	t.tokens = 0
 	t.lastIn = 0

@@ -14,6 +14,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -177,7 +178,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.runTarget = ""
 		t.streaming = false
 		if t.currentSessionID != "" {
-			t.currentSessionName, _ = session.GetBot(t.currentSessionID)
+			t.currentSessionName, _ = sessionBot.Get(t.currentSessionID)
 		}
 		var doneCmds []tea.Cmd
 		if msg.err != nil && !errors.Is(msg.err, context.Canceled) {

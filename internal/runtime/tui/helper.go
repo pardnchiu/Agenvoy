@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -66,7 +67,7 @@ func targetSession(input, currentId string) string {
 		return ""
 	}
 
-	id := session.GetSessionIDByName(name)
+	id := session.GetSessionID(name)
 	if id == "" {
 		return name
 	}
@@ -74,7 +75,7 @@ func targetSession(input, currentId string) string {
 		return ""
 	}
 
-	if bot, _ := session.GetBot(id); strings.TrimSpace(bot) != "" && bot != id {
+	if bot, _ := sessionBot.Get(id); strings.TrimSpace(bot) != "" && bot != id {
 		return bot
 	}
 	return utils.ShortenSessionID(id)

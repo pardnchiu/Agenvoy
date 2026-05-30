@@ -9,6 +9,7 @@ import (
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 )
 
 var userWrapperRe = regexp.MustCompile(`^---\n當前時間:[^\n]*\n(?:[^\n]+\n)*?---\n`)
@@ -55,7 +56,7 @@ func parseActionLine(raw string) (parsedAction, bool) {
 }
 
 func renderActionLine(p parsedAction) string {
-	body := strings.ReplaceAll(p.body, session.ActionNewlineMarker, "\n")
+	body := strings.ReplaceAll(p.body, sessionLog.ActionNewlineMarker, "\n")
 
 	switch p.kind {
 	case "user":

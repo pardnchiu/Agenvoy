@@ -135,20 +135,36 @@ func Init() error {
 	return nil
 }
 
+func SessionDir(sessionID string) string {
+	return filepath.Join(SessionsDir, sessionID)
+}
+
+func StatusPath(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "status.json")
+}
+
+func BotPath(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "bot.md")
+}
+
+func ActionLogPath(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "action.log")
+}
+
 func HistoryPath(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, "history.json")
+	return filepath.Join(SessionDir(sessionID), "history.json")
 }
 
 func InputHistoryPath(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, ".history")
+	return filepath.Join(SessionDir(sessionID), ".history")
 }
 
 func McpSessionPath(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, "mcp.json")
+	return filepath.Join(SessionDir(sessionID), "mcp.json")
 }
 
 func PagePath(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, "page")
+	return filepath.Join(SessionDir(sessionID), "page")
 }
 
 func AllowSkillProjectPath(workDir string) string {
@@ -184,7 +200,7 @@ func GetKuradbEndpoint() (string, error) {
 }
 
 func ErrorDir(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, "tool_errors")
+	return filepath.Join(SessionDir(sessionID), "tool_errors")
 }
 
 func ErrorPath(sessionID, hash string) string {

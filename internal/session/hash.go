@@ -10,7 +10,9 @@ const (
 	DefaultHash = "--------"
 )
 
-var processHash atomic.Pointer[string]
+var (
+	TUIHash atomic.Pointer[string]
+)
 
 func Hash() string {
 	var b [4]byte
@@ -24,11 +26,11 @@ func SetHash(h string) {
 	if len(h) != 8 {
 		h = DefaultHash
 	}
-	processHash.Store(&h)
+	TUIHash.Store(&h)
 }
 
 func GetHash() string {
-	if p := processHash.Load(); p != nil {
+	if p := TUIHash.Load(); p != nil {
 		return *p
 	}
 	return DefaultHash

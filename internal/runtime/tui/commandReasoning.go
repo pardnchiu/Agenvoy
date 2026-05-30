@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 )
 
 type ReasoningScopeSelect struct {
@@ -74,10 +75,7 @@ func (t TUI) openReasoningSessionPopup() (TUI, tea.Cmd) {
 		return t, tea.Println(errorStyle.Render("[!] no current session") + "\n")
 	}
 
-	current := session.ReadStatus(sid).Reasoning
-	if current == "" {
-		current = session.StatusReasoning
-	}
+	_, current := sessionBot.GetModel(sid)
 
 	options := make([]string, len(reasoningLevels))
 	cursor := 1

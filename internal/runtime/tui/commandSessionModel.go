@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 )
 
 type SessionModelSelect struct {
@@ -30,17 +31,13 @@ func (t TUI) commandSessionModel() (TUI, tea.Cmd, bool) {
 		return t, tea.Println(hintStyle.Render("no models configured · use /model global > add") + "\n"), true
 	}
 
-	status := session.ReadStatus(sid)
-	currentModel := status.Model
-	if currentModel == "" {
-		currentModel = session.StatusModel
-	}
+	currentModel, _ := sessionBot.GetModel(sid)
 
 	values := make([]string, 0, len(cfg.Models)+1)
 	options := make([]string, 0, len(cfg.Models)+1)
-	values = append(values, session.StatusModel)
-	autoLabel := session.StatusModel + "  " + hintStyle.Render("(dispatcher picks)")
-	if currentModel == session.StatusModel {
+	values = append(values, sessionBot.DefaultModel)
+	autoLabel := sessionBot.DefaultModel + "  " + hintStyle.Render("(dispatcher picks)")
+	if currentModel == sessionBot.DefaultModel {
 		autoLabel += "  " + hintStyle.Render("[current]")
 	}
 
@@ -77,7 +74,7 @@ func (t TUI) runSessionModelSelect(model string) (TUI, tea.Cmd) {
 	if sid == "" {
 		return t, tea.Println(errorStyle.Render("[!] no current session") + "\n")
 	}
-	session.SetModelReasoning(sid, model, "")
+	sessionBot.SetModel(sid, model, "")
 	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ session model: %s", model)) + "\n")
 }
 
@@ -86,6 +83,6 @@ func (t TUI) runSessionReasoningSelect(reasoning string) (TUI, tea.Cmd) {
 	if sid == "" {
 		return t, tea.Println(errorStyle.Render("[!] no current session") + "\n")
 	}
-	session.SetModelReasoning(sid, "", reasoning)
+	sessionBot.SetModel(sid, "", reasoning)
 	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ session reasoning: %s", reasoning)) + "\n")
 }

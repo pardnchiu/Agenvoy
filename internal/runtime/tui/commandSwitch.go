@@ -9,7 +9,8 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -21,7 +22,7 @@ type Session struct {
 func (t TUI) commandSwitch(parts []string) (TUI, tea.Cmd, bool) {
 	if len(parts) >= 2 {
 		name := strings.Join(parts[1:], " ")
-		id := session.GetSessionIDByName(name)
+		id := sessionManager.GetSessionID(name)
 		if id == "" {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session %q not found", name)) + "\n"), true
 		}
@@ -52,7 +53,7 @@ func (t TUI) runCommandSwitch(id string) (TUI, tea.Cmd) {
 	}
 	previous := t.currentSessionID
 	t.currentSessionID = id
-	t.currentSessionName, _ = session.GetBot(id)
+	t.currentSessionName, _ = sessionBot.Get(id)
 	t.inputHistory = loadInputHistory(id)
 	t.inputHistoryIdx = -1
 	if !t.onceCall {
@@ -96,7 +97,7 @@ func listSessions() []Session {
 		if strings.HasPrefix(sid, "temp-") {
 			continue
 		}
-		name, _ := session.GetBot(sid)
+		name, _ := sessionBot.Get(sid)
 		results = append(results, Session{
 			id:   sid,
 			name: name,

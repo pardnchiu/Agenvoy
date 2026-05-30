@@ -15,7 +15,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -55,13 +55,13 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 	dead := map[string]bool{}
 
 	if sessionID != "" {
-		s := sessionManager.ReadStatus(sessionID)
-		if s.Reasoning != "" {
-			provider.SetReasoningLevel(s.Reasoning)
+		model, reasoning := sessionBot.GetModel(sessionID)
+		if reasoning != "" {
+			provider.SetReasoningLevel(reasoning)
 		}
-		if s.Model != "" && s.Model != sessionManager.StatusModel {
-			if _, ok := registry.Registry[s.Model]; ok {
-				return []string{s.Model}, dead
+		if model != "" && model != sessionBot.DefaultModel {
+			if _, ok := registry.Registry[model]; ok {
+				return []string{model}, dead
 			}
 		}
 	}

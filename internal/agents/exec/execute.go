@@ -25,6 +25,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
+	sessionStatus "github.com/pardnchiu/agenvoy/internal/session/status"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -139,8 +141,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		if s, ok := session.UserInput.Content.(string); ok {
 			inputText = s
 		}
-		taskID := sessionManager.Online(session.ID, inputText)
-		defer sessionManager.Idle(session.ID, taskID)
+		taskID := sessionStatus.Online(session.ID, inputText)
+		defer sessionStatus.Idle(session.ID, taskID)
 
 		original := events
 		teed := make(chan agentTypes.Event, 64)
@@ -155,7 +157,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			defer close(done)
 			for ev := range teed {
 				if !stateless {
-					sessionManager.Record(sid, ev)
+					sessionLog.Record(sid, ev)
 				}
 				if isDcPush {
 					switch ev.Type {
@@ -576,7 +578,7 @@ func SaveUserInputHistory(sessionID, userText string) {
 		Role:    "user",
 		Content: userText,
 	})
-	sessionManager.AppendActionUserInput(sessionID, userText)
+	sessionLog.Append(sessionID, userText)
 }
 
 func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {

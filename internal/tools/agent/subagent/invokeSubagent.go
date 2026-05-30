@@ -11,7 +11,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -89,7 +89,7 @@ func registInvokeSubagent() {
 
 			sessionID := strings.TrimSpace(params.SessionID)
 			if name := strings.TrimSpace(params.Name); name != "" {
-				resolved := sessionManager.GetSessionIDByName(name)
+				resolved := session.GetSessionID(name)
 				if resolved == "" {
 					return "", fmt.Errorf("no cli- session has bot.md name = %q", name)
 				}

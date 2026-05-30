@@ -16,11 +16,11 @@ import (
 )
 
 func SummaryPath(sessionID string) string {
-	return filepath.Join(filesystem.SessionsDir, sessionID, "summary.json")
+	return filepath.Join(filesystem.SessionDir(sessionID), "summary.json")
 }
 
 func SummaryMetaPath(sessionID string) string {
-	return filepath.Join(filesystem.SessionsDir, sessionID, "summary.meta.json")
+	return filepath.Join(filesystem.SessionDir(sessionID), "summary.meta.json")
 }
 
 type SummaryMeta struct {
@@ -105,7 +105,7 @@ func IsNeedSummary() []string {
 	var result []string
 	for _, dir := range dirs {
 		sid := dir.Name
-		historyPath := filepath.Join(filesystem.SessionsDir, sid, "history.json")
+		historyPath := filepath.Join(filesystem.SessionDir(sid), "history.json")
 		// * os.Stat retained: FileInfo.ModTime() needed to compare history vs summary recency
 		hInfo, err := os.Stat(historyPath)
 		if err != nil {

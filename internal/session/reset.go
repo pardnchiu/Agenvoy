@@ -13,7 +13,7 @@ func ResetHistoryKeepSummary(sessionID string) (int, error) {
 	if sessionID == "" {
 		return 0, fmt.Errorf("session id is required")
 	}
-	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+	sessionDir := filesystem.SessionDir(sessionID)
 
 	if err := os.Remove(filesystem.HistoryPath(sessionID)); err != nil && !os.IsNotExist(err) {
 		return 0, fmt.Errorf("os.Remove history.json: %w", err)
@@ -21,7 +21,7 @@ func ResetHistoryKeepSummary(sessionID string) (int, error) {
 	if err := os.RemoveAll(filepath.Join(sessionDir, "tool_calls")); err != nil {
 		return 0, fmt.Errorf("os.RemoveAll tool_calls: %w", err)
 	}
-	if err := os.Remove(filepath.Join(sessionDir, "action.log")); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(filesystem.ActionLogPath(sessionID)); err != nil && !os.IsNotExist(err) {
 		return 0, fmt.Errorf("os.Remove action.log: %w", err)
 	}
 

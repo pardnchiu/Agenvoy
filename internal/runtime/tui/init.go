@@ -3,7 +3,6 @@ package tui
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
@@ -131,7 +131,7 @@ func (t TUI) Init() tea.Cmd {
 	}
 	seq = append(seq, func() tea.Msg { return initTailer{} })
 	if sid := strings.TrimSpace(t.currentSessionID); sid != "" {
-		path := filepath.Join(filesystem.SessionsDir, sid, "action.log")
+		path := filesystem.ActionLogPath(sid)
 		if go_pkg_filesystem_reader.Exists(path) && fileSize(path) > 0 {
 			seq = append(seq, func() tea.Msg { return LoadHistoryCheck{id: sid} })
 		}
@@ -203,7 +203,7 @@ func newModel(ctx context.Context, userInput string, onceCall, allowAll bool) TU
 		currentSID = sessions[0].id
 	}
 	if currentSID != "" {
-		currentName, _ = session.GetBot(currentSID)
+		currentName, _ = sessionBot.Get(currentSID)
 	}
 
 	return TUI{
@@ -271,7 +271,7 @@ func loadSessionTail(sid string) []tea.Cmd {
 	if strings.TrimSpace(sid) == "" {
 		return nil
 	}
-	lines := readAllLines(filepath.Join(filesystem.SessionsDir, sid, "action.log"))
+	lines := readAllLines(filesystem.ActionLogPath(sid))
 	if len(lines) == 0 {
 		return nil
 	}

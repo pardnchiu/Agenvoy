@@ -34,6 +34,8 @@ import (
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	sessionStatus "github.com/pardnchiu/agenvoy/internal/session/status"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/plan"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -210,7 +212,7 @@ func cmdDaemon() {
 			slog.String("error", err.Error()))
 	}
 	session.Clean()
-	session.CleanAllTask()
+	sessionStatus.Clear()
 
 	if err := go_pkg_sandbox.CheckDependence(); err != nil {
 		slog.Error("sandbox.CheckDependence",
@@ -369,11 +371,15 @@ func runSkill(ctx context.Context, sessionID, skillName string) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("scheduler skill %q unreadable: %w", skillName, err)
 	}
-	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+	sessionDir := filesystem.SessionDir(sessionID)
 	if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
 		return "", err
 	}
-	session.SaveBot(sessionID, sessionID, false)
+	if err := sessionBot.Save(sessionID, "", "", false); err != nil {
+		slog.Warn("sessionBot Save",
+			slog.String("session", sessionID),
+			slog.String("error", err.Error()))
+	}
 
 	output, err := exec.ExecWithSubagent(exec.WithDcPushPrefix(ctx, skillName), body, sessionID, "", "", nil)
 	if err != nil {

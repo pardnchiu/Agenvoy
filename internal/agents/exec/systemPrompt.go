@@ -2,13 +2,14 @@ package exec
 
 import (
 	"fmt"
+	"log/slog"
 	goRuntime "runtime"
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 )
 
@@ -46,9 +47,13 @@ func getSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.
 
 	personaSection := ""
 	if sessionID != "" {
-		sessionManager.SaveBot(sessionID, sessionID, false)
+		if err := sessionBot.Save(sessionID, "", "", false); err != nil {
+			slog.Warn("sessionBot Save",
+				slog.String("session", sessionID),
+				slog.String("error", err.Error()))
+		}
 	}
-	if name, body := sessionManager.GetBot(sessionID); body != "" {
+	if name, body := sessionBot.Get(sessionID); body != "" {
 		var sb strings.Builder
 		sb.WriteString("## Bot Persona\n\n")
 		if name != "" {

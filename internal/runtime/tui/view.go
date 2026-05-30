@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -259,14 +259,6 @@ func (t TUI) sessionName() string {
 		base = fmt.Sprintf("%s (%s)", name, short)
 	}
 
-	s := sessionManager.ReadStatus(sid)
-	model := strings.TrimSpace(s.Model)
-	reasoning := strings.TrimSpace(s.Reasoning)
-	if model == "" {
-		model = sessionManager.StatusModel
-	}
-	if reasoning == "" {
-		reasoning = sessionManager.StatusReasoning
-	}
+	model, reasoning := sessionBot.GetModel(sid)
 	return fmt.Sprintf("%s (%s/%s)", base, model, reasoning)
 }
