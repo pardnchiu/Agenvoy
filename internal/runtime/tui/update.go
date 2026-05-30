@@ -672,6 +672,11 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				tea.Println(hintStyle.Render("⎯ kuradb removing")+"\n"),
 				runKuradbDisableExec(),
 			)
+		case "update":
+			return t, tea.Sequence(
+				tea.Println(hintStyle.Render("⎯ kuradb updating")+"\n"),
+				runKuradbUpdateExec(),
+			)
 		}
 		return t, nil
 

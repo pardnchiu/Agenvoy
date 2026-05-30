@@ -30,7 +30,7 @@ type KuradbDone struct {
 func (t TUI) commandKuradb(parts []string) (TUI, tea.Cmd, bool) {
 	if len(parts) > 1 {
 		switch parts[1] {
-		case "enable", "disable":
+		case "enable", "disable", "update":
 			action := parts[1]
 			return t, func() tea.Msg { return KuradbAction{action: action} }, true
 		}
@@ -40,15 +40,17 @@ func (t TUI) commandKuradb(parts []string) (TUI, tea.Cmd, bool) {
 	if cfg, err := session.Load(); err == nil && cfg != nil {
 		enabled = cfg.KuradbEnabled
 	}
+	options := []string{"enable", "disable"}
 	cursor := 0
 	if enabled {
+		options = append(options, "update")
 		cursor = 1
 	}
 	t.popup = &Popup{
 		kind:    popupSingleSelect,
 		title:   "KuraDB",
-		options: []string{"enable", "disable"},
-		values:  []string{"enable", "disable"},
+		options: options,
+		values:  options,
 		cursor:  cursor,
 		onConfirm: func(chosen string) any {
 			return KuradbAction{action: chosen}
@@ -93,6 +95,48 @@ kura add agenvoy 2>/dev/null || true
 			return KuradbDone{action: "enable", err: fmt.Errorf("session.Save: %w", err)}
 		}
 		return KuradbDone{action: "enable"}
+	})
+}
+
+func runKuradbUpdateExec() tea.Cmd {
+	if cfg, err := session.Load(); err == nil && cfg != nil {
+		cfg.KuradbEnabled = false
+		if err := session.Save(cfg); err != nil {
+			return func() tea.Msg {
+				return KuradbDone{action: "update", err: fmt.Errorf("session.Save(stop): %w", err)}
+			}
+		}
+	}
+
+	script := fmt.Sprintf(`set -e
+curl -fsSL %s | bash
+kura add agenvoy 2>/dev/null || true
+`, kuradbInstallURL)
+
+	cmd := exec.Command("bash", "-c", script)
+	cmd.Env = os.Environ()
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		if err != nil {
+			if kuradb.IsInstalled() {
+				if cfg, lerr := session.Load(); lerr == nil && cfg != nil {
+					cfg.KuradbEnabled = true
+					_ = session.Save(cfg)
+				}
+			}
+			return KuradbDone{action: "update", err: fmt.Errorf("install script: %w", err)}
+		}
+		if !kuradb.IsInstalled() {
+			return KuradbDone{action: "update", err: fmt.Errorf("kura binary not at %s after install", kuradb.BinaryPath)}
+		}
+		cfg, err := session.Load()
+		if err != nil {
+			return KuradbDone{action: "update", err: fmt.Errorf("session.Load: %w", err)}
+		}
+		cfg.KuradbEnabled = true
+		if err := session.Save(cfg); err != nil {
+			return KuradbDone{action: "update", err: fmt.Errorf("session.Save: %w", err)}
+		}
+		return KuradbDone{action: "update"}
 	})
 }
 
