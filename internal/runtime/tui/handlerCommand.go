@@ -75,6 +75,9 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 	case "/kuradb":
 		return t.commandKuradb(parts)
 
+	case "/admin-channel":
+		return t.commandAdminChannel(parts)
+
 	case "/cron":
 		return t.commandCron(parts)
 
