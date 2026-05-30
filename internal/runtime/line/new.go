@@ -18,8 +18,9 @@ const (
 )
 
 type Bot struct {
-	client *go_bot_line.Bot
-	cancel context.CancelFunc
+	client    *go_bot_line.Bot
+	cancel    context.CancelFunc
+	fileGroup *fileGroupBuffer
 }
 
 func New() (*Bot, error) {
@@ -38,14 +39,24 @@ func New() (*Bot, error) {
 		return nil, fmt.Errorf("github.com/pardnchiu/go-bot/line New: %w", err)
 	}
 
-	bot := &Bot{client: client}
+	bot := &Bot{client: client, fileGroup: newFileGroupBuffer()}
 
 	client.Reply(func(ctx context.Context, in go_bot_line.Input) string {
+		key := sourceID(in)
+		if key == "" {
+			return ""
+		}
+		// * attachments (and a caption joining an open group) buffer until the
+		// * burst goes silent, so multi-file sends collapse into one turn; plain
+		// * text with no open group runs immediately.
+		if bot.fileGroup.offer(bot, key, in, inputHasAttachment(in)) {
+			return ""
+		}
 		bgCtx := context.WithoutCancel(ctx)
 		go func() {
-			if err := run(bgCtx, bot, in); err != nil {
+			if err := run(bgCtx, bot, in, []go_bot_line.Input{in}); err != nil {
 				slog.Warn("run",
-					slog.String("source", sourceID(in)),
+					slog.String("source", key),
 					slog.String("error", err.Error()))
 			}
 		}()

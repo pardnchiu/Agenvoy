@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	go_bot_line "github.com/pardnchiu/go-bot/line"
@@ -29,6 +30,10 @@ func sourceID(in go_bot_line.Input) string {
 	}
 }
 
+func inputHasAttachment(in go_bot_line.Input) bool {
+	return in.MessageType != "" && in.MessageType != "text" && in.MessageID != ""
+}
+
 func sourceName(in go_bot_line.Input) string {
 	if in.Username != "" {
 		return in.Username
@@ -43,9 +48,17 @@ func sourceName(in go_bot_line.Input) string {
 	}
 }
 
-func run(ctx context.Context, b *Bot, in go_bot_line.Input) error {
+func run(ctx context.Context, b *Bot, in go_bot_line.Input, attachInputs []go_bot_line.Input) error {
 	content := strings.TrimSpace(in.Text)
-	hasAttachment := in.MessageType != "" && in.MessageType != "text"
+	if content == "" {
+		for _, ai := range attachInputs {
+			if t := strings.TrimSpace(ai.Text); t != "" {
+				content = t
+				break
+			}
+		}
+	}
+	hasAttachment := slices.ContainsFunc(attachInputs, inputHasAttachment)
 	if content == "" && !hasAttachment {
 		return nil
 	}
@@ -87,22 +100,35 @@ func run(ctx context.Context, b *Bot, in go_bot_line.Input) error {
 
 	if hasAttachment {
 		dir := filepath.Join(filesystem.AgenvoyDir, "download")
-		path, err := b.client.Save(ctx, in.MessageID, dir)
-		if err != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/line Bot.Save",
-				slog.String("source", target),
-				slog.String("messageType", in.MessageType),
-				slog.String("error", err.Error()))
-		} else if path != "" {
-			label := "- " + path
-			if in.FileName != "" {
-				label += " (" + in.FileName + ")"
+		var labels []string
+		for _, ai := range attachInputs {
+			if !inputHasAttachment(ai) {
+				continue
 			}
+			path, err := b.client.Save(ctx, ai.MessageID, dir)
+			if err != nil {
+				slog.Warn("github.com/pardnchiu/go-bot/line Bot.Save",
+					slog.String("source", target),
+					slog.String("messageType", ai.MessageType),
+					slog.String("error", err.Error()))
+				continue
+			}
+			if path == "" {
+				continue
+			}
+			label := "- " + path
+			if ai.FileName != "" {
+				label += " (" + ai.FileName + ")"
+			}
+			labels = append(labels, label)
+		}
+		if len(labels) > 0 {
 			var lines []string
 			if content != "" {
 				lines = append(lines, content)
 			}
-			lines = append(lines, "[LINE attachments]", label)
+			lines = append(lines, "[LINE attachments]")
+			lines = append(lines, labels...)
 			content = strings.Join(lines, "\n")
 		}
 	}
