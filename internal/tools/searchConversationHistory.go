@@ -11,7 +11,7 @@ import (
 
 	toriidb "github.com/pardnchiu/ToriiDB/core/store"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
@@ -121,7 +121,7 @@ func searchConversationHistoryHandler(ctx context.Context, sessionID, keyword, t
 		keyIdx[k] = i
 	}
 
-	_, maxHistory := sessionManager.GetHistory(sessionID)
+	_, maxHistory := sessionHistory.Get(sessionID)
 	skip := min(len(maxHistory)+1, len(allKeys))
 	excludeKeys := make(map[string]struct{}, skip)
 	if skip > 0 {

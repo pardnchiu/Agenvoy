@@ -73,7 +73,7 @@ func (t TUI) runRemoveSession(sid string) (TUI, tea.Cmd) {
 
 	fallback := pickAlternateSession(sid)
 	if fallback == "" {
-		created, err := session.CreateSession("cli-")
+		created, err := session.New("cli-")
 		if err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] create fallback session failed: %v", err)) + "\n")
 		}

@@ -19,6 +19,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionTelegram "github.com/pardnchiu/agenvoy/internal/session/telegram"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
@@ -210,7 +211,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 
 	routingSessionID := sessionOverride
 	if routingSessionID == "" {
-		cs, err := session.GetTelegramSession(in.ChatID)
+		cs, err := sessionTelegram.New(in.ChatID)
 		if err != nil {
 			return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetTelegramSession: %w", err)
 		}

@@ -15,6 +15,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	"github.com/pardnchiu/agenvoy/internal/session/summary"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 )
@@ -68,7 +69,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 		AllowAll:          allowAll,
 	}
 
-	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
+	oldHistory, maxHistory := sessionHistory.Get(sessionID)
 	if oldHistory == nil {
 		oldHistory = []agentTypes.Message{}
 	}
@@ -196,7 +197,7 @@ func passSubagentEvent(parent chan<- agentTypes.Event, name string, ev agentType
 func ensureSubagentSession(input string) (string, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
-		id, err := sessionManager.CreateSession("temp-sub-")
+		id, err := sessionManager.New("temp-sub-")
 		if err != nil {
 			return "", fmt.Errorf("sessionManager.CreateSession: %w", err)
 		}

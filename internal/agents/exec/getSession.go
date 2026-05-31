@@ -23,7 +23,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	"github.com/pardnchiu/agenvoy/internal/session/summary"
 )
 
@@ -84,7 +84,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		return nil, fmt.Errorf("session %q does not exist", overrideID)
 	}
 
-	oldHistory, maxHistory := sessionManager.GetHistory(overrideID)
+	oldHistory, maxHistory := sessionHistory.Get(overrideID)
 	session.Histories = oldHistory
 	session.BaseLen = len(oldHistory)
 

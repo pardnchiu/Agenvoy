@@ -40,7 +40,7 @@ func (t TUI) runCreateSession(name string) (TUI, tea.Cmd) {
 		}
 	}
 
-	id, err := session.CreateSession("cli-")
+	id, err := session.New("cli-")
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] create session failed: %v", err)) + "\n")
 	}

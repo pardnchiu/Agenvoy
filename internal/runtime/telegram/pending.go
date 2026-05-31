@@ -9,7 +9,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionTelegram "github.com/pardnchiu/agenvoy/internal/session/telegram"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
 )
@@ -30,7 +30,7 @@ func newPendingListener(bot *Bot) *runtime.Listener[int64, int] {
 }
 
 func (t *telegramTransport) LookupChatID(sessionID string) (int64, error) {
-	chatStr, err := sessionManager.GetChatID(sessionID)
+	chatStr, err := sessionTelegram.GetChat(sessionID)
 	if err != nil {
 		return 0, fmt.Errorf("GetChatID: %w", err)
 	}

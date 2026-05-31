@@ -26,6 +26,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	configStatus "github.com/pardnchiu/agenvoy/internal/session/config/status"
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
@@ -563,8 +564,8 @@ func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSe
 		delta = append(delta, message)
 	}
 
-	if err := sessionManager.AppendHistory(session.ID, delta); err != nil {
-		return fmt.Errorf("sessionManager.AppendHistory: %w", err)
+	if err := sessionHistory.Append(session.ID, delta); err != nil {
+		return fmt.Errorf("sessionHistory.Append: %w", err)
 	}
 
 	writeSessionHistEntry(session.ID, choice.Message)

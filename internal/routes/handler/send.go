@@ -19,6 +19,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/session/pubsub"
 	"github.com/pardnchiu/agenvoy/internal/session/summary"
@@ -181,7 +182,7 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 	}
 	session.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, scanner, sessionID, data.AllowAll, false, data.ExcludeSkills)
 
-	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
+	oldHistory, maxHistory := sessionHistory.Get(sessionID)
 	session.Histories = oldHistory
 	session.BaseLen = len(oldHistory)
 	session.OldHistories = maxHistory
