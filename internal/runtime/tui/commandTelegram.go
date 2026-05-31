@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
@@ -38,7 +38,7 @@ func (t TUI) commandTelegram(parts []string) (TUI, tea.Cmd, bool) {
 	}
 
 	enabled := false
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		enabled = cfg.TelegramEnabled && keychain.Get(telegram.Key) != ""
 	}
 	cursor := 0
@@ -82,13 +82,13 @@ func enableTelegram(token string) tea.Cmd {
 		if err := keychain.Set(telegram.Key, token); err != nil {
 			return TelegramDone{action: "enable", err: fmt.Errorf("keychain.Set: %w", err)}
 		}
-		cfg, err := session.Load()
+		cfg, err := config.Load()
 		if err != nil {
 			return TelegramDone{action: "enable", err: fmt.Errorf("session.Load: %w", err)}
 		}
 		cfg.TelegramEnabled = true
 		cfg.TelegramUsername = username
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return TelegramDone{action: "enable", err: fmt.Errorf("session.Save: %w", err)}
 		}
 		return TelegramDone{action: "enable"}
@@ -97,7 +97,7 @@ func enableTelegram(token string) tea.Cmd {
 
 func disableTelegram() tea.Cmd {
 	return func() tea.Msg {
-		cfg, err := session.Load()
+		cfg, err := config.Load()
 		if err != nil {
 			return TelegramDone{action: "disable", err: fmt.Errorf("session.Load: %w", err)}
 		}
@@ -109,7 +109,7 @@ func disableTelegram() tea.Cmd {
 				slog.String("error", err.Error()))
 		}
 		cfg.TelegramEnabled = false
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return TelegramDone{action: "disable", err: fmt.Errorf("session.Save: %w", err)}
 		}
 		return TelegramDone{action: "disable"}

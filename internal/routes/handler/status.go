@@ -9,15 +9,15 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionStatus "github.com/pardnchiu/agenvoy/internal/session/status"
+	configStatus "github.com/pardnchiu/agenvoy/internal/session/config/status"
 )
 
 type SessionStatus struct {
-	State   string               `json:"state"`
-	Active  []sessionStatus.Task `json:"active"`
-	EndedAt string               `json:"ended_at"`
-	Limit   int                  `json:"limit"`
-	Usage   float64              `json:"usage"`
+	State   string              `json:"state"`
+	Active  []configStatus.Task `json:"active"`
+	EndedAt string              `json:"ended_at"`
+	Limit   int                 `json:"limit"`
+	Usage   float64             `json:"usage"`
 }
 
 func GetSessionStatus() gin.HandlerFunc {
@@ -34,14 +34,14 @@ func GetSessionStatus() gin.HandlerFunc {
 			return
 		}
 
-		status := sessionStatus.Get(sessionID)
+		status := configStatus.Get(sessionID)
 		limit := filesystem.MaxSessionTasks
 		usage := 0.0
 		if limit > 0 {
 			usage = math.Round(float64(len(status.Active))/float64(limit)*10000) / 100
 		}
 		if status.Active == nil {
-			status.Active = []sessionStatus.Task{}
+			status.Active = []configStatus.Task{}
 		}
 
 		c.JSON(http.StatusOK, SessionStatus{

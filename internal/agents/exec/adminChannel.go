@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -42,7 +42,7 @@ func ParseAdminChannel(v string) (prefix, id string, ok bool) {
 }
 
 func NotifyAdminCode(ctx context.Context, code, sourceName string) {
-	cfg, err := sessionManager.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil {
 		return
 	}

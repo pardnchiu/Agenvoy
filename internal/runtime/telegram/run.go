@@ -186,7 +186,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 	}
 
 	var sessionOverride, sessionMissing string
-	if name, effective := session.Match(content); name != "" {
+	if name, effective := session.CheckAssign(content); name != "" {
 		if id := session.GetSessionID(name); id != "" {
 			sessionOverride = id
 		} else {

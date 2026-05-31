@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -63,7 +63,7 @@ func registStoreSecret() {
 				return "", fmt.Errorf("keychain Set: %w", err)
 			}
 
-			if err := session.SaveKey(key); err != nil {
+			if err := config.SaveKey(key); err != nil {
 				return "", fmt.Errorf("session SaveKey: %w", err)
 			}
 

@@ -19,7 +19,7 @@ import (
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 )
 
 var (
@@ -87,7 +87,7 @@ func CreateSession(prefix string) (string, error) {
 	if err := go_pkg_filesystem.CheckDir(filesystem.SessionDir(sessionID), true); err != nil {
 		return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir: %w", err)
 	}
-	if err := sessionBot.Save(sessionID, "", "", false); err != nil {
+	if err := configBot.Save(sessionID, "", "", false); err != nil {
 		slog.Warn("sessionBot Save",
 			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
@@ -115,7 +115,7 @@ func GetTelegramSession(chatID int64) (string, error) {
 		}
 	}
 
-	if err := sessionBot.Save(sessionID, "", "", false); err != nil {
+	if err := configBot.Save(sessionID, "", "", false); err != nil {
 		slog.Warn("sessionBot Save",
 			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
@@ -160,7 +160,7 @@ func GetDiscordSession(guildID, channelID, userID string) (string, error) {
 		}
 	}
 
-	if err := sessionBot.Save(sessionID, "", "", false); err != nil {
+	if err := configBot.Save(sessionID, "", "", false); err != nil {
 		slog.Warn("sessionBot Save",
 			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
@@ -268,7 +268,7 @@ func GetSessionID(name string) string {
 			continue
 		}
 
-		botName, _ := sessionBot.Get(sid)
+		botName, _ := configBot.Get(sid)
 		if botName == "" {
 			continue
 		}

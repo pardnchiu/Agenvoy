@@ -56,5 +56,5 @@ func ResetSessionWithSummary(ctx context.Context, sessionID string) (int, error)
 		}
 	}
 
-	return sessionManager.ResetHistoryKeepSummary(sessionID)
+	return sessionManager.Reset(sessionID)
 }

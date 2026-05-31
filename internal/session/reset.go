@@ -9,20 +9,22 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 )
 
-func ResetHistoryKeepSummary(sessionID string) (int, error) {
+func Reset(sessionID string) (int, error) {
 	if sessionID == "" {
-		return 0, fmt.Errorf("session id is required")
+		return 0, fmt.Errorf("sessionID is required")
 	}
 	sessionDir := filesystem.SessionDir(sessionID)
 
 	if err := os.Remove(filesystem.HistoryPath(sessionID)); err != nil && !os.IsNotExist(err) {
-		return 0, fmt.Errorf("os.Remove history.json: %w", err)
+		return 0, fmt.Errorf("os.Remove [%s]: %w", filesystem.HistoryPath(sessionID), err)
 	}
+
 	if err := os.RemoveAll(filepath.Join(sessionDir, "tool_calls")); err != nil {
-		return 0, fmt.Errorf("os.RemoveAll tool_calls: %w", err)
+		return 0, fmt.Errorf("os.RemoveAll [%s]: %w", filepath.Join(sessionDir, "tool_calls"), err)
 	}
+
 	if err := os.Remove(filesystem.ActionLogPath(sessionID)); err != nil && !os.IsNotExist(err) {
-		return 0, fmt.Errorf("os.Remove action.log: %w", err)
+		return 0, fmt.Errorf("os.Remove [%s]: %w", filesystem.ActionLogPath(sessionID), err)
 	}
 
 	db := torii.DB(torii.DBSessionHist)

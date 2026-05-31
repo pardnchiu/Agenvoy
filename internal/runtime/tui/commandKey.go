@@ -6,8 +6,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 )
 
 type KeySelect struct {
@@ -20,7 +19,7 @@ type KeySubmit struct {
 }
 
 func (t TUI) commandKey(parts []string) (TUI, tea.Cmd, bool) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n"), true
 	}

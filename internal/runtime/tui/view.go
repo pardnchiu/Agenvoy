@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -259,6 +259,6 @@ func (t TUI) sessionName() string {
 		base = fmt.Sprintf("%s (%s)", name, short)
 	}
 
-	model, reasoning := sessionBot.GetModel(sid)
+	model, reasoning := configBot.GetModel(sid)
 	return fmt.Sprintf("%s (%s/%s)", base, model, reasoning)
 }

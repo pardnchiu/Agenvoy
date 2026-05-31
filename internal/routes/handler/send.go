@@ -18,7 +18,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/session/pubsub"
 	"github.com/pardnchiu/agenvoy/internal/session/summary"
@@ -135,7 +135,7 @@ func Send() gin.HandlerFunc {
 				AllowAll:          true,
 			}
 
-			if err := sessionBot.Save(sessionID, "", "", false); err != nil {
+			if err := configBot.Save(sessionID, "", "", false); err != nil {
 				slog.Warn("sessionBot Save",
 					slog.String("session", sessionID),
 					slog.String("error", err.Error()))

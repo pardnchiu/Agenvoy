@@ -8,8 +8,8 @@ import (
 	"time"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/session"
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
+	sessionTUI "github.com/pardnchiu/agenvoy/internal/session/tui"
 )
 
 var userWrapperRe = regexp.MustCompile(`^---\n當前時間:[^\n]*\n(?:[^\n]+\n)*?---\n`)
@@ -44,7 +44,7 @@ func parseActionLine(raw string) (parsedAction, bool) {
 		kind = third
 		rest = after
 	} else {
-		hash = session.DefaultTUIHash
+		hash = sessionTUI.Default
 		kind = mid
 	}
 

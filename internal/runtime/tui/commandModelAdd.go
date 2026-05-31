@@ -14,7 +14,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -275,7 +275,7 @@ func (t TUI) runModelAddAPIKeySubmit(key string) (TUI, tea.Cmd) {
 		t.modelAdd = nil
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] keychain.Set: %v", err)) + "\n")
 	}
-	if err := session.SaveKey(envKey); err != nil {
+	if err := config.SaveKey(envKey); err != nil {
 		t.modelAdd = nil
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.SaveKey: %v", err)) + "\n")
 	}
@@ -324,7 +324,7 @@ func (t TUI) runModelAddCompatURLSubmit(url string) (TUI, tea.Cmd) {
 		url = "http://localhost:11434/v1"
 	}
 	url = strings.TrimRight(url, "/")
-	if err := session.UpsertCompat(t.modelAdd.compatProvider, url); err != nil {
+	if err := config.UpsertCompat(t.modelAdd.compatProvider, url); err != nil {
 		t.modelAdd = nil
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] UpsertCompat: %v", err)) + "\n")
 	}
@@ -353,7 +353,7 @@ func (t TUI) runModelAddCompatKeySubmit(key string) (TUI, tea.Cmd) {
 			t.modelAdd = nil
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] keychain.Set: %v", err)) + "\n")
 		}
-		if err := session.SaveKey(keychainKey); err != nil {
+		if err := config.SaveKey(keychainKey); err != nil {
 			t.modelAdd = nil
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.SaveKey: %v", err)) + "\n")
 		}
@@ -442,7 +442,7 @@ func (t TUI) runModelAddModelPick(name, description string) (TUI, tea.Cmd) {
 	fullName := prefix + name
 	t.modelAdd = nil
 
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n")
 	}
@@ -456,12 +456,12 @@ func (t TUI) runModelAddModelPick(name, description string) (TUI, tea.Cmd) {
 		}
 	}
 	if !found {
-		cfg.Models = append(cfg.Models, session.ModelEntry{Name: fullName, Description: description})
+		cfg.Models = append(cfg.Models, config.ModelEntry{Name: fullName, Description: description})
 	}
 	if cfg.DispatcherModel == "" {
 		cfg.DispatcherModel = fullName
 	}
-	if err := session.Save(cfg); err != nil {
+	if err := config.Save(cfg); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Save: %v", err)) + "\n")
 	}
 

@@ -2,7 +2,7 @@ package session
 
 import "strings"
 
-func Match(input string) (name, effective string) {
+func CheckAssign(input string) (name, effective string) {
 	trimmed := strings.TrimLeft(input, " \t\r\n")
 	if !strings.HasPrefix(trimmed, ":") {
 		return "", input

@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	go_bot_discord "github.com/pardnchiu/go-bot/discord"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
@@ -38,7 +38,7 @@ func (t TUI) commandDiscord(parts []string) (TUI, tea.Cmd, bool) {
 	}
 
 	enabled := false
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		enabled = cfg.DiscordEnabled && keychain.Get(discord.Key) != ""
 	}
 	cursor := 0
@@ -82,13 +82,13 @@ func enableDiscord(token string) tea.Cmd {
 		if err := keychain.Set(discord.Key, token); err != nil {
 			return DiscordDone{action: "enable", err: fmt.Errorf("keychain.Set: %w", err)}
 		}
-		cfg, err := session.Load()
+		cfg, err := config.Load()
 		if err != nil {
 			return DiscordDone{action: "enable", err: fmt.Errorf("session.Load: %w", err)}
 		}
 		cfg.DiscordEnabled = true
 		cfg.DiscordUsername = username
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return DiscordDone{action: "enable", err: fmt.Errorf("session.Save: %w", err)}
 		}
 		return DiscordDone{action: "enable"}
@@ -97,7 +97,7 @@ func enableDiscord(token string) tea.Cmd {
 
 func disableDiscord() tea.Cmd {
 	return func() tea.Msg {
-		cfg, err := session.Load()
+		cfg, err := config.Load()
 		if err != nil {
 			return DiscordDone{action: "disable", err: fmt.Errorf("session.Load: %w", err)}
 		}
@@ -109,7 +109,7 @@ func disableDiscord() tea.Cmd {
 				slog.String("error", err.Error()))
 		}
 		cfg.DiscordEnabled = false
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return DiscordDone{action: "disable", err: fmt.Errorf("session.Save: %w", err)}
 		}
 		return DiscordDone{action: "disable"}

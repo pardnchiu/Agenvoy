@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -45,7 +45,7 @@ func New(model ...string) (*Agent, error) {
 		apiKeyEnvKey = "COMPAT_" + instanceName + "_API_KEY"
 	}
 
-	baseURL := session.GetCompatURL(instanceName)
+	baseURL := config.GetCompatURL(instanceName)
 	if baseURL == "" {
 		baseURL = defaultBaseURL
 	}

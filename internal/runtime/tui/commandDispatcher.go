@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 )
 
 type DispatcherSelect struct {
@@ -12,7 +12,7 @@ type DispatcherSelect struct {
 }
 
 func (t TUI) commandDispatcher() (TUI, tea.Cmd, bool) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n"), true
 	}
@@ -50,7 +50,7 @@ func (t TUI) commandDispatcher() (TUI, tea.Cmd, bool) {
 }
 
 func (t TUI) runDispatcherSelect(name string) (TUI, tea.Cmd) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n")
 	}
@@ -59,7 +59,7 @@ func (t TUI) runDispatcherSelect(name string) (TUI, tea.Cmd) {
 	}
 
 	cfg.DispatcherModel = name
-	if err := session.Save(cfg); err != nil {
+	if err := config.Save(cfg); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Save: %v", err)) + "\n")
 	}
 	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ dispatcher: %s", name)) + "\n")

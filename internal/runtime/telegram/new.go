@@ -13,7 +13,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	"github.com/pardnchiu/go-bot/telegram"
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
@@ -40,7 +40,7 @@ func (b *Bot) Client() *telegram.Bot {
 }
 
 func New() (*Bot, error) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil || !cfg.TelegramEnabled {
 		return nil, nil
 	}
@@ -81,9 +81,9 @@ func New() (*Bot, error) {
 	current.Store(bot)
 
 	username := client.Status().Username
-	if cfg, err := session.Load(); err == nil && cfg != nil && cfg.TelegramUsername != username {
+	if cfg, err := config.Load(); err == nil && cfg != nil && cfg.TelegramUsername != username {
 		cfg.TelegramUsername = username
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			slog.Warn("github.com/pardnchiu/agenvoy/internal/session Save",
 				slog.String("error", err.Error()))
 		}
