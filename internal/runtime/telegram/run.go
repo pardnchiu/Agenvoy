@@ -221,7 +221,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 	var agent agentTypes.Agent
 	var fallbacks []agentTypes.Agent
 	if externalAgent == "" {
-		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, routingSessionID)
+		primary, rest, err := exec.ResolveAgent(ctx, agents.DispatcherBot(), agents.Registry(), content, matchedSkill != nil, routingSessionID)
 		if err != nil {
 			if finishErr := b.client.FinishStatus(ctx, in.ChatID); finishErr != nil {
 				slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.FinishStatus",

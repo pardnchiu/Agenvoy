@@ -90,7 +90,7 @@ func registGeneratePlan() {
 				return "", fmt.Errorf("requirement is required")
 			}
 
-			dispatcher := agents.Dispatcher()
+			dispatcher := agents.DispatcherBot()
 			registry := agents.Registry()
 			if dispatcher == nil || len(registry.Registry) == 0 {
 				return "", fmt.Errorf("planner host not initialized")

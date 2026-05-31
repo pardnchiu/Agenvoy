@@ -32,7 +32,7 @@ func run(ctx context.Context, req Request, userContent string, events chan<- age
 	registry := agents.Registry()
 	switch {
 	case req.Model == "" || req.Model == "auto":
-		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), registry, trimContent, false, "")
+		primary, rest, err := exec.ResolveAgent(ctx, agents.DispatcherBot(), registry, trimContent, false, "")
 		if err != nil {
 			events <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 			return

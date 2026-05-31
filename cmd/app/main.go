@@ -13,7 +13,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/summary"
+	agentSummary "github.com/pardnchiu/agenvoy/internal/agents/exec/summary"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
@@ -102,21 +102,20 @@ func setSummaryCron() {
 		}
 
 		for _, sid := range sessions {
-			histories, _ := sessionHistory.Get(sid)
-			summaryHistories := summary.Get(histories)
-			if len(summaryHistories) == 0 {
+			_, histories := sessionHistory.Get(sid)
+			if len(histories) == 0 {
 				continue
 			}
 			bgCtx := context.Background()
-			router := agents.Summary()
+			router := agents.SummaryBot()
 			if router == nil {
-				router = agents.Dispatcher()
+				router = agents.DispatcherBot()
 			}
 			summaryAgent := exec.SelectAgent(bgCtx, router, agents.Registry(), "[summary] background summary cron", false, sid)
 			if summaryAgent == nil {
 				continue
 			}
-			summary.Generate(bgCtx, summaryAgent, sid, summaryHistories)
+			agentSummary.Generate(bgCtx, summaryAgent, sid, histories)
 		}
 	}
 }

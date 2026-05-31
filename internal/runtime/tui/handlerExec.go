@@ -55,7 +55,7 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 		}()
 		err := exec.Run(
 			ctx,
-			agents.Dispatcher(),
+			agents.DispatcherBot(),
 			agents.Registry(),
 			scanner,
 			input,

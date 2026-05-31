@@ -18,18 +18,20 @@ var (
 	refresher  RefreshFunc
 )
 
-func Set(d agentTypes.Agent, sm agentTypes.Agent, r agentTypes.AgentRegistry, s *runtime.SkillScanner) {
+func Set(dispatcherBot agentTypes.Agent, summaryBot agentTypes.Agent, agentRegistry agentTypes.AgentRegistry, skillScanner *runtime.SkillScanner) {
 	mu.Lock()
 	defer mu.Unlock()
-	dispatcher = d
-	summary = sm
-	registry = r
-	scanner = s
+
+	dispatcher = dispatcherBot
+	summary = summaryBot
+	registry = agentRegistry
+	scanner = skillScanner
 }
 
 func SetRefresher(fn RefreshFunc) {
 	mu.Lock()
 	defer mu.Unlock()
+
 	refresher = fn
 }
 
@@ -40,22 +42,23 @@ func Reload() bool {
 	if fn == nil {
 		return false
 	}
-	d, sm, r := fn()
+
+	dispatcherBot, summaryBot, agentRegistry := fn()
 	mu.Lock()
-	dispatcher = d
-	summary = sm
-	registry = r
+	dispatcher = dispatcherBot
+	summary = summaryBot
+	registry = agentRegistry
 	mu.Unlock()
 	return true
 }
 
-func Dispatcher() agentTypes.Agent {
+func DispatcherBot() agentTypes.Agent {
 	mu.RLock()
 	defer mu.RUnlock()
 	return dispatcher
 }
 
-func Summary() agentTypes.Agent {
+func SummaryBot() agentTypes.Agent {
 	mu.RLock()
 	defer mu.RUnlock()
 	return summary

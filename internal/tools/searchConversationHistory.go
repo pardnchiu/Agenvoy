@@ -252,14 +252,8 @@ func expandWindows(hits []historyHit, allKeys []string, keyIdx map[string]int, e
 		if !ok {
 			continue
 		}
-		start := idx - historyWindowBefore
-		if start < 0 {
-			start = 0
-		}
-		end := idx + historyWindowAfter
-		if end > len(allKeys)-1 {
-			end = len(allKeys) - 1
-		}
+		start := max(idx-historyWindowBefore, 0)
+		end := min(idx+historyWindowAfter, len(allKeys)-1)
 		for i := start; i <= end; i++ {
 			if _, skip := exclude[allKeys[i]]; skip {
 				continue

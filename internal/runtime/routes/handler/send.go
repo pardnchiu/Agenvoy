@@ -108,7 +108,7 @@ func Send() gin.HandlerFunc {
 					}
 				}
 				if agent == nil {
-					primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), registry, trimContent, false, sessionID)
+					primary, rest, err := exec.ResolveAgent(ctx, agents.DispatcherBot(), registry, trimContent, false, sessionID)
 					if err != nil {
 						wrapped <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 						return

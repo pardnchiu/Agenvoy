@@ -22,7 +22,7 @@ import (
 
 func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPrompt string, excludedTools []string) (string, error) {
 	registry := agents.Registry()
-	dispatcher := agents.Dispatcher()
+	dispatcher := agents.DispatcherBot()
 	if dispatcher == nil || len(registry.Registry) == 0 {
 		return "", fmt.Errorf("subagent host not initialized")
 	}
