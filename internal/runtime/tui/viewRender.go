@@ -218,16 +218,16 @@ func printLog(name, raw, cwd string) string {
 	if raw == "" {
 		return ""
 	}
-	var m map[string]any
-	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+	var dic map[string]any
+	if err := json.Unmarshal([]byte(raw), &dic); err != nil {
 		return raw
 	}
-	if len(m) == 0 {
+	if len(dic) == 0 {
 		return ""
 	}
 	pick := func(keys ...string) string {
 		for _, k := range keys {
-			if v, ok := m[k]; ok {
+			if v, ok := dic[k]; ok {
 				if s, ok := v.(string); ok && strings.TrimSpace(s) != "" {
 					return s
 				}
@@ -259,7 +259,7 @@ func printLog(name, raw, cwd string) string {
 		if dir == "" {
 			break
 		}
-		if r, ok := m["recursive"].(bool); ok && r {
+		if r, ok := dic["recursive"].(bool); ok && r {
 			return dir + " (recursive)"
 		}
 		return dir

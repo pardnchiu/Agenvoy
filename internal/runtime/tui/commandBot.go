@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/session"
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 )
 
 type BotNameSubmit struct {
@@ -39,7 +39,7 @@ func (t TUI) commandBot(parts []string) (TUI, tea.Cmd, bool) {
 		return t, t.botSaveCmd(sid, name, body), true
 	}
 
-	existingName, existingBody := sessionBot.Get(sid)
+	existingName, existingBody := configBot.Get(sid)
 	t.popup = &Popup{
 		kind:  popupText,
 		title: "Bot name",
@@ -77,6 +77,6 @@ func (t TUI) openBotBodyPopup(name string) (TUI, tea.Cmd) {
 }
 
 func (t TUI) botSaveCmd(sid, name, body string) tea.Cmd {
-	err := sessionBot.Save(sid, name, body, true)
+	err := configBot.Save(sid, name, body, true)
 	return func() tea.Msg { return BotSaved{name: name, err: err} }
 }

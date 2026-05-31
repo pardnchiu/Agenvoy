@@ -8,6 +8,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/summary"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 )
 
 func summaryRouter() agentTypes.Agent {
@@ -22,7 +23,7 @@ func ForceSummary(ctx context.Context, sessionID string) (int, error) {
 		return 0, fmt.Errorf("session id is required")
 	}
 
-	histories, _ := sessionManager.GetHistory(sessionID)
+	histories, _ := sessionHistory.Get(sessionID)
 	summaryHistories := summary.Get(histories)
 	if len(summaryHistories) == 0 {
 		return 0, nil
@@ -43,7 +44,7 @@ func ResetSessionWithSummary(ctx context.Context, sessionID string) (int, error)
 		return 0, fmt.Errorf("session id is required")
 	}
 
-	histories, _ := sessionManager.GetHistory(sessionID)
+	histories, _ := sessionHistory.Get(sessionID)
 	summaryHistories := summary.Get(histories)
 
 	if len(summaryHistories) > 0 {
@@ -56,5 +57,5 @@ func ResetSessionWithSummary(ctx context.Context, sessionID string) (int, error)
 		}
 	}
 
-	return sessionManager.ResetHistoryKeepSummary(sessionID)
+	return sessionManager.Reset(sessionID)
 }

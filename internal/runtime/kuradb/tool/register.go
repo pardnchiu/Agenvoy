@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 )
 
 func Register() {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil || !cfg.KuradbEnabled {
 		return
 	}

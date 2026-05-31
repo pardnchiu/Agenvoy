@@ -8,11 +8,13 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
+	"github.com/pardnchiu/agenvoy/internal/session/summary"
+	sessionTelegram "github.com/pardnchiu/agenvoy/internal/session/telegram"
 )
 
 func getSession(chatID int64, username, content string, data exec.ExecData, overrideID, missingName string) (*agentTypes.AgentSession, error) {
-	chatSessionID, err := sessionManager.GetTelegramSession(chatID)
+	chatSessionID, err := sessionTelegram.New(chatID)
 	if err != nil {
 		return nil, fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetTelegramSession: %w", err)
 	}
@@ -28,11 +30,11 @@ func getSession(chatID int64, username, content string, data exec.ExecData, over
 		Histories: []agentTypes.Message{},
 	}
 
-	oldHistory, maxHistory := sessionManager.GetHistory(histSessionID)
+	oldHistory, maxHistory := sessionHistory.Get(histSessionID)
 	sess.Histories = oldHistory
 
 	sess.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, agents.Scanner(), chatSessionID, data.AllowAll, false, data.ExcludeSkills)
-	if summary := sessionManager.GetSummaryPrompt(histSessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
+	if summary := summary.GetPrompt(histSessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
 		sess.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
 

@@ -262,11 +262,11 @@ func (a *Agent) convertToOutput(resp *Output) *agentTypes.Output {
 		} else if part.FunctionCall != nil {
 			args := "{}"
 			if part.FunctionCall.Args != nil {
-				data, err := json.Marshal(part.FunctionCall.Args)
+				raw, err := json.Marshal(part.FunctionCall.Args)
 				if err != nil {
 					continue
 				}
-				args = string(data)
+				args = string(raw)
 			}
 
 			toolCall := agentTypes.ToolCall{

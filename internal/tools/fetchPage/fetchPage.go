@@ -229,11 +229,11 @@ func handler(link string, keepLinks, sameSession bool, outType int, useCache, fo
 				addToSkippedMap(link, 0, result.Title)
 				return skippedMessage(link, 0, result.Title), nil
 			}
-			b, err := json.Marshal(result.Tree)
+			raw, err := json.Marshal(result.Tree)
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal tree: %w", err)
 			}
-			full = string(b)
+			full = string(raw)
 		default:
 			if strings.TrimSpace(result.Content) == "" {
 				addToSkippedMap(link, 0, result.Title)

@@ -1,4 +1,4 @@
-package sessionStatus
+package configStatus
 
 import (
 	"log/slog"

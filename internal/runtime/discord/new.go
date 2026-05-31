@@ -13,7 +13,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 )
@@ -36,7 +36,7 @@ func (b *Bot) Client() *go_bot_discord.Bot {
 }
 
 func New() (*Bot, error) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil || !cfg.DiscordEnabled {
 		return nil, nil
 	}
@@ -71,9 +71,9 @@ func New() (*Bot, error) {
 	current.Store(bot)
 
 	username := client.Status().Username
-	if cfg, err := session.Load(); err == nil && cfg != nil && cfg.DiscordUsername != username {
+	if cfg, err := config.Load(); err == nil && cfg != nil && cfg.DiscordUsername != username {
 		cfg.DiscordUsername = username
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			slog.Warn("github.com/pardnchiu/agenvoy/internal/session Save",
 				slog.String("error", err.Error()))
 		}

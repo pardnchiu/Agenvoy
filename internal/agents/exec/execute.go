@@ -25,8 +25,10 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
+	configStatus "github.com/pardnchiu/agenvoy/internal/session/config/status"
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
-	sessionStatus "github.com/pardnchiu/agenvoy/internal/session/status"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -141,8 +143,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		if s, ok := session.UserInput.Content.(string); ok {
 			inputText = s
 		}
-		taskID := sessionStatus.Online(session.ID, inputText)
-		defer sessionStatus.Idle(session.ID, taskID)
+		taskID := configStatus.Online(session.ID, inputText)
+		defer configStatus.Idle(session.ID, taskID)
 
 		original := events
 		teed := make(chan agentTypes.Event, 64)
@@ -227,7 +229,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		data.ExcludeTools = append(data.ExcludeTools,
 			"fetch_youtube_transcript", "transcribe_media")
 	}
-	cfg, _ := sessionManager.Load()
+	cfg, _ := config.Load()
 	if cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "" {
 		data.ExcludeTools = append(data.ExcludeTools,
 			"telegram_format", "list_telegram_chat", "send_to_telegram_chat")
@@ -484,8 +486,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 
 		if !session.Stateless && len(session.Tools) > 0 {
-			if data, err := json.Marshal(session.Tools); err == nil {
-				sessionManager.SaveToToolCall(session.ID, string(data))
+			if raw, err := json.Marshal(session.Tools); err == nil {
+				sessionManager.SaveToToolCall(session.ID, string(raw))
 			}
 		}
 		return nil
@@ -562,8 +564,8 @@ func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSe
 		delta = append(delta, message)
 	}
 
-	if err := sessionManager.AppendHistory(session.ID, delta); err != nil {
-		return fmt.Errorf("sessionManager.AppendHistory: %w", err)
+	if err := sessionHistory.Append(session.ID, delta); err != nil {
+		return fmt.Errorf("sessionHistory.Append: %w", err)
 	}
 
 	writeSessionHistEntry(session.ID, choice.Message)
@@ -637,7 +639,7 @@ func newID(parts ...string) string {
 }
 
 func buildCrossChannelPrompt() string {
-	cfg, err := sessionManager.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil {
 		return ""
 	}

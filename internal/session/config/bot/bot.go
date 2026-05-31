@@ -1,4 +1,4 @@
-package sessionBot
+package configBot
 
 import (
 	"fmt"

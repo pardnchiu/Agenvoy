@@ -18,7 +18,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
+	sessionSummary "github.com/pardnchiu/agenvoy/internal/session/summary"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 )
 
@@ -95,13 +96,13 @@ func setSummaryCron() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		sessions := session.IsNeedSummary()
+		sessions := sessionSummary.Pending()
 		if len(sessions) == 0 {
 			continue
 		}
 
 		for _, sid := range sessions {
-			histories, _ := session.GetHistory(sid)
+			histories, _ := sessionHistory.Get(sid)
 			summaryHistories := summary.Get(histories)
 			if len(summaryHistories) == 0 {
 				continue

@@ -60,11 +60,11 @@ func registSetUserEmail() {
 				return "", err
 			}
 
-			bytes, err := json.Marshal(map[string]any{"ok": true, "email": email})
+			raw, err := json.Marshal(map[string]any{"ok": true, "email": email})
 			if err != nil {
 				return "", fmt.Errorf("json Marshal: %w", err)
 			}
-			return string(bytes), nil
+			return string(raw), nil
 		},
 	})
 
@@ -88,11 +88,11 @@ func registGetUserEmail() {
 			}
 
 			email, _ := dic["email"].(string)
-			bytes, err := json.Marshal(map[string]any{"email": email})
+			raw, err := json.Marshal(map[string]any{"email": email})
 			if err != nil {
 				return "", fmt.Errorf("json Marshal: %w", err)
 			}
-			return string(bytes), nil
+			return string(raw), nil
 		},
 	})
 }

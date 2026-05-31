@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/session"
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -62,7 +62,7 @@ func activityVerb(activity string) string {
 }
 
 func targetSession(input, currentId string) string {
-	name, _ := session.Match(input)
+	name, _ := session.CheckAssign(input)
 	if name == "" {
 		return ""
 	}
@@ -75,7 +75,7 @@ func targetSession(input, currentId string) string {
 		return ""
 	}
 
-	if bot, _ := sessionBot.Get(id); strings.TrimSpace(bot) != "" && bot != id {
+	if bot, _ := configBot.Get(id); strings.TrimSpace(bot) != "" && bot != id {
 		return bot
 	}
 	return utils.ShortenSessionID(id)

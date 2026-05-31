@@ -33,11 +33,11 @@ func registListTools() {
 				})
 			}
 
-			out, err := json.Marshal(list)
+			raw, err := json.Marshal(list)
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
-			return string(out), nil
+			return string(raw), nil
 		},
 	})
 

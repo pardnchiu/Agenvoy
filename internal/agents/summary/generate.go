@@ -11,7 +11,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/summary"
 )
 
 func extractMessageTime(msg agentTypes.Message) string {
@@ -52,13 +52,13 @@ func filterAfterTime(messages []agentTypes.Message, cursor string) []agentTypes.
 }
 
 func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, histories []agentTypes.Message) error {
-	raw, summaryMap := sessionManager.EnsureSummary(sessionID)
-	meta := sessionManager.GetSummaryMeta(sessionID)
+	raw, summaryMap := summary.Ensure(sessionID)
+	meta := summary.GetMeta(sessionID)
 
 	if meta.LastMessageTime == "" && len(summaryMap) > 0 {
 		latest := latestMessageTime(histories)
-		sessionManager.SaveSummaryMeta(sessionID, latest)
-		sessionManager.SaveSummary(sessionID, summaryMap)
+		summary.SaveMeta(sessionID, latest)
+		summary.Save(sessionID, summaryMap)
 		return nil
 	}
 
@@ -84,15 +84,15 @@ func Generate(ctx context.Context, agent agentTypes.Agent, sessionID string, his
 			return fmt.Errorf("generatePass returned nil at chunk %d/%d", i+1, len(chunks))
 		}
 
-		if b, err := json.Marshal(newMap); err == nil {
-			oldSummary = string(b)
+		if raw, err := json.Marshal(newMap); err == nil {
+			oldSummary = string(raw)
 		}
 
-		sessionManager.SaveSummary(sessionID, newMap)
+		summary.Save(sessionID, newMap)
 		if chunkLatest := latestMessageTime(chunk); chunkLatest > cursor {
 			cursor = chunkLatest
 		}
-		sessionManager.SaveSummaryMeta(sessionID, cursor)
+		summary.SaveMeta(sessionID, cursor)
 	}
 	return nil
 }
@@ -148,14 +148,18 @@ func sendAndParse(ctx context.Context, agent agentTypes.Agent, messages []agentT
 		return nil
 	}
 	if len(resp.Choices) == 0 {
+		slog.Warn(label + " empty choices")
 		return nil
 	}
 	text, ok := resp.Choices[0].Message.Content.(string)
 	if !ok {
+		slog.Warn(label+" non-string content",
+			slog.String("type", fmt.Sprintf("%T", resp.Choices[0].Message.Content)))
 		return nil
 	}
 	text = strings.TrimSpace(text)
 	if text == "" {
+		slog.Warn(label + " empty text")
 		return nil
 	}
 
@@ -163,7 +167,7 @@ func sendAndParse(ctx context.Context, agent agentTypes.Agent, messages []agentT
 	for _, re := range []*regexp.Regexp{fencedBlockRegex, summaryTagRegex, summaryBracketRegex} {
 		if loc := re.FindStringSubmatchIndex(text); loc != nil {
 			part := text[loc[2]:loc[3]]
-			if json.Unmarshal([]byte(part), &result) == nil && isSummaryJSON(result) {
+			if json.Unmarshal([]byte(part), &result) == nil && summary.IsValid(result) {
 				return result
 			}
 		}
@@ -180,13 +184,19 @@ func sendAndParse(ctx context.Context, agent agentTypes.Agent, messages []agentT
 			if start == -1 {
 				break
 			}
-			var m map[string]any
-			if json.Unmarshal([]byte(text[start:]), &m) == nil && isSummaryJSON(m) {
-				return m
+			var dic map[string]any
+			if json.Unmarshal([]byte(text[start:]), &dic) == nil && summary.IsValid(dic) {
+				return dic
 			}
 			break
 		}
 	}
+	preview := text
+	if len(preview) > 200 {
+		preview = preview[:200] + "..."
+	}
+	slog.Warn(label+" unparseable response",
+		slog.String("preview", preview))
 	return nil
 }
 

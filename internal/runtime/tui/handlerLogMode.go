@@ -15,7 +15,7 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	tuiHash "github.com/pardnchiu/agenvoy/internal/session/tui"
 )
 
 type tailLine struct {
@@ -137,7 +137,7 @@ func drainNew(path string, lastSize int64) int64 {
 		return current
 	}
 
-	own := session.GetHash()
+	own := tuiHash.Get()
 	scanner := bufio.NewScanner(io.LimitReader(file, current-lastSize))
 	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
 	for scanner.Scan() {

@@ -42,11 +42,11 @@ func registListTask() {
 				return "[]", nil
 			}
 
-			buf, err := json.Marshal(filtered)
+			raw, err := json.Marshal(filtered)
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
-			return string(buf), nil
+			return string(raw), nil
 		},
 	})
 }

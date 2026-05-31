@@ -98,11 +98,11 @@ Scope with file_pattern glob (e.g. '**/*.go', 'configs/**').`,
 				}
 			}
 
-			out, err := json.Marshal(matches)
+			raw, err := json.Marshal(matches)
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
-			return string(out), nil
+			return string(raw), nil
 		},
 	})
 }

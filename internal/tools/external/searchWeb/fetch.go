@@ -112,11 +112,11 @@ func fetch(ctx context.Context, query, timeRange string) (string, error) {
 		return "[]", nil
 	}
 
-	bytes, err := json.Marshal(items)
+	raw, err := json.Marshal(items)
 	if err != nil {
 		return "", fmt.Errorf("json.Marshal: %w", err)
 	}
-	return string(bytes), nil
+	return string(raw), nil
 }
 
 func parse(html string) []data {

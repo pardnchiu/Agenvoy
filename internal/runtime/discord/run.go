@@ -18,7 +18,7 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionDiscord "github.com/pardnchiu/agenvoy/internal/session/discord"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
@@ -168,7 +168,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		}
 	}
 
-	discordSessionID, err := sessionManager.GetDiscordSession(in.GuildID, in.ChannelID, in.UserID)
+	discordSessionID, err := sessionDiscord.New(in.GuildID, in.ChannelID, in.UserID)
 	if err != nil {
 		return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetDiscordSession: %w", err)
 	}

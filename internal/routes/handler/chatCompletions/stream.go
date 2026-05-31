@@ -38,11 +38,11 @@ func stream(c *gin.Context, id string, created int64, model string, events <-cha
 			"choices": choices,
 		}
 		maps.Copy(chunk, extra)
-		data, err := json.Marshal(chunk)
+		raw, err := json.Marshal(chunk)
 		if err != nil {
 			return false
 		}
-		if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+		if _, err := fmt.Fprintf(w, "data: %s\n\n", raw); err != nil {
 			return false
 		}
 		flusher.Flush()

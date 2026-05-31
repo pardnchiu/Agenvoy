@@ -10,7 +10,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session"
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -31,7 +31,7 @@ func (t TUI) commandRemoveSession() (TUI, tea.Cmd, bool) {
 	}
 
 	label := utils.ShortenSessionID(sid)
-	if name, _ := sessionBot.Get(sid); name != "" && name != sid {
+	if name, _ := configBot.Get(sid); name != "" && name != sid {
 		label = fmt.Sprintf("%s (%s)", name, label)
 	}
 
@@ -73,7 +73,7 @@ func (t TUI) runRemoveSession(sid string) (TUI, tea.Cmd) {
 
 	fallback := pickAlternateSession(sid)
 	if fallback == "" {
-		created, err := session.CreateSession("cli-")
+		created, err := session.New("cli-")
 		if err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] create fallback session failed: %v", err)) + "\n")
 		}
@@ -81,7 +81,7 @@ func (t TUI) runRemoveSession(sid string) (TUI, tea.Cmd) {
 	}
 
 	t.currentSessionID = fallback
-	t.currentSessionName, _ = sessionBot.Get(fallback)
+	t.currentSessionName, _ = configBot.Get(fallback)
 	t = t.restartTailer()
 	t.tokens = 0
 	t.lastIn = 0

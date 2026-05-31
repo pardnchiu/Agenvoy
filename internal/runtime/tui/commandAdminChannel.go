@@ -6,7 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -28,7 +28,7 @@ func (t TUI) commandAdminChannel(parts []string) (TUI, tea.Cmd, bool) {
 	}
 
 	current := ""
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		current = strings.TrimSpace(cfg.AdminChannel)
 	}
 

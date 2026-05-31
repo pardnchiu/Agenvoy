@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/session"
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -40,20 +40,20 @@ func (t TUI) runCreateSession(name string) (TUI, tea.Cmd) {
 		}
 	}
 
-	id, err := session.CreateSession("cli-")
+	id, err := session.New("cli-")
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] create session failed: %v", err)) + "\n")
 	}
 
 	if name != "" {
-		if err := sessionBot.Save(id, name, "", true); err != nil {
+		if err := configBot.Save(id, name, "", true); err != nil {
 			slog.Warn("sessionBot.Save", slog.String("session", id), slog.String("error", err.Error()))
 		}
 	}
 
 	previous := t.currentSessionID
 	t.currentSessionID = id
-	t.currentSessionName, _ = sessionBot.Get(id)
+	t.currentSessionName, _ = configBot.Get(id)
 
 	t.tokens = 0
 	t.lastIn = 0

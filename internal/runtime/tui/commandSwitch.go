@@ -10,7 +10,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -53,7 +53,7 @@ func (t TUI) runCommandSwitch(id string) (TUI, tea.Cmd) {
 	}
 	previous := t.currentSessionID
 	t.currentSessionID = id
-	t.currentSessionName, _ = sessionBot.Get(id)
+	t.currentSessionName, _ = configBot.Get(id)
 	t.inputHistory = loadInputHistory(id)
 	t.inputHistoryIdx = -1
 	if !t.onceCall {
@@ -97,7 +97,7 @@ func listSessions() []Session {
 		if strings.HasPrefix(sid, "temp-") {
 			continue
 		}
-		name, _ := sessionBot.Get(sid)
+		name, _ := configBot.Get(sid)
 		results = append(results, Session{
 			id:   sid,
 			name: name,

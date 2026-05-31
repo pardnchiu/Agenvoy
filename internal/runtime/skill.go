@@ -123,13 +123,13 @@ func (s *SkillScanner) LoadFS(fsys fs.FS, dir string) {
 		}
 
 		skillPath := fmt.Sprintf("%s/%s/SKILL.md", dir, entry.Name())
-		data, err := fs.ReadFile(fsys, skillPath)
+		raw, err := fs.ReadFile(fsys, skillPath)
 		if err != nil {
 			continue
 		}
 
 		folderPath := fmt.Sprintf("%s/%s", dir, entry.Name())
-		skill := filesystem.ParseSkillBytes(skillPath, folderPath, data)
+		skill := filesystem.ParseSkillBytes(skillPath, folderPath, raw)
 		if skill.Name == "" {
 			skill.Name = entry.Name()
 		}

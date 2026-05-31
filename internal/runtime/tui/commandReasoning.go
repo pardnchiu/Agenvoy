@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
-	"github.com/pardnchiu/agenvoy/internal/session"
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 )
 
 type ReasoningScopeSelect struct {
@@ -75,7 +75,7 @@ func (t TUI) openReasoningSessionPopup() (TUI, tea.Cmd) {
 		return t, tea.Println(errorStyle.Render("[!] no current session") + "\n")
 	}
 
-	_, current := sessionBot.GetModel(sid)
+	_, current := configBot.GetModel(sid)
 
 	options := make([]string, len(reasoningLevels))
 	cursor := 1
@@ -102,7 +102,7 @@ func (t TUI) openReasoningSessionPopup() (TUI, tea.Cmd) {
 }
 
 func (t TUI) runReasoningSelect(level string) (TUI, tea.Cmd) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n")
 	}
@@ -111,7 +111,7 @@ func (t TUI) runReasoningSelect(level string) (TUI, tea.Cmd) {
 	}
 
 	cfg.ReasoningLevel = level
-	if err := session.Save(cfg); err != nil {
+	if err := config.Save(cfg); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Save: %v", err)) + "\n")
 	}
 

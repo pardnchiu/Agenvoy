@@ -126,11 +126,11 @@ func ClearToken() error {
 }
 
 func saveToken(t *StoredToken) error {
-	data, err := json.Marshal(t)
+	raw, err := json.Marshal(t)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	return keychain.Set(tokenKey, string(data))
+	return keychain.Set(tokenKey, string(raw))
 }
 
 func buildAuthURL(challenge, state, redirect string) string {

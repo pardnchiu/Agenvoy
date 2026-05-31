@@ -10,7 +10,7 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 )
 
@@ -54,7 +54,7 @@ func listMcpEntries() []mcpEntry {
 		if err != nil {
 			continue
 		}
-		name, _ := sessionBot.Get(sid)
+		name, _ := configBot.Get(sid)
 		label := sid
 		if name != "" && name != sid {
 			label = fmt.Sprintf("%s (%s)", sid, name)

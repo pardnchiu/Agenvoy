@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/pardnchiu/agenvoy/internal/session"
-	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 )
 
 type SessionModelSelect struct {
@@ -23,7 +23,7 @@ func (t TUI) commandSessionModel() (TUI, tea.Cmd, bool) {
 		return t, tea.Println(errorStyle.Render("[!] no current session") + "\n"), true
 	}
 
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n"), true
 	}
@@ -31,13 +31,13 @@ func (t TUI) commandSessionModel() (TUI, tea.Cmd, bool) {
 		return t, tea.Println(hintStyle.Render("no models configured · use /model global > add") + "\n"), true
 	}
 
-	currentModel, _ := sessionBot.GetModel(sid)
+	currentModel, _ := configBot.GetModel(sid)
 
 	values := make([]string, 0, len(cfg.Models)+1)
 	options := make([]string, 0, len(cfg.Models)+1)
-	values = append(values, sessionBot.DefaultModel)
-	autoLabel := sessionBot.DefaultModel + "  " + hintStyle.Render("(dispatcher picks)")
-	if currentModel == sessionBot.DefaultModel {
+	values = append(values, configBot.DefaultModel)
+	autoLabel := configBot.DefaultModel + "  " + hintStyle.Render("(dispatcher picks)")
+	if currentModel == configBot.DefaultModel {
 		autoLabel += "  " + hintStyle.Render("[current]")
 	}
 
@@ -74,7 +74,7 @@ func (t TUI) runSessionModelSelect(model string) (TUI, tea.Cmd) {
 	if sid == "" {
 		return t, tea.Println(errorStyle.Render("[!] no current session") + "\n")
 	}
-	sessionBot.SetModel(sid, model, "")
+	configBot.SetModel(sid, model, "")
 	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ session model: %s", model)) + "\n")
 }
 
@@ -83,6 +83,6 @@ func (t TUI) runSessionReasoningSelect(reasoning string) (TUI, tea.Cmd) {
 	if sid == "" {
 		return t, tea.Println(errorStyle.Render("[!] no current session") + "\n")
 	}
-	sessionBot.SetModel(sid, "", reasoning)
+	configBot.SetModel(sid, "", reasoning)
 	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ session reasoning: %s", reasoning)) + "\n")
 }

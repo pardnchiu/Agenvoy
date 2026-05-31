@@ -34,8 +34,8 @@ func StreamSessionLog() gin.HandlerFunc {
 		sub := pubsub.Sub(sid, 64)
 		defer sub.Close()
 
-		if data, err := json.Marshal(agentTypes.Event{Type: agentTypes.EventConnected, Text: sid}); err == nil {
-			if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", data); err != nil {
+		if raw, err := json.Marshal(agentTypes.Event{Type: agentTypes.EventConnected, Text: sid}); err == nil {
+			if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", raw); err != nil {
 				return
 			}
 			c.Writer.Flush()
@@ -53,11 +53,11 @@ func StreamSessionLog() gin.HandlerFunc {
 				if !ok {
 					return
 				}
-				data, err := json.Marshal(ev)
+				raw, err := json.Marshal(ev)
 				if err != nil {
 					continue
 				}
-				if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", data); err != nil {
+				if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", raw); err != nil {
 					return
 				}
 				c.Writer.Flush()

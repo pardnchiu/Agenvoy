@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -16,7 +16,7 @@ func GetKey() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "key is required"})
 			return
 		}
-		if !sessionManager.IsKeyExist(key) {
+		if !config.IsKeyExist(key) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "key not registered"})
 			return
 		}

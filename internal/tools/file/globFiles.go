@@ -71,11 +71,11 @@ Locate specific file types (e.g. '**/*.go' for Go files).`,
 				}
 				return "", fmt.Errorf("go_pkg_filesystem_reader.GlobFiles: %w", err)
 			}
-			data, err := json.Marshal(matches)
+			raw, err := json.Marshal(matches)
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
-			return string(data), nil
+			return string(raw), nil
 		},
 	})
 }
