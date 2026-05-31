@@ -12,7 +12,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
-type AdminSendFunc func(ctx context.Context, targetID, text string) error
+type AdminSendFunc func(ctx context.Context, targetID, str string) error
 
 var (
 	adminSenderMu sync.RWMutex
@@ -78,8 +78,8 @@ func NotifyAdminCode(ctx context.Context, code, sourceName string) {
 		return
 	}
 
-	text := fmt.Sprintf("%s requested access · verification code: %s", sourceName, code)
-	if err := send(ctx, id, text); err != nil {
+	str := fmt.Sprintf("%s requested access · verification code: %s", sourceName, code)
+	if err := send(ctx, id, str); err != nil {
 		slog.Warn("admin_channel send failed",
 			slog.String("channel", value),
 			slog.String("error", err.Error()))

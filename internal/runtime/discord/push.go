@@ -19,8 +19,8 @@ import (
 
 func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	id := strings.TrimSpace(payload.SessionID)
-	text := strings.TrimSpace(payload.Text)
-	if id == "" || text == "" || !strings.HasPrefix(id, "dc-") {
+	str := strings.TrimSpace(payload.Text)
+	if id == "" || str == "" || !strings.HasPrefix(id, "dc-") {
 		return
 	}
 
@@ -51,7 +51,7 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	}
 
 	chanName := utils.LookupChatName(filesystem.DiscordAuthPath, channelID)
-	cleanText, attachmentPaths := utils.ExtractFileMarkers(text)
+	cleanText, attachmentPaths := utils.ExtractFileMarkers(str)
 
 	if strings.TrimSpace(cleanText) != "" {
 		message := cleanText + buildPushFooter(payload.Duration, payload.Model, payload.Usage)

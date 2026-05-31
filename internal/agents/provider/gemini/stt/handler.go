@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/record"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
@@ -102,7 +102,7 @@ func handler(ctx context.Context, path, prompt string) (string, error) {
 		return "", fmt.Errorf("empty response")
 	}
 
-	if err := filesystem.UpdateUsage(model,
+	if err := record.UpdateUsage(model,
 		resp.UsageMetadata.PromptTokenCount-resp.UsageMetadata.CachedContentTokenCount,
 		resp.UsageMetadata.CandidatesTokenCount,
 		0, resp.UsageMetadata.CachedContentTokenCount,

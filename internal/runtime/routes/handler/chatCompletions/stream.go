@@ -57,11 +57,11 @@ func stream(c *gin.Context, id string, created int64, model string, events <-cha
 	var usage agentTypes.Usage
 	var streamErr error
 
-	emitContent := func(text string) bool {
-		if text == "" {
+	emitContent := func(str string) bool {
+		if str == "" {
 			return true
 		}
-		return writeChunk([]gin.H{{"index": 0, "delta": gin.H{"content": normalizeMarkdown(text)}, "finish_reason": nil}}, nil)
+		return writeChunk([]gin.H{{"index": 0, "delta": gin.H{"content": normalizeMarkdown(str)}, "finish_reason": nil}}, nil)
 	}
 	emitReasoningLine := func(line string) bool {
 		if line == "" {
@@ -153,18 +153,18 @@ func stream(c *gin.Context, id string, created int64, model string, events <-cha
 	}
 }
 
-func normalizeMarkdown(text string) string {
+func normalizeMarkdown(str string) string {
 	var blocks []string
-	text = codeBlovkRegex.ReplaceAllStringFunc(text, func(m string) string {
+	str = codeBlovkRegex.ReplaceAllStringFunc(str, func(m string) string {
 		blocks = append(blocks, m)
 		return fmt.Sprintf("\x00CB%d\x00", len(blocks)-1)
 	})
 
-	text = strings.ReplaceAll(text, "\n", "\n\n")
-	text = multiNewlineRegex.ReplaceAllString(text, "\n\n")
+	str = strings.ReplaceAll(str, "\n", "\n\n")
+	str = multiNewlineRegex.ReplaceAllString(str, "\n\n")
 
 	for i, b := range blocks {
-		text = strings.Replace(text, fmt.Sprintf("\x00CB%d\x00", i), b, 1)
+		str = strings.Replace(str, fmt.Sprintf("\x00CB%d\x00", i), b, 1)
 	}
-	return text
+	return str
 }

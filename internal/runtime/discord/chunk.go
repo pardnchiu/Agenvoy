@@ -10,16 +10,16 @@ const discordChunkBytes = 1600
 
 var fenceRegex = regexp.MustCompile("```([a-zA-Z0-9_+-]*)")
 
-func chunk(text string) []string {
-	if len(text) <= discordChunkBytes {
-		return []string{text}
+func chunk(str string) []string {
+	if len(str) <= discordChunkBytes {
+		return []string{str}
 	}
 	var chunks []string
 	carryLang := ""
 	carryOpen := false
 	pos := 0
-	for pos < len(text) {
-		remaining := text[pos:]
+	for pos < len(str) {
+		remaining := str[pos:]
 		prefix := ""
 		if carryOpen {
 			prefix = "```" + carryLang + "\n"
@@ -60,7 +60,7 @@ func chunk(text string) []string {
 		carryOpen = isOpen
 
 		pos += idx
-		for pos < len(text) && (text[pos] == '\n' || text[pos] == ' ') {
+		for pos < len(str) && (str[pos] == '\n' || str[pos] == ' ') {
 			pos++
 		}
 	}

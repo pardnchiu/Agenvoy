@@ -18,12 +18,12 @@ func sendAttachments(ctx context.Context, client *go_bot_discord.Bot, channelID,
 	}
 
 	sendFailure := func(label, detail, errMsg string) {
-		text := fmt.Sprintf("-# ⎿ ⚠️ %s failed (background upload)", label)
+		str := fmt.Sprintf("-# ⎿ ⚠️ %s failed (background upload)", label)
 		if detail != "" {
-			text = fmt.Sprintf("%s: `%s`", text, detail)
+			str = fmt.Sprintf("%s: `%s`", str, detail)
 		}
-		text = fmt.Sprintf("%s\n-# ⎿ `%s`", text, errMsg)
-		if _, err := client.Send(ctx, channelID, replyTo, text); err != nil {
+		str = fmt.Sprintf("%s\n-# ⎿ `%s`", str, errMsg)
+		if _, err := client.Send(ctx, channelID, replyTo, str); err != nil {
 			slog.Error("github.com/pardnchiu/go-bot/discord Bot.Send (notify)",
 				slog.String("label", label),
 				slog.String("error", err.Error()))

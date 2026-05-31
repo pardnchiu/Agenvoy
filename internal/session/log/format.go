@@ -18,11 +18,11 @@ const (
 func formatActionEvent(event agentTypes.Event) string {
 	switch event.Type {
 	case agentTypes.EventText:
-		text := strings.TrimSpace(event.Text)
-		if text == "" {
+		str := strings.TrimSpace(event.Text)
+		if str == "" {
 			return ""
 		}
-		return withTimestamp("assistant", flatten(text))
+		return withTimestamp("assistant", flatten(str))
 
 	case agentTypes.EventToolCall:
 		body := event.ToolName
@@ -69,18 +69,18 @@ func formatActionEvent(event agentTypes.Event) string {
 		return withTimestamp("done", strings.Join(parts, " "))
 
 	case agentTypes.EventSkillResult:
-		text := strings.TrimSpace(event.Text)
-		if text == "" {
+		str := strings.TrimSpace(event.Text)
+		if str == "" {
 			return ""
 		}
-		return withTimestamp("skill_result", flatten(text))
+		return withTimestamp("skill_result", flatten(str))
 
 	case agentTypes.EventAgentResult:
-		text := strings.TrimSpace(event.Text)
-		if text == "" {
+		str := strings.TrimSpace(event.Text)
+		if str == "" {
 			return ""
 		}
-		return withTimestamp("agent_result", flatten(text))
+		return withTimestamp("agent_result", flatten(str))
 	}
 	return ""
 }
@@ -90,9 +90,9 @@ func withTimestamp(kind, body string) string {
 	return fmt.Sprintf("[%s][%s][%s] %s", ts, tuiHash.Get(), kind, body)
 }
 
-func flatten(text string) string {
-	text = strings.ReplaceAll(text, "\r\n", "\n")
-	text = strings.ReplaceAll(text, "\r", "\n")
-	text = strings.ReplaceAll(text, "\n", ActionNewlineMarker)
-	return text
+func flatten(str string) string {
+	str = strings.ReplaceAll(str, "\r\n", "\n")
+	str = strings.ReplaceAll(str, "\r", "\n")
+	str = strings.ReplaceAll(str, "\n", ActionNewlineMarker)
+	return str
 }

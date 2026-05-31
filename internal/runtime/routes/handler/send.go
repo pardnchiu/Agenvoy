@@ -21,7 +21,7 @@ import (
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
-	"github.com/pardnchiu/agenvoy/internal/session/pubsub"
+	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	"github.com/pardnchiu/agenvoy/internal/session/summary"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 )

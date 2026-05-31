@@ -11,7 +11,7 @@ import (
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
-func SendAdminCode(ctx context.Context, chatID, text string) error {
+func SendAdminCode(ctx context.Context, chatID, str string) error {
 	token := strings.TrimSpace(keychain.Get(Key))
 	if token == "" {
 		return fmt.Errorf("telegram token missing")
@@ -24,7 +24,7 @@ func SendAdminCode(ctx context.Context, chatID, text string) error {
 	if err != nil {
 		return fmt.Errorf("github.com/pardnchiu/go-bot/telegram New: %w", err)
 	}
-	if _, err := client.Send(ctx, id, 0, html.EscapeString(text), go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
+	if _, err := client.Send(ctx, id, 0, html.EscapeString(str), go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
 		return fmt.Errorf("github.com/pardnchiu/go-bot/telegram Bot.Send: %w", err)
 	}
 	return nil

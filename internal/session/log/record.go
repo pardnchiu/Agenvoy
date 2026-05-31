@@ -22,12 +22,12 @@ var (
 	actionLogMu     sync.Mutex
 )
 
-func Append(sessionID, text string) {
-	text = strings.TrimSpace(text)
-	if text == "" {
+func Append(sessionID, str string) {
+	str = strings.TrimSpace(str)
+	if str == "" {
 		return
 	}
-	appendAction(sessionID, withTimestamp("user", flatten(text)))
+	appendAction(sessionID, withTimestamp("user", flatten(str)))
 }
 
 func Record(sessionID string, event agentTypes.Event) {
@@ -50,8 +50,8 @@ func Record(sessionID string, event agentTypes.Event) {
 }
 
 func appendAssistant(sessionID string, event agentTypes.Event) {
-	text := strings.TrimSpace(event.Text)
-	if text == "" || sessionID == "" {
+	str := strings.TrimSpace(event.Text)
+	if str == "" || sessionID == "" {
 		return
 	}
 
@@ -67,7 +67,7 @@ func appendAssistant(sessionID string, event agentTypes.Event) {
 	if sb.Len() > 0 {
 		sb.WriteByte('\n')
 	}
-	sb.WriteString(text)
+	sb.WriteString(str)
 }
 
 func flushAssistant(sessionID string, event agentTypes.Event) {

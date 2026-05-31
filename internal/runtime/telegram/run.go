@@ -164,11 +164,11 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 		return nil
 	}
 
-	markStatus := func(text string) {
-		wrapped := fmt.Sprintf("<blockquote expandable>%s</blockquote>", html.EscapeString(text))
+	markStatus := func(str string) {
+		wrapped := fmt.Sprintf("<blockquote expandable>%s</blockquote>", html.EscapeString(str))
 		if err := b.client.SendStatus(ctx, in.ChatID, in.MessageID, wrapped, go_bot_telegram.WithStatusSendType(go_bot_telegram.TypeHTML)); err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/telegram Bot.client.SendStatus",
-				slog.String("text", text),
+				slog.String("text", str),
 				slog.String("chat", chatName(in)),
 				slog.Int("replyTo", in.MessageID),
 				slog.String("error", err.Error()))

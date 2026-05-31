@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/record"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -62,7 +62,7 @@ func readDeamonError(args json.RawMessage) (string, []string, error) {
 	params.H = min(params.H, 72)
 	cutoff := time.Now().Add(-time.Duration(params.H) * time.Hour)
 
-	lines, err := filesystem.ScanDaemonLogSince(readLogWindowBytes, cutoff)
+	lines, err := record.GetLog(readLogWindowBytes, cutoff)
 	if err != nil {
 		return "", nil, err
 	}

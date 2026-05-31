@@ -206,11 +206,11 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	}
 	utils.EventLog("[Discord]", agentTypes.Event{}, sess.ID, content)
 
-	markStatus := func(text string) {
-		if err := b.client.SendStatus(ctx, in.ChannelID, in.MessageID, text); err != nil {
+	markStatus := func(str string) {
+		if err := b.client.SendStatus(ctx, in.ChannelID, in.MessageID, str); err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.SendStatus",
 				slog.String("session", sess.ID),
-				slog.String("text", text),
+				slog.String("text", str),
 				slog.String("channel", channelName(in)),
 				slog.String("error", err.Error()))
 		}

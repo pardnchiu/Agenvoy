@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/session/pubsub"
+	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 )
 
 const (

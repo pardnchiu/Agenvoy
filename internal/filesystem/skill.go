@@ -70,13 +70,13 @@ func ParseSkill(path string) (*Skill, error) {
 
 func ParseSkillBytes(absPath, folderPath string, data []byte) *Skill {
 	hash := fmt.Sprintf("%x", sha256.Sum256(data))
-	text := string(data)
+	str := string(data)
 	skill := &Skill{
 		Name:    filepath.Base(folderPath),
 		AbsPath: absPath,
 		Path:    folderPath,
-		Content: text,
-		Body:    text,
+		Content: str,
+		Body:    str,
 		Hash:    hash,
 	}
 	header, body, err := extractSkillHeader(data)

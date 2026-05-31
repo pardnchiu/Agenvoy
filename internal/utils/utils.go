@@ -42,7 +42,7 @@ func CheckAgentEndpointAlive(ctx context.Context, agent agentTypes.Agent, timeou
 
 var fileMarkerRegex = regexp.MustCompile(`\[SEND_FILE:([^\]]+)\]`)
 
-func ExtractFileMarkers(text string) (cleanText string, paths []string) {
+func ExtractFileMarkers(str string) (cleanText string, paths []string) {
 	seen := map[string]bool{}
 	var raw []string
 	collect := func(path string) {
@@ -54,10 +54,10 @@ func ExtractFileMarkers(text string) (cleanText string, paths []string) {
 		raw = append(raw, path)
 	}
 
-	for _, m := range fileMarkerRegex.FindAllStringSubmatch(text, -1) {
+	for _, m := range fileMarkerRegex.FindAllStringSubmatch(str, -1) {
 		collect(m[1])
 	}
-	text = fileMarkerRegex.ReplaceAllString(text, "")
+	str = fileMarkerRegex.ReplaceAllString(str, "")
 
 	for _, p := range raw {
 		info, err := os.Stat(p)
@@ -67,6 +67,6 @@ func ExtractFileMarkers(text string) (cleanText string, paths []string) {
 		paths = append(paths, p)
 	}
 
-	cleanText = strings.TrimSpace(text)
+	cleanText = strings.TrimSpace(str)
 	return
 }

@@ -1,10 +1,11 @@
-package filesystem
+package record
 
 import (
 	"fmt"
 	"os"
 	"syscall"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
@@ -21,22 +22,22 @@ func UpdateUsage(model string, input, output, cacheCreate, cacheRead int) error 
 		return nil
 	}
 
-	// * lock file: kept on os.OpenFile because syscall.Flock needs the raw fd
-	path := UsagePath + ".lock"
-	lock, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0600)
+	path := filesystem.UsagePath
+	lockPath := path + ".lock"
+	lock, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		return fmt.Errorf("os.OpenFile: %w", err)
+		return fmt.Errorf("os OpenFile [%x]: %w", lockPath, err)
 	}
 	defer lock.Close()
 
 	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX); err != nil {
-		return fmt.Errorf("syscall.Flock: %w", err)
+		return fmt.Errorf("syscall Flock: %w", err)
 	}
 	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 
 	usage := make(map[string]Usage)
-	if go_pkg_filesystem_reader.Exists(UsagePath) {
-		if loaded, err := go_pkg_filesystem.ReadJSON[map[string]Usage](UsagePath); err == nil && loaded != nil {
+	if go_pkg_filesystem_reader.Exists(path) {
+		if loaded, err := go_pkg_filesystem.ReadJSON[map[string]Usage](path); err == nil && loaded != nil {
 			usage = loaded
 		}
 	}
@@ -49,8 +50,8 @@ func UpdateUsage(model string, input, output, cacheCreate, cacheRead int) error 
 		CacheRead:   prev.CacheRead + cacheRead,
 	}
 
-	if err := go_pkg_filesystem.WriteJSON(UsagePath, usage, false); err != nil {
-		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteJSON (%s): %w", UsagePath, err)
+	if err := go_pkg_filesystem.WriteJSON(path, usage, false); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteJSON [%s]: %w", path, err)
 	}
 	return nil
 }

@@ -16,6 +16,7 @@ var (
 	filesystemOnce          sync.Once
 	AgenvoyDir              string
 	ConfigPath              string
+	DaemonLogPath           string
 	UsagePath               string
 	McpPath                 string
 	StoreDir                string
@@ -72,6 +73,7 @@ func Init() error {
 	filesystemOnce.Do(func() {
 		AgenvoyDir = filepath.Join(homeDir, ".config", projectName)
 		ConfigPath = filepath.Join(AgenvoyDir, "config.json")
+		DaemonLogPath = filepath.Join(AgenvoyDir, "daemon.log")
 		UsagePath = filepath.Join(AgenvoyDir, "usage.json")
 		McpPath = filepath.Join(AgenvoyDir, "mcp.json")
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/session/toolError"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -49,7 +49,7 @@ Use when a tool returns "no data: {hash}" and the full context is needed.`,
 				return "", fmt.Errorf("hash is required")
 			}
 
-			result := filesystem.GetError(sessionId, hash)
+			result := toolError.Get(sessionId, hash)
 			if result == "" {
 				return "tool not found", nil
 			}

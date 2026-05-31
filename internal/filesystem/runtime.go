@@ -59,9 +59,6 @@ type RuntimeLimits struct {
 	MaxExternalAgentTimeoutMin int    `json:"max_external_agent_timeout_min,omitempty"`
 }
 
-// LoadRuntime reads the `limits` section from config.json, fills missing fields
-// with defaults, writes back if anything was missing, and assigns the resolved
-// values to package vars. Must be called after Init().
 func LoadRuntime() error {
 	if ConfigPath == "" {
 		return fmt.Errorf("filesystem.LoadRuntime: ConfigPath not initialized (call Init first)")

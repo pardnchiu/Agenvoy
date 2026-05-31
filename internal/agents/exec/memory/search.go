@@ -88,8 +88,8 @@ func keywordScan(db *toriidb.Session, tool, keyword string, limit int) []Record 
 			return true
 		}
 		for _, kw := range rec.Keywords {
-			text := strings.ToLower(kw)
-			if strings.Contains(text, lower) || strings.Contains(lower, text) {
+			str := strings.ToLower(kw)
+			if strings.Contains(str, lower) || strings.Contains(lower, str) {
 				return true
 			}
 		}

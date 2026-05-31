@@ -156,12 +156,12 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 	}
 
 	if err := <-errCh; err != nil {
-		text := strings.TrimSpace(sb.String())
-		if text == "" {
+		str := strings.TrimSpace(sb.String())
+		if str == "" {
 			return "", fmt.Errorf("subagent execute: %w", err)
 		}
 		return fmt.Sprintf("[subagent partial result · %s · session=%s]\n%s\n\n[error] %s",
-			agent.Name(), sessionID, text, err.Error()), nil
+			agent.Name(), sessionID, str, err.Error()), nil
 	}
 
 	result := strings.TrimSpace(sb.String())

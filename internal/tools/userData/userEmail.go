@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -50,13 +50,13 @@ func registSetUserEmail() {
 				return "", fmt.Errorf("invalid format: %q", email)
 			}
 
-			dic, err := filesystem.ReadConfig()
+			dic, err := config.Get()
 			if err != nil {
 				return "", err
 			}
 			dic["email"] = email
 
-			if err := filesystem.WriteConfig(dic); err != nil {
+			if err := config.Write(dic); err != nil {
 				return "", err
 			}
 
@@ -82,7 +82,7 @@ func registGetUserEmail() {
 			"properties": map[string]any{},
 		},
 		Handler: func(_ context.Context, _ *toolTypes.Executor, _ json.RawMessage) (string, error) {
-			dic, err := filesystem.ReadConfig()
+			dic, err := config.Get()
 			if err != nil {
 				return "", err
 			}

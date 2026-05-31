@@ -28,8 +28,8 @@ func sanitizeHTML(s string) string {
 
 func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	id := strings.TrimSpace(payload.SessionID)
-	text := sanitizeHTML(strings.TrimSpace(payload.Text))
-	if id == "" || text == "" || !strings.HasPrefix(id, "tg-") {
+	str := sanitizeHTML(strings.TrimSpace(payload.Text))
+	if id == "" || str == "" || !strings.HasPrefix(id, "tg-") {
 		return
 	}
 
@@ -68,7 +68,7 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	}
 
 	chatName := utils.LookupChatName(filesystem.TelegramAuthPath, strconv.FormatInt(chatID, 10))
-	cleanText, photoPaths, docPaths := extractFileMarkers(text)
+	cleanText, photoPaths, docPaths := extractFileMarkers(str)
 
 	if strings.TrimSpace(cleanText) != "" {
 		message := cleanText + buildPushFooter(payload.Duration, payload.Model, payload.Usage)

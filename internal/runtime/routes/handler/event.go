@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/session/pubsub"
+	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 )
 
 func PublishSessionEvent() gin.HandlerFunc {

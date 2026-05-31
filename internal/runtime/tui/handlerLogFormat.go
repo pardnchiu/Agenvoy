@@ -68,11 +68,11 @@ func renderActionLine(p parsedAction) string {
 		return messageBlock(body)
 
 	case "assistant":
-		text := strings.TrimSpace(body)
-		if text == "" {
+		str := strings.TrimSpace(body)
+		if str == "" {
 			return ""
 		}
-		return renderEvent(agentTypes.Event{Type: agentTypes.EventText, Text: text})
+		return renderEvent(agentTypes.Event{Type: agentTypes.EventText, Text: str})
 
 	case "tool_call":
 		name, args, _ := strings.Cut(body, " ")
@@ -103,11 +103,11 @@ func renderActionLine(p parsedAction) string {
 		return renderEvent(formatDone(body))
 
 	case "skill_result":
-		text := strings.TrimSpace(body)
-		if text == "" {
+		str := strings.TrimSpace(body)
+		if str == "" {
 			return ""
 		}
-		return renderEvent(agentTypes.Event{Type: agentTypes.EventSkillResult, Text: text})
+		return renderEvent(agentTypes.Event{Type: agentTypes.EventSkillResult, Text: str})
 	}
 	return ""
 }

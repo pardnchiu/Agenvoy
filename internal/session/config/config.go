@@ -65,8 +65,26 @@ func (c *Config) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func Get() (map[string]any, error) {
+	dic, err := go_pkg_filesystem.ReadJSON[map[string]any](filesystem.ConfigPath)
+	if err != nil {
+		return nil, fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem ReadJSON [%s]: %w", filesystem.ConfigPath, err)
+	}
+	if dic == nil {
+		dic = map[string]any{}
+	}
+	return dic, nil
+}
+
+func Write(dic map[string]any) error {
+	if err := go_pkg_filesystem.WriteJSON(filesystem.ConfigPath, dic, false); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteJSON [%s]: %w", filesystem.ConfigPath, err)
+	}
+	return nil
+}
+
 func Save(cfg *Config) error {
-	oldDic, err := filesystem.ReadConfig()
+	oldDic, err := Get()
 	if err != nil {
 		oldDic = map[string]any{}
 	}
@@ -82,7 +100,7 @@ func Save(cfg *Config) error {
 
 	maps.Copy(oldDic, newDic)
 	delete(oldDic, "planner_model")
-	return filesystem.WriteConfig(oldDic)
+	return Write(oldDic)
 }
 
 func SaveKey(key string) error {

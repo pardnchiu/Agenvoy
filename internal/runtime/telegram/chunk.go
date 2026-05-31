@@ -15,15 +15,15 @@ type openTag struct {
 	attrs string
 }
 
-func chunk(text string) []string {
-	if len(text) <= telegramChunkBytes {
-		return []string{text}
+func chunk(str string) []string {
+	if len(str) <= telegramChunkBytes {
+		return []string{str}
 	}
 	var chunks []string
 	var carry []openTag
 	pos := 0
-	for pos < len(text) {
-		remaining := text[pos:]
+	for pos < len(str) {
+		remaining := str[pos:]
 		prefix := openTags(carry)
 		budget := telegramChunkBytes - len(prefix)
 		if budget <= 0 {
@@ -56,7 +56,7 @@ func chunk(text string) []string {
 		carry = stack
 
 		pos += idx
-		for pos < len(text) && (text[pos] == '\n' || text[pos] == ' ') {
+		for pos < len(str) && (str[pos] == '\n' || str[pos] == ' ') {
 			pos++
 		}
 	}

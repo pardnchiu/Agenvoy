@@ -271,8 +271,8 @@ func parseSSEStream(resp *http.Response) (*agentTypes.Output, error) {
 	}
 
 	msg := agentTypes.Message{Role: "assistant"}
-	if text := textBuf.String(); text != "" {
-		msg.Content = text
+	if str := textBuf.String(); str != "" {
+		msg.Content = str
 	}
 	msg.ToolCalls = toolCalls
 

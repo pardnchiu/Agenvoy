@@ -43,10 +43,10 @@ func (t *telegramTransport) LookupChatID(sessionID string) (int64, error) {
 
 func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolName, toolArgs string, multiline bool) (int, error) {
 	const limit = 3200
-	var text string
+	var str string
 	var modes []go_bot_telegram.MessageOption
 	if r := []rune(toolArgs); len(r) > limit {
-		text = fmt.Sprintf("Run %s?\n\n%s...", toolName, string(r[:limit]))
+		str = fmt.Sprintf("Run %s?\n\n%s...", toolName, string(r[:limit]))
 	} else {
 		var body string
 		if multiline {
@@ -54,10 +54,10 @@ func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolN
 		} else {
 			body = fmt.Sprintf("<code>%s</code>", html.EscapeString(toolArgs))
 		}
-		text = fmt.Sprintf("Run %s?\n\n%s", html.EscapeString(toolName), body)
+		str = fmt.Sprintf("Run %s?\n\n%s", html.EscapeString(toolName), body)
 		modes = append(modes, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
 	}
-	msg, err := t.bot.client.SendSelect(ctx, chatID, 0, text, runtime.ConfirmOptions(), modes...)
+	msg, err := t.bot.client.SendSelect(ctx, chatID, 0, str, runtime.ConfirmOptions(), modes...)
 	if err != nil {
 		return 0, err
 	}

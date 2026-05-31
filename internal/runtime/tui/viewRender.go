@@ -62,9 +62,9 @@ func headerBlock(cwd, daemon, http, discord, telegram string) string {
 	return headerStyle.Render(body)
 }
 
-func messageBlock(text string) string {
+func messageBlock(str string) string {
 	var sb strings.Builder
-	for i, line := range strings.Split(text, "\n") {
+	for i, line := range strings.Split(str, "\n") {
 		if i > 0 {
 			sb.WriteString("\n  ")
 		} else {
@@ -120,11 +120,11 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 		if ev.Source == "" {
 			return "", false
 		}
-		text := strings.TrimSpace(ev.Text)
-		if text == "" {
+		str := strings.TrimSpace(ev.Text)
+		if str == "" {
 			return "", false
 		}
-		return hintStyle.Render("  ⎿ " + srcPrefix + "agent: " + text), true
+		return hintStyle.Render("  ⎿ " + srcPrefix + "agent: " + str), true
 
 	case agentTypes.EventToolCall:
 		if ev.ToolName == "ask_user" || ev.ToolName == "store_secret" {
@@ -144,14 +144,14 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 		return hintStyle.Render(line), true
 
 	case agentTypes.EventText:
-		text := ev.Text
-		if text == "" {
+		str := ev.Text
+		if str == "" {
 			return "", false
 		}
 		if ev.Source != "" {
-			return hintStyle.Render("  ⎿ " + srcPrefix + oneLine(text)), true
+			return hintStyle.Render("  ⎿ " + srcPrefix + oneLine(str)), true
 		}
-		return messageRow(text, sessionLabel), true
+		return messageRow(str, sessionLabel), true
 
 	case agentTypes.EventExecError:
 		return errorStyle.Render("  ⎿ " + srcPrefix + "error: " + ev.ToolName + " — " + ev.Text), true

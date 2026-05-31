@@ -9,8 +9,8 @@ import (
 
 var imageExts = map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".webp": true}
 
-func extractFileMarkers(text string) (cleanText string, photoPaths []string, docPaths []string) {
-	cleanText, paths := utils.ExtractFileMarkers(text)
+func extractFileMarkers(str string) (cleanText string, photoPaths []string, docPaths []string) {
+	cleanText, paths := utils.ExtractFileMarkers(str)
 	for _, p := range paths {
 		if imageExts[strings.ToLower(filepath.Ext(p))] {
 			photoPaths = append(photoPaths, p)

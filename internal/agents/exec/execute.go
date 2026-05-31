@@ -22,12 +22,13 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/record"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
-	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	configStatus "github.com/pardnchiu/agenvoy/internal/session/config/status"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
@@ -38,20 +39,20 @@ var timestampHeaderRegex = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
 
 var summaryLeakMarkerRegex = regexp.MustCompile(`(?mi)^\s*(?:[#*>\-]+\s*)?(?:Prior Conversation Context|Prior summary \(reference only\)|background summary of prior discussion|Strict rules:)`)
 
-func StripModelResponse(text string) string {
-	text = timestampHeaderRegex.ReplaceAllString(text, "")
-	if loc := summaryLeakMarkerRegex.FindStringIndex(text); loc != nil {
-		dropped := strings.TrimSpace(text[loc[0]:])
+func StripModelResponse(str string) string {
+	str = timestampHeaderRegex.ReplaceAllString(str, "")
+	if loc := summaryLeakMarkerRegex.FindStringIndex(str); loc != nil {
+		dropped := strings.TrimSpace(str[loc[0]:])
 		head := dropped
 		if len(head) > 120 {
 			head = head[:120]
 		}
-		text = text[:loc[0]]
+		str = str[:loc[0]]
 		slog.Warn("StripModelResponse summary leak stripped",
 			slog.Int("dropped_chars", len(dropped)),
 			slog.String("dropped_head", head))
 	}
-	lines := strings.Split(text, "\n")
+	lines := strings.Split(str, "\n")
 	inFence := false
 	for i, line := range lines {
 		trimmed := strings.TrimLeft(line, " \t")
@@ -436,15 +437,15 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 		switch value := choice.Message.Content.(type) {
 		case string:
-			text := value
-			if text == "" {
+			str := value
+			if str == "" {
 				if actionError(&emptyCount, events) {
 					return nil
 				}
 				continue
 			}
 
-			stripped := StripModelResponse(text)
+			stripped := StripModelResponse(str)
 			if stripped == "" {
 				if actionError(&emptyCount, events) {
 					return nil
@@ -478,7 +479,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			return fmt.Errorf("unexpected content type: %T", choice.Message.Content)
 		}
 
-		if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
+		if err := record.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 			slog.Warn("usageManager.Update",
 				slog.String("session", session.ID),
 				slog.String("error", err.Error()))
@@ -506,7 +507,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		usage.CacheRead += resp.Usage.CacheRead
 		if text, ok := resp.Choices[0].Message.Content.(string); ok && text != "" {
 			sendText(events, StripModelResponse(text))
-			if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
+			if err := record.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 				slog.Warn("usageManager.Update",
 					slog.String("session", session.ID),
 					slog.String("error", err.Error()))
@@ -517,7 +518,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	}
 
 	sendText(events, "no usable data, retry later, or using other tools.")
-	if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
+	if err := record.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 		slog.Warn("usageManager.Update",
 			slog.String("session", session.ID),
 			slog.String("error", err.Error()))
@@ -536,10 +537,10 @@ func actionError(emptyCount *int, events chan<- agentTypes.Event) bool {
 	return false
 }
 
-func sendText(events chan<- agentTypes.Event, text string) {
-	text = strings.TrimRight(text, "\n")
-	if text != "" {
-		for line := range strings.SplitSeq(text, "\n") {
+func sendText(events chan<- agentTypes.Event, str string) {
+	str = strings.TrimRight(str, "\n")
+	if str != "" {
+		for line := range strings.SplitSeq(str, "\n") {
 			events <- agentTypes.Event{Type: agentTypes.EventText, Text: line}
 		}
 	}
