@@ -67,11 +67,11 @@ func registStoreSecret() {
 				return "", fmt.Errorf("session SaveKey: %w", err)
 			}
 
-			bytes, err := json.Marshal(map[string]any{"ok": true, "key": key})
+			raw, err := json.Marshal(map[string]any{"ok": true, "key": key})
 			if err != nil {
 				return "", fmt.Errorf("json Marshal: %w", err)
 			}
-			return string(bytes), nil
+			return string(raw), nil
 		},
 	})
 }

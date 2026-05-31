@@ -14,11 +14,11 @@ func (t *Translator) JSONRequest(doc *APIDocumentData, params map[string]any) (*
 
 	var reader io.Reader
 	if doc.Endpoint.Method != "GET" && len(params) > 0 {
-		data, err := json.Marshal(params)
+		raw, err := json.Marshal(params)
 		if err != nil {
 			return nil, fmt.Errorf("json.Marshal: %w", err)
 		}
-		reader = strings.NewReader(string(data))
+		reader = strings.NewReader(string(raw))
 	}
 
 	if doc.Endpoint.Method == "GET" {

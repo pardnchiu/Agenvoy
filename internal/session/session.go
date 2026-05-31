@@ -48,11 +48,11 @@ func AppendHistory(sessionID string, delta []agentTypes.Message) error {
 	}
 	latest = append(latest, delta...)
 
-	data, err := json.Marshal(latest)
+	raw, err := json.Marshal(latest)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
-	if err := go_pkg_filesystem.WriteFile(historyPath, string(data), 0644); err != nil {
+	if err := go_pkg_filesystem.WriteFile(historyPath, string(raw), 0644); err != nil {
 		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteFile: %w", err)
 	}
 	return nil

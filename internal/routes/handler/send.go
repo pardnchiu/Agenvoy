@@ -21,6 +21,7 @@ import (
 	sessionBot "github.com/pardnchiu/agenvoy/internal/session/bot"
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/session/pubsub"
+	"github.com/pardnchiu/agenvoy/internal/session/summary"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 )
 
@@ -185,7 +186,7 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 	session.BaseLen = len(oldHistory)
 	session.OldHistories = maxHistory
 
-	if summary := sessionManager.GetSummaryPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
+	if summary := summary.GetPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
 		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
 	session.ToolHistories = []agentTypes.Message{}

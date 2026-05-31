@@ -70,7 +70,7 @@ func registSendToDiscordChannel() {
 				return "", fmt.Errorf("github.com/pardnchiu/go-bot/discord Bot.Send: %w", err)
 			}
 
-			out, err := json.Marshal(map[string]any{
+			raw, err := json.Marshal(map[string]any{
 				"ok":         true,
 				"channel_id": channelID,
 				"message_id": msg.ID,
@@ -78,7 +78,7 @@ func registSendToDiscordChannel() {
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
-			return string(out), nil
+			return string(raw), nil
 		},
 	})
 }

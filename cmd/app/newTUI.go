@@ -31,7 +31,7 @@ import (
 func newTUI(initialInput string, onceCall, allowAll bool) {
 	lipgloss.SetHasDarkBackground(true)
 
-	session.SetHash(session.Hash())
+	session.SetTUIHash()
 
 	if err := filesystem.Init(); err != nil {
 		slog.Error("filesystem.Init",

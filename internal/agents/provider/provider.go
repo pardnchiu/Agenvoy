@@ -56,9 +56,9 @@ func ThinkingBudget(level string) int {
 }
 
 func parse(data []byte) map[string]ModelItem {
-	var m map[string]ModelItem
-	json.Unmarshal(data, &m)
-	return m
+	var dic map[string]ModelItem
+	json.Unmarshal(data, &dic)
+	return dic
 }
 
 func providers() map[string]map[string]ModelItem {

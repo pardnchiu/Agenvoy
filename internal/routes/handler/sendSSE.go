@@ -44,14 +44,14 @@ func sendSSE(c *gin.Context, sessionID string, input string, events <-chan agent
 			continue
 		}
 
-		data, err := json.Marshal(event)
+		raw, err := json.Marshal(event)
 		if err != nil {
 			continue
 		}
 
 		utils.EventLog("[HTTP]", event, sessionID, "")
 
-		fmt.Fprintf(writer, "data: %s\n\n", data)
+		fmt.Fprintf(writer, "data: %s\n\n", raw)
 		flusher.Flush()
 
 		if event.Type == agentTypes.EventDone || event.Type == agentTypes.EventError {

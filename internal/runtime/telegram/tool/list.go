@@ -26,11 +26,11 @@ func registListTelegramChat() {
 			if entries == nil {
 				entries = []utils.ChatEntry{}
 			}
-			out, err := json.Marshal(entries)
+			raw, err := json.Marshal(entries)
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
-			return string(out), nil
+			return string(raw), nil
 		},
 	})
 }

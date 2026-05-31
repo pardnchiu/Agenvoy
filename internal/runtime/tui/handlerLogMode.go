@@ -137,7 +137,7 @@ func drainNew(path string, lastSize int64) int64 {
 		return current
 	}
 
-	own := session.GetHash()
+	own := session.GetTUIHash()
 	scanner := bufio.NewScanner(io.LimitReader(file, current-lastSize))
 	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
 	for scanner.Scan() {

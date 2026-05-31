@@ -80,7 +80,7 @@ func registSendToTelegramChat() {
 				return "", fmt.Errorf("github.com/pardnchiu/go-bot/telegram Bot.Send: %w", err)
 			}
 
-			out, err := json.Marshal(map[string]any{
+			raw, err := json.Marshal(map[string]any{
 				"ok":         true,
 				"chat_id":    chatIDStr,
 				"message_id": msg.ID,
@@ -88,7 +88,7 @@ func registSendToTelegramChat() {
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
-			return string(out), nil
+			return string(raw), nil
 		},
 	})
 }

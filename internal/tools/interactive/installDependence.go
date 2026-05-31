@@ -121,11 +121,11 @@ func registInstallDependence() {
 }
 
 func jsonString(dic map[string]any) (string, error) {
-	bytes, err := json.Marshal(dic)
+	raw, err := json.Marshal(dic)
 	if err != nil {
 		return "", fmt.Errorf("json Marshal: %w", err)
 	}
-	return string(bytes), nil
+	return string(raw), nil
 }
 
 func buildCommand(name string) (string, []string, string, error) {
@@ -199,12 +199,12 @@ func readStderr(path string) string {
 		return ""
 	}
 
-	bytes, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return ""
 	}
 
-	result := strings.TrimSpace(string(bytes))
+	result := strings.TrimSpace(string(raw))
 	const max = 4096
 	if len(result) > max {
 		result = "...(truncated)\n" + result[len(result)-max:]

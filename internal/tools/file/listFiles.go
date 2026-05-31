@@ -84,11 +84,11 @@ Inspect immediate children; recursive=true walks subtree files.`,
 				}
 			}
 
-			data, err := json.Marshal(files)
+			raw, err := json.Marshal(files)
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
-			return string(data), nil
+			return string(raw), nil
 		},
 	})
 }

@@ -250,11 +250,11 @@ func (a *Agent) convertToOutput(resp *Output) *agentTypes.Output {
 		} else if item.Type == "tool_use" {
 			arg := ""
 			if item.Input != nil {
-				data, err := json.Marshal(item.Input)
+				raw, err := json.Marshal(item.Input)
 				if err != nil {
 					continue
 				}
-				arg = string(data)
+				arg = string(raw)
 			}
 
 			toolCall := agentTypes.ToolCall{

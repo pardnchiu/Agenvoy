@@ -174,7 +174,7 @@ func disableKuradb() {
 
 func cmdDaemon() {
 	installDaemonSlog()
-	session.SetHash(session.Hash())
+	session.SetTUIHash()
 
 	if err := filesystem.Init(); err != nil {
 		slog.Error("filesystem.Init",

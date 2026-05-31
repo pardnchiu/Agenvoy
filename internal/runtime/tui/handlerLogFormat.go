@@ -44,7 +44,7 @@ func parseActionLine(raw string) (parsedAction, bool) {
 		kind = third
 		rest = after
 	} else {
-		hash = session.DefaultHash
+		hash = session.DefaultTUIHash
 		kind = mid
 	}
 

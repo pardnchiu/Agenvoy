@@ -17,8 +17,8 @@ func ReadConfig() (map[string]any, error) {
 	return dic, nil
 }
 
-func WriteConfig(m map[string]any) error {
-	if err := go_pkg_filesystem.WriteJSON(ConfigPath, m, false); err != nil {
+func WriteConfig(dic map[string]any) error {
+	if err := go_pkg_filesystem.WriteJSON(ConfigPath, dic, false); err != nil {
 		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteJSON: %w", err)
 	}
 	return nil

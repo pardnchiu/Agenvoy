@@ -93,11 +93,11 @@ func fetch(ctx context.Context, reqPath string) (string, error) {
 		items = items[:10]
 	}
 
-	bytes, err := json.Marshal(items)
+	raw, err := json.Marshal(items)
 	if err != nil {
 		return "", fmt.Errorf("json.Marshal: %w", err)
 	}
-	return string(bytes), nil
+	return string(raw), nil
 }
 
 func deduplicate(items []item) []item {

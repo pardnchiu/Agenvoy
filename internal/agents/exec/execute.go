@@ -484,8 +484,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 
 		if !session.Stateless && len(session.Tools) > 0 {
-			if data, err := json.Marshal(session.Tools); err == nil {
-				sessionManager.SaveToToolCall(session.ID, string(data))
+			if raw, err := json.Marshal(session.Tools); err == nil {
+				sessionManager.SaveToToolCall(session.ID, string(raw))
 			}
 		}
 		return nil

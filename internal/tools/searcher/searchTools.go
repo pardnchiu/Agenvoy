@@ -96,7 +96,7 @@ func registSearchTools() {
 				Query      string   `json:"query"`
 				TotalTools int      `json:"total_tools"`
 			}
-			out, err := json.Marshal(output{
+			raw, err := json.Marshal(output{
 				Injected:   matches,
 				Query:      params.Query,
 				TotalTools: len(e.AllTools),
@@ -104,7 +104,7 @@ func registSearchTools() {
 			if err != nil {
 				return "", fmt.Errorf("json.Marshal: %w", err)
 			}
-			return string(out), nil
+			return string(raw), nil
 		},
 	})
 }
