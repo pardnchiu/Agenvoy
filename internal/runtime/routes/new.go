@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/pardnchiu/agenvoy/internal/routes/handler"
-	completionsHandler "github.com/pardnchiu/agenvoy/internal/routes/handler/chatCompletions"
+	"github.com/pardnchiu/agenvoy/internal/runtime/routes/handler"
+	completionsHandler "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/chatCompletions"
 )
 
 func New() *gin.Engine {
