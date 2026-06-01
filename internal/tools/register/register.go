@@ -48,13 +48,13 @@ func Regist(d Def) {
 			slog.String("name", d.Name))
 	}
 
-	params, _ := json.Marshal(d.Parameters)
+	raw, _ := json.Marshal(d.Parameters)
 	tool := toolTypes.Tool{
 		Type: "function",
 		Function: toolTypes.ToolFunction{
 			Name:        d.Name,
 			Description: d.Description,
-			Parameters:  params,
+			Parameters:  raw,
 		},
 	}
 	handlerMap[d.Name] = d.Handler
@@ -101,11 +101,11 @@ func IsConcurrent(name string) bool {
 }
 
 func JSON() []byte {
-	b, err := json.Marshal(defList)
+	raw, err := json.Marshal(defList)
 	if err != nil {
 		return []byte("[]")
 	}
-	return b
+	return raw
 }
 
 func Dispatch(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {

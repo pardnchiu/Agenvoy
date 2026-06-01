@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/line"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	go_bot_line "github.com/pardnchiu/go-bot/line"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
@@ -43,7 +43,7 @@ func (t TUI) commandLine(parts []string) (TUI, tea.Cmd, bool) {
 	}
 
 	enabled := false
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		enabled = cfg.LineEnabled && keychain.Get(line.SecretKey) != "" && keychain.Get(line.TokenKey) != ""
 	}
 	cursor := 0
@@ -105,13 +105,13 @@ func enableLine(secret, token string) tea.Cmd {
 		if err := keychain.Set(line.TokenKey, token); err != nil {
 			return LineDone{action: "enable", err: fmt.Errorf("keychain.Set token: %w", err)}
 		}
-		cfg, err := session.Load()
+		cfg, err := config.Load()
 		if err != nil {
 			return LineDone{action: "enable", err: fmt.Errorf("session.Load: %w", err)}
 		}
 		cfg.LineEnabled = true
 		cfg.LineUsername = name
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return LineDone{action: "enable", err: fmt.Errorf("session.Save: %w", err)}
 		}
 		return LineDone{action: "enable"}
@@ -120,7 +120,7 @@ func enableLine(secret, token string) tea.Cmd {
 
 func disableLine() tea.Cmd {
 	return func() tea.Msg {
-		cfg, err := session.Load()
+		cfg, err := config.Load()
 		if err != nil {
 			return LineDone{action: "disable", err: fmt.Errorf("session.Load: %w", err)}
 		}
@@ -136,7 +136,7 @@ func disableLine() tea.Cmd {
 				slog.String("error", err.Error()))
 		}
 		cfg.LineEnabled = false
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return LineDone{action: "disable", err: fmt.Errorf("session.Save: %w", err)}
 		}
 		return LineDone{action: "disable"}

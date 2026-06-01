@@ -41,12 +41,12 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 	apiToolbox.LoadDirs(filesystem.ExtensionAPIToolsDir)
 
 	for _, tool := range apiToolbox.GetTools() {
-		data, err := json.Marshal(tool)
+		raw, err := json.Marshal(tool)
 		if err != nil {
 			continue
 		}
 		var t toolTypes.Tool
-		if err := json.Unmarshal(data, &t); err != nil {
+		if err := json.Unmarshal(raw, &t); err != nil {
 			continue
 		}
 		tools = append(tools, t)
@@ -69,12 +69,12 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 	}
 
 	for _, tool := range scriptToolbox.GetTools() {
-		data, err := json.Marshal(tool)
+		raw, err := json.Marshal(tool)
 		if err != nil {
 			continue
 		}
 		var t toolTypes.Tool
-		if err := json.Unmarshal(data, &t); err != nil {
+		if err := json.Unmarshal(raw, &t); err != nil {
 			continue
 		}
 		tools = append(tools, t)
@@ -123,20 +123,20 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 }
 
 func normalizeArgs(args json.RawMessage) json.RawMessage {
-	var m map[string]any
-	if err := json.Unmarshal(args, &m); err != nil {
+	var dic map[string]any
+	if err := json.Unmarshal(args, &dic); err != nil {
 		return args
 	}
-	for k, v := range m {
+	for k, v := range dic {
 		if s, ok := v.(string); ok {
 			var unquoted string
 			if err := json.Unmarshal([]byte(`"`+s+`"`), &unquoted); err == nil {
-				m[k] = unquoted
+				dic[k] = unquoted
 			}
 		}
 	}
-	if out, err := json.Marshal(m); err == nil {
-		return out
+	if raw, err := json.Marshal(dic); err == nil {
+		return raw
 	}
 	return args
 }

@@ -16,7 +16,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionTelegram "github.com/pardnchiu/agenvoy/internal/session/telegram"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -28,12 +28,12 @@ func sanitizeHTML(s string) string {
 
 func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	id := strings.TrimSpace(payload.SessionID)
-	text := sanitizeHTML(strings.TrimSpace(payload.Text))
-	if id == "" || text == "" || !strings.HasPrefix(id, "tg-") {
+	str := sanitizeHTML(strings.TrimSpace(payload.Text))
+	if id == "" || str == "" || !strings.HasPrefix(id, "tg-") {
 		return
 	}
 
-	chatIDStr, err := sessionManager.GetChatID(id)
+	chatIDStr, err := sessionTelegram.GetChat(id)
 	if err != nil {
 		slog.Warn("github.com/pardnchiu/agenvoy/internal/session GetChatID",
 			slog.String("session", id),
@@ -68,7 +68,7 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	}
 
 	chatName := utils.LookupChatName(filesystem.TelegramAuthPath, strconv.FormatInt(chatID, 10))
-	cleanText, photoPaths, docPaths := extractFileMarkers(text)
+	cleanText, photoPaths, docPaths := extractFileMarkers(str)
 
 	if strings.TrimSpace(cleanText) != "" {
 		message := cleanText + buildPushFooter(payload.Duration, payload.Model, payload.Usage)

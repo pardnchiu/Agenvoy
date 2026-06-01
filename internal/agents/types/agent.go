@@ -3,14 +3,14 @@ package agentTypes
 import (
 	"context"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
 type Agent interface {
 	Name() string
 	Send(ctx context.Context, messages []Message, toolDefs []toolTypes.Tool) (*Output, error)
-	Execute(ctx context.Context, skill *filesystem.Skill, userInput string, events chan<- Event, allowAll bool) error
+	Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- Event, allowAll bool) error
 }
 
 type AgentRegistry struct {

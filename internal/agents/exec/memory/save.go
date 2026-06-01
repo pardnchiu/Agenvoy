@@ -65,44 +65,44 @@ func getKeywords(keywords []string) []string {
 	seen := make(map[string]struct{}, len(keywords))
 	result := make([]string, 0, len(keywords))
 	for _, keyword := range keywords {
-		text := strings.TrimSpace(strings.ToLower(keyword))
-		if text == "" {
+		str := strings.TrimSpace(strings.ToLower(keyword))
+		if str == "" {
 			continue
 		}
-		if _, ok := seen[text]; ok {
+		if _, ok := seen[str]; ok {
 			continue
 		}
-		seen[text] = struct{}{}
-		result = append(result, text)
+		seen[str] = struct{}{}
+		result = append(result, str)
 	}
 	return result
 }
 
-func getMessage(text string) string {
-	text = strings.ToLower(strings.TrimSpace(text))
+func getMessage(str string) string {
+	str = strings.ToLower(strings.TrimSpace(str))
 	switch {
-	case text == "":
+	case str == "":
 		return "unknown"
-	case strings.Contains(text, "not exist:"),
-		strings.Contains(text, "tool not found"),
-		strings.Contains(text, "unsupported tool"):
+	case strings.Contains(str, "not exist:"),
+		strings.Contains(str, "tool not found"),
+		strings.Contains(str, "unsupported tool"):
 		return "tool_not_exist"
-	case strings.Contains(text, "required"):
+	case strings.Contains(str, "required"):
 		return "required_param"
-	case strings.Contains(text, "invalid"):
+	case strings.Contains(str, "invalid"):
 		return "invalid_param"
-	case strings.Contains(text, "timeout"),
-		strings.Contains(text, "deadline exceeded"):
+	case strings.Contains(str, "timeout"),
+		strings.Contains(str, "deadline exceeded"):
 		return "timeout"
-	case strings.Contains(text, "unauthorized"),
-		strings.Contains(text, "forbidden"),
-		strings.Contains(text, "permission denied"),
-		strings.Contains(text, "access denied"):
+	case strings.Contains(str, "unauthorized"),
+		strings.Contains(str, "forbidden"),
+		strings.Contains(str, "permission denied"),
+		strings.Contains(str, "access denied"):
 		return "permission"
-	case strings.Contains(text, "no result"),
-		strings.Contains(text, "no data"),
-		strings.Contains(text, "not found"),
-		strings.Contains(text, "empty result"):
+	case strings.Contains(str, "no result"),
+		strings.Contains(str, "no data"),
+		strings.Contains(str, "not found"),
+		strings.Contains(str, "empty result"):
 		return "no_result"
 	default:
 		return "other"

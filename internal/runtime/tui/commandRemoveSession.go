@@ -3,7 +3,6 @@ package tui
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,6 +10,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -31,7 +32,7 @@ func (t TUI) commandRemoveSession() (TUI, tea.Cmd, bool) {
 	}
 
 	label := utils.ShortenSessionID(sid)
-	if name, _ := session.GetBot(sid); name != "" && name != sid {
+	if name, _ := configBot.Get(sid); name != "" && name != sid {
 		label = fmt.Sprintf("%s (%s)", name, label)
 	}
 
@@ -65,15 +66,16 @@ func (t TUI) openRemoveSessionConfirm2(sid string) (TUI, tea.Cmd) {
 
 func (t TUI) runRemoveSession(sid string) (TUI, tea.Cmd) {
 	deletedKeys := deleteSessionHistKeys(sid)
+	historyStore.Clear(sid)
 
-	sessionDir := filepath.Join(filesystem.SessionsDir, sid)
+	sessionDir := filesystem.SessionDir(sid)
 	if err := os.RemoveAll(sessionDir); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] remove session dir: %v", err)) + "\n")
 	}
 
 	fallback := pickAlternateSession(sid)
 	if fallback == "" {
-		created, err := session.CreateSession("cli-")
+		created, err := session.New("cli-")
 		if err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] create fallback session failed: %v", err)) + "\n")
 		}
@@ -81,7 +83,7 @@ func (t TUI) runRemoveSession(sid string) (TUI, tea.Cmd) {
 	}
 
 	t.currentSessionID = fallback
-	t.currentSessionName, _ = session.GetBot(fallback)
+	t.currentSessionName, _ = configBot.Get(fallback)
 	t = t.restartTailer()
 	t.tokens = 0
 	t.lastIn = 0

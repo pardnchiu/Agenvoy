@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 )
 
 const kuradbInstallURL = "https://cloud.agenvoy.com/KuraDB/install.sh"
@@ -37,7 +37,7 @@ func (t TUI) commandKuradb(parts []string) (TUI, tea.Cmd, bool) {
 	}
 
 	enabled := false
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		enabled = cfg.KuradbEnabled
 	}
 	options := []string{"enable", "disable"}
@@ -86,12 +86,12 @@ kura add agenvoy 2>/dev/null || true
 		if !kuradb.IsInstalled() {
 			return KuradbDone{action: "enable", err: fmt.Errorf("kura binary not at %s after install", kuradb.BinaryPath)}
 		}
-		cfg, err := session.Load()
+		cfg, err := config.Load()
 		if err != nil {
 			return KuradbDone{action: "enable", err: fmt.Errorf("session.Load: %w", err)}
 		}
 		cfg.KuradbEnabled = true
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return KuradbDone{action: "enable", err: fmt.Errorf("session.Save: %w", err)}
 		}
 		return KuradbDone{action: "enable"}
@@ -99,9 +99,9 @@ kura add agenvoy 2>/dev/null || true
 }
 
 func runKuradbUpdateExec() tea.Cmd {
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		cfg.KuradbEnabled = false
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return func() tea.Msg {
 				return KuradbDone{action: "update", err: fmt.Errorf("session.Save(stop): %w", err)}
 			}
@@ -118,9 +118,9 @@ kura add agenvoy 2>/dev/null || true
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		if err != nil {
 			if kuradb.IsInstalled() {
-				if cfg, lerr := session.Load(); lerr == nil && cfg != nil {
+				if cfg, lerr := config.Load(); lerr == nil && cfg != nil {
 					cfg.KuradbEnabled = true
-					_ = session.Save(cfg)
+					_ = config.Save(cfg)
 				}
 			}
 			return KuradbDone{action: "update", err: fmt.Errorf("install script: %w", err)}
@@ -128,12 +128,12 @@ kura add agenvoy 2>/dev/null || true
 		if !kuradb.IsInstalled() {
 			return KuradbDone{action: "update", err: fmt.Errorf("kura binary not at %s after install", kuradb.BinaryPath)}
 		}
-		cfg, err := session.Load()
+		cfg, err := config.Load()
 		if err != nil {
 			return KuradbDone{action: "update", err: fmt.Errorf("session.Load: %w", err)}
 		}
 		cfg.KuradbEnabled = true
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return KuradbDone{action: "update", err: fmt.Errorf("session.Save: %w", err)}
 		}
 		return KuradbDone{action: "update"}
@@ -147,12 +147,12 @@ func runKuradbDisableExec() tea.Cmd {
 		if err != nil {
 			return KuradbDone{action: "disable", err: fmt.Errorf("rm %s: %w", kuradb.BinaryPath, err)}
 		}
-		cfg, err := session.Load()
+		cfg, err := config.Load()
 		if err != nil {
 			return KuradbDone{action: "disable", err: fmt.Errorf("session.Load: %w", err)}
 		}
 		cfg.KuradbEnabled = false
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return KuradbDone{action: "disable", err: fmt.Errorf("session.Save: %w", err)}
 		}
 		return KuradbDone{action: "disable"}

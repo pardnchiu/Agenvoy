@@ -45,8 +45,8 @@ func sendAttachments(ctx context.Context, chatID int64, chatName string, photoPa
 		if detail != "" {
 			body = fmt.Sprintf("<code>%s</code>: %s", html.EscapeString(detail), body)
 		}
-		text := fmt.Sprintf("⚠️ %s failed (background upload)\n%s", label, body)
-		if _, err := client.Send(ctx, chatID, 0, text, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
+		str := fmt.Sprintf("⚠️ %s failed (background upload)\n%s", label, body)
+		if _, err := client.Send(ctx, chatID, 0, str, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML)); err != nil {
 			slog.Error("github.com/pardnchiu/go-bot/telegram Bot.Send (notify)",
 				slog.String("label", label),
 				slog.String("error", err.Error()))

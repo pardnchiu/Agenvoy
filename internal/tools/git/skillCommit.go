@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -43,10 +43,10 @@ func skillCommit() {
 			if params.SkillName == "" {
 				return "", fmt.Errorf("skill_name is required")
 			}
-			if err := filesystem.CheckSkillGitDir(ctx); err != nil {
+			if err := skill.CheckGit(ctx); err != nil {
 				return "", fmt.Errorf("filesystem.CheckSkillGitDir: %w", err)
 			}
-			if err := filesystem.CommitSkillDir(ctx, params.Act, params.SkillName); err != nil {
+			if err := skill.Commit(ctx, params.Act, params.SkillName); err != nil {
 				return "", fmt.Errorf("filesystem.CommitSkills: %w", err)
 			}
 			return fmt.Sprintf("committed: %s_%s", params.Act, params.SkillName), nil

@@ -11,7 +11,8 @@ import (
 
 	toriidb "github.com/pardnchiu/ToriiDB/core/store"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
+	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
@@ -41,7 +42,7 @@ func registSearchConversationHistory() {
 		Name:        "search_conversation_history",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: "Search this session's past messages by keyword + semantic similarity, returning hits with surrounding context. Use when the user references something earlier that scrolled out of view.",
+		Description: "Search this session's past messages. mode=keyword for exact text match across full history (including archived); mode=semantic for meaning-based match in recent conversations. Use when the user references something earlier that scrolled out of view.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -49,9 +50,15 @@ func registSearchConversationHistory() {
 					"type":        "string",
 					"description": "Search text (e.g. 'redis TTL', 'bwrap sandbox decision').",
 				},
+				"mode": map[string]any{
+					"type":        "string",
+					"description": "keyword: FTS across full history including archive. semantic: vector similarity in recent messages.",
+					"enum":        []string{"keyword", "semantic"},
+					"default":     "semantic",
+				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "Keyword time window. Semantic match ignores this. Widen only if empty.",
+					"description": "Time window filter. Applies to both modes.",
 					"enum":        go_pkg_utils.GetKeys(historyTimeRanges),
 					"default":     "1d",
 				},
@@ -69,10 +76,10 @@ func registSearchConversationHistory() {
 		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Keyword   string `json:"keyword"`
+				Mode      string `json:"mode"`
 				TimeRange string `json:"time_range"`
 				Limit     int    `json:"limit"`
-				// avoid small agent like 4.1 be stupid to call with different parameter name
-				Query string `json:"query"`
+				Query     string `json:"query"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
@@ -91,6 +98,11 @@ func registSearchConversationHistory() {
 				return "", fmt.Errorf("keyword is required")
 			}
 
+			mode := strings.TrimSpace(params.Mode)
+			if mode != "keyword" {
+				mode = "semantic"
+			}
+
 			timeRange := strings.TrimSpace(params.TimeRange)
 			switch timeRange {
 			case "1d", "7d", "1m", "1y":
@@ -104,12 +116,54 @@ func registSearchConversationHistory() {
 			default:
 				limit = 8
 			}
-			return searchConversationHistoryHandler(ctx, sessionId, keyword, params.TimeRange, limit)
+
+			if mode == "keyword" {
+				return keywordHandler(ctx, sessionId, keyword, timeRange, limit)
+			}
+			return semanticHandler(ctx, sessionId, keyword, timeRange, limit)
 		},
 	})
 }
 
-func searchConversationHistoryHandler(ctx context.Context, sessionID, keyword, timeRange string, limit int) (string, error) {
+func keywordHandler(_ context.Context, sessionID, keyword, timeRange string, limit int) (string, error) {
+	var sb strings.Builder
+
+	reults, err := historyStore.Search(sessionID, keyword, timeRange, limit)
+	if err == nil && len(reults) > 0 {
+		sb.WriteString("[archive]\n")
+		for _, r := range reults {
+			tsStr := time.Unix(0, r.Timestamp).Format(time.RFC3339)
+			sb.WriteString(fmt.Sprintf("[%s · %s] %s\n", tsStr, r.Role, r.Content))
+		}
+	}
+
+	db := torii.DB(torii.DBSessionHist)
+	allKeys := db.Keys(sessionID + ":*")
+	if len(allKeys) > 0 {
+		var afterNano int64
+		if d, ok := historyTimeRanges[timeRange]; ok {
+			afterNano = time.Now().Add(-d).UnixNano()
+		}
+		recent := keywordHits(db, allKeys, keyword, afterNano, limit)
+		if len(recent) > 0 {
+			if sb.Len() > 0 {
+				sb.WriteString("\n")
+			}
+			sb.WriteString("[recent]\n")
+			for _, h := range recent {
+				tsStr := time.Unix(0, h.TS).Format(time.RFC3339)
+				sb.WriteString(fmt.Sprintf("[%s · %s] %s\n", tsStr, h.Role, h.Content))
+			}
+		}
+	}
+
+	if sb.Len() == 0 {
+		return fmt.Sprintf("no matches with keyword: %s", keyword), nil
+	}
+	return sb.String(), nil
+}
+
+func semanticHandler(ctx context.Context, sessionID, keyword, timeRange string, limit int) (string, error) {
 	db := torii.DB(torii.DBSessionHist)
 	allKeys := db.Keys(sessionID + ":*")
 	if len(allKeys) == 0 {
@@ -121,7 +175,7 @@ func searchConversationHistoryHandler(ctx context.Context, sessionID, keyword, t
 		keyIdx[k] = i
 	}
 
-	_, maxHistory := sessionManager.GetHistory(sessionID)
+	_, maxHistory := sessionHistory.Get(sessionID)
 	skip := min(len(maxHistory)+1, len(allKeys))
 	excludeKeys := make(map[string]struct{}, skip)
 	if skip > 0 {
@@ -130,22 +184,7 @@ func searchConversationHistoryHandler(ctx context.Context, sessionID, keyword, t
 		}
 	}
 
-	searchKeys := allKeys
-	if skip > 0 {
-		searchKeys = allKeys[:len(allKeys)-skip]
-	}
-
-	perSource := max(1, limit/2)
-
-	var afterNano int64
-	if d, ok := historyTimeRanges[timeRange]; ok {
-		afterNano = time.Now().Add(-d).UnixNano()
-	}
-
-	hits := mergeHits(
-		keywordHits(db, searchKeys, keyword, afterNano, perSource),
-		semanticHits(ctx, db, sessionID, keyword, excludeKeys, perSource),
-	)
+	hits := semanticHits(ctx, db, sessionID, keyword, excludeKeys, limit)
 	if len(hits) == 0 {
 		return fmt.Sprintf("no matches with keyword: %s", keyword), nil
 	}
@@ -252,14 +291,8 @@ func expandWindows(hits []historyHit, allKeys []string, keyIdx map[string]int, e
 		if !ok {
 			continue
 		}
-		start := idx - historyWindowBefore
-		if start < 0 {
-			start = 0
-		}
-		end := idx + historyWindowAfter
-		if end > len(allKeys)-1 {
-			end = len(allKeys) - 1
-		}
+		start := max(idx-historyWindowBefore, 0)
+		end := min(idx+historyWindowAfter, len(allKeys)-1)
 		for i := start; i <= end; i++ {
 			if _, skip := exclude[allKeys[i]]; skip {
 				continue

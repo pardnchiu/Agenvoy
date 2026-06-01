@@ -9,7 +9,7 @@ import (
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 )
 
 const (
@@ -24,7 +24,7 @@ type Bot struct {
 }
 
 func New() (*Bot, error) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil || !cfg.LineEnabled {
 		return nil, nil
 	}
@@ -72,7 +72,7 @@ func New() (*Bot, error) {
 
 	if name := client.Status().DisplayName; name != "" && cfg.LineUsername != name {
 		cfg.LineUsername = name
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			slog.Warn("github.com/pardnchiu/agenvoy/internal/session Save",
 				slog.String("error", err.Error()))
 		}

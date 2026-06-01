@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -50,21 +50,21 @@ func registSetUserEmail() {
 				return "", fmt.Errorf("invalid format: %q", email)
 			}
 
-			dic, err := filesystem.ReadConfig()
+			dic, err := config.Get()
 			if err != nil {
 				return "", err
 			}
 			dic["email"] = email
 
-			if err := filesystem.WriteConfig(dic); err != nil {
+			if err := config.Write(dic); err != nil {
 				return "", err
 			}
 
-			bytes, err := json.Marshal(map[string]any{"ok": true, "email": email})
+			raw, err := json.Marshal(map[string]any{"ok": true, "email": email})
 			if err != nil {
 				return "", fmt.Errorf("json Marshal: %w", err)
 			}
-			return string(bytes), nil
+			return string(raw), nil
 		},
 	})
 
@@ -82,17 +82,17 @@ func registGetUserEmail() {
 			"properties": map[string]any{},
 		},
 		Handler: func(_ context.Context, _ *toolTypes.Executor, _ json.RawMessage) (string, error) {
-			dic, err := filesystem.ReadConfig()
+			dic, err := config.Get()
 			if err != nil {
 				return "", err
 			}
 
 			email, _ := dic["email"].(string)
-			bytes, err := json.Marshal(map[string]any{"email": email})
+			raw, err := json.Marshal(map[string]any{"email": email})
 			if err != nil {
 				return "", fmt.Errorf("json Marshal: %w", err)
 			}
-			return string(bytes), nil
+			return string(raw), nil
 		},
 	})
 }

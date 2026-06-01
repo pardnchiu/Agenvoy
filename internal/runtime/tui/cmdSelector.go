@@ -109,7 +109,17 @@ func queryCmdSelector(content string) (query string, ok bool) {
 
 func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 	query = strings.ToLower(query)
-	var cmdNameItems, cmdDescItems, skillItems []CmdSelectorItem
+
+	var (
+		prefixCmd   []CmdSelectorItem
+		prefixSk    []CmdSelectorItem
+		prefixSched []CmdSelectorItem
+		descCmd     []CmdSelectorItem
+		descSk      []CmdSelectorItem
+		descSched   []CmdSelectorItem
+		dangerCmd   []CmdSelectorItem
+		dangerSk    []CmdSelectorItem
+	)
 
 	for _, c := range commands {
 		item := CmdSelectorItem{
@@ -128,19 +138,18 @@ func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 			}
 		}
 		switch {
-		case query == "" || strings.Contains(c.name, query):
-			cmdNameItems = append(cmdNameItems, item)
+		case item.isAllow && (query == "" || strings.Contains(c.name, query) || strings.Contains(strings.ToLower(c.desc), query)):
+			dangerCmd = append(dangerCmd, item)
+		case query == "" || strings.HasPrefix(c.name, query) || strings.Contains(c.name, query):
+			prefixCmd = append(prefixCmd, item)
 		case strings.Contains(strings.ToLower(c.desc), query):
-			cmdDescItems = append(cmdDescItems, item)
+			descCmd = append(descCmd, item)
 		}
 	}
 
 	if scanner := agents.Scanner(); scanner != nil {
 		for _, name := range scanner.List() {
 			if name == "" {
-				continue
-			}
-			if query != "" && !strings.Contains(strings.ToLower(name), query) {
 				continue
 			}
 
@@ -163,15 +172,22 @@ func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 			if desc == "" {
 				desc = "skill"
 			}
-			skillItems = append(skillItems, CmdSelectorItem{
+			item := CmdSelectorItem{
 				label:   "/" + name,
 				desc:    desc,
 				isSkill: true,
-			})
+			}
+
+			lowerName := strings.ToLower(name)
+			switch {
+			case query == "" || strings.HasPrefix(lowerName, query) || strings.Contains(lowerName, query):
+				prefixSk = append(prefixSk, item)
+			case strings.Contains(strings.ToLower(description), query):
+				descSk = append(descSk, item)
+			}
 		}
 	}
 
-	var schedulerItems []CmdSelectorItem
 	cronByName := make(map[string]string)
 	skillBoundToSession := make(map[string]bool)
 	if crons, err := runtime.LoadCrons(); err == nil {
@@ -201,44 +217,61 @@ func getCmdSelectorItems(query, sessionID string) []CmdSelectorItem {
 				continue
 			}
 			label := "/sched-" + name
-			if query != "" && !strings.Contains(strings.ToLower(label), query) {
-				continue
-			}
 			desc := "scheduler skill"
 			if expr := cronByName[name]; expr != "" {
 				desc = "(" + expr + ") scheduler skill"
 			}
-			schedulerItems = append(schedulerItems, CmdSelectorItem{
+			item := CmdSelectorItem{
 				label:       label,
 				desc:        desc,
 				isScheduler: true,
-			})
+			}
+
+			lowerLabel := strings.ToLower(strings.TrimPrefix(label, "/"))
+			switch {
+			case query == "" || strings.HasPrefix(lowerLabel, query) || strings.Contains(lowerLabel, query):
+				prefixSched = append(prefixSched, item)
+			case strings.Contains(strings.ToLower(desc), query):
+				descSched = append(descSched, item)
+			}
 		}
 	}
 
 	byLabel := func(s []CmdSelectorItem) func(i, j int) bool {
 		return func(i, j int) bool { return s[i].label < s[j].label }
 	}
-	sort.SliceStable(cmdNameItems, func(i, j int) bool {
-		if cmdNameItems[i].isAllow != cmdNameItems[j].isAllow {
-			return !cmdNameItems[i].isAllow
-		}
-		pi := strings.HasPrefix(strings.TrimPrefix(cmdNameItems[i].label, "/"), query)
-		pj := strings.HasPrefix(strings.TrimPrefix(cmdNameItems[j].label, "/"), query)
+	sort.SliceStable(prefixCmd, func(i, j int) bool {
+		pi := strings.HasPrefix(strings.TrimPrefix(prefixCmd[i].label, "/"), query)
+		pj := strings.HasPrefix(strings.TrimPrefix(prefixCmd[j].label, "/"), query)
 		if pi != pj {
 			return pi
 		}
-		return cmdNameItems[i].label < cmdNameItems[j].label
+		return prefixCmd[i].label < prefixCmd[j].label
 	})
-	sort.SliceStable(cmdDescItems, byLabel(cmdDescItems))
-	sort.SliceStable(skillItems, byLabel(skillItems))
-	sort.SliceStable(schedulerItems, byLabel(schedulerItems))
+	sort.SliceStable(prefixSk, func(i, j int) bool {
+		pi := strings.HasPrefix(strings.ToLower(strings.TrimPrefix(prefixSk[i].label, "/")), query)
+		pj := strings.HasPrefix(strings.ToLower(strings.TrimPrefix(prefixSk[j].label, "/")), query)
+		if pi != pj {
+			return pi
+		}
+		return prefixSk[i].label < prefixSk[j].label
+	})
+	sort.SliceStable(prefixSched, byLabel(prefixSched))
+	sort.SliceStable(descCmd, byLabel(descCmd))
+	sort.SliceStable(descSk, byLabel(descSk))
+	sort.SliceStable(descSched, byLabel(descSched))
+	sort.SliceStable(dangerCmd, byLabel(dangerCmd))
+	sort.SliceStable(dangerSk, byLabel(dangerSk))
 
-	items := make([]CmdSelectorItem, 0, len(cmdNameItems)+len(cmdDescItems)+len(skillItems)+len(schedulerItems))
-	items = append(items, cmdNameItems...)
-	items = append(items, cmdDescItems...)
-	items = append(items, skillItems...)
-	items = append(items, schedulerItems...)
+	items := make([]CmdSelectorItem, 0, len(prefixCmd)+len(prefixSk)+len(prefixSched)+len(descCmd)+len(descSk)+len(descSched)+len(dangerCmd)+len(dangerSk))
+	items = append(items, prefixCmd...)
+	items = append(items, prefixSk...)
+	items = append(items, prefixSched...)
+	items = append(items, descCmd...)
+	items = append(items, descSk...)
+	items = append(items, descSched...)
+	items = append(items, dangerCmd...)
+	items = append(items, dangerSk...)
 	return items
 }
 

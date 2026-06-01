@@ -13,6 +13,7 @@ import (
 	goCron "github.com/pardnchiu/go-scheduler"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 )
 
 type Runner func(ctx context.Context, sessionID, skillName string) (string, error)
@@ -175,7 +176,7 @@ func reload() error {
 			if hasMore {
 				return
 			}
-			if err := filesystem.TrashScheduleSkill(context.Background(), entryCopy.Skill); err != nil {
+			if err := skill.TrashSchedule(context.Background(), entryCopy.Skill); err != nil {
 				slog.Warn("filesystem.TrashScheduleSkill",
 					slog.String("session", entryCopy.SessionID),
 					slog.String("error", err.Error()))

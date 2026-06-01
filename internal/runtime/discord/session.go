@@ -10,11 +10,13 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionDiscord "github.com/pardnchiu/agenvoy/internal/session/discord"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
+	"github.com/pardnchiu/agenvoy/internal/session/summary"
 )
 
 func getSession(in go_bot_discord.Input, content string, data exec.ExecData) (*agentTypes.AgentSession, error) {
-	sessionID, err := sessionManager.GetDiscordSession(in.GuildID, in.ChannelID, in.UserID)
+	sessionID, err := sessionDiscord.New(in.GuildID, in.ChannelID, in.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetDiscordSession: %w", err)
 	}
@@ -25,11 +27,12 @@ func getSession(in go_bot_discord.Input, content string, data exec.ExecData) (*a
 		Histories: []agentTypes.Message{},
 	}
 
-	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
+	oldHistory, maxHistory := sessionHistory.Get(sessionID)
 	sess.Histories = oldHistory
+	sess.BaseLen = len(oldHistory)
 
 	sess.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, agents.Scanner(), sessionID, data.AllowAll, false, data.ExcludeSkills)
-	if summary := sessionManager.GetSummaryPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
+	if summary := summary.GetPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
 		sess.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
 

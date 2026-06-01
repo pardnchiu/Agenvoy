@@ -9,7 +9,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
@@ -18,7 +18,7 @@ const (
 	baseAPI = "https://generativelanguage.googleapis.com/v1beta/models/"
 )
 
-func (a *Agent) Execute(ctx context.Context, skill *filesystem.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
+func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
 	data := exec.ExecData{
 		Agent:   a,
 		WorkDir: a.workDir,
@@ -262,11 +262,11 @@ func (a *Agent) convertToOutput(resp *Output) *agentTypes.Output {
 		} else if part.FunctionCall != nil {
 			args := "{}"
 			if part.FunctionCall.Args != nil {
-				data, err := json.Marshal(part.FunctionCall.Args)
+				raw, err := json.Marshal(part.FunctionCall.Args)
 				if err != nil {
 					continue
 				}
-				args = string(data)
+				args = string(raw)
 			}
 
 			toolCall := agentTypes.ToolCall{

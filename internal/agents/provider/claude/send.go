@@ -9,7 +9,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
@@ -18,7 +18,7 @@ const (
 	messagesAPI = "https://api.anthropic.com/v1/messages"
 )
 
-func (a *Agent) Execute(ctx context.Context, skill *filesystem.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
+func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
 	data := exec.ExecData{
 		Agent:   a,
 		WorkDir: a.workDir,
@@ -250,11 +250,11 @@ func (a *Agent) convertToOutput(resp *Output) *agentTypes.Output {
 		} else if item.Type == "tool_use" {
 			arg := ""
 			if item.Input != nil {
-				data, err := json.Marshal(item.Input)
+				raw, err := json.Marshal(item.Input)
 				if err != nil {
 					continue
 				}
-				arg = string(data)
+				arg = string(raw)
 			}
 
 			toolCall := agentTypes.ToolCall{

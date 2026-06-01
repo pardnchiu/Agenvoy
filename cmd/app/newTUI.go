@@ -22,7 +22,9 @@ import (
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime/tui"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
+	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
+	tuiHash "github.com/pardnchiu/agenvoy/internal/session/tui"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/plan"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
@@ -31,7 +33,7 @@ import (
 func newTUI(initialInput string, onceCall, allowAll bool) {
 	lipgloss.SetHasDarkBackground(true)
 
-	session.SetHash(session.Hash())
+	tuiHash.New()
 
 	if err := filesystem.Init(); err != nil {
 		slog.Error("filesystem.Init",
@@ -42,7 +44,7 @@ func newTUI(initialInput string, onceCall, allowAll bool) {
 		slog.Warn("filesystem.LoadRuntime",
 			slog.String("error", err.Error()))
 	}
-	if err := session.BackfillKeys(); err != nil {
+	if err := config.BackfillKeys(); err != nil {
 		slog.Warn("session.BackfillKeys",
 			slog.String("error", err.Error()))
 	}
@@ -52,6 +54,12 @@ func newTUI(initialInput string, onceCall, allowAll bool) {
 		return
 	}
 	defer torii.Close()
+
+	if err := historyStore.New(filesystem.HistoryDBPath); err != nil {
+		slog.Warn("historyStore.Init",
+			slog.String("error", err.Error()))
+	}
+	defer historyStore.Close()
 
 	codexImage2.Register()
 	geminiYoutube.Register()
@@ -72,7 +80,7 @@ func newTUI(initialInput string, onceCall, allowAll bool) {
 			slog.String("error", err.Error()))
 	}
 
-	if cfg, err := session.Load(); err == nil {
+	if cfg, err := config.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
 	subagent.Register()

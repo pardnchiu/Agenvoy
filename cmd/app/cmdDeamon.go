@@ -23,7 +23,7 @@ import (
 	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
 	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/routes"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	discordTool "github.com/pardnchiu/agenvoy/internal/runtime/discord/tool"
@@ -31,10 +31,16 @@ import (
 	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/line"
 	"github.com/pardnchiu/agenvoy/internal/runtime/monitor"
+	"github.com/pardnchiu/agenvoy/internal/runtime/routes"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	telegramTool "github.com/pardnchiu/agenvoy/internal/runtime/telegram/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	configStatus "github.com/pardnchiu/agenvoy/internal/session/config/status"
+	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
+	tuiHash "github.com/pardnchiu/agenvoy/internal/session/tui"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/plan"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -67,7 +73,7 @@ var (
 func reloadDiscord() {
 	newToken := keychain.Get(discord.Key)
 	newEnabled := false
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		newEnabled = cfg.DiscordEnabled
 	}
 
@@ -101,7 +107,7 @@ func reloadDiscord() {
 func reloadTelegram() {
 	newToken := keychain.Get(telegram.Key)
 	newEnabled := false
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		newEnabled = cfg.TelegramEnabled
 	}
 
@@ -136,7 +142,7 @@ func reloadLine() {
 	newSecret := keychain.Get(line.SecretKey)
 	newToken := keychain.Get(line.TokenKey)
 	newEnabled := false
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		newEnabled = cfg.LineEnabled
 	}
 
@@ -170,7 +176,7 @@ func reloadLine() {
 
 func reloadKuradb() {
 	newEnabled := false
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		newEnabled = cfg.KuradbEnabled
 	}
 
@@ -199,9 +205,9 @@ func reloadKuradb() {
 }
 
 func disableKuradb() {
-	if cfg, err := session.Load(); err == nil && cfg != nil {
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		cfg.KuradbEnabled = false
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			slog.Warn("session.Save",
 				slog.String("error", err.Error()))
 		}
@@ -215,7 +221,7 @@ func disableKuradb() {
 
 func cmdDaemon() {
 	installDaemonSlog()
-	session.SetHash(session.Hash())
+	tuiHash.New()
 
 	if err := filesystem.Init(); err != nil {
 		slog.Error("filesystem.Init",
@@ -226,7 +232,7 @@ func cmdDaemon() {
 		slog.Warn("filesystem.LoadRuntime",
 			slog.String("error", err.Error()))
 	}
-	if err := session.BackfillKeys(); err != nil {
+	if err := config.BackfillKeys(); err != nil {
 		slog.Warn("session.BackfillKeys",
 			slog.String("error", err.Error()))
 	}
@@ -236,6 +242,12 @@ func cmdDaemon() {
 		return
 	}
 	defer torii.Close()
+
+	if err := historyStore.New(filesystem.HistoryDBPath); err != nil {
+		slog.Warn("historyStore New",
+			slog.String("error", err.Error()))
+	}
+	defer historyStore.Close()
 
 	codexImage2.Register()
 	geminiYoutube.Register()
@@ -253,14 +265,14 @@ func cmdDaemon() {
 			slog.String("error", err.Error()))
 	}
 	session.Clean()
-	session.CleanAllTask()
+	configStatus.Clear()
 
 	if err := go_pkg_sandbox.CheckDependence(); err != nil {
 		slog.Error("sandbox.CheckDependence",
 			slog.String("error", err.Error()))
 	}
 
-	if cfg, err := session.Load(); err == nil {
+	if cfg, err := config.Load(); err == nil {
 		provider.SetReasoningLevel(cfg.ReasoningLevel)
 	}
 	subagent.Register()
@@ -393,7 +405,7 @@ func watchConfig(ctx context.Context) func() {
 					continue
 				}
 				lastReload = time.Now()
-				if cfg, err := session.Load(); err == nil {
+				if cfg, err := config.Load(); err == nil {
 					provider.SetReasoningLevel(cfg.ReasoningLevel)
 				}
 				if agents.Reload() {
@@ -416,15 +428,19 @@ func watchConfig(ctx context.Context) func() {
 }
 
 func runSkill(ctx context.Context, sessionID, skillName string) (string, error) {
-	body, err := filesystem.GetScheduleSkillBody(skillName)
+	body, err := skill.GetSchedule(skillName)
 	if err != nil {
 		return "", fmt.Errorf("scheduler skill %q unreadable: %w", skillName, err)
 	}
-	sessionDir := filepath.Join(filesystem.SessionsDir, sessionID)
+	sessionDir := filesystem.SessionDir(sessionID)
 	if err := go_pkg_filesystem.CheckDir(sessionDir, true); err != nil {
 		return "", err
 	}
-	session.SaveBot(sessionID, sessionID, false)
+	if err := configBot.Save(sessionID, "", "", false); err != nil {
+		slog.Warn("sessionBot Save",
+			slog.String("session", sessionID),
+			slog.String("error", err.Error()))
+	}
 
 	output, err := exec.ExecWithSubagent(exec.WithDcPushPrefix(ctx, skillName), body, sessionID, "", "", nil)
 	if err != nil {

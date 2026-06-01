@@ -21,9 +21,9 @@ func (t Tool) getDef(server string, client Client) (toolRegister.Def, bool) {
 		"properties": map[string]any{},
 	}
 	if len(t.InputSchema) > 0 {
-		var m map[string]any
-		if err := json.Unmarshal(t.InputSchema, &m); err == nil && m != nil {
-			params = m
+		var dic map[string]any
+		if err := json.Unmarshal(t.InputSchema, &dic); err == nil && dic != nil {
+			params = dic
 		}
 	}
 

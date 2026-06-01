@@ -9,6 +9,7 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 )
 
@@ -130,7 +131,7 @@ func (t TUI) runAllowReportDisable() (TUI, tea.Cmd) {
 	if _, err := runtime.RemoveCron(reportSkillName); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] allow-report: %v", err)) + "\n")
 	}
-	if err := filesystem.TrashScheduleSkill(context.Background(), reportSkillName); err != nil {
+	if err := skill.TrashSchedule(context.Background(), reportSkillName); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] allow-report: %v", err)) + "\n")
 	}
 	return t, tea.Println(hintStyle.Render("⎯ allow-report disabled · schedule removed") + "\n")

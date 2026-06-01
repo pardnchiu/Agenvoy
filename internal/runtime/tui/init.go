@@ -3,7 +3,6 @@ package tui
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -18,7 +17,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	"github.com/pardnchiu/agenvoy/internal/runtime/line"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
@@ -133,7 +133,7 @@ func (t TUI) Init() tea.Cmd {
 	}
 	seq = append(seq, func() tea.Msg { return initTailer{} })
 	if sid := strings.TrimSpace(t.currentSessionID); sid != "" {
-		path := filepath.Join(filesystem.SessionsDir, sid, "action.log")
+		path := filesystem.ActionLogPath(sid)
 		if go_pkg_filesystem_reader.Exists(path) && fileSize(path) > 0 {
 			seq = append(seq, func() tea.Msg { return LoadHistoryCheck{id: sid} })
 		}
@@ -205,7 +205,7 @@ func newModel(ctx context.Context, userInput string, onceCall, allowAll bool) TU
 		currentSID = sessions[0].id
 	}
 	if currentSID != "" {
-		currentName, _ = session.GetBot(currentSID)
+		currentName, _ = configBot.Get(currentSID)
 	}
 
 	return TUI{
@@ -231,7 +231,7 @@ func newModel(ctx context.Context, userInput string, onceCall, allowAll bool) TU
 }
 
 func getDiscordStatus() string {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil || !cfg.DiscordEnabled || keychain.Get(discord.Key) == "" {
 		return textStyle.Render("discord:  ") + hintStyle.Render("disable")
 	}
@@ -243,7 +243,7 @@ func getDiscordStatus() string {
 }
 
 func getTelegramStatus() string {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil || !cfg.TelegramEnabled || keychain.Get(telegram.Key) == "" {
 		return textStyle.Render("telegram: ") + hintStyle.Render("disable")
 	}
@@ -255,7 +255,7 @@ func getTelegramStatus() string {
 }
 
 func getLineStatus() string {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil || !cfg.LineEnabled || keychain.Get(line.SecretKey) == "" || keychain.Get(line.TokenKey) == "" {
 		return textStyle.Render("line:     ") + hintStyle.Render("disable")
 	}
@@ -286,7 +286,7 @@ func loadSessionTail(sid string) []tea.Cmd {
 	if strings.TrimSpace(sid) == "" {
 		return nil
 	}
-	lines := readAllLines(filepath.Join(filesystem.SessionsDir, sid, "action.log"))
+	lines := readAllLines(filesystem.ActionLogPath(sid))
 	if len(lines) == 0 {
 		return nil
 	}

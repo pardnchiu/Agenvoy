@@ -16,9 +16,11 @@ var (
 	filesystemOnce          sync.Once
 	AgenvoyDir              string
 	ConfigPath              string
+	DaemonLogPath           string
 	UsagePath               string
 	McpPath                 string
 	StoreDir                string
+	HistoryDBPath           string
 	SessionsDir             string
 	ToolsDir                string
 	APIToolsDir             string
@@ -73,10 +75,12 @@ func Init() error {
 	filesystemOnce.Do(func() {
 		AgenvoyDir = filepath.Join(homeDir, ".config", projectName)
 		ConfigPath = filepath.Join(AgenvoyDir, "config.json")
+		DaemonLogPath = filepath.Join(AgenvoyDir, "daemon.log")
 		UsagePath = filepath.Join(AgenvoyDir, "usage.json")
 		McpPath = filepath.Join(AgenvoyDir, "mcp.json")
 
 		StoreDir = filepath.Join(AgenvoyDir, ".store")
+		HistoryDBPath = filepath.Join(StoreDir, "history.db")
 		SessionsDir = filepath.Join(AgenvoyDir, "sessions")
 		ToolsDir = filepath.Join(AgenvoyDir, "tools")
 		APIToolsDir = filepath.Join(ToolsDir, "api")
@@ -137,20 +141,48 @@ func Init() error {
 	return nil
 }
 
+func SessionDir(sessionID string) string {
+	return filepath.Join(SessionsDir, sessionID)
+}
+
+func SessionConfigPath(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "config.json")
+}
+
+func StatusPath(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "status.json")
+}
+
+func BotPath(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "bot.md")
+}
+
+func ActionLogPath(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "action.log")
+}
+
 func HistoryPath(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, "history.json")
+	return filepath.Join(SessionDir(sessionID), "history.json")
+}
+
+func SummaryPath(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "summary.json")
+}
+
+func SummaryMetaPath(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "summary.meta.json")
 }
 
 func InputHistoryPath(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, ".history")
+	return filepath.Join(SessionDir(sessionID), ".history")
 }
 
 func McpSessionPath(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, "mcp.json")
+	return filepath.Join(SessionDir(sessionID), "mcp.json")
 }
 
 func PagePath(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, "page")
+	return filepath.Join(SessionDir(sessionID), "page")
 }
 
 func AllowSkillProjectPath(workDir string) string {
@@ -186,7 +218,7 @@ func GetKuradbEndpoint() (string, error) {
 }
 
 func ErrorDir(sessionID string) string {
-	return filepath.Join(SessionsDir, sessionID, "tool_errors")
+	return filepath.Join(SessionDir(sessionID), "tool_errors")
 }
 
 func ErrorPath(sessionID, hash string) string {

@@ -7,7 +7,7 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 )
 
 const (
@@ -30,7 +30,7 @@ func loadInputHistory(sid string) []string {
 		if line == "" {
 			continue
 		}
-		results = append(results, strings.ReplaceAll(line, session.ActionNewlineMarker, "\n"))
+		results = append(results, strings.ReplaceAll(line, sessionLog.ActionNewlineMarker, "\n"))
 	}
 	return results
 }
@@ -60,7 +60,7 @@ func (t TUI) recordInputHistory(content string) TUI {
 
 	var sb strings.Builder
 	for _, entry := range t.inputHistory {
-		sb.WriteString(strings.ReplaceAll(entry, "\n", session.ActionNewlineMarker))
+		sb.WriteString(strings.ReplaceAll(entry, "\n", sessionLog.ActionNewlineMarker))
 		sb.WriteString("\n")
 	}
 	if err := go_pkg_filesystem.WriteFile(filesystem.InputHistoryPath(t.currentSessionID), sb.String(), 0644); err != nil {

@@ -23,7 +23,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
+	"github.com/pardnchiu/agenvoy/internal/session/summary"
 )
 
 func buildContent(content string, imageInputs []string, fileInputs []string) any {
@@ -78,17 +79,17 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 	if overrideID == "" {
 		return nil, fmt.Errorf("execData.SessionID is required")
 	}
-	sessionDir := filepath.Join(filesystem.SessionsDir, overrideID)
+	sessionDir := filesystem.SessionDir(overrideID)
 	if !go_pkg_filesystem_reader.IsDir(sessionDir) {
 		return nil, fmt.Errorf("session %q does not exist", overrideID)
 	}
 
-	oldHistory, maxHistory := sessionManager.GetHistory(overrideID)
+	oldHistory, maxHistory := sessionHistory.Get(overrideID)
 	session.Histories = oldHistory
 	session.BaseLen = len(oldHistory)
 
 	session.SystemPrompts = BuildSystemPrompts(execData.WorkDir, execData.ExtraSystemPrompt, scanner, overrideID, execData.AllowAll, execData.WebMode, execData.ExcludeSkills)
-	if summary := sessionManager.GetSummaryPrompt(overrideID, OldestMessageTime(maxHistory)); summary != "" {
+	if summary := summary.GetPrompt(overrideID, OldestMessageTime(maxHistory)); summary != "" {
 		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
 

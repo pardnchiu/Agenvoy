@@ -122,9 +122,9 @@ func handleDownloadFile(ctx context.Context, _ *toolTypes.Executor, args json.Ra
 		result["sha256"] = sha
 	}
 
-	outBytes, err := json.Marshal(result)
+	raw, err := json.Marshal(result)
 	if err != nil {
 		return "", fmt.Errorf("json.Marshal: %w", err)
 	}
-	return string(outBytes), nil
+	return string(raw), nil
 }

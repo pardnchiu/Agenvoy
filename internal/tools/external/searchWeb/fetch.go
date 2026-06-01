@@ -112,11 +112,11 @@ func fetch(ctx context.Context, query, timeRange string) (string, error) {
 		return "[]", nil
 	}
 
-	bytes, err := json.Marshal(items)
+	raw, err := json.Marshal(items)
 	if err != nil {
 		return "", fmt.Errorf("json.Marshal: %w", err)
 	}
-	return string(bytes), nil
+	return string(raw), nil
 }
 
 func parse(html string) []data {
@@ -165,12 +165,12 @@ func parse(html string) []data {
 	return results
 }
 
-func extractURL(text string) string {
-	if strings.HasPrefix(text, "http") && !strings.Contains(text, "duckduckgo.com") {
-		return text
+func extractURL(str string) string {
+	if strings.HasPrefix(str, "http") && !strings.Contains(str, "duckduckgo.com") {
+		return str
 	}
 
-	parsed, err := url.Parse(text)
+	parsed, err := url.Parse(str)
 	if err != nil {
 		return ""
 	}
@@ -183,7 +183,7 @@ func extractURL(text string) string {
 	return ""
 }
 
-func extractText(text string) string {
+func extractText(str string) string {
 	ddgEntities := map[string]string{
 		"&amp;":  "&",
 		"&lt;":   "<",
@@ -192,10 +192,10 @@ func extractText(text string) string {
 		"&#39;":  "'",
 		"&nbsp;": " ",
 	}
-	text = regexTag.ReplaceAllString(text, "")
+	str = regexTag.ReplaceAllString(str, "")
 
 	for entity, char := range ddgEntities {
-		text = strings.ReplaceAll(text, entity, char)
+		str = strings.ReplaceAll(str, entity, char)
 	}
-	return strings.TrimSpace(text)
+	return strings.TrimSpace(str)
 }

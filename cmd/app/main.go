@@ -13,13 +13,14 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
-	"github.com/pardnchiu/agenvoy/internal/agents/summary"
+	agentSummary "github.com/pardnchiu/agenvoy/internal/agents/exec/summary"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	"github.com/pardnchiu/agenvoy/internal/runtime/line"
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
+	sessionSummary "github.com/pardnchiu/agenvoy/internal/session/summary"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 )
 
@@ -97,27 +98,26 @@ func setSummaryCron() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		sessions := session.IsNeedSummary()
+		sessions := sessionSummary.Pending()
 		if len(sessions) == 0 {
 			continue
 		}
 
 		for _, sid := range sessions {
-			histories, _ := session.GetHistory(sid)
-			summaryHistories := summary.Get(histories)
-			if len(summaryHistories) == 0 {
+			_, histories := sessionHistory.Get(sid)
+			if len(histories) == 0 {
 				continue
 			}
 			bgCtx := context.Background()
-			router := agents.Summary()
+			router := agents.SummaryBot()
 			if router == nil {
-				router = agents.Dispatcher()
+				router = agents.DispatcherBot()
 			}
 			summaryAgent := exec.SelectAgent(bgCtx, router, agents.Registry(), "[summary] background summary cron", false, sid)
 			if summaryAgent == nil {
 				continue
 			}
-			summary.Generate(bgCtx, summaryAgent, sid, summaryHistories)
+			agentSummary.Generate(bgCtx, summaryAgent, sid, histories)
 		}
 	}
 }

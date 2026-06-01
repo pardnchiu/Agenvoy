@@ -10,6 +10,7 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/denied"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -131,7 +132,7 @@ Accepts absolute paths and '~' (e.g. '/abs/path/foo.go', '~/notes.md').`,
 				return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 			}
 
-			filesystem.RunCommitSkillDir(ctx, absPath, false)
+			skill.AutoCommitByPath(ctx, absPath, false)
 			return fmt.Sprintf("successfully updated %s", absPath), nil
 		},
 	})

@@ -11,6 +11,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
+	"github.com/pardnchiu/agenvoy/internal/session/summary"
 )
 
 func getSession(in go_bot_line.Input, content string, data exec.ExecData) (*agentTypes.AgentSession, error) {
@@ -25,11 +27,12 @@ func getSession(in go_bot_line.Input, content string, data exec.ExecData) (*agen
 		Histories: []agentTypes.Message{},
 	}
 
-	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
+	oldHistory, maxHistory := sessionHistory.Get(sessionID)
 	sess.Histories = oldHistory
+	sess.BaseLen = len(oldHistory)
 
 	sess.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, agents.Scanner(), sessionID, data.AllowAll, false, data.ExcludeSkills)
-	if summary := sessionManager.GetSummaryPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
+	if summary := summary.GetPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
 		sess.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
 

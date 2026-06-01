@@ -13,18 +13,18 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionDiscord "github.com/pardnchiu/agenvoy/internal/session/discord"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	id := strings.TrimSpace(payload.SessionID)
-	text := strings.TrimSpace(payload.Text)
-	if id == "" || text == "" || !strings.HasPrefix(id, "dc-") {
+	str := strings.TrimSpace(payload.Text)
+	if id == "" || str == "" || !strings.HasPrefix(id, "dc-") {
 		return
 	}
 
-	channelID, err := sessionManager.GetChannelID(id)
+	channelID, err := sessionDiscord.GetChannel(id)
 	if err != nil {
 		slog.Warn("github.com/pardnchiu/agenvoy/internal/session GetChannelID",
 			slog.String("session", id),
@@ -51,7 +51,7 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	}
 
 	chanName := utils.LookupChatName(filesystem.DiscordAuthPath, channelID)
-	cleanText, attachmentPaths := utils.ExtractFileMarkers(text)
+	cleanText, attachmentPaths := utils.ExtractFileMarkers(str)
 
 	if strings.TrimSpace(cleanText) != "" {
 		message := cleanText + buildPushFooter(payload.Duration, payload.Model, payload.Usage)

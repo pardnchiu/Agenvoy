@@ -55,7 +55,7 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 		}()
 		err := exec.Run(
 			ctx,
-			agents.Dispatcher(),
+			agents.DispatcherBot(),
 			agents.Registry(),
 			scanner,
 			input,
@@ -88,9 +88,9 @@ func (t TUI) handleAgentEvent(ev agentTypes.Event) (tea.Model, tea.Cmd) {
 
 	case agentTypes.EventAgentResult:
 		if ev.Source == "" {
-			text := strings.TrimSpace(ev.Text)
-			t.currentModel = text
-			t.activity = text
+			str := strings.TrimSpace(ev.Text)
+			t.currentModel = str
+			t.activity = str
 		}
 
 	case agentTypes.EventToolCall:

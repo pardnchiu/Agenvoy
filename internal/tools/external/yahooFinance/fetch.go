@@ -105,9 +105,9 @@ func fetch(ctx context.Context, host, symbol, interval, rangeStr string) (string
 		return "", fmt.Errorf("status %d", status)
 	}
 
-	bytes, err := json.Marshal(data)
+	raw, err := json.Marshal(data)
 	if err != nil {
 		return "", err
 	}
-	return string(bytes), nil
+	return string(raw), nil
 }

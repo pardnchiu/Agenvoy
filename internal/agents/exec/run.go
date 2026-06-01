@@ -8,9 +8,10 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 )
 
 func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *runtime.SkillScanner, userInput string, imageInputs []string, fileInputs []string, events chan<- agentTypes.Event, allowAll bool, workDir, sessionID string, webMode bool) error {
@@ -30,8 +31,8 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 	}
 
 	sessionOverride := sessionID
-	if name, effective := sessionManager.Match(trimInput); name != "" {
-		id := sessionManager.GetSessionIDByName(name)
+	if name, effective := sessionManager.CheckAssign(trimInput); name != "" {
+		id := sessionManager.GetSessionID(name)
 		if id == "" {
 			return fmt.Errorf("session %q not found", name)
 		}
@@ -44,7 +45,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		trimInput = strings.TrimSpace(externalEffective)
 	}
 
-	var matchedSkill *filesystem.Skill
+	var matchedSkill *skill.Skill
 	var skillResult agentTypes.Event
 	if externalAgent == "" && scanner != nil {
 		if m, effective := runtime.MatchSkill(scanner, trimInput); m != nil {
@@ -100,9 +101,9 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 
 	if session != nil && session.ID != "" {
 		if matchedSkill != nil {
-			sessionManager.Record(session.ID, skillResult)
+			sessionLog.Record(session.ID, skillResult)
 		}
-		sessionManager.Record(session.ID, agentResult)
+		sessionLog.Record(session.ID, agentResult)
 	}
 
 	if externalAgent != "" {

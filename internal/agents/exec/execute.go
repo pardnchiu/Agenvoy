@@ -22,9 +22,15 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/record"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
+	configStatus "github.com/pardnchiu/agenvoy/internal/session/config/status"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
+	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -34,20 +40,20 @@ var timestampHeaderRegex = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
 
 var summaryLeakMarkerRegex = regexp.MustCompile(`(?mi)^\s*(?:[#*>\-]+\s*)?(?:Prior Conversation Context|Prior summary \(reference only\)|background summary of prior discussion|Strict rules:)`)
 
-func StripModelResponse(text string) string {
-	text = timestampHeaderRegex.ReplaceAllString(text, "")
-	if loc := summaryLeakMarkerRegex.FindStringIndex(text); loc != nil {
-		dropped := strings.TrimSpace(text[loc[0]:])
+func StripModelResponse(str string) string {
+	str = timestampHeaderRegex.ReplaceAllString(str, "")
+	if loc := summaryLeakMarkerRegex.FindStringIndex(str); loc != nil {
+		dropped := strings.TrimSpace(str[loc[0]:])
 		head := dropped
 		if len(head) > 120 {
 			head = head[:120]
 		}
-		text = text[:loc[0]]
+		str = str[:loc[0]]
 		slog.Warn("StripModelResponse summary leak stripped",
 			slog.Int("dropped_chars", len(dropped)),
 			slog.String("dropped_head", head))
 	}
-	lines := strings.Split(text, "\n")
+	lines := strings.Split(str, "\n")
 	inFence := false
 	for i, line := range lines {
 		trimmed := strings.TrimLeft(line, " \t")
@@ -88,7 +94,7 @@ type ExecData struct {
 	Agent             agentTypes.Agent
 	FallbackAgents    []agentTypes.Agent
 	WorkDir           string
-	Skill             *filesystem.Skill
+	Skill             *skill.Skill
 	SkillScanner      *runtime.SkillScanner
 	Content           string
 	SessionID         string
@@ -139,8 +145,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		if s, ok := session.UserInput.Content.(string); ok {
 			inputText = s
 		}
-		taskID := sessionManager.Online(session.ID, inputText)
-		defer sessionManager.Idle(session.ID, taskID)
+		taskID := configStatus.Online(session.ID, inputText)
+		defer configStatus.Idle(session.ID, taskID)
 
 		original := events
 		teed := make(chan agentTypes.Event, 64)
@@ -155,7 +161,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			defer close(done)
 			for ev := range teed {
 				if !stateless {
-					sessionManager.Record(sid, ev)
+					sessionLog.Record(sid, ev)
 				}
 				if isDcPush {
 					switch ev.Type {
@@ -225,7 +231,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		data.ExcludeTools = append(data.ExcludeTools,
 			"fetch_youtube_transcript", "transcribe_media")
 	}
-	cfg, _ := sessionManager.Load()
+	cfg, _ := config.Load()
 	if cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "" {
 		data.ExcludeTools = append(data.ExcludeTools,
 			"telegram_format", "list_telegram_chat", "send_to_telegram_chat")
@@ -432,15 +438,15 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 		switch value := choice.Message.Content.(type) {
 		case string:
-			text := value
-			if text == "" {
+			str := value
+			if str == "" {
 				if actionError(&emptyCount, events) {
 					return nil
 				}
 				continue
 			}
 
-			stripped := StripModelResponse(text)
+			stripped := StripModelResponse(str)
 			if stripped == "" {
 				if actionError(&emptyCount, events) {
 					return nil
@@ -474,7 +480,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			return fmt.Errorf("unexpected content type: %T", choice.Message.Content)
 		}
 
-		if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
+		if err := record.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 			slog.Warn("usageManager.Update",
 				slog.String("session", session.ID),
 				slog.String("error", err.Error()))
@@ -482,8 +488,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 
 		if !session.Stateless && len(session.Tools) > 0 {
-			if data, err := json.Marshal(session.Tools); err == nil {
-				sessionManager.SaveToToolCall(session.ID, string(data))
+			if raw, err := json.Marshal(session.Tools); err == nil {
+				sessionManager.SaveToToolCall(session.ID, string(raw))
 			}
 		}
 		return nil
@@ -502,7 +508,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		usage.CacheRead += resp.Usage.CacheRead
 		if text, ok := resp.Choices[0].Message.Content.(string); ok && text != "" {
 			sendText(events, StripModelResponse(text))
-			if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
+			if err := record.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 				slog.Warn("usageManager.Update",
 					slog.String("session", session.ID),
 					slog.String("error", err.Error()))
@@ -513,7 +519,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	}
 
 	sendText(events, "no usable data, retry later, or using other tools.")
-	if err := filesystem.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
+	if err := record.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 		slog.Warn("usageManager.Update",
 			slog.String("session", session.ID),
 			slog.String("error", err.Error()))
@@ -532,10 +538,10 @@ func actionError(emptyCount *int, events chan<- agentTypes.Event) bool {
 	return false
 }
 
-func sendText(events chan<- agentTypes.Event, text string) {
-	text = strings.TrimRight(text, "\n")
-	if text != "" {
-		for line := range strings.SplitSeq(text, "\n") {
+func sendText(events chan<- agentTypes.Event, str string) {
+	str = strings.TrimRight(str, "\n")
+	if str != "" {
+		for line := range strings.SplitSeq(str, "\n") {
 			events <- agentTypes.Event{Type: agentTypes.EventText, Text: line}
 		}
 	}
@@ -560,8 +566,8 @@ func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSe
 		delta = append(delta, message)
 	}
 
-	if err := sessionManager.AppendHistory(session.ID, delta); err != nil {
-		return fmt.Errorf("sessionManager.AppendHistory: %w", err)
+	if err := sessionHistory.Append(session.ID, delta); err != nil {
+		return fmt.Errorf("sessionHistory.Append: %w", err)
 	}
 
 	writeSessionHistEntry(session.ID, choice.Message)
@@ -576,7 +582,7 @@ func SaveUserInputHistory(sessionID, userText string) {
 		Role:    "user",
 		Content: userText,
 	})
-	sessionManager.AppendActionUserInput(sessionID, userText)
+	sessionLog.Append(sessionID, userText)
 }
 
 func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
@@ -597,7 +603,7 @@ func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
 	}
 }
 
-func assignBindingSkill(session *agentTypes.AgentSession, s *filesystem.Skill) {
+func assignBindingSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 	id := "skill-assign-" + newID("skill", s.Name)
 	argsJSON, _ := json.Marshal(map[string]string{"skill": s.Name})
 	call := agentTypes.ToolCall{
@@ -635,7 +641,7 @@ func newID(parts ...string) string {
 }
 
 func buildCrossChannelPrompt() string {
-	cfg, err := sessionManager.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil {
 		return ""
 	}

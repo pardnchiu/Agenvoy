@@ -96,11 +96,11 @@ func registAskUser() {
 				return "", err
 			}
 
-			bytes, err := json.Marshal(map[string]any{"answers": answers})
+			raw, err := json.Marshal(map[string]any{"answers": answers})
 			if err != nil {
 				return "", fmt.Errorf("json Marshal: %w", err)
 			}
-			return string(bytes), nil
+			return string(raw), nil
 		},
 	})
 }

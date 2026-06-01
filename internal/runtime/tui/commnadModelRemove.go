@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 )
 
 type ModelRemove struct {
@@ -13,7 +13,7 @@ type ModelRemove struct {
 }
 
 func (t TUI) commandModelRemove() (TUI, tea.Cmd, bool) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n"), true
 	}
@@ -51,7 +51,7 @@ func (t TUI) commandModelRemove() (TUI, tea.Cmd, bool) {
 }
 
 func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n")
 	}
@@ -83,7 +83,7 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 		clearedSummary = true
 	}
 
-	if err := session.Save(cfg); err != nil {
+	if err := config.Save(cfg); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Save: %v", err)) + "\n")
 	}
 

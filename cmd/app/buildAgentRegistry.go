@@ -15,7 +15,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/openai"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 )
 
 func buildAgentRegistry() agentTypes.AgentRegistry {
@@ -61,7 +61,7 @@ func buildAgentRegistry() agentTypes.AgentRegistry {
 }
 
 func dispatcherSelector(registry agentTypes.AgentRegistry) agentTypes.Agent {
-	if cfg, err := session.Load(); err == nil && cfg.DispatcherModel != "" {
+	if cfg, err := config.Load(); err == nil && cfg.DispatcherModel != "" {
 		if a, ok := registry.Registry[cfg.DispatcherModel]; ok {
 			return a
 		}
@@ -70,7 +70,7 @@ func dispatcherSelector(registry agentTypes.AgentRegistry) agentTypes.Agent {
 }
 
 func summarySelector(registry agentTypes.AgentRegistry) agentTypes.Agent {
-	if cfg, err := session.Load(); err == nil && cfg.SummaryModel != "" {
+	if cfg, err := config.Load(); err == nil && cfg.SummaryModel != "" {
 		if a, ok := registry.Registry[cfg.SummaryModel]; ok {
 			return a
 		}

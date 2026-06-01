@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 )
 
 type SummaryModelSelect struct {
@@ -12,7 +12,7 @@ type SummaryModelSelect struct {
 }
 
 func (t TUI) commandSummaryModel() (TUI, tea.Cmd, bool) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n"), true
 	}
@@ -57,7 +57,7 @@ func (t TUI) commandSummaryModel() (TUI, tea.Cmd, bool) {
 }
 
 func (t TUI) runSummaryModelSelect(name string) (TUI, tea.Cmd) {
-	cfg, err := session.Load()
+	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n")
 	}
@@ -69,7 +69,7 @@ func (t TUI) runSummaryModelSelect(name string) (TUI, tea.Cmd) {
 	}
 
 	cfg.SummaryModel = name
-	if err := session.Save(cfg); err != nil {
+	if err := config.Save(cfg); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Save: %v", err)) + "\n")
 	}
 	if name == "" {

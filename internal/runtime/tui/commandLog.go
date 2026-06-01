@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -16,7 +15,7 @@ import (
 type LogDone struct{ err error }
 
 func (t TUI) commandLog() (TUI, tea.Cmd, bool) {
-	path := filepath.Join(filesystem.AgenvoyDir, "daemon.log")
+	path := filesystem.DaemonLogPath
 	if !go_pkg_filesystem_reader.Exists(path) {
 		return t, tea.Println(hintStyle.Render("⎯ no daemon log yet") + "\n"), true
 	}

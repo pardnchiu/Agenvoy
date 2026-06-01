@@ -2,27 +2,23 @@
 
 > [中文](Memory-System.zh.md)
 
-The memory layer in Agenvoy has four ToriiDB-backed tiers for conversation memory, plus a fifth optional tier — KuraDB — for external document RAG.
+The memory layer in Agenvoy has three tiers for conversation memory, a cross-session error memory tier, plus an optional tier — KuraDB — for external document RAG.
 
 | Tier | Backed by | Scope |
 |---|---|---|
-| Current context (16-msg window) | in-memory + `DBSessionHist` | session |
-| Rolling summary | `DBSessionSummary` | session |
-| Conversation history search | `DBSessionHist` (keyword + vector) | session |
-| Error memory | `error_memory` (90d TTL) | cross-session |
+| 1. Context window (16 messages + summary) | `history.json` + `summary.json` | session |
+| 2. Semantic search (recent) | ToriiDB `DBSessionHist` (vector) | session |
+| 3. Full-text archive (all history) | SQLite FTS5 via [go-sqlite](https://github.com/pardnchiu/go-sqlite) | session |
+| Error memory | ToriiDB `error_memory` (90d TTL) | cross-session |
 | External document RAG | [KuraDB](KuraDB-RAG.md) (in-process child) | cross-session, user-curated databases |
 
-## Four-tier architecture (conversation memory, ToriiDB)
+## Three-tier conversation memory
 
-### 1. Current context (`MAX_HISTORY_MESSAGES`, default 16)
+### 1. Context window (`max_history_messages`, default 16)
 
-Each session keeps the most recent N messages in full and feeds them into the LLM context window. Anything older is compressed into the rolling summary.
+Each session keeps the most recent N messages in full and feeds them into the LLM context window. Anything older remains in `history.json` but is not sent to the LLM.
 
-`MAX_HISTORY_MESSAGES` is the cap; lower values reduce token cost but increase forgetfulness.
-
-### 2. Rolling summary
-
-When the recent-N window slides, the displaced messages are summarized via `summary_prompt.md` and persisted in `DBSessionSummary`. The summary is injected into the system prompt at the top of each turn so older context survives.
+A rolling summary (`summary.json`) condenses older conversations and is injected into the system prompt at the top of each turn so older context survives beyond the N-message window.
 
 **Incremental cursor:** `summary.meta.json` (per-session) holds `last_message_time` (format `YYYY-MM-DD HH:MM:SS`, extracted from message content's opening `當前時間: ...`). On each `summary.Generate` invocation:
 
@@ -31,26 +27,32 @@ When the recent-N window slides, the displaced messages are summarized via `summ
 3. On success, cursor advances to that chunk's max timestamp + `SaveSummary` triggers the mtime gate
 4. `generatePass` failure → `return` (don't bill subsequent chunks; next cron tick retries)
 
-**Why timestamp not count:** `summary.json` fields (`discussion_log` / `key_data`) get pruned, so message-count-based coverage drifts. Message timestamps are immutable, unbroken signal.
+### 2. Semantic search — ToriiDB (recent conversations)
 
-**Migration:** if cursor is empty but `summaryMap` is non-empty (first upgrade), `SaveSummaryMeta(latestMessageTime(histories))` + `SaveSummary` writes the gate and the current tick skips — avoiding token blow-up from re-summarizing N messages on first upgrade.
+The `search_conversation_history` tool with `mode=semantic` runs vector similarity search via ToriiDB `db.VSearch`. Each hit triggers a context window expansion: 2 entries before + 1 entry after.
 
-> Summary auto-stripping was removed in commit `a33cbef` — summaries are produced **only** on explicit trigger. Do not re-introduce automatic stripping.
+ToriiDB entries are cleaned during `history.json` compaction — entries older than the compact cutoff are removed, keeping ToriiDB focused on recent conversations. Older data lives in SQLite (tier 3).
 
-### 3. Semantic conversation history search
+### 3. Full-text archive — SQLite FTS5 (all history)
 
-The `search_conversation_history` tool runs **keyword + semantic in parallel**:
+Every message written to `history.json` is **dual-written** to SQLite (`~/.config/agenvoy/.store/history.db`) via [pardnchiu/go-sqlite](https://github.com/pardnchiu/go-sqlite). SQLite always holds the complete conversation history, even after `history.json` is compacted.
 
-- **Keyword path** — `Contains` scan over history with optional `time_range` pre-filter (1d / 7d / 1m / 1y)
-- **Semantic path** — `db.VSearch(ctx, keyword, sid+":*", k)` cosine top-K; `time_range` does **not** apply (semantic relevance is the signal)
+The `search_conversation_history` tool with `mode=keyword` runs FTS5 full-text search on the SQLite archive + ToriiDB substring match on recent entries, combining results.
 
-`limit ∈ [8, 16, 32]` is a per-source cap. Both paths fetch `limit/2`, then results merge and dedupe by key.
+**Compaction:** when `history.json` exceeds `max_history_bytes` (default 5 MiB), the oldest messages are trimmed to 80% on a complete user+assistant pair boundary. The cutoff timestamp is recorded in SQLite `session_meta.start_at` so that keyword search excludes entries already present in `history.json` (avoiding duplicates). ToriiDB entries older than the cutoff are also removed.
 
-Each hit triggers a context window expansion: 2 entries before + 1 entry after (asymmetric — the prior reveals setup, the following reveals resolution). Adjacent indices form contiguous blocks; gaps are separated by blank lines.
+**Backfill:** on first encounter (SQLite has no data for a session but `history.json` has content), the entire existing history is backfilled into SQLite.
 
-When `OPENAI_API_KEY` is missing, the semantic path silently returns empty and only keyword scan applies.
+**Timestamps:** stored as UTC unix nanoseconds. `當前時間:` in message content is parsed via `time.ParseInLocation` (local timezone) and converted to UTC for storage. Search queries use `time.Now().UnixNano()` (already UTC).
 
-### 4. Cross-session error memory
+### Search routing
+
+| `mode` parameter | Source | Use case |
+|---|---|---|
+| `semantic` (default) | ToriiDB VSearch | "What did we discuss about X?" — meaning-based |
+| `keyword` | SQLite FTS5 (archive) + ToriiDB substring (recent) | "Find messages containing 'sandbox'" — exact text |
+
+### Cross-session error memory
 
 Tool failures, resolution paths, and abandoned strategies persist across sessions in `error_memory` with **90-day TTL**. On hit (either via keyword `Contains` or `db.VSearch`), the entry's TTL is refreshed via `db.Expire`.
 
@@ -63,27 +65,30 @@ When the same tool name fails in a future session, `toolCall.go` automatically q
 
 ## Storage layout
 
-| Database | Content | TTL |
+| Store | Content | Lifecycle |
 |---|---|---|
-| `DBSessionHist` | One entry per user/assistant turn, vectorized via `text-embedding-3-small` | None (unless session is `temp-*` and reaped) |
-| `DBSessionSummary` | One summary blob per session | None |
-| `DBConfig` | Session-level config flags | None |
-| `error_memory` | Tool error records with resolution metadata | 90 d (refresh on hit) |
+| `history.json` | Recent messages (hot, LLM reads every turn) | Auto-compacted at 5 MiB |
+| ToriiDB `DBSessionHist` | Recent messages with embeddings | Cleaned on compact (entries < cutoff removed) |
+| SQLite `messages` | All messages ever written (dual-write) | Cleared on reset / remove-session |
+| SQLite `session_meta` | `start_at` — compact cutoff timestamp | Cleared on reset / remove-session |
+| `summary.json` | Rolling summary blob | Survives reset |
+| ToriiDB `error_memory` | Tool error records with resolution metadata | 90d TTL (refresh on hit) |
 
-## Why ToriiDB
+## Reset / remove behavior
 
-- **Embedded** — no external service required
-- **Vector search** — `SetVector` + `VSearch` with cosine similarity
-- **TTL with refresh** — `Expire` keeps frequently relevant entries hot
-- **Lazy value getter** — `Entry.Value` is `func() string` to avoid materializing every result during scans
+| Operation | `history.json` | ToriiDB `DBSessionHist` | SQLite (messages + meta) | `summary.json` |
+|---|---|---|---|---|
+| Compact (auto) | Trimmed to 80% | Entries < cutoff removed | Untouched (already has all data) | Untouched |
+| Reset (`/reset`) | Deleted | Cleared | Cleared | Preserved |
+| Remove session | Directory deleted | Cleared | Cleared | Directory deleted |
 
 ## External document RAG (KuraDB)
 
-The four tiers above all serve conversation memory — past chats, summaries, error records. For querying **user-curated document collections** (notes, inbox, code repos, …), Agenvoy delegates to [KuraDB](KuraDB-RAG.md), an in-process child process spawned by the daemon when `kuradb_enabled=true`.
+The three tiers above all serve conversation memory — past chats, summaries, error records. For querying **user-curated document collections** (notes, inbox, code repos, …), Agenvoy delegates to [KuraDB](KuraDB-RAG.md), an in-process child process spawned by the daemon when `kuradb_enabled=true`.
 
 KuraDB exposes three tools to the agent (`rag_list_db` / `rag_search_keyword` / `rag_search_semantic`), per-turn dynamically excluded when the endpoint file is missing. When loaded, the system prompt forces them to fire **first** for any information query (external web tools become gap-filling secondary).
 
-This split is deliberate: ToriiDB is integrated runtime memory (you can't disable it); KuraDB is an opt-in indexed knowledge base (enable via `/kuradb` TUI command).
+This split is deliberate: ToriiDB + SQLite are integrated runtime memory (you can't disable them); KuraDB is an opt-in indexed knowledge base (enable via `/kuradb` TUI command).
 
 ## Migration note
 

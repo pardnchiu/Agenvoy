@@ -30,28 +30,28 @@ func ReadFile(ctx context.Context, path string, offset, limit int) (string, erro
 	case ".pdf":
 		_, chunks, err := go_pkg_filesystem_parser.PDF(ctx, path)
 		if err != nil {
-			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/parser PDF (%s): %w", path, err)
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/parser PDF [%s]: %w", path, err)
 		}
 		return sliceChunks(chunks, path, offset, limit, "page"), nil
 
 	case ".pptx":
 		_, chunks, err := go_pkg_filesystem_parser.PPTX(ctx, path)
 		if err != nil {
-			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/parser PPTX (%s): %w", path, err)
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/parser PPTX [%s]: %w", path, err)
 		}
 		return sliceChunks(chunks, path, offset, limit, "slide"), nil
 
 	case ".docx":
 		result, _, err := go_pkg_filesystem_parser.Docx(ctx, path)
 		if err != nil {
-			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/parser Docx (%s): %w", path, err)
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/parser Docx [%s]: %w", path, err)
 		}
 		return sliceLines(result, path, offset, limit), nil
 
 	case ".csv", ".tsv":
 		result, err := go_pkg_filesystem_parser.CSV(ctx, path, offset, limit)
 		if err != nil {
-			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/parser CSV (%s): %w", path, err)
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/parser CSV [%s]: %w", path, err)
 		}
 		return result, nil
 	}
@@ -66,7 +66,7 @@ func ReadFile(ctx context.Context, path string, offset, limit int) (string, erro
 
 		result, err := go_pkg_filesystem_parser.Image(ctx, path)
 		if err != nil {
-			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/parser Image (%s): %w", path, err)
+			return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/parser Image [%s]: %w", path, err)
 		}
 		return result, nil
 	}
@@ -81,7 +81,7 @@ func ReadFile(ctx context.Context, path string, offset, limit int) (string, erro
 
 	result, err := go_pkg_filesystem.ReadText(path)
 	if err != nil {
-		return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem ReadText(%s): %w", path, err)
+		return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem ReadText [%s]: %w", path, err)
 	}
 	// * binary guard: NUL in first 512B (UTF-16 false-positive)
 	if strings.IndexByte(result[:min(len(result), 512)], 0) >= 0 {

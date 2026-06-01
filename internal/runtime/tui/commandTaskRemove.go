@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 )
 
@@ -63,16 +63,16 @@ func (t TUI) openTaskRemoveConfirm(skill string) (TUI, tea.Cmd) {
 	return t, nil
 }
 
-func (t TUI) runTaskRemove(skill string) (TUI, tea.Cmd) {
-	removed, err := runtime.RemoveTask(skill)
+func (t TUI) runTaskRemove(skillName string) (TUI, tea.Cmd) {
+	removed, err := runtime.RemoveTask(skillName)
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] task remove: %v", err)) + "\n")
 	}
 	if removed == 0 {
-		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ no task found for %s", skill)) + "\n")
+		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ no task found for %s", skillName)) + "\n")
 	}
-	if err := filesystem.TrashScheduleSkill(context.Background(), skill); err != nil {
+	if err := skill.TrashSchedule(context.Background(), skillName); err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] TrashScheduleSkill: %v", err)) + "\n")
 	}
-	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ removed task: %s · skill trashed", skill)) + "\n")
+	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ removed task: %s · skill trashed", skillName)) + "\n")
 }

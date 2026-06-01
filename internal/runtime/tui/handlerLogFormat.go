@@ -8,7 +8,8 @@ import (
 	"time"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
+	sessionTUI "github.com/pardnchiu/agenvoy/internal/session/tui"
 )
 
 var userWrapperRe = regexp.MustCompile(`^---\n當前時間:[^\n]*\n(?:[^\n]+\n)*?---\n`)
@@ -43,7 +44,7 @@ func parseActionLine(raw string) (parsedAction, bool) {
 		kind = third
 		rest = after
 	} else {
-		hash = session.DefaultHash
+		hash = sessionTUI.Default
 		kind = mid
 	}
 
@@ -55,7 +56,7 @@ func parseActionLine(raw string) (parsedAction, bool) {
 }
 
 func renderActionLine(p parsedAction) string {
-	body := strings.ReplaceAll(p.body, session.ActionNewlineMarker, "\n")
+	body := strings.ReplaceAll(p.body, sessionLog.ActionNewlineMarker, "\n")
 
 	switch p.kind {
 	case "user":
@@ -67,11 +68,11 @@ func renderActionLine(p parsedAction) string {
 		return messageBlock(body)
 
 	case "assistant":
-		text := strings.TrimSpace(body)
-		if text == "" {
+		str := strings.TrimSpace(body)
+		if str == "" {
 			return ""
 		}
-		return renderEvent(agentTypes.Event{Type: agentTypes.EventText, Text: text})
+		return renderEvent(agentTypes.Event{Type: agentTypes.EventText, Text: str})
 
 	case "tool_call":
 		name, args, _ := strings.Cut(body, " ")
@@ -102,11 +103,11 @@ func renderActionLine(p parsedAction) string {
 		return renderEvent(formatDone(body))
 
 	case "skill_result":
-		text := strings.TrimSpace(body)
-		if text == "" {
+		str := strings.TrimSpace(body)
+		if str == "" {
 			return ""
 		}
-		return renderEvent(agentTypes.Event{Type: agentTypes.EventSkillResult, Text: text})
+		return renderEvent(agentTypes.Event{Type: agentTypes.EventSkillResult, Text: str})
 	}
 	return ""
 }

@@ -134,11 +134,11 @@ func (c *Agent) getAccessToken(ctx context.Context, client *http.Client, deviceC
 			Scope:       accessToken.Scope,
 		}
 
-		data, err := json.Marshal(token)
+		raw, err := json.Marshal(token)
 		if err != nil {
 			return nil, fmt.Errorf("json.Marshal: %w", err)
 		}
-		if err := keychain.Set(tokenKey, string(data)); err != nil {
+		if err := keychain.Set(tokenKey, string(raw)); err != nil {
 			return nil, fmt.Errorf("keychain.Set: %w", err)
 		}
 		return token, nil

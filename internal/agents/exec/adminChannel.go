@@ -8,11 +8,11 @@ import (
 	"sync"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
-type AdminSendFunc func(ctx context.Context, targetID, text string) error
+type AdminSendFunc func(ctx context.Context, targetID, str string) error
 
 var (
 	adminSenderMu sync.RWMutex
@@ -42,7 +42,7 @@ func ParseAdminChannel(v string) (prefix, id string, ok bool) {
 }
 
 func NotifyAdminCode(ctx context.Context, code, sourceName string) {
-	cfg, err := sessionManager.Load()
+	cfg, err := config.Load()
 	if err != nil || cfg == nil {
 		return
 	}
@@ -78,8 +78,8 @@ func NotifyAdminCode(ctx context.Context, code, sourceName string) {
 		return
 	}
 
-	text := fmt.Sprintf("%s requested access · verification code: %s", sourceName, code)
-	if err := send(ctx, id, text); err != nil {
+	str := fmt.Sprintf("%s requested access · verification code: %s", sourceName, code)
+	if err := send(ctx, id, str); err != nil {
 		slog.Warn("admin_channel send failed",
 			slog.String("channel", value),
 			slog.String("error", err.Error()))

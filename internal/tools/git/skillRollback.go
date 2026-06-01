@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -34,7 +34,7 @@ func skillRollback() {
 			if params.Commit == "" {
 				return "", fmt.Errorf("commit is required")
 			}
-			out, err := filesystem.RollbackSkillDir(ctx, params.Commit)
+			out, err := skill.Rollback(ctx, params.Commit)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.RollbackSkills: %w", err)
 			}

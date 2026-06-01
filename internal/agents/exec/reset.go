@@ -5,16 +5,17 @@ import (
 	"fmt"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
-	"github.com/pardnchiu/agenvoy/internal/agents/summary"
+	agentSummary "github.com/pardnchiu/agenvoy/internal/agents/exec/summary"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 )
 
 func summaryRouter() agentTypes.Agent {
-	if a := agents.Summary(); a != nil {
+	if a := agents.SummaryBot(); a != nil {
 		return a
 	}
-	return agents.Dispatcher()
+	return agents.DispatcherBot()
 }
 
 func ForceSummary(ctx context.Context, sessionID string) (int, error) {
@@ -22,9 +23,8 @@ func ForceSummary(ctx context.Context, sessionID string) (int, error) {
 		return 0, fmt.Errorf("session id is required")
 	}
 
-	histories, _ := sessionManager.GetHistory(sessionID)
-	summaryHistories := summary.Get(histories)
-	if len(summaryHistories) == 0 {
+	_, histories := sessionHistory.Get(sessionID)
+	if len(histories) == 0 {
 		return 0, nil
 	}
 
@@ -32,10 +32,10 @@ func ForceSummary(ctx context.Context, sessionID string) (int, error) {
 	if agent == nil {
 		return 0, fmt.Errorf("no agent available for summary refresh")
 	}
-	if err := summary.Generate(ctx, agent, sessionID, summaryHistories); err != nil {
+	if err := agentSummary.Generate(ctx, agent, sessionID, histories); err != nil {
 		return 0, fmt.Errorf("summary refresh failed: %w", err)
 	}
-	return len(summaryHistories), nil
+	return len(histories), nil
 }
 
 func ResetSessionWithSummary(ctx context.Context, sessionID string) (int, error) {
@@ -43,18 +43,17 @@ func ResetSessionWithSummary(ctx context.Context, sessionID string) (int, error)
 		return 0, fmt.Errorf("session id is required")
 	}
 
-	histories, _ := sessionManager.GetHistory(sessionID)
-	summaryHistories := summary.Get(histories)
+	_, histories := sessionHistory.Get(sessionID)
 
-	if len(summaryHistories) > 0 {
+	if len(histories) > 0 {
 		agent := SelectAgent(ctx, summaryRouter(), agents.Registry(), "[summary] reset session", false, sessionID)
 		if agent == nil {
 			return 0, fmt.Errorf("no agent available for summary refresh; reset aborted")
 		}
-		if err := summary.Generate(ctx, agent, sessionID, summaryHistories); err != nil {
+		if err := agentSummary.Generate(ctx, agent, sessionID, histories); err != nil {
 			return 0, fmt.Errorf("summary refresh failed; reset aborted to avoid context loss: %w", err)
 		}
 	}
 
-	return sessionManager.ResetHistoryKeepSummary(sessionID)
+	return sessionManager.Reset(sessionID)
 }

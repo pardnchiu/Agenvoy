@@ -13,6 +13,7 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 )
 
 type SkillScanner struct {
@@ -22,8 +23,8 @@ type SkillScanner struct {
 }
 
 type SkillList struct {
-	ByName map[string]*filesystem.Skill
-	ByPath map[string]*filesystem.Skill
+	ByName map[string]*skill.Skill
+	ByPath map[string]*skill.Skill
 	Paths  []string
 }
 
@@ -52,8 +53,8 @@ func NewSkillScanner() *SkillScanner {
 
 func (s *SkillScanner) Scan() {
 	list := &SkillList{
-		ByName: make(map[string]*filesystem.Skill),
-		ByPath: make(map[string]*filesystem.Skill),
+		ByName: make(map[string]*skill.Skill),
+		ByPath: make(map[string]*skill.Skill),
 		Paths:  s.paths,
 	}
 
@@ -90,7 +91,7 @@ func (s *SkillScanner) scan(root string, list *SkillList) error {
 			continue
 		}
 
-		skill, err := filesystem.ParseSkill(path)
+		skill, err := skill.Get(path)
 		if err != nil {
 			slog.Warn("failed to parse skill",
 				slog.String("path", path),
@@ -123,13 +124,13 @@ func (s *SkillScanner) LoadFS(fsys fs.FS, dir string) {
 		}
 
 		skillPath := fmt.Sprintf("%s/%s/SKILL.md", dir, entry.Name())
-		data, err := fs.ReadFile(fsys, skillPath)
+		raw, err := fs.ReadFile(fsys, skillPath)
 		if err != nil {
 			continue
 		}
 
 		folderPath := fmt.Sprintf("%s/%s", dir, entry.Name())
-		skill := filesystem.ParseSkillBytes(skillPath, folderPath, data)
+		skill := skill.ParseBytes(skillPath, folderPath, raw)
 		if skill.Name == "" {
 			skill.Name = entry.Name()
 		}
@@ -154,7 +155,7 @@ func (s *SkillScanner) List() []string {
 	return names
 }
 
-func (s *SkillScanner) Lookup(name string) *filesystem.Skill {
+func (s *SkillScanner) Lookup(name string) *skill.Skill {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if s.Skills == nil {
@@ -163,7 +164,7 @@ func (s *SkillScanner) Lookup(name string) *filesystem.Skill {
 	return s.Skills.ByName[name]
 }
 
-func MatchSkill(scanner *SkillScanner, input string, excludeSkills ...string) (*filesystem.Skill, string) {
+func MatchSkill(scanner *SkillScanner, input string, excludeSkills ...string) (*skill.Skill, string) {
 	if scanner == nil {
 		return nil, input
 	}

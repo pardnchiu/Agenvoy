@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,12 +14,15 @@ import (
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
+	"github.com/pardnchiu/agenvoy/internal/session/summary"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 )
 
 func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPrompt string, excludedTools []string) (string, error) {
 	registry := agents.Registry()
-	dispatcher := agents.Dispatcher()
+	dispatcher := agents.DispatcherBot()
 	if dispatcher == nil || len(registry.Registry) == 0 {
 		return "", fmt.Errorf("subagent host not initialized")
 	}
@@ -67,7 +69,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 		AllowAll:          allowAll,
 	}
 
-	oldHistory, maxHistory := sessionManager.GetHistory(sessionID)
+	oldHistory, maxHistory := sessionHistory.Get(sessionID)
 	if oldHistory == nil {
 		oldHistory = []agentTypes.Message{}
 	}
@@ -91,7 +93,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 		BaseLen:       len(oldHistory),
 		UserInput:     agentTypes.Message{Role: "user", Content: userText},
 	}
-	if summary := sessionManager.GetSummaryPrompt(sessionID, OldestMessageTime(maxHistory)); summary != "" {
+	if summary := summary.GetPrompt(sessionID, OldestMessageTime(maxHistory)); summary != "" {
 		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
 
@@ -105,7 +107,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 		parentEvents = nil
 	}
 
-	displayName, _ := sessionManager.GetBot(sessionID)
+	displayName, _ := configBot.Get(sessionID)
 	if displayName == "" || displayName == sessionID {
 		var short, rest string
 		switch {
@@ -154,12 +156,12 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 	}
 
 	if err := <-errCh; err != nil {
-		text := strings.TrimSpace(sb.String())
-		if text == "" {
+		str := strings.TrimSpace(sb.String())
+		if str == "" {
 			return "", fmt.Errorf("subagent execute: %w", err)
 		}
 		return fmt.Sprintf("[subagent partial result · %s · session=%s]\n%s\n\n[error] %s",
-			agent.Name(), sessionID, text, err.Error()), nil
+			agent.Name(), sessionID, str, err.Error()), nil
 	}
 
 	result := strings.TrimSpace(sb.String())
@@ -195,14 +197,14 @@ func passSubagentEvent(parent chan<- agentTypes.Event, name string, ev agentType
 func ensureSubagentSession(input string) (string, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
-		id, err := sessionManager.CreateSession("temp-sub-")
+		id, err := sessionManager.New("temp-sub-")
 		if err != nil {
 			return "", fmt.Errorf("sessionManager.CreateSession: %w", err)
 		}
 		return id, nil
 	}
 
-	sessionDir := filepath.Join(filesystem.SessionsDir, trimmed)
+	sessionDir := filesystem.SessionDir(trimmed)
 	if !go_pkg_filesystem_reader.Exists(sessionDir) {
 		return "", fmt.Errorf("session %q does not exist", trimmed)
 	}

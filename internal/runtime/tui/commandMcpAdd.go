@@ -9,7 +9,7 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 )
 
@@ -210,7 +210,7 @@ func availableSessions() []sessionRef {
 		if !strings.HasPrefix(sid, "cli-") && !strings.HasPrefix(sid, "http-") {
 			continue
 		}
-		name, _ := session.GetBot(sid)
+		name, _ := configBot.Get(sid)
 		out = append(out, sessionRef{id: sid, name: name})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].id < out[j].id })

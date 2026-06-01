@@ -63,9 +63,9 @@ func headerBlock(cwd, daemon, http, discord, telegram, line string) string {
 	return headerStyle.Render(body)
 }
 
-func messageBlock(text string) string {
+func messageBlock(str string) string {
 	var sb strings.Builder
-	for i, line := range strings.Split(text, "\n") {
+	for i, line := range strings.Split(str, "\n") {
 		if i > 0 {
 			sb.WriteString("\n  ")
 		} else {
@@ -121,11 +121,11 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 		if ev.Source == "" {
 			return "", false
 		}
-		text := strings.TrimSpace(ev.Text)
-		if text == "" {
+		str := strings.TrimSpace(ev.Text)
+		if str == "" {
 			return "", false
 		}
-		return hintStyle.Render("  ⎿ " + srcPrefix + "agent: " + text), true
+		return hintStyle.Render("  ⎿ " + srcPrefix + "agent: " + str), true
 
 	case agentTypes.EventToolCall:
 		if ev.ToolName == "ask_user" || ev.ToolName == "store_secret" {
@@ -145,14 +145,14 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 		return hintStyle.Render(line), true
 
 	case agentTypes.EventText:
-		text := ev.Text
-		if text == "" {
+		str := ev.Text
+		if str == "" {
 			return "", false
 		}
 		if ev.Source != "" {
-			return hintStyle.Render("  ⎿ " + srcPrefix + oneLine(text)), true
+			return hintStyle.Render("  ⎿ " + srcPrefix + oneLine(str)), true
 		}
-		return messageRow(text, sessionLabel), true
+		return messageRow(str, sessionLabel), true
 
 	case agentTypes.EventExecError:
 		return errorStyle.Render("  ⎿ " + srcPrefix + "error: " + ev.ToolName + " — " + ev.Text), true
@@ -219,16 +219,16 @@ func printLog(name, raw, cwd string) string {
 	if raw == "" {
 		return ""
 	}
-	var m map[string]any
-	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+	var dic map[string]any
+	if err := json.Unmarshal([]byte(raw), &dic); err != nil {
 		return raw
 	}
-	if len(m) == 0 {
+	if len(dic) == 0 {
 		return ""
 	}
 	pick := func(keys ...string) string {
 		for _, k := range keys {
-			if v, ok := m[k]; ok {
+			if v, ok := dic[k]; ok {
 				if s, ok := v.(string); ok && strings.TrimSpace(s) != "" {
 					return s
 				}
@@ -260,7 +260,7 @@ func printLog(name, raw, cwd string) string {
 		if dir == "" {
 			break
 		}
-		if r, ok := m["recursive"].(bool); ok && r {
+		if r, ok := dic["recursive"].(bool); ok && r {
 			return dir + " (recursive)"
 		}
 		return dir

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -17,8 +16,7 @@ func newDaemon() error {
 		return fmt.Errorf("os.Executable: %w", err)
 	}
 
-	logPath := filepath.Join(filesystem.AgenvoyDir, "daemon.log")
-	logFile, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile(filesystem.DaemonLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("open daemon.log: %w", err)
 	}
@@ -48,5 +46,5 @@ func newDaemon() error {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	return fmt.Errorf("daemon did not become ready within 10s; check %s", logPath)
+	return fmt.Errorf("daemon did not become ready within 10s; check %s", filesystem.DaemonLogPath)
 }

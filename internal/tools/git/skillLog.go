@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -35,7 +35,7 @@ func skillLog() {
 			if params.Limit > 100 {
 				params.Limit = 100
 			}
-			log, err := filesystem.GetSkillDirGitLog(ctx, params.Limit)
+			log, err := skill.GetGitLog(ctx, params.Limit)
 			if err != nil {
 				return "", fmt.Errorf("filesystem.LogSkills: %w", err)
 			}

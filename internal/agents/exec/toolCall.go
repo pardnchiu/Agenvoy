@@ -12,6 +12,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/session/toolError"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -218,7 +219,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		result := s.result
 		if s.execErr != "" {
 			if !sessionData.Stateless {
-				filesystem.SaveError(sessionData.ID, s.name, s.args, s.execErr)
+				toolError.Save(sessionData.ID, s.name, s.args, s.execErr)
 			}
 			toolFailCount[s.hash]++
 			if toolFailCount[s.hash] >= filesystem.MaxRetry {

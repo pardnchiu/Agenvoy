@@ -17,8 +17,9 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
+	sessionDiscord "github.com/pardnchiu/agenvoy/internal/session/discord"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
@@ -160,7 +161,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		content = strings.TrimSpace(externalEffective)
 	}
 
-	var matchedSkill *filesystem.Skill
+	var matchedSkill *skill.Skill
 	if externalAgent == "" && scanner != nil {
 		if m, effective := runtime.MatchSkill(scanner, content, tools.TUIOnlySkills...); m != nil {
 			matchedSkill = m
@@ -168,7 +169,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		}
 	}
 
-	discordSessionID, err := sessionManager.GetDiscordSession(in.GuildID, in.ChannelID, in.UserID)
+	discordSessionID, err := sessionDiscord.New(in.GuildID, in.ChannelID, in.UserID)
 	if err != nil {
 		return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetDiscordSession: %w", err)
 	}
@@ -176,7 +177,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	var agent agentTypes.Agent
 	var fallbacks []agentTypes.Agent
 	if externalAgent == "" {
-		primary, rest, err := exec.ResolveAgent(ctx, agents.Dispatcher(), agents.Registry(), content, matchedSkill != nil, discordSessionID)
+		primary, rest, err := exec.ResolveAgent(ctx, agents.DispatcherBot(), agents.Registry(), content, matchedSkill != nil, discordSessionID)
 		if err != nil {
 			if _, sendErr := b.client.Send(ctx, in.ChannelID, in.MessageID, fmt.Sprintf("⚠️ %s", err.Error())); sendErr != nil {
 				slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.Send (ResolveAgent error reply)",
@@ -206,11 +207,11 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	}
 	utils.EventLog("[Discord]", agentTypes.Event{}, sess.ID, content)
 
-	markStatus := func(text string) {
-		if err := b.client.SendStatus(ctx, in.ChannelID, in.MessageID, text); err != nil {
+	markStatus := func(str string) {
+		if err := b.client.SendStatus(ctx, in.ChannelID, in.MessageID, str); err != nil {
 			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.SendStatus",
 				slog.String("session", sess.ID),
-				slog.String("text", text),
+				slog.String("text", str),
 				slog.String("channel", channelName(in)),
 				slog.String("error", err.Error()))
 		}

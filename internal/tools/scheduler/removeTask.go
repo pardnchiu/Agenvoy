@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -33,21 +33,21 @@ func registRemoveTask() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			skill := strings.TrimSpace(params.SkillName)
-			if skill == "" {
+			skillName := strings.TrimSpace(params.SkillName)
+			if skillName == "" {
 				return "", fmt.Errorf("skill_name is required")
 			}
-			removed, err := runtime.RemoveTask(skill)
+			removed, err := runtime.RemoveTask(skillName)
 			if err != nil {
 				return "", err
 			}
 			if removed == 0 {
-				return fmt.Sprintf("no task found for skill %q", skill), nil
+				return fmt.Sprintf("no task found for skill %q", skillName), nil
 			}
-			if err := filesystem.TrashScheduleSkill(ctx, skill); err != nil {
+			if err := skill.TrashSchedule(ctx, skillName); err != nil {
 				return "", fmt.Errorf("TrashScheduleSkill: %w", err)
 			}
-			return fmt.Sprintf("removed %d task(s) for skill %q and moved skill to .Trash", removed, skill), nil
+			return fmt.Sprintf("removed %d task(s) for skill %q and moved skill to .Trash", removed, skillName), nil
 		},
 	})
 }

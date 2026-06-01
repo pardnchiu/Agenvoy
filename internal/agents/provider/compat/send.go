@@ -6,12 +6,12 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
-func (a *Agent) Execute(ctx context.Context, skill *filesystem.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
+func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput string, events chan<- agentTypes.Event, allowAll bool) error {
 	data := exec.ExecData{
 		Agent:   a,
 		WorkDir: a.workDir,

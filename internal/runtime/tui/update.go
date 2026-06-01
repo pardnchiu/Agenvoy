@@ -13,7 +13,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -177,7 +178,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.runTarget = ""
 		t.streaming = false
 		if t.currentSessionID != "" {
-			t.currentSessionName, _ = session.GetBot(t.currentSessionID)
+			t.currentSessionName, _ = configBot.Get(t.currentSessionID)
 		}
 		var doneCmds []tea.Cmd
 		if msg.err != nil && !errors.Is(msg.err, context.Canceled) {
@@ -725,7 +726,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err := keychain.Set("OPENAI_API_KEY", token); err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb keychain.Set: %v", err)) + "\n")
 		}
-		if err := session.SaveKey("OPENAI_API_KEY"); err != nil {
+		if err := config.SaveKey("OPENAI_API_KEY"); err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb session.SaveKey: %v", err)) + "\n")
 		}
 		return t, tea.Sequence(
@@ -740,12 +741,12 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return t, tea.Println(errorStyle.Render("[!] admin-channel: format must be tg@<chatID> or dc@<channelID>") + "\n")
 			}
 		}
-		cfg, err := session.Load()
+		cfg, err := config.Load()
 		if err != nil || cfg == nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] admin-channel: session.Load: %v", err)) + "\n")
 		}
 		cfg.AdminChannel = value
-		if err := session.Save(cfg); err != nil {
+		if err := config.Save(cfg); err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] admin-channel: session.Save: %v", err)) + "\n")
 		}
 		if value == "" {
