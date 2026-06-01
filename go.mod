@@ -14,7 +14,10 @@ require (
 	github.com/pardnchiu/go-browser v0.1.3
 	github.com/pardnchiu/go-pkg v0.13.2
 	github.com/pardnchiu/go-scheduler v1.2.0
+	github.com/pardnchiu/go-sqlite v1.1.0
 )
+
+require github.com/mattn/go-sqlite3 v1.14.33 // indirect
 
 require (
 	github.com/joho/godotenv v1.5.1 // indirect

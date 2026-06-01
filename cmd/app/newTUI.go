@@ -23,6 +23,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime/tui"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
+	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
 	tuiHash "github.com/pardnchiu/agenvoy/internal/session/tui"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/plan"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
@@ -53,6 +54,12 @@ func newTUI(initialInput string, onceCall, allowAll bool) {
 		return
 	}
 	defer torii.Close()
+
+	if err := historyStore.New(filesystem.HistoryDBPath); err != nil {
+		slog.Warn("historyStore.Init",
+			slog.String("error", err.Error()))
+	}
+	defer historyStore.Close()
 
 	codexImage2.Register()
 	geminiYoutube.Register()

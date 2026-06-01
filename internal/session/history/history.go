@@ -3,12 +3,14 @@ package history
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
 )
 
 var muMap sync.Map
@@ -38,6 +40,25 @@ func Append(sessionID string, delta []agentTypes.Message) error {
 	if err := go_pkg_filesystem.WriteFile(historyPath, string(raw), 0644); err != nil {
 		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteFile: %w", err)
 	}
+
+	if historyStore.IsReady() && !historyStore.IsExist(sessionID) && len(latest) > len(delta) {
+		if err := historyStore.Write(sessionID, latest); err != nil {
+			slog.Warn("historyStore Write",
+				slog.String("session", sessionID),
+				slog.String("error", err.Error()))
+		}
+	} else {
+		if err := historyStore.Write(sessionID, delta); err != nil {
+			slog.Warn("historyStore Write",
+				slog.String("session", sessionID),
+				slog.String("error", err.Error()))
+		}
+	}
+
+	if filesystem.MaxHistoryBytes > 0 && len(raw) > filesystem.MaxHistoryBytes {
+		compact(sessionID, historyPath, latest, len(raw))
+	}
+
 	return nil
 }
 
