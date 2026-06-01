@@ -23,6 +23,7 @@ import (
 	geminiYoutube "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/youtube"
 	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/record"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
@@ -189,8 +190,12 @@ func cmdDaemon() {
 		slog.Warn("filesystem.LoadRuntime",
 			slog.String("error", err.Error()))
 	}
+	if err := record.TrimLog(); err != nil {
+		slog.Warn("record TrimLog",
+			slog.String("error", err.Error()))
+	}
 	if err := config.BackfillKeys(); err != nil {
-		slog.Warn("session.BackfillKeys",
+		slog.Warn("config BackfillKeys",
 			slog.String("error", err.Error()))
 	}
 	if err := torii.Init(filesystem.StoreDir); err != nil {
