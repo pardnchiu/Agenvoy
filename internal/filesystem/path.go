@@ -20,6 +20,7 @@ var (
 	UsagePath               string
 	McpPath                 string
 	StoreDir                string
+	HistoryDBPath           string
 	SessionsDir             string
 	ToolsDir                string
 	APIToolsDir             string
@@ -78,6 +79,7 @@ func Init() error {
 		McpPath = filepath.Join(AgenvoyDir, "mcp.json")
 
 		StoreDir = filepath.Join(AgenvoyDir, ".store")
+		HistoryDBPath = filepath.Join(StoreDir, "history.db")
 		SessionsDir = filepath.Join(AgenvoyDir, "sessions")
 		ToolsDir = filepath.Join(AgenvoyDir, "tools")
 		APIToolsDir = filepath.Join(ToolsDir, "api")

@@ -52,11 +52,11 @@ func Close() {
 	}
 }
 
-func DB(index int) *toriidb.Session {
+func DB(idx int) *toriidb.Session {
 	session := instance.Session()
-	if err := session.Select(index); err != nil {
+	if err := session.Select(idx); err != nil {
 		slog.Error("store.DB.Select",
-			slog.Int("index", index),
+			slog.Int("index", idx),
 			slog.String("error", err.Error()))
 	}
 	return session

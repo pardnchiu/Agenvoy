@@ -22,6 +22,7 @@ var (
 	MaxRetry                   = 3
 	AgentSendTimeoutSec        = 600
 	MaxHistoryMessages         = 16
+	MaxHistoryBytes            = 5 * 1024 * 1024
 	MaxSessionTasks            = 3
 	MaxSubagentTimeoutMin      = 10
 	MaxExternalAgentTimeoutMin = 10
@@ -54,6 +55,7 @@ type RuntimeLimits struct {
 	MaxRetry                   int    `json:"max_same_payload_retry,omitempty"`
 	AgentSendTimeoutSec        int    `json:"agent_send_timeout_seconds,omitempty"`
 	MaxHistoryMessages         int    `json:"max_history_messages,omitempty"`
+	MaxHistoryBytes            int    `json:"max_history_bytes,omitempty"`
 	MaxSessionTasks            int    `json:"max_session_tasks,omitempty"`
 	MaxSubagentTimeoutMin      int    `json:"max_subagent_timeout_min,omitempty"`
 	MaxExternalAgentTimeoutMin int    `json:"max_external_agent_timeout_min,omitempty"`
@@ -122,6 +124,12 @@ func LoadRuntime() error {
 		changed = true
 	}
 	MaxHistoryMessages = limits.MaxHistoryMessages
+
+	if limits.MaxHistoryBytes <= 0 {
+		limits.MaxHistoryBytes = MaxHistoryBytes
+		changed = true
+	}
+	MaxHistoryBytes = limits.MaxHistoryBytes
 
 	if limits.MaxSessionTasks <= 0 {
 		limits.MaxSessionTasks = MaxSessionTasks

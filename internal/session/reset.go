@@ -7,6 +7,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
+	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
 )
 
 func Reset(sessionID string) (int, error) {
@@ -26,6 +27,8 @@ func Reset(sessionID string) (int, error) {
 	if err := os.Remove(filesystem.ActionLogPath(sessionID)); err != nil && !os.IsNotExist(err) {
 		return 0, fmt.Errorf("os.Remove [%s]: %w", filesystem.ActionLogPath(sessionID), err)
 	}
+
+	historyStore.Clear(sessionID)
 
 	db := torii.DB(torii.DBSessionHist)
 	keys := db.Keys(sessionID + ":*")

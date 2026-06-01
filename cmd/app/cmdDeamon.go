@@ -38,6 +38,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	configStatus "github.com/pardnchiu/agenvoy/internal/session/config/status"
+	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
 	tuiHash "github.com/pardnchiu/agenvoy/internal/session/tui"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/plan"
 	"github.com/pardnchiu/agenvoy/internal/tools/agent/subagent"
@@ -198,6 +199,12 @@ func cmdDaemon() {
 		return
 	}
 	defer torii.Close()
+
+	if err := historyStore.New(filesystem.HistoryDBPath); err != nil {
+		slog.Warn("historyStore New",
+			slog.String("error", err.Error()))
+	}
+	defer historyStore.Close()
 
 	codexImage2.Register()
 	geminiYoutube.Register()

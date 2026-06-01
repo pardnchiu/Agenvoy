@@ -239,9 +239,9 @@ func searchByKeyword(query string, tools []toolTypes.Tool, maxResults int) []res
 }
 
 func selectByName(names string, tools []toolTypes.Tool) []result {
-	index := make(map[string]toolTypes.Tool, len(tools))
+	idx := make(map[string]toolTypes.Tool, len(tools))
 	for _, t := range tools {
-		index[strings.ToLower(t.Function.Name)] = t
+		idx[strings.ToLower(t.Function.Name)] = t
 	}
 
 	var out []result
@@ -251,7 +251,7 @@ func selectByName(names string, tools []toolTypes.Tool) []result {
 		if name == "" {
 			continue
 		}
-		if t, ok := index[name]; ok && !seen[name] {
+		if t, ok := idx[name]; ok && !seen[name] {
 			seen[name] = true
 			out = append(out, result{
 				Name:          t.Function.Name,
