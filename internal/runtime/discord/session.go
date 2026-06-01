@@ -29,6 +29,7 @@ func getSession(in go_bot_discord.Input, content string, data exec.ExecData) (*a
 
 	oldHistory, maxHistory := sessionHistory.Get(sessionID)
 	sess.Histories = oldHistory
+	sess.BaseLen = len(oldHistory)
 
 	sess.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, agents.Scanner(), sessionID, data.AllowAll, false, data.ExcludeSkills)
 	if summary := summary.GetPrompt(sessionID, exec.OldestMessageTime(maxHistory)); summary != "" {

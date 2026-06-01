@@ -32,6 +32,7 @@ func getSession(chatID int64, username, content string, data exec.ExecData, over
 
 	oldHistory, maxHistory := sessionHistory.Get(histSessionID)
 	sess.Histories = oldHistory
+	sess.BaseLen = len(oldHistory)
 
 	sess.SystemPrompts = exec.BuildSystemPrompts(data.WorkDir, data.ExtraSystemPrompt, agents.Scanner(), chatSessionID, data.AllowAll, false, data.ExcludeSkills)
 	if summary := summary.GetPrompt(histSessionID, exec.OldestMessageTime(maxHistory)); summary != "" {
