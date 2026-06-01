@@ -13,6 +13,7 @@ import (
 
 const (
 	downloadMaxAge = 30 * 24 * time.Hour
+	trashMaxAge    = 30 * 24 * time.Hour
 )
 
 func CleanDownload() {
@@ -52,6 +53,37 @@ func CleanDownload() {
 		if err := os.Rename(path, dst); err != nil {
 			slog.Warn("record CleanDownload Rename",
 				slog.String("src", path),
+				slog.String("error", err.Error()))
+		}
+	}
+}
+
+func CleanDownloadTrash() {
+	dir := filesystem.DownloadTrashDir
+	if !go_pkg_filesystem_reader.IsDir(dir) {
+		return
+	}
+
+	cutoff := time.Now().Add(-trashMaxAge)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		slog.Warn("record CleanDownloadTrash ReadDir",
+			slog.String("error", err.Error()))
+		return
+	}
+
+	for _, entry := range entries {
+		path := filepath.Join(dir, entry.Name())
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().After(cutoff) {
+			continue
+		}
+		if err := os.RemoveAll(path); err != nil {
+			slog.Warn("record CleanDownloadTrash RemoveAll",
+				slog.String("path", path),
 				slog.String("error", err.Error()))
 		}
 	}
