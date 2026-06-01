@@ -48,7 +48,7 @@
 - **自我排程**——說一句「每個工作天早上 8 點把 Hacker News 熱門摘要推到 Telegram」，Agent 會自動建立 cron 與推送管線。
 - **依任務挑模型**——Claude 寫程式、Gemini 處理影音、GPT 做研究，自動路由。
 - **語意搜尋你的檔案**——KuraDB 把本機文件／筆記做成向量索引（file → embedding），Agent 從你的知識庫回答，而非通用訓練資料。
-- **跨 session 記憶**——過去對話依語意搜尋，而非只是關鍵字。
+- **跨 session 記憶**——三層記憶：近期上下文 + 向量語意搜尋（ToriiDB）+ 全文歸檔搜尋（SQLite FTS5）。每筆訊息雙寫，資料永不遺失。
 - **發布／安裝自訂工具**——透過 pkg.agenvoy.com registry 跨機器分享 AI 生成工具；上傳走 email 驗證碼 gate、版本嚴格遞增、安裝走單一 popup 並自動安裝依賴。
 
 ## 一鍵安裝
@@ -228,14 +228,14 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
 |--|--|--|--|--|--|--|
 | Instruction file 系統 | ✅ SKILL.md | ✅ SKILL.md | ✅ SKILL.md | ✅ CLAUDE.md | ❌ | ❌ |
-| 對話歷史搜尋 | ✅ ToriiDB 向量搜尋 | ✅ SQLite 向量 | ✅ SQLite FTS5 | ❌ | ❌ | ❌ |
+| 對話歷史搜尋 | ✅ 三層：上下文 + ToriiDB 向量 + SQLite FTS5 | ✅ SQLite 向量 | ✅ SQLite FTS5 | ❌ | ❌ | ❌ |
 | 外部文件 RAG（原生 in-process） | ✅ KuraDB（語意＋關鍵字，OpenAI embeddings） | ❌（需走 MCP） | ❌（需走 MCP） | ❌ | ❌ | ❌ |
 | 錯誤記憶 | ✅ ToriiDB | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Action log | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 長期持久記憶 | ⚠️ ToriiDB 基礎已就緒 | ✅ Wiki-style MEMORY.md | ✅ MEMORY.md + USER.md | ⚠️ CLAUDE.md 手動 | ❌ | ❌ |
+| 長期持久記憶 | ✅ SQLite 全文歸檔（雙寫，資料永不遺失） | ✅ Wiki-style MEMORY.md | ✅ MEMORY.md + USER.md | ⚠️ CLAUDE.md 手動 | ❌ | ❌ |
 | 跨 session 記憶 | ⚠️ 預設 session 隔離，可外接記憶擴展 | ✅ 內建跨 session | ✅ 內建跨 session | ⚠️ 預設 session 隔離，可外接記憶擴展 | ⚠️ 預設 session 隔離 | ⚠️ 預設 session 隔離 |
 
-> **ToriiDB** 是 Agenvoy 生態中自研的內嵌式向量資料庫（[pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)）。不需外部服務，in-process 運行。Agenvoy 以 ToriiDB 作為記憶基礎設施，目前驅動語意對話搜尋與錯誤記憶，並作為未來長期跨 session 記憶擴展的基底。
+> **三層對話記憶**：(1) **上下文** — 最新 16 筆訊息直接載入 LLM context + 定期 summary；(2) **ToriiDB** — 自研內嵌式向量資料庫（[pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)），對近期對話做語意相似搜尋；(3) **SQLite FTS5** — 透過 [pardnchiu/go-sqlite](https://github.com/pardnchiu/go-sqlite) 的全文歸檔，每筆訊息雙寫，即使 history 裁剪後資料也不遺失。`search_conversation_history` 依 `mode` 路由：`semantic` → ToriiDB、`keyword` → SQLite FTS5。
 
 ---
 

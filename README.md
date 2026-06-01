@@ -48,7 +48,7 @@ Out of the box it also:
 - **Schedules itself** — say "every weekday 8am push a Hacker News top-stories digest to Telegram" and the agent builds the cron + push pipeline for you.
 - **Picks the right model per task** — Claude for coding, Gemini for video, GPT for research, routed automatically.
 - **Searches your files semantically** — KuraDB indexes your local docs / notes (file → embedding vector); the agent answers from your own knowledge base, not generic training data.
-- **Remembers across sessions** — past conversations searchable by meaning, not just keywords.
+- **Remembers across sessions** — three-tier memory: recent context + vector similarity (ToriiDB) + full-text archive (SQLite FTS5). Every message is dual-written; nothing is ever lost.
 - **Publishes and installs custom tools** — share AI-built tools across machines through the pkg.agenvoy.com registry; email-verified uploads with downgrade-proof versioning, one-popup install with dependency auto-resolve.
 
 ## One-line install
@@ -230,14 +230,14 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
 |--|--|--|--|--|--|--|
 | Instruction file system | ✅ SKILL.md | ✅ SKILL.md | ✅ SKILL.md | ✅ CLAUDE.md | ❌ | ❌ |
-| Conversation history search | ✅ ToriiDB vector search | ✅ SQLite vector | ✅ SQLite FTS5 | ❌ | ❌ | ❌ |
+| Conversation history search | ✅ Three-tier: context + ToriiDB vector + SQLite FTS5 | ✅ SQLite vector | ✅ SQLite FTS5 | ❌ | ❌ | ❌ |
 | External document RAG (native, in-process) | ✅ KuraDB (semantic + keyword, OpenAI embeddings) | ❌ (use MCP) | ❌ (use MCP) | ❌ | ❌ | ❌ |
 | Error memory | ✅ ToriiDB | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Action log | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Long-term persistent memory | ⚠️ ToriiDB foundation in place | ✅ Wiki-style MEMORY.md | ✅ MEMORY.md + USER.md | ⚠️ CLAUDE.md manual | ❌ | ❌ |
+| Long-term persistent memory | ✅ SQLite full-text archive (dual-write, never loses data) | ✅ Wiki-style MEMORY.md | ✅ MEMORY.md + USER.md | ⚠️ CLAUDE.md manual | ❌ | ❌ |
 | Cross-session memory | ⚠️ session-isolated by default, extensible with external memory | ✅ built-in cross-session | ✅ built-in cross-session | ⚠️ session-isolated by default, extensible with external memory | ⚠️ session-isolated by default | ⚠️ session-isolated by default |
 
-> **ToriiDB** is a self-developed embedded vector database ([pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)) in the Agenvoy ecosystem. It requires no external service and runs in-process. Agenvoy uses ToriiDB as its memory infrastructure, currently powering semantic conversation history search and error memory, and serving as the foundation for future long-term cross-session memory expansion.
+> **Three-tier conversation memory**: (1) **Context** — latest 16 messages loaded directly into LLM context + periodic summary; (2) **ToriiDB** — self-developed embedded vector database ([pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)) for semantic similarity search on recent conversations; (3) **SQLite FTS5** — full-text archive via [pardnchiu/go-sqlite](https://github.com/pardnchiu/go-sqlite), dual-written on every message, never loses data even after history compaction. `search_conversation_history` routes by `mode`: `semantic` → ToriiDB, `keyword` → SQLite FTS5.
 
 ---
 
