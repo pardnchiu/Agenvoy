@@ -40,6 +40,8 @@ var (
 	ScheduleSkillsDir       string
 	ScheduleSkillTrashDir   string
 	DownloadDir             string
+	DownloadTrashDir        string
+	SessionsTrashDir        string
 	AllowSkillGlobalPath    string
 	KuradbDir               string
 	KuradbEndpointPath      string
@@ -109,6 +111,8 @@ func Init() error {
 		} else {
 			DownloadDir = filepath.Join(AgenvoyDir, "download")
 		}
+		DownloadTrashDir = filepath.Join(AgenvoyDir, "download", ".Trash")
+		SessionsTrashDir = filepath.Join(SessionsDir, ".Trash")
 		AllowSkillGlobalPath = filepath.Join(AgenvoyDir, "allow_skill")
 
 		KuradbDir = filepath.Join(homeDir, ".config", "kuradb")
@@ -126,6 +130,8 @@ func Init() error {
 	for _, dir := range []string{
 		AgenvoyDir,
 		DownloadDir,
+		DownloadTrashDir,
+		SessionsTrashDir,
 		ExtensionAPIToolsDir,
 		ExtensionScriptToolsDir,
 	} {
@@ -213,12 +219,4 @@ func GetKuradbEndpoint() (string, error) {
 		return "", fmt.Errorf("endpoint file %s is empty", path)
 	}
 	return url, nil
-}
-
-func ErrorDir(sessionID string) string {
-	return filepath.Join(SessionDir(sessionID), "tool_errors")
-}
-
-func ErrorPath(sessionID, hash string) string {
-	return filepath.Join(ErrorDir(sessionID), hash+".json")
 }

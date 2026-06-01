@@ -159,6 +159,10 @@ func chainSingleShotSubmit(prior tea.Cmd, input string) tea.Cmd {
 
 type StartupSelectSession struct{}
 
+type StartupSessionSelect struct {
+	id string
+}
+
 type LoadHistoryCheck struct {
 	id string
 }

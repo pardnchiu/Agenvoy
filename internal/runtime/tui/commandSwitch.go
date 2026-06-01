@@ -94,7 +94,7 @@ func listSessions() []Session {
 	results := make([]Session, 0, len(dirs))
 	for _, dir := range dirs {
 		sid := dir.Name
-		if strings.HasPrefix(sid, "temp-") {
+		if strings.HasPrefix(sid, "temp-") || strings.HasPrefix(sid, ".") {
 			continue
 		}
 		name, _ := configBot.Get(sid)

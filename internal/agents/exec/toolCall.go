@@ -12,7 +12,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/session/toolError"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -218,9 +217,6 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 
 		result := s.result
 		if s.execErr != "" {
-			if !sessionData.Stateless {
-				toolError.Save(sessionData.ID, s.name, s.args, s.execErr)
-			}
 			toolFailCount[s.hash]++
 			if toolFailCount[s.hash] >= filesystem.MaxRetry {
 				result = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次失敗: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", s.name, toolFailCount[s.hash], s.execErr, s.name)

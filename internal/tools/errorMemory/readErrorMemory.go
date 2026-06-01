@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pardnchiu/agenvoy/internal/session/toolError"
+	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -31,7 +32,7 @@ Use when a tool returns "no data: {hash}" and the full context is needed.`,
 				"hash",
 			},
 		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Hash string `json:"hash"`
 			}
@@ -39,21 +40,26 @@ Use when a tool returns "no data: {hash}" and the full context is needed.`,
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 
-			sessionId := e.SessionID
-			if sessionId == "" {
-				return "", fmt.Errorf("session not exist")
-			}
-
 			hash := strings.TrimSpace(params.Hash)
 			if hash == "" {
 				return "", fmt.Errorf("hash is required")
 			}
 
-			result := toolError.Get(sessionId, hash)
-			if result == "" {
-				return "tool not found", nil
+			db := torii.DB(torii.DBErrorMemory)
+			for _, key := range db.Keys("*") {
+				entry, ok := db.Get(key)
+				if !ok {
+					continue
+				}
+				var rec memory.Record
+				if err := json.Unmarshal([]byte(entry.Value()), &rec); err != nil {
+					continue
+				}
+				if rec.ID == hash {
+					return entry.Value(), nil
+				}
 			}
-			return result, nil
+			return "not found", nil
 		},
 	})
 }

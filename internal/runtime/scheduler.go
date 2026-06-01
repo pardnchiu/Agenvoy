@@ -13,6 +13,7 @@ import (
 	goCron "github.com/pardnchiu/go-scheduler"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/filesystem/record"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 )
 
@@ -64,11 +65,34 @@ func NewScheduler() error {
 	if initErr != nil {
 		return initErr
 	}
+	addDefaultCrons()
 	if err := reload(); err != nil {
 		slog.Warn("scheduler initial reload",
 			slog.String("error", err.Error()))
 	}
 	return nil
+}
+
+func addDefaultCrons() {
+	st := get()
+	if st == nil {
+		return
+	}
+	record.CleanDownload()
+	record.CleanDownloadTrash()
+	record.CleanToolCalls()
+	if _, err := st.cron.Add("0 0 0,6,12,18 * * *", record.CleanDownload); err != nil {
+		slog.Warn("cron cleanDownload",
+			slog.String("error", err.Error()))
+	}
+	if _, err := st.cron.Add("0 0 0,6,12,18 * * *", record.CleanDownloadTrash); err != nil {
+		slog.Warn("cron cleanDownloadTrash",
+			slog.String("error", err.Error()))
+	}
+	if _, err := st.cron.Add("0 0 0 * * *", record.CleanToolCalls); err != nil {
+		slog.Warn("cron cleanToolCalls",
+			slog.String("error", err.Error()))
+	}
 }
 
 func StopScheduler() {
