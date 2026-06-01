@@ -399,6 +399,15 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 本專案以 [Apache License 2.0](../LICENSE) 授權。
 
+## 社群貢獻者
+
+<a href="https://github.com/pardnchiu/Agenvoy/issues/3">
+  <img src="https://github.com/Azetry.png" width="40" height="40" alt="Azetry" style="border-radius:50%" />
+</a>
+<a href="https://github.com/pardnchiu/agenvoy/issues/49">
+  <img src="https://github.com/oceanasd.png" width="40" height="40" alt="oceanasd" style="border-radius:50%" />
+</a>
+
 ## Contributor
 
 歡迎 [開 issue](https://github.com/pardnchiu/agenvoy/issues/new) 分享想法。

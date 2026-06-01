@@ -401,6 +401,15 @@ Dynamic tool families (auto-registered, not listed above): `mcp__<server>__<tool
 
 This project is licensed under the [Apache License 2.0](LICENSE).
 
+## Community Contributors
+
+<a href="https://github.com/pardnchiu/Agenvoy/issues/3">
+  <img src="https://github.com/Azetry.png" width="40" height="40" alt="Azetry" style="border-radius:50%" />
+</a>
+<a href="https://github.com/pardnchiu/agenvoy/issues/49">
+  <img src="https://github.com/oceanasd.png" width="40" height="40" alt="oceanasd" style="border-radius:50%" />
+</a>
+
 ## Contributor
 
 Just [open an issue](https://github.com/pardnchiu/agenvoy/issues/new) to share an idea.
