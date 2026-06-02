@@ -184,6 +184,7 @@ func (a *Agent) convertToTools(tools []toolTypes.Tool) []map[string]any {
 	for i, tool := range tools {
 		var params map[string]any
 		json.Unmarshal(tool.Function.Parameters, &params)
+		stringifyEnums(params)
 
 		newTools[i] = map[string]any{
 			"name":        tool.Function.Name,
@@ -192,6 +193,30 @@ func (a *Agent) convertToTools(tools []toolTypes.Tool) []map[string]any {
 		}
 	}
 	return newTools
+}
+
+func stringifyEnums(m map[string]any) {
+	if vals, ok := m["enum"]; ok {
+		if list, ok := vals.([]any); ok {
+			for i, v := range list {
+				if _, ok := v.(string); !ok {
+					list[i] = fmt.Sprintf("%v", v)
+				}
+			}
+		}
+	}
+	for _, v := range m {
+		switch child := v.(type) {
+		case map[string]any:
+			stringifyEnums(child)
+		case []any:
+			for _, item := range child {
+				if obj, ok := item.(map[string]any); ok {
+					stringifyEnums(obj)
+				}
+			}
+		}
+	}
 }
 
 func (a *Agent) generateRequestBody(messages []Content, prompt string, newTools []map[string]any) map[string]any {

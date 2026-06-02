@@ -12,10 +12,13 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -726,6 +729,9 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err := keychain.Set("OPENAI_API_KEY", token); err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb keychain.Set: %v", err)) + "\n")
 		}
+		if err := kuradb.SyncOpenAIKey(token); err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb SyncOpenAIKey: %v", err)) + "\n")
+		}
 		if err := config.SaveKey("OPENAI_API_KEY"); err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb session.SaveKey: %v", err)) + "\n")
 		}
@@ -856,10 +862,32 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if chosen == "" {
 				return SessionNew{}
 			}
-			return SessionSelect{id: chosen}
+			return StartupSessionSelect{id: chosen}
 		}
 		t.popup = popup
 		return t, nil
+
+	case StartupSessionSelect:
+		t.currentSessionID = msg.id
+		t.currentSessionName, _ = configBot.Get(msg.id)
+		t.inputHistory = loadInputHistory(msg.id)
+		t.inputHistoryIdx = -1
+		t = t.restartTailer()
+		t.tokens = 0
+		t.lastIn = 0
+		t.lastOut = 0
+		t.currentModel = ""
+		t.activity = ""
+
+		seq := []tea.Cmd{
+			tea.ClearScreen,
+			tea.Println(headerBlock(t.cwd, t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus)),
+		}
+		path := filesystem.ActionLogPath(msg.id)
+		if go_pkg_filesystem_reader.Exists(path) && fileSize(path) > 0 {
+			seq = append(seq, func() tea.Msg { return LoadHistoryCheck{id: msg.id} })
+		}
+		return t, tea.Sequence(seq...)
 
 	case LoadHistoryCheck:
 		sid := msg.id

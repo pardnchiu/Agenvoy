@@ -7,7 +7,49 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 )
+
+const (
+	maxDaemonLogSize  = 1 << 20
+	trimDaemonLogSize = 768 << 10
+)
+
+func TrimLog() error {
+	path := filesystem.DaemonLogPath
+
+	stat, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("os Stat [%s]: %w", path, err)
+	}
+	if stat.Size() <= maxDaemonLogSize {
+		return nil
+	}
+
+	data, err := go_pkg_filesystem.ReadText(path)
+	if err != nil {
+		return fmt.Errorf("go_pkg_filesystem ReadText [%s]: %w", path, err)
+	}
+
+	raw := []byte(data)
+	if int64(len(raw)) <= maxDaemonLogSize {
+		return nil
+	}
+
+	cut := max(len(raw)-trimDaemonLogSize, 0)
+	for cut < len(raw) && raw[cut] != '\n' {
+		cut++
+	}
+	if cut < len(raw) {
+		cut++
+	}
+
+	return go_pkg_filesystem.WriteFile(path, string(raw[cut:]), 0644)
+}
+
 
 func GetLog(maxBytes int64, cutoff time.Time) ([]string, error) {
 	lines, err := tailLog(maxBytes)

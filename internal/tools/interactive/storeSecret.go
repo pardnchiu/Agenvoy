@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -61,6 +62,11 @@ func registStoreSecret() {
 
 			if err := keychain.Set(key, value); err != nil {
 				return "", fmt.Errorf("keychain Set: %w", err)
+			}
+			if key == "OPENAI_API_KEY" {
+				if err := kuradb.SyncOpenAIKey(value); err != nil {
+					return "", fmt.Errorf("kuradb SyncOpenAIKey: %w", err)
+				}
 			}
 
 			if err := config.SaveKey(key); err != nil {

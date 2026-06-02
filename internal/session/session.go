@@ -138,4 +138,3 @@ func GetLineTarget(sessionID string) (string, error) {
 	}
 	return config["line_target"], nil
 }
-

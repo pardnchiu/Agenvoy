@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -14,6 +17,7 @@ import (
 
 const (
 	BinaryPath        = "/usr/local/bin/kura"
+	serviceKey        = "kuradb"
 	healthInterval    = 1 * time.Minute
 	healthRequestTime = 5 * time.Second
 	healthMaxStrikes  = 3
@@ -24,6 +28,35 @@ func Remove() error {
 		return fmt.Errorf("os.Remove %s: %w", filesystem.KuradbEndpointPath, err)
 	}
 	return nil
+}
+
+func SyncOpenAIKey(value string) error {
+	if value == "" {
+		return nil
+	}
+	switch runtime.GOOS {
+	case "darwin":
+		exec.Command("security", "delete-generic-password",
+			"-s", serviceKey,
+			"-a", "OPENAI_API_KEY").Run()
+		cmd := exec.Command("security", "add-generic-password",
+			"-s", serviceKey,
+			"-a", "OPENAI_API_KEY",
+			"-w", value)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("security add-generic-password: %s", strings.TrimSpace(string(out)))
+		}
+		return nil
+	default:
+		cmd := exec.Command("secret-tool", "store",
+			"--label", serviceKey+"/OPENAI_API_KEY",
+			"service", serviceKey, "account", "OPENAI_API_KEY")
+		cmd.Stdin = strings.NewReader(value)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("secret-tool store: %s", strings.TrimSpace(string(out)))
+		}
+		return nil
+	}
 }
 
 func IsInstalled() bool {

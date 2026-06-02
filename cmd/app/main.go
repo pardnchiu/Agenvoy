@@ -122,6 +122,7 @@ func setSummaryCron() {
 	}
 }
 
+
 func initMCP(ctx context.Context, sessionID string) *mcp.MCP {
 	manager, err := mcp.New(ctx, strings.TrimSpace(sessionID))
 	if err != nil {
