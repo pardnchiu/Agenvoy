@@ -16,6 +16,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func New(prefix string) (string, error) {
@@ -122,7 +123,15 @@ func GetLineSession(sourceType, userID, groupID, roomID string) (string, error) 
 		}
 	}
 
-	configBot.Save(sessionID, sessionID, "", false)
+	botName := configBot.FormatName(utils.LookupChatName(filesystem.LineAuthPath, target))
+	if err := configBot.Save(sessionID, botName, "", false); err != nil {
+		slog.Warn("configBot Save",
+			slog.String("session", sessionID),
+			slog.String("error", err.Error()))
+	}
+	if botName != "" {
+		configBot.ReplaceDefault(sessionID, botName)
+	}
 	return sessionID, nil
 }
 

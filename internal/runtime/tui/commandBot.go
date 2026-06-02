@@ -39,6 +39,7 @@ func (t TUI) commandBot(parts []string) (TUI, tea.Cmd, bool) {
 		return t, t.botSaveCmd(sid, name, body), true
 	}
 
+	refreshBotName(sid)
 	existingName, existingBody := configBot.Get(sid)
 	t.popup = &Popup{
 		kind:  popupText,
