@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
@@ -104,6 +105,50 @@ func SetModel(sessionID, model, reasoning string) {
 	if reasoning != "" {
 		bot.Reasoning = reasoning
 	}
+	writeBotFile(sessionID, bot)
+}
+
+func FormatName(raw string) string {
+	var sb strings.Builder
+	for _, r := range raw {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			sb.WriteRune(r)
+		}
+	}
+	return sb.String()
+}
+
+func UpdateName(prefix, name string) {
+	if prefix == "" || name == "" {
+		return
+	}
+	dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir)
+	if err != nil {
+		return
+	}
+	for _, d := range dirs {
+		sid := d.Name
+		if !strings.HasPrefix(sid, prefix) {
+			continue
+		}
+		bot := read(sid)
+		if bot.Name != "" && !strings.HasPrefix(bot.Name, "tg-") && !strings.HasPrefix(bot.Name, "dc-") {
+			continue
+		}
+		bot.Name = name
+		writeBotFile(sid, bot)
+	}
+}
+
+func ReplaceDefault(sessionID, name string) {
+	if sessionID == "" || name == "" {
+		return
+	}
+	bot := read(sessionID)
+	if bot.Name != "" && !strings.HasPrefix(bot.Name, "tg-") && !strings.HasPrefix(bot.Name, "dc-") {
+		return
+	}
+	bot.Name = name
 	writeBotFile(sessionID, bot)
 }
 

@@ -97,6 +97,7 @@ func listSessions() []Session {
 		if strings.HasPrefix(sid, "temp-") || strings.HasPrefix(sid, ".") {
 			continue
 		}
+		refreshBotName(sid)
 		name, _ := configBot.Get(sid)
 		results = append(results, Session{
 			id:   sid,

@@ -14,6 +14,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
+	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
@@ -274,6 +275,12 @@ func (t TUI) runModelAddAPIKeySubmit(key string) (TUI, tea.Cmd) {
 	if err := keychain.Set(envKey, key); err != nil {
 		t.modelAdd = nil
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] keychain.Set: %v", err)) + "\n")
+	}
+	if envKey == "OPENAI_API_KEY" {
+		if err := kuradb.SyncOpenAIKey(key); err != nil {
+			t.modelAdd = nil
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb SyncOpenAIKey: %v", err)) + "\n")
+		}
 	}
 	if err := config.SaveKey(envKey); err != nil {
 		t.modelAdd = nil

@@ -8,6 +8,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
@@ -45,10 +46,14 @@ func New(guildID, channelID, userID string) (string, error) {
 		}
 	}
 
-	if err := configBot.Save(sessionID, "", "", false); err != nil {
+	botName := configBot.FormatName(utils.LookupChatName(filesystem.DiscordAuthPath, channelID))
+	if err := configBot.Save(sessionID, botName, "", false); err != nil {
 		slog.Warn("configBot Save",
 			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
+	}
+	if botName != "" {
+		configBot.ReplaceDefault(sessionID, botName)
 	}
 	return sessionID, nil
 }

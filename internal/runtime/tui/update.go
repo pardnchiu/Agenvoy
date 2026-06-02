@@ -750,6 +750,11 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err := keychain.Set(msg.key, msg.value); err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] keychain.Set %s: %v", msg.key, err)) + "\n")
 		}
+		if msg.key == "OPENAI_API_KEY" {
+			if err := kuradb.SyncOpenAIKey(msg.value); err != nil {
+				return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] kuradb SyncOpenAIKey: %v", err)) + "\n")
+			}
+		}
 		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ %s updated", msg.key)) + "\n")
 
 	case KuradbDone:

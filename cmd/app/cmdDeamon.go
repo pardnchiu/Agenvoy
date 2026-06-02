@@ -151,9 +151,12 @@ func reloadKuradb() {
 	}
 	lastKuradbEnabled = newEnabled
 
-	if !newEnabled || !kuradb.IsInstalled() || strings.TrimSpace(keychain.Get("OPENAI_API_KEY")) == "" {
+	openaiKey := strings.TrimSpace(keychain.Get("OPENAI_API_KEY"))
+	if !newEnabled || !kuradb.IsInstalled() || openaiKey == "" {
 		return
 	}
+
+	kuradb.SyncOpenAIKey(openaiKey)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	kuradbCancel = cancel

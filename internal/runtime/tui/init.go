@@ -18,6 +18,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/utils"
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
@@ -199,6 +201,8 @@ func newModel(ctx context.Context, userInput string, onceCall, allowAll bool) TU
 		cwd = "?"
 	}
 
+	refreshBotNames()
+
 	currentSID := ""
 	currentName := ""
 
@@ -269,6 +273,41 @@ func getHttpStatus() string {
 		return textStyle.Render("http:     ") + errorStyle.Render("failed")
 	}
 	return textStyle.Render("http:     ") + okayStyle.Render(filesystem.Port)
+}
+
+func refreshBotNames() {
+	dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir)
+	if err != nil {
+		return
+	}
+	for _, d := range dirs {
+		refreshBotName(d.Name)
+	}
+}
+
+func refreshBotName(sid string) {
+	var authPath, idKey string
+	switch {
+	case strings.HasPrefix(sid, "tg-"):
+		authPath = filesystem.TelegramAuthPath
+		idKey = "chat_id"
+	case strings.HasPrefix(sid, "dc-"):
+		authPath = filesystem.DiscordAuthPath
+		idKey = "channel_id"
+	default:
+		return
+	}
+	cfg, err := go_pkg_filesystem.ReadJSON[map[string]string](filesystem.SessionConfigPath(sid))
+	if err != nil {
+		return
+	}
+	id := cfg[idKey]
+	if id == "" {
+		return
+	}
+	if n := configBot.FormatName(utils.LookupChatName(authPath, id)); n != "" {
+		configBot.ReplaceDefault(sid, n)
+	}
 }
 
 func loadSessionTail(sid string) []tea.Cmd {

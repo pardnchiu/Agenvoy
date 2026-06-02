@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
@@ -27,10 +29,14 @@ func New(chatID int64) (string, error) {
 		}
 	}
 
-	if err := configBot.Save(sessionID, "", "", false); err != nil {
+	botName := configBot.FormatName(utils.LookupChatName(filesystem.TelegramAuthPath, strconv.FormatInt(chatID, 10)))
+	if err := configBot.Save(sessionID, botName, "", false); err != nil {
 		slog.Warn("configBot Save",
 			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
+	}
+	if botName != "" {
+		configBot.ReplaceDefault(sessionID, botName)
 	}
 	return sessionID, nil
 }
