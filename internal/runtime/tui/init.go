@@ -58,9 +58,10 @@ type TUI struct {
 	textarea textarea.Model
 	spinner  spinner.Model
 
-	running      bool
-	cancelExec   context.CancelFunc
-	runStartedAt time.Time
+	running       bool
+	cancelExec    context.CancelFunc
+	runStartedAt  time.Time
+	pendingResume *ResumeExec
 
 	popup        *Popup
 	popupQueue   []Pending
@@ -172,6 +173,16 @@ type LoadHistoryCheck struct {
 type LoadHistorySelect struct {
 	id   string
 	load bool
+}
+
+type PendingCheck struct {
+	id string
+}
+
+type PendingResume struct {
+	id       string
+	taskHash string
+	resume   bool
 }
 
 func newModel(ctx context.Context, userInput string, onceCall, allowAll bool) TUI {

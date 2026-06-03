@@ -17,6 +17,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
@@ -183,6 +184,11 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if t.currentSessionID != "" {
 			t.currentSessionName, _ = configBot.Get(t.currentSessionID)
 		}
+		if t.pendingResume != nil {
+			resume := *t.pendingResume
+			t.pendingResume = nil
+			return t.startResume(resume)
+		}
 		var doneCmds []tea.Cmd
 		if msg.err != nil && !errors.Is(msg.err, context.Canceled) {
 			doneCmds = append(doneCmds, tea.Println(errorStyle.Render(fmt.Sprintf("[!] exec error: %v", msg.err))+"\n"))
@@ -222,6 +228,13 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			tea.Println(messageBlock(content)),
 			t.spinner.Tick,
 		)
+
+	case ResumeExec:
+		if t.running {
+			t.pendingResume = &msg
+			return t, nil
+		}
+		return t.startResume(msg)
 
 	case WorkDir:
 		t.cwd = msg.dir
@@ -855,6 +868,9 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		path := filesystem.ActionLogPath(msg.id)
 		if go_pkg_filesystem_reader.Exists(path) && fileSize(path) > 0 {
 			seq = append(seq, func() tea.Msg { return LoadHistoryCheck{id: msg.id} })
+		} else {
+			sid := msg.id
+			seq = append(seq, func() tea.Msg { return PendingCheck{id: sid} })
 		}
 		return t, tea.Sequence(seq...)
 
@@ -873,10 +889,58 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t, nil
 
 	case LoadHistorySelect:
+		sid := msg.id
 		if !msg.load {
+			return t, func() tea.Msg { return PendingCheck{id: sid} }
+		}
+		cmds := loadSessionTail(msg.id)
+		cmds = append(cmds, func() tea.Msg { return PendingCheck{id: sid} })
+		return t, tea.Sequence(cmds...)
+
+	case PendingCheck:
+		hashes := interactive.ListPendingTasks(msg.id)
+		if len(hashes) == 0 {
 			return t, nil
 		}
-		return t, tea.Sequence(loadSessionTail(msg.id)...)
+		taskHash := hashes[0]
+		objective := interactive.PendingObjective(msg.id, taskHash)
+		title := "Resume interrupted task?"
+		if objective != "" {
+			title = "Resume: " + truncate(objective, 60)
+		}
+		sid := msg.id
+		t.popup = &Popup{
+			kind:    popupSingleSelect,
+			title:   title,
+			options: []string{"Yes", "No"},
+			values:  []string{"yes", "no"},
+			onConfirm: func(chosen string) any {
+				return PendingResume{id: sid, taskHash: taskHash, resume: chosen == "yes"}
+			},
+		}
+		return t, nil
+
+	case PendingResume:
+		if !msg.resume {
+			return t, nil
+		}
+		meta, err := interactive.LoadPendingMeta(msg.id, msg.taskHash)
+		if err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] load pending: %v", err)))
+		}
+		runtime.AskUser(runtime.Request{
+			Kind:      runtime.KindAskUser,
+			SessionID: msg.id,
+			ToolName:  "ask_user",
+			AskUser:   &runtime.UserPayload{Questions: meta.Questions},
+		}, func(reply runtime.Reply) {
+			if reply.Error != nil {
+				interactive.CleanupPending(msg.id, msg.taskHash)
+				return
+			}
+			runtime.TriggerResume(msg.id, msg.taskHash, reply.Answers)
+		})
+		return t, nil
 
 	case tailLine:
 		if t.mode != cliMode || t.onceCall {
@@ -921,4 +985,16 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return t, tea.Batch(cmds...)
+}
+
+func (t TUI) startResume(msg ResumeExec) (tea.Model, tea.Cmd) {
+	sid := msg.SessionID
+	if sid == "" {
+		sid = t.currentSessionID
+	}
+	t.running = true
+	t.runStartedAt = time.Now()
+	t.runTarget = ""
+	go runExec(t.ctx, msg.Content, false, t.cwd, sid, t.mode == webMode)
+	return t, t.spinner.Tick
 }

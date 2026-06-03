@@ -3,6 +3,7 @@ package exec
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,9 +15,54 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
+
+func askUserInBackground(sessionID, rawArgs string, toolResults []interactive.ToolResult) {
+	var params struct {
+		Questions []runtime.Question `json:"questions"`
+		State     struct {
+			Objective string   `json:"objective"`
+			Completed []string `json:"completed"`
+			NextSteps []string `json:"next_steps"`
+		} `json:"state"`
+	}
+	if err := json.Unmarshal([]byte(rawArgs), &params); err != nil {
+		slog.Warn("json Unmarshal",
+			slog.String("error", err.Error()))
+		return
+	}
+	if len(params.Questions) == 0 {
+		slog.Warn("ask user no questions")
+		return
+	}
+
+	interactive.SaveAndEnqueueAskUser(sessionID, params.Questions, params.State.Objective, params.State.Completed, params.State.NextSteps, toolResults)
+}
+
+var ErrAskUserInterrupted = errors.New("ask user interrupted")
+
+func toolResults(session *agentTypes.AgentSession) []interactive.ToolResult {
+	nameByID := make(map[string]string)
+	for _, msg := range session.ToolHistories {
+		for _, tc := range msg.ToolCalls {
+			nameByID[tc.ID] = tc.Function.Name
+		}
+	}
+
+	var results []interactive.ToolResult
+	for _, msg := range session.Tools {
+		content, _ := msg.Content.(string)
+		results = append(results, interactive.ToolResult{
+			Name:   nameByID[msg.ToolCallID],
+			ID:     msg.ToolCallID,
+			Result: content,
+		})
+	}
+	return results
+}
 
 const (
 	slotReady          = 0
@@ -162,6 +208,42 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			slots[i].state = slotValidateFailed
 			slots[i].preMsg = content
 			continue
+		}
+	}
+
+	for i := range slots {
+		slot := &slots[i]
+		if slot.state == slotReady && slot.name == "ask_user" {
+			for j := range slots {
+				cs := &slots[j]
+				if cs.state == slotReady || cs.name == "ask_user" {
+					continue
+				}
+				content := cs.preMsg
+				msg := agentTypes.Message{
+					Role:       "tool",
+					Content:    content,
+					ToolCallID: cs.id,
+				}
+				switch cs.state {
+				case slotCached:
+					if cs.isImage {
+						injectImageToUserInput(sessionData, cs.imageURL)
+					}
+					sessionData.ToolHistories = append(sessionData.ToolHistories, msg)
+				default:
+					sessionData.Tools = append(sessionData.Tools, msg)
+					sessionData.ToolHistories = append(sessionData.ToolHistories, msg)
+				}
+			}
+
+			toolResults := toolResults(sessionData)
+
+			go askUserInBackground(sessionData.ID, slot.args, toolResults)
+			if exec.CancelExecution != nil {
+				exec.CancelExecution()
+			}
+			return sessionData, alreadyCall, ErrAskUserInterrupted
 		}
 	}
 

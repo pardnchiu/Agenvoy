@@ -104,12 +104,23 @@ func (l *Listener[CID, MID]) loop(ctx context.Context) {
 	defer unregister()
 
 	for {
+		l.cleanStaleCur()
 		l.emit(ctx)
 		select {
 		case <-ctx.Done():
 			return
 		case <-notify:
 		case <-l.wakeup:
+		}
+	}
+}
+
+func (l *Listener[CID, MID]) cleanStaleCur() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for cid, a := range l.cur {
+		if !EntryExists(a.pendingID) {
+			delete(l.cur, cid)
 		}
 	}
 }

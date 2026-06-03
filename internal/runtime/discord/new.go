@@ -68,6 +68,7 @@ func New() (*Bot, error) {
 	}
 	bot.cancel = cancel
 	bot.listener = newPendingListener(bot)
+	runtime.RegisterResumeHandler("dc-", bot.resumeFromPending)
 	current.Store(bot)
 
 	username := client.Status().Username

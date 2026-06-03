@@ -26,7 +26,8 @@ type Executor struct {
 	APIToolbox     *apiAdapter.Translator
 	ScriptToolbox  ScriptToolExecutor
 
-	SkillScanner *runtime.SkillScanner
+	SkillScanner    *runtime.SkillScanner
+	CancelExecution context.CancelFunc
 }
 
 type Tool struct {

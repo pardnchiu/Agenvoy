@@ -216,6 +216,11 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		return fmt.Errorf("tools.NewExecutor: %w", err)
 	}
 
+	execCtx, execCancel := context.WithCancel(ctx)
+	defer execCancel()
+	ctx = execCtx
+	exec.CancelExecution = execCancel
+
 	if data.Skill != nil {
 		assignBindingSkill(session, data.Skill)
 	}
@@ -431,6 +436,14 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		if len(choice.Message.ToolCalls) > 0 {
 			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, toolFailCount)
 			if err != nil {
+				if errors.Is(err, ErrAskUserInterrupted) {
+					if !session.Stateless && len(session.Tools) > 0 {
+						if raw, err := json.Marshal(session.Tools); err == nil {
+							sessionManager.SaveToToolCall(session.ID, string(raw))
+						}
+					}
+					return nil
+				}
 				return err
 			}
 			continue
