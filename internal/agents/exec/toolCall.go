@@ -88,7 +88,7 @@ type toolSlot struct {
 	execErr string
 }
 
-func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, toolFailCount map[string]int) (*agentTypes.AgentSession, map[string]string, error) {
+func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, toolFailCount map[string]int, turnAllowAll *bool) (*agentTypes.AgentSession, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 
 	calls := choice.Message.ToolCalls
@@ -143,7 +143,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			continue
 		}
 
-		if !allowAll && !toolRegister.IsReadOnly(toolName) {
+		if !allowAll && !*turnAllowAll && !toolRegister.IsReadOnly(toolName) {
 			proceed := true
 			reason := ""
 			if runtime.HasListener(sessionData.ID) && !allowTool.Match(getAllowList(ctx), toolName, toolArg) {
@@ -164,6 +164,9 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 								slog.String("session", sessionData.ID),
 								slog.String("error", err.Error()))
 						}
+					}
+					if reply.Approve && reply.AllowTurn {
+						*turnAllowAll = true
 					}
 				}
 			}

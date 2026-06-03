@@ -153,7 +153,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		done := make(chan struct{})
 		sid := session.ID
 		pushHook, hasPush := lookupPushHook(sid)
-		isDcPush := hasPush && !isDcPushSuppressed(ctx)
+		pushCtx := ctx
+		isDcPush := hasPush && !isDcPushSuppressed(pushCtx)
 		var pushTextBuf strings.Builder
 		var pushDoneEv agentTypes.Event
 		stateless := session.Stateless
@@ -187,13 +188,13 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			if isDcPush {
 				text := strings.TrimSpace(pushTextBuf.String())
 				if text != "" {
-					pushHook(ctx, PushPayload{
+					pushHook(pushCtx, PushPayload{
 						SessionID: sid,
 						Text:      text,
 						Model:     pushDoneEv.Model,
 						Usage:     pushDoneEv.Usage,
 						Duration:  pushDoneEv.Duration,
-						Prefix:    dcPushPrefix(ctx),
+						Prefix:    dcPushPrefix(pushCtx),
 					})
 				}
 			}
@@ -271,6 +272,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
 	toolFailCount := make(map[string]int)
+	turnAllowAll := false
 	emptyCount := 0
 	trimmedToolCalls := false
 	type sendOutcome struct {
@@ -434,7 +436,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 		choice := resp.Choices[0]
 		if len(choice.Message.ToolCalls) > 0 {
-			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, toolFailCount)
+			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, toolFailCount, &turnAllowAll)
 			if err != nil {
 				if errors.Is(err, ErrAskUserInterrupted) {
 					if !session.Stateless && len(session.Tools) > 0 {

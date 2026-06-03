@@ -376,6 +376,7 @@ func (l *Listener[CID, MID]) finalize(state *active[CID, MID], reply Reply) {
 var confirmOptions = []string{
 	"✅ Yes",
 	"✅ Yes, don't ask again",
+	"✅ Yes, allow this turn",
 	"❌ No",
 	"⛔ Stop",
 }
@@ -390,6 +391,8 @@ func confirmReplyFor(data string) (reply Reply, finalize bool) {
 		return Reply{Approve: true}, true
 	case "✅ Yes, don't ask again":
 		return Reply{Approve: true, Remember: true}, true
+	case "✅ Yes, allow this turn":
+		return Reply{Approve: true, AllowTurn: true}, true
 	case "❌ No":
 		return Reply{Approve: false, Skip: true}, true
 	case "⛔ Stop":

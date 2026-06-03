@@ -60,6 +60,7 @@ func (b *Bot) resumeFromPending(sessionID, taskHash string, answers []any) {
 
 	primary, rest, err := exec.ResolveAgent(ctx, agents.DispatcherBot(), agents.Registry(), content, false, sessionID)
 	if err != nil {
+		b.client.FinishStatus(ctx, channelID)
 		b.client.Send(ctx, channelID, "", fmt.Sprintf("⚠️ %s", err.Error()))
 		return
 	}

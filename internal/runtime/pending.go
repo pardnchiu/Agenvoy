@@ -48,13 +48,14 @@ type Request struct {
 }
 
 type Reply struct {
-	Approve  bool
-	Skip     bool
-	Remember bool
-	Reason   string
-	Answers  []any
-	ExitCode int
-	Error    error
+	Approve   bool
+	Skip      bool
+	Remember  bool
+	AllowTurn bool
+	Reason    string
+	Answers   []any
+	ExitCode  int
+	Error     error
 }
 
 type entry struct {

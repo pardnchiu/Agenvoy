@@ -222,6 +222,9 @@ func ListPendingTasks(sessionID string) []string {
 			continue
 		}
 		name := e.Name()
+		if strings.HasPrefix(name, ".") {
+			continue
+		}
 		hash := strings.TrimSuffix(strings.TrimSuffix(name, ".md"), ".json")
 		if !seen[hash] {
 			seen[hash] = true
