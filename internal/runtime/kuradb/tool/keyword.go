@@ -19,7 +19,7 @@ func registRagSearchKeyword() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     15 * time.Second,
-		Description: `[system-default] Search user's RAG knowledge base by exact token match. Use when query targets a precise string (filename, English term, person name, specific symbol). For natural-language or synonym queries, use rag_search_semantic instead.`,
+		Description: "[system-default] Exact token match over RAG knowledge base. Use for precise strings (filenames, terms, names, symbols). For natural-language queries use rag_search_semantic.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

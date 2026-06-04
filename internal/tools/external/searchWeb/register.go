@@ -20,7 +20,7 @@ func Register() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "search_web",
 		AlwaysAllow: true,
-		Description: "[system-default] Web search — MANDATORY before answering any 'what/who/why/how is X' question where X is a named entity (project, tool, library, product, company, person, place, event) not yet loaded into this session via prior tool result. Also mandatory for any fact that can drift (releases, versions, prices, dates, specs, APIs, news, schedules). Training memory is untrusted for proper nouns and post-cutoff topics — searching and citing source URLs beats paraphrasing recall; an unfamiliar name is never a reason to skip the search. If the user supplies a URL, use fetch_page instead (never `site:`-wrap a known URL here).",
+		Description: "[system-default] Web search. Mandatory for named entities and facts that drift (versions, prices, dates, news). Training knowledge is untrusted for proper nouns and post-cutoff topics. URL given → use fetch_page instead. Results are snippets only — call fetch_page for full content.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -30,7 +30,7 @@ func Register() {
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "Lookback window restricting results to the past day/week/month/year. Omit for no restriction; default 'w' biases to recent results.",
+					"description": "Lookback window: d=past day, w=past week, m=past month, y=past year. Omit for no restriction. Use w for 最近/近期/本週, m for 本月. Default w.",
 					"default":     "w",
 					"enum":        timeRanges,
 				},

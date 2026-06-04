@@ -18,7 +18,7 @@ func registInvokeExternalAgent() {
 		Name:        "invoke_external_agent",
 		AlwaysAllow: true,
 		Timeout:     10 * time.Minute,
-		Description: "Invoke one external CLI agent (codex / copilot / claude / gemini) and return its response. Use when the user names an agent or wants a non-Anthropic perspective.",
+		Description: "Invoke one external CLI agent and return its response. Use when user names a specific agent. Never fallback here for tool uncertainty. External agents run independently without project tool access. Requires ExternalAgents.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -13,9 +13,10 @@ import (
 
 func registRememberError() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "remember_error",
-		AlwaysAllow: true,
-		Description: "Persist a tool-error record to cross-session error memory for retrieval via search_tool_errors. Call after an error is resolved or abandoned so the next session skips the same diagnosis.",
+		Name:          "remember_error",
+		AlwaysAllow:   true,
+		FireAndForget: true,
+		Description:   "Persist tool-error record to cross-session memory. Auto-call when: resolved via non-trivial fallback → resolved; strategy confirmed non-working → failed; 3 approaches exhausted → abandoned. Skip trivial typos, 1st-retry fixes, transient errors.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

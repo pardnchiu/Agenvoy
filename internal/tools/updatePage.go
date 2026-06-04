@@ -18,6 +18,7 @@ func registUpdatePage() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "update_page",
 		AlwaysLoad:  true,
+		AlwaysAllow: true,
 		Description: "Overwrite the rendered page for the current session (index.html under the session's page directory). Browser tabs viewing this session auto-reload. Pass the complete HTML; partial diffs unsupported.",
 		Parameters: map[string]any{
 			"type": "object",

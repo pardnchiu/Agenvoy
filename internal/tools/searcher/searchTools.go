@@ -29,7 +29,7 @@ func registSearchTools() {
 		Name:        "search_tools",
 		AlwaysAllow: true,
 		AlwaysLoad:  true,
-		Description: "Search the tool registry by keyword (or 'select:<name>' for exact activation) and inject matching tool schemas into the current turn. Use when a needed capability seems available but isn't loaded — Agenvoy ships lazy-schema.",
+		Description: "Search tool registry by keyword (or 'select:<name>' for exact activation) and inject schemas. Use when a capability isn't loaded. Prefer unmarked tools (mcp__* > api_* > script_*) over [system-default] for same intent.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

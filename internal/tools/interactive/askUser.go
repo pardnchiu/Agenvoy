@@ -133,6 +133,12 @@ func registAskUser() {
 			if len(params.Questions) == 0 {
 				return "", fmt.Errorf("ask_user requires at least one question in 'questions'")
 			}
+			if strings.TrimSpace(params.State.Objective) == "" {
+				return "", fmt.Errorf("state.objective is required for task resumption")
+			}
+			if len(params.State.NextSteps) == 0 {
+				return "", fmt.Errorf("state.next_steps is required for task resumption")
+			}
 
 			questions := make([]runtime.Question, 0, len(params.Questions))
 			for i, q := range params.Questions {

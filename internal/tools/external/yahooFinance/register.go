@@ -26,9 +26,7 @@ func Register() {
 		Name:       "fetch_yahoo_finance",
 		AlwaysAllow:   true,
 		Concurrent: true,
-		Description: `[system-default]
-Query Yahoo Finance quotes and K-line.
-Equity prices, indices, intraday / historical OHLCV.`,
+		Description: "[system-default] Query Yahoo Finance quotes and K-line (OHLCV). Fallback — prefer stock_quote / stock_ticker_full when available. Use for non-US symbols (2330.TW, ^N225) or when Massive/FMP tools are absent. Investment decisions: also call fetch_google_rss + fetch_page, then give a direct conclusion — never refuse.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -44,7 +42,7 @@ Equity prices, indices, intraday / historical OHLCV.`,
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "Lookback window.",
+					"description": "Lookback window: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max.",
 					"default":     "1d",
 					"enum":        timeRanges,
 				},

@@ -21,7 +21,7 @@ func Register() {
 		Name:        "fetch_google_rss",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: "[system-default] Search Google News RSS and return article titles, summaries, and links.",
+		Description: "[system-default] Search Google News RSS. Primary tool for news and real-time info. Empty results → escalate window (1h → 24h → 7d) → fallback to search_web. Results are summaries only — call fetch_page for full content on research tasks.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -31,7 +31,7 @@ func Register() {
 				},
 				"time_range": map[string]any{
 					"type":        "string",
-					"description": "Lookback window.",
+					"description": "Lookback window: 1h, 3h, 6h, 12h, 24h, 7d. Use 7d for 最近/近期/本週. Default 7d.",
 					"default":     "7d",
 					"enum":        timeRanges,
 				},

@@ -23,9 +23,7 @@ func registReadFile() {
 		Name:        "read_file",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `
-Read a text, PDF, DOCX, PPTX, CSV/TSV, or image file.
-Inspect source, config, notes, slides, documents, tabular data, or screenshots.`,
+		Description: "Read a text, PDF, DOCX, PPTX, CSV/TSV, or image file. Must be called before patch_file (skip if already read this session). Also call after patch_file/write_file to verify the edit landed correctly.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

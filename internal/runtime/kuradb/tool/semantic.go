@@ -19,7 +19,7 @@ func registRagSearchSemantic() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     15 * time.Second,
-		Description: `[system-default] Search user's RAG knowledge base by meaning. Use when query asks about (1) any document/PDF/note content, (2) topics/concepts the user may have ingested, (3) named entities that could be in user's files (e.g. 'X 寫了啥', 'X 詳細資料', '介紹 X'). Prefer this over rag_search_keyword for natural-language and synonym queries.`,
+		Description: "[system-default] Semantic search over RAG knowledge base. Prefer over rag_search_keyword for natural-language queries. If results are sufficient, answer directly without external tools.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
