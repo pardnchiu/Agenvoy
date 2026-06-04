@@ -19,9 +19,7 @@ func registGlobFiles() {
 		Name:       "glob_files",
 		AlwaysAllow:   true,
 		Concurrent: true,
-		Description: `
-Find files matching a glob pattern within a directory.
-Locate specific file types (e.g. '**/*.go' for Go files).`,
+		Description: "Find files matching a glob pattern within a directory (e.g. '**/*.go'). Use when only a filename or partial path is known — never guess full paths. Call read_file on each match before editing to confirm the correct file.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -19,7 +19,7 @@ import (
 func registSavePageToFile() {
 	toolRegister.Regist(toolRegister.Def{
 		Name: "save_page_to_file",
-		Description: "[system-default] Fetch a web page and save its content to a local file.",
+		Description: "[system-default] Fetch a web page and save to local file. Topic without URL → search_web first to obtain URL. Never substitute fetch_page + write_file. Omit save_to for auto-save to ~/Downloads.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -18,7 +18,7 @@ func registInstallDependence() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "install_dependence",
 		AlwaysAllow: false,
-		Description: "Install a missing system binary cross-platform: macOS via brew, Linux via apt-get/dnf/yum/pacman/apk (with sudo through TUI process passthrough). Skips when binary already in PATH.",
+		Description: "Install a missing system binary cross-platform (TUI/CLI only). Skips if already in PATH. Never use run_command for package installs — sandbox blocks sudo. Language-level packages (pip/npm/cargo/gem) → output command for user to run manually.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

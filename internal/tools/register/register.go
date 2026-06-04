@@ -18,14 +18,15 @@ type GroupHandler func(ctx context.Context, e *toolTypes.Executor, name string, 
 const DefaultToolTimeout = time.Minute
 
 type Def struct {
-	Name        string
-	Description string
-	Parameters  map[string]any
-	Handler     Handler
-	AlwaysAllow bool
-	AlwaysLoad  bool
-	Concurrent  bool
-	Timeout     time.Duration
+	Name          string
+	Description   string
+	Parameters    map[string]any
+	Handler       Handler
+	AlwaysAllow   bool
+	AlwaysLoad    bool
+	Concurrent    bool
+	FireAndForget bool
+	Timeout       time.Duration
 }
 
 var handlerMap = map[string]Handler{}
@@ -34,6 +35,7 @@ var defList []toolTypes.Tool
 var readOnlySet = map[string]bool{}
 var alwaysLoadSet = map[string]bool{}
 var concurrentSet = map[string]bool{}
+var fireAndForgetSet = map[string]bool{}
 var timeoutMap = map[string]time.Duration{}
 
 func Regist(d Def) {
@@ -68,6 +70,9 @@ func Regist(d Def) {
 	if d.Concurrent {
 		concurrentSet[d.Name] = true
 	}
+	if d.FireAndForget {
+		fireAndForgetSet[d.Name] = true
+	}
 	if d.Timeout > 0 {
 		timeoutMap[d.Name] = d.Timeout
 	}
@@ -98,6 +103,10 @@ func MarkAlwaysAllow(name string) {
 
 func IsConcurrent(name string) bool {
 	return concurrentSet[name]
+}
+
+func IsFireAndForget(name string) bool {
+	return fireAndForgetSet[name]
 }
 
 func JSON() []byte {

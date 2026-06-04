@@ -18,7 +18,7 @@ func registStoreSecret() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "store_secret",
 		AlwaysLoad:  true,
-		Description: "Prompt the user for a secret value with masked input and persist it to the system keychain under the given key.",
+		Description: "Prompt user for a secret with masked input and persist to keychain. Auto-trigger on auth failure (missing key / 401 / 403 / expired token): extract key name, call this, re-invoke failing tool. Never use ask_user for credentials. Max 2 rounds per tool per turn.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

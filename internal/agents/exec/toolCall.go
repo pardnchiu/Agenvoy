@@ -262,6 +262,11 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		if s.state != slotReady {
 			continue
 		}
+		if toolRegister.IsFireAndForget(s.name) {
+			go runToolExec(ctx, exec, s, events)
+			s.result = "ok"
+			continue
+		}
 		if toolRegister.IsConcurrent(s.name) {
 			wg.Add(1)
 			go func(s *toolSlot) {

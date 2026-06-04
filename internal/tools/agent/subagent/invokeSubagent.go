@@ -29,7 +29,7 @@ func registInvokeSubagent() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     time.Duration(filesystem.MaxSubagentTimeoutMin) * time.Minute,
-		Description: "Spawn an internal subagent in its own session and return its reply. Use to delegate a self-contained subtask. Pass `name` / `session_id` for multi-turn persona threading.",
+		Description: "Spawn a subagent in its own session. Named delegation (呼叫/請/找 X 做 Y, ask/let X do Y) → pass name verbatim; anonymous → leave name empty. Never pre-judge existence, never fallback to self, never ask_user for a name.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -80,7 +80,7 @@ func registFetchPage() {
 		Name:        "fetch_page",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: "[system-default] Fetch a live web page and return its content (markdown / html / json). Use whenever the user provides any URL or named page (any domain — including social profiles like threads / x / linkedin / instagram, docs, paywalled news). URL given → always fetch_page, never search_web. Set same_session=true for login-required sites and paywalls.",
+		Description: "[system-default] Fetch a web page and return content (markdown/html/json). URL given → always this tool, never search_web. same_session=true for login-required sites. Mandatory on search/RSS result links for research tasks or when citing sources. Document research: no request limit — fetch page by page until complete.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

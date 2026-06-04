@@ -14,7 +14,7 @@ import (
 func registListCron() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "list_cron",
-		Description: "List cron jobs scheduled in the current session from crons.json. No parameters. Returns JSON array of {expression, session_id, skill} filtered to the caller's session_id; empty array when nothing is scheduled in this session.",
+		Description: "List cron jobs in current session. For test/dry-run requests: find skill name here + list_task, then read_file SKILL.md and execute directly — never reply with 'run /sched-X in TUI'.",
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},

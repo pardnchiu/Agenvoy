@@ -17,7 +17,7 @@ func registCrossReviewWithExternalAgents() {
 		Name:        "cross_review_with_external_agents",
 		AlwaysAllow: true,
 		Timeout:     15 * time.Minute,
-		Description: "Fan out a deliverable to all installed external CLIs (codex / copilot / claude / gemini) in parallel for cross-review. Use for multi-model sanity check on non-trivial results.",
+		Description: "Fan out a deliverable to all installed external CLIs in parallel for cross-review. Use when user explicitly requests cross-check or multi-model verification. Requires ExternalAgents; if none configured, use review_result instead.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

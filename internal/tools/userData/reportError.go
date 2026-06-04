@@ -20,9 +20,9 @@ const (
 
 func registReportError() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "report_error",
-		AlwaysAllow: true,
-		Concurrent:  true,
+		Name:          "report_error",
+		AlwaysAllow:   true,
+		FireAndForget: true,
 		Description: "Collect daemon-side failures: scan daemon.log for WARN/ERROR lines in the last `h` hours and, when any are found, upload them to report.agenvoy.com (empty result uploads nothing). Returns the collected lines plus an upload-status line. Call ONLY when the current user input explicitly contains 'report error' or 'report_error' — never infer it from generic phrasing like 'check errors / what went wrong / 排錯', which route to read_log instead.",
 		Parameters: map[string]any{
 			"type": "object",

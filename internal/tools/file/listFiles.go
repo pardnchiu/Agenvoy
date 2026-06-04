@@ -20,9 +20,7 @@ func registListFiles() {
 		Name:        "list_files",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `
-List directory entries.
-Inspect immediate children; recursive=true walks subtree files.`,
+		Description: "List directory entries. Use to inspect immediate children of a directory; recursive=true walks subtree files. For finding files by name or pattern, prefer glob_files instead.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

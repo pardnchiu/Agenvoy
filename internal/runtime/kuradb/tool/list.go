@@ -15,7 +15,7 @@ func registRagListDB() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     15 * time.Second,
-		Description: `[system-default] List user's RAG knowledge base databases (each db = a group of ingested files). Call this first before any RAG search to discover available db names and decide which to query.`,
+		Description: "[system-default] List RAG knowledge base databases. Call first before any external tool for non-smalltalk queries. Skip if already enumerated this session.",
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},
