@@ -14,7 +14,7 @@ import (
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 )
 
-func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *runtime.SkillScanner, userInput string, imageInputs []string, fileInputs []string, events chan<- agentTypes.Event, allowAll bool, workDir, sessionID string, webMode bool) error {
+func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentRegistry, scanner *runtime.SkillScanner, userInput string, imageInputs []string, fileInputs []string, events chan<- agentTypes.Event, allowAll bool, workDir, sessionID, pendingTask string, webMode bool) error {
 	if strings.TrimSpace(workDir) == "" {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -93,6 +93,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		FileInputs:     fileInputs,
 		AllowAll:       allowAll,
 		WebMode:        webMode,
+		PendingTask:    pendingTask,
 	}
 	session, err := GetSession(execData)
 	if err != nil {

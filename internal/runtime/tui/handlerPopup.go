@@ -125,7 +125,7 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		t = t.closePopup()
 
 	case tea.KeyEnter:
-		if p.cursor == 3 {
+		if p.cursor == 4 {
 			p.kind = popupText
 			p.skipWithReason = true
 			p.title = "Reason (Enter to skip without reason):"
@@ -147,11 +147,17 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		case 2:
 			reply = runtime.Reply{
+				Approve:   true,
+				AllowTurn: true,
+			}
+
+		case 3:
+			reply = runtime.Reply{
 				Approve: false,
 				Skip:    true,
 			}
 
-		case 4:
+		case 5:
 			reply = runtime.Reply{
 				Approve: false,
 				Error:   fmt.Errorf("user stopped"),
@@ -328,6 +334,7 @@ func newPopup(id string, req runtime.Request) *Popup {
 			options: []string{
 				"Yes",
 				"Yes, don't ask again",
+				"Yes, allow this turn",
 				"No",
 				"No, with reason",
 				"Stop",

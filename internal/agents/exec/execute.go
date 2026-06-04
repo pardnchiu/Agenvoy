@@ -32,6 +32,7 @@ import (
 	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
@@ -105,6 +106,7 @@ type ExecData struct {
 	ExtraSystemPrompt string
 	AllowAll          bool
 	WebMode           bool
+	PendingTask       string
 }
 
 type (
@@ -153,7 +155,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		done := make(chan struct{})
 		sid := session.ID
 		pushHook, hasPush := lookupPushHook(sid)
-		isDcPush := hasPush && !isDcPushSuppressed(ctx)
+		pushCtx := ctx
+		isDcPush := hasPush && !isDcPushSuppressed(pushCtx)
 		var pushTextBuf strings.Builder
 		var pushDoneEv agentTypes.Event
 		stateless := session.Stateless
@@ -187,13 +190,13 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			if isDcPush {
 				text := strings.TrimSpace(pushTextBuf.String())
 				if text != "" {
-					pushHook(ctx, PushPayload{
+					pushHook(pushCtx, PushPayload{
 						SessionID: sid,
 						Text:      text,
 						Model:     pushDoneEv.Model,
 						Usage:     pushDoneEv.Usage,
 						Duration:  pushDoneEv.Duration,
-						Prefix:    dcPushPrefix(ctx),
+						Prefix:    dcPushPrefix(pushCtx),
 					})
 				}
 			}
@@ -214,6 +217,31 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	exec, err := tools.NewExecutor(data.WorkDir, session.ID, scanner)
 	if err != nil {
 		return fmt.Errorf("tools.NewExecutor: %w", err)
+	}
+
+	execCtx, execCancel := context.WithCancel(ctx)
+	defer execCancel()
+	ctx = execCtx
+	exec.CancelExecution = execCancel
+
+	keepPending := true
+	if !session.Stateless && session.ID != "" {
+		if data.PendingTask != "" {
+			exec.PendingTask = data.PendingTask
+		} else {
+			objective := data.Content
+			if objective == "" {
+				if s, ok := session.UserInput.Content.(string); ok {
+					objective = s
+				}
+			}
+			exec.PendingTask = interactive.CreateExecPending(session.ID, objective)
+		}
+		defer func() {
+			if !keepPending {
+				interactive.CleanupPending(session.ID, exec.PendingTask)
+			}
+		}()
 	}
 
 	if data.Skill != nil {
@@ -266,6 +294,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
 	toolFailCount := make(map[string]int)
+	turnAllowAll := false
 	emptyCount := 0
 	trimmedToolCalls := false
 	type sendOutcome struct {
@@ -275,6 +304,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	sendFailCount := 0
 	for range limit {
 		if ctx.Err() != nil {
+			keepPending = false
 			return ctx.Err()
 		}
 		assembled := assembleMessages(session.SystemPrompts, session.OldHistories, session.SummaryMessage, session.UserInput, session.ToolHistories)
@@ -297,6 +327,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			case <-ctx.Done():
 				watchdog.Stop()
 				cancelSend()
+				keepPending = false
 				return ctx.Err()
 			case out := <-resultCh:
 				resp, err = out.resp, out.err
@@ -347,6 +378,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		cancelSend()
 		if err != nil {
 			if ctx.Err() != nil {
+				keepPending = false
 				return ctx.Err()
 			}
 			isTimeout := isSendTimeoutError(err, sendCtxErr)
@@ -429,8 +461,17 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 		choice := resp.Choices[0]
 		if len(choice.Message.ToolCalls) > 0 {
-			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, toolFailCount)
+			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, toolFailCount, &turnAllowAll)
 			if err != nil {
+				if errors.Is(err, ErrAskUserInterrupted) {
+					if !session.Stateless && len(session.Tools) > 0 {
+						if raw, err := json.Marshal(session.Tools); err == nil {
+							sessionManager.SaveToToolCall(session.ID, string(raw))
+						}
+					}
+					return nil
+				}
+				keepPending = false
 				return err
 			}
 			continue
@@ -492,6 +533,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				sessionManager.SaveToToolCall(session.ID, string(raw))
 			}
 		}
+		keepPending = false
 		return nil
 	}
 
@@ -514,6 +556,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 					slog.String("error", err.Error()))
 			}
 			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
+			keepPending = false
 			return nil
 		}
 	}

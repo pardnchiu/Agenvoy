@@ -66,7 +66,7 @@ func FormatToolEvent(name, raw string) string {
 		}
 		return val
 
-	case "read_file", "write_file", "patch_file", "glob_files", "read_image", "save_page_to_file":
+	case "read_file", "write_file", "patch_file", "glob_files", "save_page_to_file":
 		if val := arg("path", "pattern", "save_to"); val != "" {
 			return val
 		}

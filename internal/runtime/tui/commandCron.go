@@ -75,7 +75,7 @@ func (t TUI) dispatchAgent(content string) (TUI, tea.Cmd) {
 	t.runStartedAt = time.Now()
 	t.runTarget = targetSession(content, t.currentSessionID)
 
-	go runExec(t.ctx, content, false, t.cwd, t.currentSessionID, t.mode == webMode)
+	go runExec(t.ctx, content, false, t.cwd, t.currentSessionID, "", t.mode == webMode)
 
 	return t, tea.Batch(
 		tea.Println(messageBlock(content)),

@@ -81,15 +81,15 @@ func addDefaultCrons() {
 	record.CleanDownload()
 	record.CleanDownloadTrash()
 	record.CleanToolCalls()
-	if _, err := st.cron.Add("0 0 0,6,12,18 * * *", record.CleanDownload); err != nil {
+	if _, err := st.cron.Add("0 0,6,12,18 * * *", record.CleanDownload); err != nil {
 		slog.Warn("cron cleanDownload",
 			slog.String("error", err.Error()))
 	}
-	if _, err := st.cron.Add("0 0 0,6,12,18 * * *", record.CleanDownloadTrash); err != nil {
+	if _, err := st.cron.Add("0 0,6,12,18 * * *", record.CleanDownloadTrash); err != nil {
 		slog.Warn("cron cleanDownloadTrash",
 			slog.String("error", err.Error()))
 	}
-	if _, err := st.cron.Add("0 0 0 * * *", record.CleanToolCalls); err != nil {
+	if _, err := st.cron.Add("0 0 * * *", record.CleanToolCalls); err != nil {
 		slog.Warn("cron cleanToolCalls",
 			slog.String("error", err.Error()))
 	}

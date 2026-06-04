@@ -110,6 +110,9 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 
 	case "/key":
 		return t.commandKey(parts)
+
+	case "/pending":
+		return t.commandPending()
 	}
 	return t, nil, false
 }

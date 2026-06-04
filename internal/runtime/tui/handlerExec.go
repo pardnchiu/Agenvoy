@@ -33,7 +33,7 @@ func truncatePushPrefix(s string, max int) string {
 	return string(r)
 }
 
-func runExec(parentCtx context.Context, input string, allowAll bool, workDir, sessionID string, webMode bool) {
+func runExec(parentCtx context.Context, input string, allowAll bool, workDir, sessionID, pendingTask string, webMode bool) {
 	ctx, cancel := context.WithCancel(exec.WithDcPushPrefix(parentCtx, truncatePushPrefix(input, 32)))
 	send(agentExec{cancel: cancel})
 
@@ -65,6 +65,7 @@ func runExec(parentCtx context.Context, input string, allowAll bool, workDir, se
 			allowAll,
 			workDir,
 			sessionID,
+			pendingTask,
 			webMode,
 		)
 		close(wrapped)

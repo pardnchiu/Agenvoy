@@ -43,24 +43,27 @@ type Request struct {
 	ToolArgs    string
 	AskUser     *UserPayload
 	ExecProcess *ExecPayload
-	Ctx         context.Context
-	EnqueueAt   time.Time
+	Ctx       context.Context
+	EnqueueAt time.Time
 }
 
 type Reply struct {
-	Approve  bool
-	Skip     bool
-	Remember bool
-	Reason   string
-	Answers  []any
-	ExitCode int
-	Error    error
+	Approve   bool
+	Skip      bool
+	Remember  bool
+	AllowTurn bool
+	Reason    string
+	Answers   []any
+	ExitCode  int
+	Error     error
 }
 
 type entry struct {
-	req     Request
-	replyCh chan Reply
-	claimed bool
+	req       Request
+	replyCh   chan Reply
+	claimed   bool
+	async     bool
+	onResolve func(Reply)
 }
 
 type listenerEntry struct {
@@ -181,17 +184,55 @@ func PickNextMatch(prefix string, accept func(Request) bool) (id string, req Req
 	return chosenID, chosen.req, true
 }
 
+func AskUser(req Request, onResolve func(Reply)) (string, error) {
+	if req.ID == "" {
+		req.ID = go_pkg_utils.UUID()
+	}
+	req.Ctx = context.Background()
+	req.EnqueueAt = time.Now()
+
+	e := &entry{
+		req:       req,
+		replyCh:   make(chan Reply, 1),
+		async:     true,
+		onResolve: onResolve,
+	}
+
+	mu.Lock()
+	entries[req.ID] = e
+	mu.Unlock()
+	signalFor(req.SessionID)
+
+	return req.ID, nil
+}
+
 func Resolve(id string, r Reply) {
 	mu.Lock()
 	e, ok := entries[id]
+	if ok && e.async {
+		delete(entries, id)
+	}
 	mu.Unlock()
 	if !ok {
+		return
+	}
+	if e.async {
+		if e.onResolve != nil {
+			go e.onResolve(r)
+		}
 		return
 	}
 	select {
 	case e.replyCh <- r:
 	default:
 	}
+}
+
+func EntryExists(id string) bool {
+	mu.Lock()
+	defer mu.Unlock()
+	_, ok := entries[id]
+	return ok
 }
 
 func signalFor(sessionID string) {

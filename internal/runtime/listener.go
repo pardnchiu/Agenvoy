@@ -104,12 +104,23 @@ func (l *Listener[CID, MID]) loop(ctx context.Context) {
 	defer unregister()
 
 	for {
+		l.cleanStaleCur()
 		l.emit(ctx)
 		select {
 		case <-ctx.Done():
 			return
 		case <-notify:
 		case <-l.wakeup:
+		}
+	}
+}
+
+func (l *Listener[CID, MID]) cleanStaleCur() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for cid, a := range l.cur {
+		if !EntryExists(a.pendingID) {
+			delete(l.cur, cid)
 		}
 	}
 }
@@ -365,6 +376,7 @@ func (l *Listener[CID, MID]) finalize(state *active[CID, MID], reply Reply) {
 var confirmOptions = []string{
 	"✅ Yes",
 	"✅ Yes, don't ask again",
+	"✅ Yes, allow this turn",
 	"❌ No",
 	"⛔ Stop",
 }
@@ -379,6 +391,8 @@ func confirmReplyFor(data string) (reply Reply, finalize bool) {
 		return Reply{Approve: true}, true
 	case "✅ Yes, don't ask again":
 		return Reply{Approve: true, Remember: true}, true
+	case "✅ Yes, allow this turn":
+		return Reply{Approve: true, AllowTurn: true}, true
 	case "❌ No":
 		return Reply{Approve: false, Skip: true}, true
 	case "⛔ Stop":

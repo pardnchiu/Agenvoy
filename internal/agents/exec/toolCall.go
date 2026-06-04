@@ -3,6 +3,7 @@ package exec
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,9 +15,54 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
+
+func askUserInBackground(sessionID, taskHash, rawArgs string, toolResults []interactive.ToolResult) {
+	var params struct {
+		Questions []runtime.Question `json:"questions"`
+		State     struct {
+			Objective string   `json:"objective"`
+			Completed []string `json:"completed"`
+			NextSteps []string `json:"next_steps"`
+		} `json:"state"`
+	}
+	if err := json.Unmarshal([]byte(rawArgs), &params); err != nil {
+		slog.Warn("json Unmarshal",
+			slog.String("error", err.Error()))
+		return
+	}
+	if len(params.Questions) == 0 {
+		slog.Warn("ask user no questions")
+		return
+	}
+
+	interactive.SaveAndEnqueueAskUser(sessionID, params.Questions, params.State.Objective, params.State.Completed, params.State.NextSteps, toolResults, taskHash)
+}
+
+var ErrAskUserInterrupted = errors.New("ask user interrupted")
+
+func toolResults(session *agentTypes.AgentSession) []interactive.ToolResult {
+	nameByID := make(map[string]string)
+	for _, msg := range session.ToolHistories {
+		for _, tc := range msg.ToolCalls {
+			nameByID[tc.ID] = tc.Function.Name
+		}
+	}
+
+	var results []interactive.ToolResult
+	for _, msg := range session.Tools {
+		content, _ := msg.Content.(string)
+		results = append(results, interactive.ToolResult{
+			Name:   nameByID[msg.ToolCallID],
+			ID:     msg.ToolCallID,
+			Result: content,
+		})
+	}
+	return results
+}
 
 const (
 	slotReady          = 0
@@ -42,7 +88,7 @@ type toolSlot struct {
 	execErr string
 }
 
-func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, toolFailCount map[string]int) (*agentTypes.AgentSession, map[string]string, error) {
+func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, toolFailCount map[string]int, turnAllowAll *bool) (*agentTypes.AgentSession, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 
 	calls := choice.Message.ToolCalls
@@ -66,6 +112,12 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			hash:  hash,
 			state: slotReady,
 		}
+
+		interactive.RecordToolAttempt(exec.SessionID, exec.PendingTask, interactive.ToolAttempt{
+			Name: toolName,
+			ID:   toolID,
+			Args: toolArg,
+		})
 
 		if toolName != "read_file" {
 			if cached, ok := alreadyCall[hash]; ok && cached != "" {
@@ -97,7 +149,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			continue
 		}
 
-		if !allowAll && !toolRegister.IsReadOnly(toolName) {
+		if !allowAll && !*turnAllowAll && !toolRegister.IsReadOnly(toolName) {
 			proceed := true
 			reason := ""
 			if runtime.HasListener(sessionData.ID) && !allowTool.Match(getAllowList(ctx), toolName, toolArg) {
@@ -118,6 +170,9 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 								slog.String("session", sessionData.ID),
 								slog.String("error", err.Error()))
 						}
+					}
+					if reply.Approve && reply.AllowTurn {
+						*turnAllowAll = true
 					}
 				}
 			}
@@ -162,6 +217,42 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			slots[i].state = slotValidateFailed
 			slots[i].preMsg = content
 			continue
+		}
+	}
+
+	for i := range slots {
+		slot := &slots[i]
+		if slot.state == slotReady && slot.name == "ask_user" {
+			for j := range slots {
+				cs := &slots[j]
+				if cs.state == slotReady || cs.name == "ask_user" {
+					continue
+				}
+				content := cs.preMsg
+				msg := agentTypes.Message{
+					Role:       "tool",
+					Content:    content,
+					ToolCallID: cs.id,
+				}
+				switch cs.state {
+				case slotCached:
+					if cs.isImage {
+						injectImageToUserInput(sessionData, cs.imageURL)
+					}
+					sessionData.ToolHistories = append(sessionData.ToolHistories, msg)
+				default:
+					sessionData.Tools = append(sessionData.Tools, msg)
+					sessionData.ToolHistories = append(sessionData.ToolHistories, msg)
+				}
+			}
+
+			toolResults := toolResults(sessionData)
+
+			go askUserInBackground(sessionData.ID, exec.PendingTask, slot.args, toolResults)
+			if exec.CancelExecution != nil {
+				exec.CancelExecution()
+			}
+			return sessionData, alreadyCall, ErrAskUserInterrupted
 		}
 	}
 
@@ -307,6 +398,11 @@ func runToolExec(ctx context.Context, exec *toolTypes.Executor, s *toolSlot, eve
 			Text:     err.Error(),
 		}
 		s.execErr = err.Error()
+		go interactive.AppendToolResult(exec.SessionID, exec.PendingTask, interactive.ToolResult{
+			Name:   s.name,
+			ID:     s.id,
+			Result: "error: " + err.Error(),
+		})
 		events <- agentTypes.Event{
 			Type:     agentTypes.EventToolCallEnd,
 			ToolName: s.name,
@@ -323,12 +419,17 @@ func runToolExec(ctx context.Context, exec *toolTypes.Executor, s *toolSlot, eve
 			Text:     result,
 		}
 	}
+	s.result = result
+	go interactive.AppendToolResult(exec.SessionID, exec.PendingTask, interactive.ToolResult{
+		Name:   s.name,
+		ID:     s.id,
+		Result: result,
+	})
 	events <- agentTypes.Event{
 		Type:     agentTypes.EventToolCallEnd,
 		ToolName: s.name,
 		ToolID:   s.id,
 	}
-	s.result = result
 }
 
 func validateToolArgs(exec *toolTypes.Executor, toolName, args string) string {

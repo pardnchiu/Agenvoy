@@ -3,12 +3,15 @@ package tui
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync/atomic"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
 
 var (
@@ -36,6 +39,12 @@ type WorkDir struct {
 	dir string
 }
 
+type ResumeExec struct {
+	SessionID   string
+	Content     string
+	PendingTask string
+}
+
 func Run(ctx context.Context, userInput string, onceCall, allowAll bool) error {
 	prog := tea.NewProgram(newModel(ctx, userInput, onceCall, allowAll), tea.WithContext(ctx), tea.WithoutSignalHandler())
 	program.Store(prog)
@@ -52,6 +61,17 @@ func Run(ctx context.Context, userInput string, onceCall, allowAll bool) error {
 		restoreSlog := installSlogTUI(ctx)
 		defer restoreSlog()
 	}
+
+	runtime.RegisterResumeHandler("", func(sessionID, taskHash string, answers []any) {
+		content, err := interactive.LoadResumeMessage(sessionID, taskHash, answers)
+		if err != nil {
+			slog.Warn("ask_user resume: pending already consumed",
+				slog.String("session", sessionID),
+				slog.String("task_hash", taskHash))
+			return
+		}
+		send(ResumeExec{SessionID: sessionID, Content: content, PendingTask: taskHash})
+	})
 
 	go newPendingChannel(ctx)
 	if !onceCall {

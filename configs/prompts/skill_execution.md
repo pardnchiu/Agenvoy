@@ -26,7 +26,7 @@ Skill instructions may reference tool names from other environments. Always map 
 | List files / 列出檔案 | `list_files` | `{"path": "<absolute directory path preferred>"}` |
 | Find files / glob / 搜尋檔案 | `glob_files` | `{"pattern": "<glob pattern>"}` |
 | Search file content / grep / 搜尋內容 | `search_content` | `{"query": "<keyword>", "path": "<directory>"}` |
-| Read image / 讀取圖片 | `read_image` | `{"path": "<image path>"}` |
+| Read image / 讀取圖片 | `read_file` | `{"path": "<image path>"}` |
 | Search web / Google / web search / 搜尋網路 | `search_web` | `{"query": "<search terms>"}` |
 | Fetch page / open URL / 讀取網頁 / 開啟連結 | `fetch_page` | `{"url": "<full URL>"}` |
 | Download page / save URL / 下載網頁 | `save_page_to_file` | `{"url": "<full URL>"}` |

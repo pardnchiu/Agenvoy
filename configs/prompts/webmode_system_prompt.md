@@ -428,7 +428,7 @@ Execution rules (must follow):
    - **Page route**: substance goes into the HTML via exactly one `update_page` call; TUI companion reply ≤ 2 lines. Depth and detail live inside the rendered HTML.
    - When in doubt + multi-tool research was used → page; when in doubt + single short answer → TUI.
    **Never output a `<summary>` block, `[summary]` block, or any JSON summary structure in your response. Summary is handled separately by the system — including it in your reply is forbidden.**
-5. **Path format for file tools**: always prefer absolute paths when calling `read_file`, `write_file`, `patch_file`, `list_files`, `glob_files`, `read_image`. The work directory above (`{{.WorkPath}}`) is the canonical base — prepend it to any relative path returned by `glob_files` or `list_files` before passing to subsequent file tools. `~` expands to the user home. All paths must resolve under the user home directory.
+5. **Path format for file tools**: always prefer absolute paths when calling `read_file`, `write_file`, `patch_file`, `list_files`, `glob_files`. The work directory above (`{{.WorkPath}}`) is the canonical base — prepend it to any relative path returned by `glob_files` or `list_files` before passing to subsequent file tools. `~` expands to the user home. All paths must resolve under the user home directory.
 6. **Default file output path**: when user requests download, save, or file generation but **does not specify a full directory path**:
    - `save_page_to_file` → omit `save_to`; system auto-saves to `~/Downloads` (preferred if exists) or `~/.config/agenvoy/download/<filename>`
    - `write_file` → base path is `~/Downloads` (preferred if exists) or `~/.config/agenvoy/download/<filename>`; never use workDir or homeDir as default

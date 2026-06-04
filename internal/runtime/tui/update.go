@@ -161,7 +161,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.runStartedAt = time.Now()
 			t.runTarget = targetSession(content, t.currentSessionID)
 
-			go runExec(t.ctx, content, false, t.cwd, t.currentSessionID, t.mode == webMode)
+			go runExec(t.ctx, content, false, t.cwd, t.currentSessionID, "", t.mode == webMode)
 
 			cmds = append(cmds,
 				tea.Println(messageBlock(content)),
@@ -182,6 +182,11 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.streaming = false
 		if t.currentSessionID != "" {
 			t.currentSessionName, _ = configBot.Get(t.currentSessionID)
+		}
+		if t.pendingResume != nil {
+			resume := *t.pendingResume
+			t.pendingResume = nil
+			return t.startResume(resume)
 		}
 		var doneCmds []tea.Cmd
 		if msg.err != nil && !errors.Is(msg.err, context.Canceled) {
@@ -217,11 +222,21 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.running = true
 		t.runStartedAt = time.Now()
 		t.runTarget = targetSession(content, t.currentSessionID)
-		go runExec(t.ctx, content, t.allowAll, t.cwd, t.currentSessionID, t.mode == webMode)
+		go runExec(t.ctx, content, t.allowAll, t.cwd, t.currentSessionID, "", t.mode == webMode)
 		return t, tea.Batch(
 			tea.Println(messageBlock(content)),
 			t.spinner.Tick,
 		)
+
+	case ResumeExec:
+		if t.running {
+			t.pendingResume = &msg
+			return t, nil
+		}
+		return t.startResume(msg)
+
+	case PendingSelect:
+		return t.resumePending(msg)
 
 	case WorkDir:
 		t.cwd = msg.dir
@@ -921,4 +936,16 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return t, tea.Batch(cmds...)
+}
+
+func (t TUI) startResume(msg ResumeExec) (tea.Model, tea.Cmd) {
+	sid := msg.SessionID
+	if sid == "" {
+		sid = t.currentSessionID
+	}
+	t.running = true
+	t.runStartedAt = time.Now()
+	t.runTarget = ""
+	go runExec(t.ctx, msg.Content, false, t.cwd, sid, msg.PendingTask, t.mode == webMode)
+	return t, t.spinner.Tick
 }

@@ -58,6 +58,7 @@ var commands = []Command{
 	{"allow-skill", "!(dangerously) skip permission · always-allow skill"},
 	{"allow-cmd", "!(dangerously) append binary to config.white_list · daemon restart required"},
 	{"allow-report", "!(exposes logs) enable / disable daily upload of daemon WARN/ERROR to developer"},
+	{"pending", "list / resume interrupted tasks · error recovery · ask_user resume"},
 	{"key", "update / rotate keychain value · pick from recorded keys"},
 	{"clear", "clear visible transcript / history · memory untouched"},
 	{"exit", "exit / quit TUI · daemon keeps running"},

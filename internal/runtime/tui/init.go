@@ -58,9 +58,10 @@ type TUI struct {
 	textarea textarea.Model
 	spinner  spinner.Model
 
-	running      bool
-	cancelExec   context.CancelFunc
-	runStartedAt time.Time
+	running       bool
+	cancelExec    context.CancelFunc
+	runStartedAt  time.Time
+	pendingResume *ResumeExec
 
 	popup        *Popup
 	popupQueue   []Pending
@@ -173,6 +174,8 @@ type LoadHistorySelect struct {
 	id   string
 	load bool
 }
+
+
 
 func newModel(ctx context.Context, userInput string, onceCall, allowAll bool) TUI {
 	textArea := textarea.New()
