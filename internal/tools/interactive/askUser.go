@@ -200,9 +200,7 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen] + "…"
 }
 
-func LoadPendingMeta(sessionID, taskHash string) (pendingMeta, error) {
-	return go_pkg_filesystem.ReadJSON[pendingMeta](filesystem.PendingMetaPath(sessionID, taskHash))
-}
+
 
 func CleanupPending(sessionID, taskHash string) {
 	os.Remove(filesystem.PendingPath(sessionID, taskHash))
@@ -234,19 +232,6 @@ func ListPendingTasks(sessionID string) []string {
 	return hashes
 }
 
-func PendingObjective(sessionID, taskHash string) string {
-	content, err := go_pkg_filesystem.ReadText(filesystem.PendingPath(sessionID, taskHash))
-	if err != nil {
-		return ""
-	}
-	for _, line := range strings.Split(content, "\n") {
-		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasPrefix(line, "##") {
-			return line
-		}
-	}
-	return ""
-}
 
 func LoadResumeMessage(sessionID, taskHash string, answers []any) (string, error) {
 	mdPath := filesystem.PendingPath(sessionID, taskHash)
