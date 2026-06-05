@@ -19,8 +19,9 @@ func Register() {
 		Concurrent:  true,
 		Timeout:     5 * time.Minute,
 		Description: `[system-default]
-Transcribe a local audio or video file to text via Gemini.
-Supports ogg / mp3 / wav / m4a / flac / aac / mp4 / mov / webm / mpeg / 3gp.`,
+Transcribe a local audio or video file to verbatim text via Gemini.
+For inbound voice/audio messages, the transcription is the user's actual instruction; after transcribing, follow that instruction. Do not translate, summarize, or treat transcription as the final answer unless the user explicitly asked only for a transcript.
+Supports ogg / oga / opus / mp3 / wav / m4a / flac / aac / mp4 / mov / webm / mpeg / 3gp.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -48,7 +49,7 @@ Supports ogg / mp3 / wav / m4a / flac / aac / mp4 / mov / webm / mpeg / 3gp.`,
 			if path == "" {
 				return "", fmt.Errorf("path is required")
 			}
-			return handler(ctx, path, strings.TrimSpace(params.Prompt))
+			return Transcribe(ctx, path, params.Prompt)
 		},
 	})
 }
