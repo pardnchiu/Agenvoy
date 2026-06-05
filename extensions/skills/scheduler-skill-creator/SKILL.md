@@ -1,7 +1,7 @@
 ---
 name: scheduler-skill-creator
 description: |
-  建立並排程定時觸發的 skill。**所有新增定時／週期任務、提醒、排程通知的請求必須走此 skill**，禁止直接呼叫 add_task / add_cron（那是 skill 已存在時的時間綁定工具，不該作為新建排程的入口）。
+  建立並排程定時觸發的 skill。**所有新增定時／週期任務、提醒、排程通知的請求必須走此 skill**，禁止直接呼叫 add_schedule（那是 skill 已存在時的時間綁定工具，不該作為新建排程的入口）。
 
   必定觸發的訊息特徵（任一即活化）：
   - 相對延遲：「X 分鐘後」「X 小時後」「稍後」「待會」「等一下」
@@ -16,7 +16,7 @@ description: |
   - 訊息為一份完整的 SKILL.md body（`# Title` + `## 任務` + `## 輸出格式` 結構），無建立／排程動詞 → 為 skill execution，非 creation
   - 訊息僅含「執行 skill X」「跑 X」「run skill X」無時間 token → 為 execution
 
-  流程：解析訊息抽出「要做什麼」「何時觸發」→ 缺項用 ask_user 補問 → 生成 skill 檔案至 ~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md（無 scheduler- 前綴，hash 用於避免命名衝突）→ 呼叫 add_task 或 add_cron 綁定時間 → 回報。
+  流程：解析訊息抽出「要做什麼」「何時觸發」→ 缺項用 ask_user 補問 → 生成 skill 檔案至 ~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md（無 scheduler- 前綴，hash 用於避免命名衝突）→ 呼叫 add_schedule 綁定時間 → 回報。
 ---
 
 # Scheduler Skill 建立器
@@ -32,13 +32,13 @@ scheduler 採 skill-based 觸發：到時間時，daemon 讀 `scheduler/<short>/
 | 路徑 | `~/.config/agenvoy/skills/<name>/SKILL.md` | `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md` |
 | frontmatter `name` | `<name>` | `<short>-<hash8>` (**無前綴**) |
 | 一般 `/<name>` 補全 | 出現 | **不出現**（scanner 不掃 scheduler/） |
-| 呼叫方式 | `/<name>` 觸發 | `add_task(skill_name=<short>-<hash8>)` / `add_cron(skill_name=<short>-<hash8>)` |
+| 呼叫方式 | `/<name>` 觸發 | `add_schedule(target=task, skill_name=<short>-<hash8>)` / `add_schedule(target=cron, skill_name=<short>-<hash8>)` |
 
 ## 成功標準
 
 - 生成檔案: `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md`，frontmatter `name: <short>-<hash8>`（無前綴）
 - skill body 描述任務行為、引用具體 tool
-- 呼叫 `add_task(time, skill_name=<short>-<hash8>)` 或 `add_cron(time, skill_name=<short>-<hash8>)` 綁定時間成功
+- 呼叫 `add_schedule(target=task, time, skill_name=<short>-<hash8>)` 或 `add_schedule(target=cron, time, skill_name=<short>-<hash8>)` 綁定時間成功
 - 回報生成位置、full name（含 hash）、排程類型（one-shot／recurring）、下次觸發時間
 
 ## 步驟
@@ -108,17 +108,17 @@ scheduler 採 skill-based 觸發：到時間時，daemon 讀 `scheduler/<short>/
 
 | 使用者說 | 工具 | `time` 參數 |
 |---|---|---|
-| `X 分鐘後` | `add_task` | `+Xm` |
-| `X 小時後` | `add_task` | `+Xh` |
-| `今天 X 點`（24h） | `add_task` | `HH:MM` |
-| `明天 / 特定日期 X 點` | `add_task` | `YYYY-MM-DD HH:MM` |
-| `每 X 分鐘` | `add_cron` | `*/X * * * *` |
-| `每小時` | `add_cron` | `0 * * * *` |
-| `每天 X 點` | `add_cron` | `MM HH * * *` |
-| `每週 N`（0=Sun, 1=Mon, ..., 6=Sat） | `add_cron` | `MM HH * * N` |
-| `每月 D 日 X 點` | `add_cron` | `MM HH D * *` |
+| `X 分鐘後` | `add_schedule(target=task)` | `+Xm` |
+| `X 小時後` | `add_schedule(target=task)` | `+Xh` |
+| `今天 X 點`（24h） | `add_schedule(target=task)` | `HH:MM` |
+| `明天 / 特定日期 X 點` | `add_schedule(target=task)` | `YYYY-MM-DD HH:MM` |
+| `每 X 分鐘` | `add_schedule(target=cron)` | `*/X * * * *` |
+| `每小時` | `add_schedule(target=cron)` | `0 * * * *` |
+| `每天 X 點` | `add_schedule(target=cron)` | `MM HH * * *` |
+| `每週 N`（0=Sun, 1=Mon, ..., 6=Sat） | `add_schedule(target=cron)` | `MM HH * * N` |
+| `每月 D 日 X 點` | `add_schedule(target=cron)` | `MM HH D * *` |
 
-決定走 `add_task`（一次性）或 `add_cron`（週期）。
+決定走 `add_schedule` target=task（一次性）或 target=cron（週期）。
 
 ### 3. 初始化 skill 目錄（**強制走 init 腳本**）
 
@@ -174,16 +174,16 @@ python3 scripts/init_scheduler_skill.py <short-name>
 
 | 任務類型 | 候選 skill（優先） | 候選 tool（退一步） |
 |---|---|---|
-| 比特幣行情／分析 | `bitcoin-lookup` | `search_web` / `fetch_google_rss` → `fetch_page` |
-| 一般股價／財經 | （視 `## Skills` 是否有對應）| `search_web` / `fetch_google_rss` → `fetch_page` |
-| HN／RSS 摘要 | （視是否有 digest skill）| `fetch_google_rss` |
+| 比特幣行情／分析 | `bitcoin-lookup` | `search_web` / `fetch_google_news` → `fetch_page` |
+| 一般股價／財經 | （視 `## Skills` 是否有對應）| `search_web` / `fetch_google_news` → `fetch_page` |
+| HN／RSS 摘要 | （視是否有 digest skill）| `fetch_google_news` |
 | 網頁／API 抓取 | — | `fetch_page`／`send_http_request`／`api_*` |
 | 程式碼 review | `code-reviewer` | — |
 | Commit／版號 | `commit-generate`／`version-generate` | — |
 | 計算 | — | `calculator` |
 | 純文字提醒（無 IO） | — | 不需 tool，body 直接寫死要輸出的文字 |
 
-**`scheduler-skill-creator` 與 `scheduler/` 下任何 skill 不算候選** —— 前者是本流程自己、不能遞迴；後者是 scheduler 用內部 skill（透過 `add_task` 綁定觸發、不能用 `/<name>` 從 body 呼叫）。
+**`scheduler-skill-creator` 與 `scheduler/` 下任何 skill 不算候選** —— 前者是本流程自己、不能遞迴；後者是 scheduler 用內部 skill（透過 `add_schedule` 綁定觸發、不能用 `/<name>` 從 body 呼叫）。
 
 ### 4. 填充 skill body
 
@@ -200,9 +200,9 @@ python3 scripts/init_scheduler_skill.py <short-name>
 依步驟 2 結果呼叫，`skill_name` 用步驟 3 stdout 印出的完整 `<short>-<hash8>`：
 
 ```
-add_task(time="<time_value>", skill_name="<short>-<hash8>")
+add_schedule(target="task", time="<time_value>", skill_name="<short>-<hash8>")
 # 或
-add_cron(time="<cron_expression>", skill_name="<short>-<hash8>")
+add_schedule(target="cron", time="<cron_expression>", skill_name="<short>-<hash8>")
 ```
 
 `skill_name` **不加 `scheduler-` 前綴**（內部會直查 `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md` 確認存在）。session_id 內部自動取 caller `e.SessionID`，不必傳。
@@ -215,7 +215,7 @@ add_cron(time="<cron_expression>", skill_name="<short>-<hash8>")
 
 - skill 已建立: `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md`
 - skill name: `<short>-<hash8>`（無前綴，hash 自動產生避免命名衝突）
-- 排程: `add_task` / `add_cron` 的回應內容（含下次觸發時間、ID）
+- 排程: `add_schedule` 的回應內容（含下次觸發時間、ID）
 
 ## 命名規則
 
@@ -223,7 +223,7 @@ add_cron(time="<cron_expression>", skill_name="<short>-<hash8>")
 |---|---|---|
 | short name（輸入 init script） | lowercase / hyphen-case，無 `scheduler-` 前綴、無 hash | `daily-hn-digest`、`tsmc-stock-watch` |
 | hash suffix | init script 產生的 8-char hex random | `a3f9b2c1` |
-| full name（檔案／frontmatter／add_task skill_name 用） | `<short>-<hash8>` | `tsmc-stock-watch-a3f9b2c1` |
+| full name（檔案／frontmatter／add_schedule skill_name 用） | `<short>-<hash8>` | `tsmc-stock-watch-a3f9b2c1` |
 | 目錄 | `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/` | `.../tsmc-stock-watch-a3f9b2c1/` |
 
 **禁止**在任何環節加 `scheduler-` 前綴。`scheduler` 已表達於目錄路徑，加前綴只會造成 `scheduler/scheduler-foo-<hash>/` 之類的重複命名。
@@ -270,7 +270,7 @@ scheduler 觸發後，runtime 會把 subagent 產出的最終文字自動送回 
 
 **步驟 1** 解析：任務 = 查 2330.TW 股價；時間 = 每 5 分鐘 → recurring。兩者皆有，不問。
 
-**步驟 2** 正規化：`add_cron(time="*/5 * * * *", ...)`
+**步驟 2** 正規化：`add_schedule(target="cron", time="*/5 * * * *", ...)`
 
 **步驟 3** `run_command python3 scripts/init_scheduler_skill.py tsmc-stock-watch`
 
@@ -295,14 +295,14 @@ description: 每 5 分鐘抓取台積電 2330.TW 即時股價並提醒。
 
 ## 任務
 
-透過 `search_web` / `fetch_google_rss` 找到 `2330.TW` 最新報價來源，再用 `fetch_page` 讀取結果。
+透過 `search_web` / `fetch_google_news` 找到 `2330.TW` 最新報價來源，再用 `fetch_page` 讀取結果。
 
 ## 輸出格式
 
 `台積電 2330.TW: NT$<price> (<change>% 從昨收)` 一行。
 ```
 
-**步驟 5** `add_cron(time="*/5 * * * *", skill_name="tsmc-stock-watch-a3f9b2c1")`
+**步驟 5** `add_schedule(target="cron", time="*/5 * * * *", skill_name="tsmc-stock-watch-a3f9b2c1")`
 
 **步驟 6** 回報：「已排程每 5 分鐘觸發 `tsmc-stock-watch-a3f9b2c1`。下次觸發 HH:MM。」
 
@@ -312,5 +312,5 @@ description: 每 5 分鐘抓取台積電 2330.TW 即時股價並提醒。
 - **不**在 short name、frontmatter、skill_name 任何位置加 `scheduler-` 前綴
 - **不**留 `[TODO: ...]` 佔位符在最終 skill —— 步驟 4 須把所有 TODO 替換為具體內容
 - **不**用任意預設值補齊時間 —— 缺時間就 `ask_user` 問清楚，不要「應該是 9 點」之類腦補
-- **不**跳過步驟 5 的 `add_task` / `add_cron` —— skill 建立但沒綁時間 = 排程不會觸發
+- **不**跳過步驟 5 的 `add_schedule` —— skill 建立但沒綁時間 = 排程不會觸發
 - **不**在 body 引用未經 `search_tools` 確認存在的 tool name —— 觸發時 subagent 找不到 tool 會直接 abort，使用者拿不到結果也看不到錯誤原因

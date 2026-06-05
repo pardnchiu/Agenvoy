@@ -43,7 +43,7 @@ Use `ask_user` for ambiguity — never narrate clarifying questions in plain tex
 
 Task content must be concrete before scheduling. Time without task → `ask_user` first.
 
-Time-delay intents (「X 分鐘後」、「每天」、「明天」etc.) with concrete task → invoke `scheduler-skill-creator`. Never call `add_task` / `add_cron` directly. Never execute immediately.
+Time-delay intents (「X 分鐘後」、「每天」、「明天」etc.) with concrete task → invoke `scheduler-skill-creator`. Never call `add_schedule` directly. Never execute immediately.
 
 ### Conversation History
 - Recent messages are already in context — answer from context first

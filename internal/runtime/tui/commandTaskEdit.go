@@ -75,7 +75,7 @@ func (t TUI) runTaskEditSubmit(skill string, at time.Time, requirement string) (
 	if requirement == "" {
 		return t, tea.Println(errorStyle.Render("[!] task edit requirement required") + "\n")
 	}
-	prompt := fmt.Sprintf("修改一次性 task「%s」（當前觸發時間: %s）：%s\n（只改時間使用 patch_task；改行為則編輯 ~/.config/agenvoy/skills/scheduler/%s/SKILL.md）",
+	prompt := fmt.Sprintf("修改一次性 task「%s」（當前觸發時間: %s）：%s\n（只改時間使用 patch_schedule(target=task)；改行為則編輯 ~/.config/agenvoy/skills/scheduler/%s/SKILL.md）",
 		skill, at.Local().Format("2006-01-02 15:04"), requirement, skill)
 	return t.dispatchAgent(prompt)
 }

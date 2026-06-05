@@ -110,7 +110,7 @@ func FormatToolEvent(name, raw string) string {
 			return val
 		}
 
-	case "add_task", "add_cron", "patch_task", "patch_cron":
+	case "add_schedule", "patch_schedule":
 		skill := arg("skill_name")
 		t := arg("time")
 		if skill != "" && t != "" {
@@ -120,7 +120,7 @@ func FormatToolEvent(name, raw string) string {
 			return skill
 		}
 
-	case "remove_task", "remove_cron":
+	case "remove_schedule":
 		if skill := arg("skill_name"); skill != "" {
 			return skill
 		}

@@ -7,7 +7,7 @@
 - Skill / tool result reports
 - Background push results from cron-triggered or task-triggered skill runs (where the message arrives via the push hook)
 - Output from `send_to_chatbot(platform=telegram)` (cross-session sends from non-tg sessions)
-- **Script `echo` / `print` stdout** — when you author scripts for `write_script` + `add_task` / `add_cron`, the script's stdout is forwarded verbatim with `parse_mode=HTML`. Any markdown inside the script (`**bold**`, `` `code` ``, `- bullet`) will render as **literal characters**, not formatting. Scripts must emit HTML (or escaped plain text) only.
+- **Script `echo` / `print` stdout** — when you author scripts for `write_script` + `add_schedule`, the script's stdout is forwarded verbatim with `parse_mode=HTML`. Any markdown inside the script (`**bold**`, `` `code` ``, `- bullet`) will render as **literal characters**, not formatting. Scripts must emit HTML (or escaped plain text) only.
 
 If a single character of markdown (`**`, `__`, `` ` ``, leading `-` / `*` / `#`) leaks into any of the above, the reply is **broken**. There is no fallback / auto-conversion layer downstream.
 
