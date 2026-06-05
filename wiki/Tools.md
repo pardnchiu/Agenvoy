@@ -24,8 +24,6 @@
 | `save_page_to_file` | | Fetch and persist to local file |
 | `search_web` | | DuckDuckGo lite endpoint, package-level rate limit (2 s gap) |
 | `fetch_google_rss` | ✓ | Google News RSS |
-| `fetch_yahoo_finance` | ✓ | Stock and financial data |
-| `fetch_youtube_transcript` | ✓ | YouTube subtitle fetch (Gemini-backed) |
 | `transcribe_media` | ✓ | Local audio / video transcription via Gemini `inline_data` (ogg, mp3, wav, m4a, flac, aac, mp4, mov, webm, mpeg, 3gp); 20 MiB / request cap aligned with Telegram `Bot.Save` |
 | `send_http_request` | ✓ | Raw HTTP request, returns status + headers + body |
 | `calculator` | ✓ | Math expression evaluator |
@@ -68,7 +66,6 @@ When `rag_*` tools are loaded, the system prompt forces the **first wave** of to
 | Tool | Description |
 |---|---|
 | `update_page` | Overwrite the rendered HTML page for the current session canvas; browser tabs auto-reload via SSE |
-| `generate_image` | Generate an image via `gpt-image-2` through the codex OAuth backend (`chatgpt.com/backend-api/codex/responses` + `image_generation` built-in). Schema requires `prompt` + `size` (enum: `1024x1024` / `1024x1792` / `1792x1024`) + `quality` (enum: `low` / `medium` / `high`); empty size/quality → handler fails with a hint to call `ask_user` first (no silent default — each generation costs 3-5× of subscription). Output lands in `~/.config/agenvoy/download/agenvoy-img-<uuid>.png`; the return text's last line is `FILE: <path>`, which the channel runtime auto-attaches. `AlwaysAllow=false` (must pass confirm gate) |
 
 ### Channel
 
@@ -93,7 +90,7 @@ Output text from any tool or LLM response is post-processed for these markers:
 | `[SEND_FILE:<path>]` (inline) | Same as above — LLM emits this when proactively wanting to attach |
 | `[SEND_VOICE:<text>]` | Telegram only. Synthesizes via Gemini TTS, sends as OGG voice. Run.go fires the upload **async** (`go func` with `context.WithoutCancel`); reply text returns immediately. Failure → `slog.Error` + chat notify `⚠️ SendVoice failed (background)` (never silent) |
 
-Marker regex + dedupe + `os.Stat` filtering lives in `internal/utils/fileMarker.go`. Push hooks (`telegram.PushTelegramResult` / `discord.PushDiscordResult`) call the same extractor — image generation during a cron fire still attaches correctly.
+Marker regex + dedupe + `os.Stat` filtering lives in `internal/utils/fileMarker.go`. Push hooks (`telegram.PushTelegramResult` / `discord.PushDiscordResult`) call the same extractor.
 
 ### Skill discovery
 
@@ -179,7 +176,7 @@ Each adapter has its own timeout, layered with the executor-side ceiling:
 
 Long-running tools (script + API) emit `running name=... elapsed=Ys/Zs` to the daemon log every 30s for visibility.
 
-Subagent + external-agent tools have their own multi-minute caps (`invoke_subagent` = `MAX_SUBAGENT_TIMEOUT_MIN`, `invoke_external_agent` = 10 min, `cross_review_with_external_agents` = 15 min, `generate_plan` / `generate_image` / `transcribe_media` / `fetch_youtube_transcript` = 5 min).
+Subagent + external-agent tools have their own multi-minute caps (`invoke_subagent` = `MAX_SUBAGENT_TIMEOUT_MIN`, `invoke_external_agent` = 10 min, `cross_review_with_external_agents` = 15 min, `generate_plan` / `transcribe_media` = 5 min).
 
 ## Credential auto-heal
 

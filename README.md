@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <strong>Say it. It builds the tool. No programming required.</strong> Claude / GPT / Gemini auto-routed; lives in Telegram, Discord, and your terminal.
+  <strong>Say it. It builds the tool. No programming required.</strong> Claude / GPT / Gemini auto-routed; lives in Telegram, Discord, LINE (alpha), and your terminal.
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
 
 ## What is Agenvoy
 
-A **personal AI agent** that runs on your own machine. Configure it once, talk to it from anywhere — Telegram, Discord, terminal TUI, or browser. Same memory, same tools, same skills across every channel.
+A **personal AI agent** that runs on your own machine. Configure it once, talk to it from anywhere — Telegram, Discord, LINE (alpha), terminal TUI, or browser. Same memory, same tools, same skills across every channel.
 
 Built for people who want their own always-on assistant, not another SaaS subscription.
 
@@ -43,8 +43,8 @@ Built for people who want their own always-on assistant, not another SaaS subscr
 
 Out of the box it also:
 
-- **Chats anywhere** — Telegram inline buttons · Discord select menus / modals · terminal TUI · browser canvas. One daemon, every surface.
-- **Generates images, speaks replies (TTS), transcribes audio / video.**
+- **Chats anywhere** — Telegram inline buttons · Discord select menus / modals · LINE (alpha) · terminal TUI · browser canvas. One daemon, every surface.
+- **Speaks replies (TTS), transcribes audio / video.**
 - **Schedules itself** — say "every weekday 8am push a Hacker News top-stories digest to Telegram" and the agent builds the cron + push pipeline for you.
 - **Picks the right model per task** — Claude for coding, Gemini for video, GPT for research, routed automatically.
 - **Searches your files semantically** — KuraDB indexes your local docs / notes (file → embedding vector); the agent answers from your own knowledge base, not generic training data.
@@ -73,7 +73,6 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | Agent builds & saves its own tools | ✅ FaaS-sandboxed scripts + APIs | ❌ | ⚠️ skill-only |
 | First-contact verification on Telegram/Discord | ✅ 6-digit OTP | ⚠️ pairing code (manual approve) | ❌ allowlist only |
 | Cross-session push (any session → chat) | ✅ `send_to_telegram_chat` / `send_to_discord_channel` | ❌ | ❌ |
-| Image generation in chat | ✅ gpt-image-2 | ❌ | ❌ |
 | Native document RAG (file → embedding) | ✅ KuraDB in-process (semantic + keyword) | ❌ (MCP only) | ❌ (MCP only) |
 
 > Looking for the full feature-by-feature breakdown? See [**What makes it different**](#what-makes-it-different) below.
@@ -141,7 +140,8 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | Telegram | ✅ native daemon | ✅ native daemon | ✅ native daemon | ⚠️ Channels MCP (requires active session) | ❌ | ❌ |
 | Discord | ✅ native daemon | ✅ native daemon | ✅ native daemon | ⚠️ Channels MCP (requires active session) | ❌ | ❌ |
 | iMessage | ❌ | ✅ BlueBubbles | ✅ BlueBubbles | ⚠️ Channels MCP (macOS only) | ❌ | ❌ |
-| WhatsApp / Slack / LINE | ❌ | ✅ 50+ platforms | ✅ 20+ platforms | ❌ | ❌ | ❌ |
+| LINE | ⚠️ alpha ([linebot branch](https://github.com/pardnchiu/Agenvoy/tree/linebot)) | ❌ | ❌ | ❌ | ❌ | ❌ |
+| WhatsApp / Slack | ❌ | ✅ 50+ platforms | ✅ 20+ platforms | ❌ | ❌ | ❌ |
 | Always-on receiving (no session needed) | ✅ daemon | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Cross-session send (any session → chat) | ✅ `send_to_telegram_chat` / `send_to_discord_channel` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | First-contact verification | ✅ 6-digit OTP (crypto/rand) | ✅ pairing code (dmPolicy: pairing) | ❌ (allowlist only) | ❌ | ❌ | ❌ |
@@ -215,7 +215,6 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | Tool registry (publish + install across machines) | ✅ pkg.agenvoy.com (Cloudflare Worker + R2 + D1, email verification + downgrade guard) | ❌ | ⚠️ agentskills.io (skills only) | ❌ | ❌ | ❌ |
 | Skill system | ✅ SKILL.md lazy-load | ✅ SKILL.md 5400+ community | ✅ SKILL.md agentskills.io | ✅ CLAUDE.md | ❌ | ❌ |
 | Format reference as lazy-load tool | ✅ `telegram_format` / `discord_format` | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Image generation | ✅ DALL-E/Codex Image | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Document RAG (external knowledge base) | ✅ KuraDB (in-process vector + semantic/keyword) | ❌ (conversation memory only) | ❌ (conversation memory only) | ❌ | ❌ | ❌ |
 | Media transcription STT | ✅ Gemini, 14 formats | ✅ Whisper/Gemini | ✅ faster-whisper (local) | ❌ | ❌ | ❌ |
 | TTS voice output | ✅ Gemini TTS | ✅ ElevenLabs/Hume/MS | ✅ Edge TTS/ElevenLabs/OpenAI | ❌ | ❌ | ❌ |
@@ -256,7 +255,7 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 
 | Dimension | Detail |
 |-----------|--------|
-| **Clear advantages** | Single Go binary, 12 dependencies, self-maintained ecosystem (pardnchiu universe), dispatcher model routing, Session Canvas, native platform UI (real buttons/modals), OTP verification, cross-session send to Telegram/Discord from any session, API tool auto-discovery, image generation, format reference as lazy-load tool, local-only scheduler (no cloud required) |
+| **Clear advantages** | Single Go binary, 12 dependencies, self-maintained ecosystem (pardnchiu universe), dispatcher model routing, Session Canvas, native platform UI (real buttons/modals), OTP verification, cross-session send to Telegram/Discord from any session, API tool auto-discovery, format reference as lazy-load tool, local-only scheduler (no cloud required) |
 | **On par with competitors** | Telegram/Discord daemon, TTS/STT, scheduler output push, Skill system, MCP, browser automation, inbound attachment handling |
 | **Where competitors lead** | OpenClaw 50+ platforms, Hermes MCP server mode, Hermes local STT, OpenClaw/Hermes built-in cross-session memory, Claude Code Computer Use beta, Claude Code cloud cron/task |
 | **Codex CLI** | Fewest features — CLI + TUI + OpenAI OAuth only, no daemon, no chat platforms, no scheduler |
@@ -330,15 +329,12 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | `save_page_to_file` | Fetch a web page and save its content to a local file. |
 | `search_web` | Search the web via DuckDuckGo Lite; returns top 10 results. |
 | `fetch_google_rss` | Search Google News RSS and return article titles, summaries, links. |
-| `fetch_yahoo_finance` | Query Yahoo Finance quotes and K-line (OHLCV). |
-| `fetch_youtube_transcript` | Transcribe a YouTube video with timestamps. *(gemini needed)* |
 | `transcribe_media` | Transcribe a local audio / video file (ogg, mp3, wav, m4a, flac, aac, mp4, mov, webm, mpeg, 3gp, …) up to 20 MiB. *(gemini needed)* |
 | `send_http_request` | Send an HTTP request to a specified URL. |
 | **Shell** |  |
 | `run_command` | Run a binary with argv; returns combined stdout/stderr. |
 | **Render** |  |
 | `update_page` | Overwrite the rendered HTML page for the current session; tabs auto-reload. |
-| `generate_image` | Generate an image via gpt-image-2 (size & quality picked by user). *(codex needed)* |
 | **Channel** |  |
 | `list_telegram_chat` | List authorized Telegram chats (id + name). *(telegram needed)* |
 | `send_to_telegram_chat` | Send an HTML-formatted message to an authorized Telegram chat by chat_id. *(telegram needed)* |

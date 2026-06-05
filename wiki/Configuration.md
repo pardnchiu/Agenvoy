@@ -76,7 +76,7 @@ Loaded from repo-root `.env` via `godotenv` in `cmd/app/main.go init()`.
 | `MAX_SUBAGENT_TIMEOUT_MIN` | No | `10` (cap `60`) | `invoke_subagent` total timeout in minutes |
 | `MAX_EXTERNAL_AGENT_TIMEOUT_MIN` | No | `10` (cap `60`) | External CLI subprocess timeout in minutes |
 | `AGENT_SEND_TIMEOUT_SECONDS` | No | `600` | Exec-layer ceiling on `Agent.Send`; wraps `context.WithTimeout` around the provider call. Mainly relevant for codex SSE (10m client timeout); for non-SSE providers, `Client.Timeout=5m` fires first |
-| `OPENAI_API_KEY` | No | — | Enables semantic search via `text-embedding-3-small`, KuraDB embedding, generate_image (codex backend uses subscription quota independently) |
+| `OPENAI_API_KEY` | No | — | Enables semantic search via `text-embedding-3-small` and KuraDB embedding |
 
 External CLI agents (`codex` / `gh` / `claude` / `gemini`) are auto-detected via `exec.LookPath`; install the binary on `PATH` to enable, no env flag required.
 

@@ -24,8 +24,6 @@
 | `save_page_to_file` | | 抓網頁後存檔 |
 | `search_web` | | DuckDuckGo lite endpoint，package 層 rate limit（2 s gap） |
 | `fetch_google_rss` | ✓ | Google News RSS |
-| `fetch_yahoo_finance` | ✓ | 股票／財務數據 |
-| `fetch_youtube_transcript` | ✓ | YouTube 字幕（Gemini 後端） |
 | `transcribe_media` | ✓ | 本地音訊／影片轉逐字稿，走 Gemini `inline_data`（ogg、mp3、wav、m4a、flac、aac、mp4、mov、webm、mpeg、3gp）；單檔上限 20 MiB，與 Telegram `Bot.Save` 對齊 |
 | `send_http_request` | ✓ | 原始 HTTP 請求，回 status + headers + body |
 | `calculator` | ✓ | 數學表達式求值 |
@@ -68,7 +66,6 @@
 | 工具 | 說明 |
 |---|---|
 | `update_page` | 覆寫當前 session canvas 的 HTML 頁；瀏覽器分頁透過 SSE 自動 reload |
-| `generate_image` | 透過 codex OAuth backend（`chatgpt.com/backend-api/codex/responses` + `image_generation` built-in）走 `gpt-image-2` 生圖。Schema 要求 `prompt` + `size`（enum: `1024x1024` / `1024x1792` / `1792x1024`）+ `quality`（enum: `low` / `medium` / `high`）；size/quality 為空 → handler fail 並提示先呼 `ask_user`（無 silent default —— 每張吃訂閱 3-5×）。輸出落 `~/.config/agenvoy/download/agenvoy-img-<uuid>.png`；return 文字最後一行為 `FILE: <path>`，channel runtime 自動 attach。`AlwaysAllow=false`（必過 confirm gate） |
 
 ### Channel
 
@@ -179,7 +176,7 @@ Description 長度：預設**單句**動詞開頭。**禁止**：觸發條件（
 
 長跑 tool（script + API）每 30s 在 daemon log 印 `running name=... elapsed=Ys/Zs` 提供可見性。
 
-Subagent + external-agent 工具另有多分鐘 cap（`invoke_subagent` = `MAX_SUBAGENT_TIMEOUT_MIN`、`invoke_external_agent` = 10 分、`cross_review_with_external_agents` = 15 分、`generate_plan` / `generate_image` / `transcribe_media` / `fetch_youtube_transcript` = 5 分）。
+Subagent + external-agent 工具另有多分鐘 cap（`invoke_subagent` = `MAX_SUBAGENT_TIMEOUT_MIN`、`invoke_external_agent` = 10 分、`cross_review_with_external_agents` = 15 分、`generate_plan` / `transcribe_media` = 5 分）。
 
 ## 憑證自動修復
 
