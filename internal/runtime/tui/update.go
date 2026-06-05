@@ -12,6 +12,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
@@ -701,6 +702,19 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] voice %s: %v", msg.action, msg.err)) + "\n")
 		}
 		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ voice %sd", msg.action)) + "\n")
+
+	case Image2Action:
+		if msg.action == "enable" && !openaicodex.HasToken() {
+			next, cmd := t.startImage2CodexOAuth()
+			return next, cmd
+		}
+		return t, setImage2(msg.action)
+
+	case Image2Done:
+		if msg.err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] image2 %s: %v", msg.action, msg.err)) + "\n")
+		}
+		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ image2 %sd", msg.action)) + "\n")
 
 	case KuradbAction:
 		switch msg.action {

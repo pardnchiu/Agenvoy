@@ -72,8 +72,11 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 	case "/telegram":
 		return t.commandTelegram(parts)
 
-	case "/voice":
+	case "/enable-voice":
 		return t.commandVoice(parts)
+
+	case "/enable-image2":
+		return t.commandImage2(parts)
 
 	case "/kuradb":
 		return t.commandKuradb(parts)

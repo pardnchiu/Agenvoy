@@ -164,7 +164,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 	autoTranscribed := false
 	if hasAttachment {
 		if slices.ContainsFunc(attachInputs, inputHasVoice) && !config.VoiceEnabled() {
-			_, _ = b.client.Send(ctx, in.ChatID, in.MessageID, "Please enable it with <code>/voice enable</code> first.", go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
+			_, _ = b.client.Send(ctx, in.ChatID, in.MessageID, "Please enable it with <code>/enable-voice enable</code> first.", go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
 			return nil
 		}
 		var attachments []savedAttachment

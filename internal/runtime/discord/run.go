@@ -140,7 +140,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	autoTranscribed := false
 	if hasAttachment {
 		if hasVoiceAttachment(in) && !config.VoiceEnabled() {
-			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, "Please enable it with `/voice enable` first.")
+			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, "Please enable it with `/enable-voice enable` first.")
 			return nil
 		}
 		attachments := saveAttachments(ctx, b, in)

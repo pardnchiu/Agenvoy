@@ -63,11 +63,12 @@ type TUI struct {
 	runStartedAt  time.Time
 	pendingResume *ResumeExec
 
-	popup        *Popup
-	popupQueue   []Pending
-	botBodyDraft string
-	mcpAdd       *mcpAddDraft
-	modelAdd     *modelAddItem
+	popup                  *Popup
+	popupQueue             []Pending
+	botBodyDraft           string
+	mcpAdd                 *mcpAddDraft
+	modelAdd               *modelAddItem
+	enableImage2AfterOAuth bool
 
 	selector *CmdSelector
 
