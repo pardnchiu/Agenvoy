@@ -21,7 +21,7 @@ func registDownloadFile() {
 		Name:        "download_file",
 		AlwaysAllow: false,
 		Concurrent:  true,
-		Description: "Download a binary file from a URL to local disk. Use for tar.gz, images, archives, or any non-text content. For JSON/HTML use send_http_request / fetch_page / save_page_to_file.",
+		Description: "Download a binary file from a URL to local disk. Use for tar.gz, images, archives, or any non-text content. For JSON/HTML/markdown use send_http_request or fetch_page(save=true).",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

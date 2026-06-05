@@ -269,8 +269,8 @@ func printLog(name, raw, cwd string) string {
 		}
 		return dir
 
-	case "read_file", "write_file", "patch_file", "glob_files", "save_page_to_file":
-		if s := pick("path", "pattern", "save_to"); s != "" {
+	case "read_file", "write_file", "patch_file", "glob_files":
+		if s := pick("path", "pattern"); s != "" {
 			return s
 		}
 
