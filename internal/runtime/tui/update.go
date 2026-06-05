@@ -256,6 +256,16 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, nil
 		}
 
+		if msg.request.Kind == runtime.KindAskUser {
+			if t.cancelExec != nil {
+				t.cancelExec()
+				t.cancelExec = nil
+			}
+			t.running = false
+			t.activity = ""
+			t.runTarget = ""
+			t.streaming = false
+		}
 		t.popup = popup
 		return t, nil
 

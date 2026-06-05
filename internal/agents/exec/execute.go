@@ -257,8 +257,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		data.ExcludeTools = append(data.ExcludeTools, "generate_image")
 	}
 	if go_pkg_keychain.Get("GEMINI_API_KEY") == "" {
-		data.ExcludeTools = append(data.ExcludeTools,
-			"fetch_youtube_transcript", "transcribe_media")
+		data.ExcludeTools = append(data.ExcludeTools, "transcribe_media")
 	}
 	if cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "" {
 		data.ExcludeTools = append(data.ExcludeTools,
