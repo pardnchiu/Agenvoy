@@ -504,7 +504,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			choice.Message.Content = fmt.Sprintf("---\n當前時間: %s\n---\n%s", time.Now().Format("2006-01-02 15:04:05"), stripped)
 			session.ToolHistories = append(session.ToolHistories, choice.Message)
 
-			if err := saveNewHistory(choice, session); err != nil {
+			if err := saveNewHistory(ctx, choice, session); err != nil {
 				slog.Warn("writeHistory",
 					slog.String("session", session.ID),
 					slog.String("error", err.Error()))
@@ -590,7 +590,7 @@ func sendText(events chan<- agentTypes.Event, str string) {
 	events <- agentTypes.Event{Type: agentTypes.EventTextDone}
 }
 
-func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSession) error {
+func saveNewHistory(ctx context.Context, choice agentTypes.OutputChoices, session *agentTypes.AgentSession) error {
 	session.Histories = append(session.Histories, choice.Message)
 
 	if session.Stateless {
@@ -612,22 +612,22 @@ func saveNewHistory(choice agentTypes.OutputChoices, session *agentTypes.AgentSe
 		return fmt.Errorf("sessionHistory.Append: %w", err)
 	}
 
-	writeSessionHistEntry(session.ID, choice.Message)
+	writeSessionHistEntry(ctx, session.ID, choice.Message)
 	return nil
 }
 
-func SaveUserInputHistory(sessionID, userText string) {
+func SaveUserInputHistory(ctx context.Context, sessionID, userText string) {
 	if sessionID == "" || strings.TrimSpace(userText) == "" {
 		return
 	}
-	writeSessionHistEntry(sessionID, agentTypes.Message{
+	writeSessionHistEntry(ctx, sessionID, agentTypes.Message{
 		Role:    "user",
 		Content: userText,
 	})
 	sessionLog.Append(sessionID, userText)
 }
 
-func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
+func writeSessionHistEntry(ctx context.Context, sessionID string, msg agentTypes.Message) {
 	msgBytes, err := json.Marshal(msg)
 	if err != nil {
 		return
@@ -636,7 +636,7 @@ func writeSessionHistEntry(sessionID string, msg agentTypes.Message) {
 	db := torii.DB(torii.DBSessionHist)
 	value := string(msgBytes)
 
-	if setErr := db.SetVector(context.Background(), key, value, torii.SetDefault, nil); setErr != nil {
+	if setErr := db.SetVector(ctx, key, value, torii.SetDefault, nil); setErr != nil {
 		if setErr = db.Set(key, value, torii.SetDefault, nil); setErr != nil {
 			slog.Warn("store.DB.Set",
 				slog.String("session", sessionID),

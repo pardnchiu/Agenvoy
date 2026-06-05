@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -13,7 +14,7 @@ import (
 	sessionTelegram "github.com/pardnchiu/agenvoy/internal/session/telegram"
 )
 
-func getSession(chatID int64, username, content string, data exec.ExecData, overrideID, missingName string) (*agentTypes.AgentSession, error) {
+func getSession(ctx context.Context, chatID int64, username, content string, data exec.ExecData, overrideID, missingName string) (*agentTypes.AgentSession, error) {
 	chatSessionID, err := sessionTelegram.New(chatID)
 	if err != nil {
 		return nil, fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetTelegramSession: %w", err)
@@ -61,7 +62,7 @@ func getSession(chatID int64, username, content string, data exec.ExecData, over
 		Role:    "user",
 		Content: userText,
 	}
-	exec.SaveUserInputHistory(histSessionID, userText)
+	exec.SaveUserInputHistory(ctx, histSessionID, userText)
 
 	return sess, nil
 }

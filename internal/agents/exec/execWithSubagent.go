@@ -97,7 +97,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}
 
-	SaveUserInputHistory(sessionID, userText)
+	SaveUserInputHistory(ctx, sessionID, userText)
 
 	subCtx, cancel := context.WithTimeout(ctx, time.Duration(filesystem.MaxSubagentTimeoutMin)*time.Minute)
 	defer cancel()

@@ -119,7 +119,7 @@ func registFetchPage() {
 				"link",
 			},
 		},
-		Handler: func(_ context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Link        string `json:"link"`
 				KeepLinks   bool   `json:"keep_links"`
@@ -148,12 +148,12 @@ func registFetchPage() {
 			if params.SameSession != nil {
 				sameSession = *params.SameSession
 			}
-			return handler(link, params.KeepLinks, sameSession, outType, useCache, params.Force, nil)
+			return handler(ctx, link, params.KeepLinks, sameSession, outType, useCache, params.Force, nil)
 		},
 	})
 }
 
-func handler(link string, keepLinks, sameSession bool, outType int, useCache, force bool, saveTo *string) (string, error) {
+func handler(ctx context.Context, link string, keepLinks, sameSession bool, outType int, useCache, force bool, saveTo *string) (string, error) {
 	parsed, err := url.Parse(link)
 	if err != nil {
 		return "", fmt.Errorf("url.Parse: %w", err)
@@ -197,7 +197,7 @@ func handler(link string, keepLinks, sameSession bool, outType int, useCache, fo
 		if sameSession {
 			opt.Profile = currentProfile()
 		}
-		result, err := go_browser.Fetch(context.Background(), link, 15*time.Second, opt)
+		result, err := go_browser.Fetch(ctx, link, 15*time.Second, opt)
 		if err != nil {
 			status := 503
 			title := ""

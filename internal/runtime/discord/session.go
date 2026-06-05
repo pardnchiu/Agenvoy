@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -15,7 +16,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session/summary"
 )
 
-func getSession(in go_bot_discord.Input, content string, data exec.ExecData) (*agentTypes.AgentSession, error) {
+func getSession(ctx context.Context, in go_bot_discord.Input, content string, data exec.ExecData) (*agentTypes.AgentSession, error) {
 	sessionID, err := sessionDiscord.New(in.GuildID, in.ChannelID, in.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetDiscordSession: %w", err)
@@ -55,7 +56,7 @@ func getSession(in go_bot_discord.Input, content string, data exec.ExecData) (*a
 		Role:    "user",
 		Content: userText,
 	}
-	exec.SaveUserInputHistory(sessionID, userText)
+	exec.SaveUserInputHistory(ctx, sessionID, userText)
 
 	return sess, nil
 }

@@ -33,7 +33,7 @@ func CallExternal(ctx context.Context, sessionID, agent, prompt string, readOnly
 
 	sendText(events, out)
 	if sessionID != "" {
-		writeSessionHistEntry(sessionID, agentTypes.Message{
+		writeSessionHistEntry(ctx, sessionID, agentTypes.Message{
 			Role:    "assistant",
 			Content: out,
 		})

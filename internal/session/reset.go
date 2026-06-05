@@ -7,6 +7,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
 )
 
@@ -31,6 +32,7 @@ func Reset(sessionID string) (int, error) {
 	}
 
 	historyStore.Clear(sessionID)
+	sessionHistory.ClearMutex(sessionID)
 
 	db := torii.DB(torii.DBSessionHist)
 	keys := db.Keys(sessionID + ":*")

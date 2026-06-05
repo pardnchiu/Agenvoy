@@ -277,7 +277,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 		AllowAll:       false,
 	}
 
-	sess, err := getSession(in.ChatID, in.Username, content, execData, sessionOverride, sessionMissing)
+	sess, err := getSession(ctx, in.ChatID, in.Username, content, execData, sessionOverride, sessionMissing)
 	if err != nil {
 		return fmt.Errorf("getSession: %w", err)
 	}

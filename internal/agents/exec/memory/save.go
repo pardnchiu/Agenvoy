@@ -26,7 +26,7 @@ type Record struct {
 	Outcome   string   `json:"outcome,omitempty"`
 }
 
-func Save(sessionID string, record Record) (string, error) {
+func Save(ctx context.Context, sessionID string, record Record) (string, error) {
 	record.Keywords = getKeywords(record.Keywords)
 	errType := getMessage(record.Symptom + "\n" + record.Cause)
 	if errType != "unknown" {
@@ -48,7 +48,7 @@ func Save(sessionID string, record Record) (string, error) {
 	value := string(raw)
 	expireAt := torii.TTL(ttlSeconds)
 
-	if err := db.SetVector(context.Background(), key, value, torii.SetDefault, expireAt); err != nil {
+	if err := db.SetVector(ctx, key, value, torii.SetDefault, expireAt); err != nil {
 		if err = db.Set(key, value, torii.SetDefault, expireAt); err != nil {
 			return "", fmt.Errorf("store.Set: %w", err)
 		}

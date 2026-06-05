@@ -218,7 +218,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		AllowAll:       false,
 	}
 
-	sess, err := getSession(in, content, execData)
+	sess, err := getSession(ctx, in, content, execData)
 	if err != nil {
 		return fmt.Errorf("getSession: %w", err)
 	}

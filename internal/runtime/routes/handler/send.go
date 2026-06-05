@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -142,7 +143,7 @@ func Send() gin.HandlerFunc {
 					slog.String("error", err.Error()))
 			}
 
-			session, err := newSession(data, sessionID)
+			session, err := newSession(ctx, data, sessionID)
 			if err != nil {
 				wrapped <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 				return
@@ -169,7 +170,7 @@ func Send() gin.HandlerFunc {
 	}
 }
 
-func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession, error) {
+func newSession(ctx context.Context, data exec.ExecData, sessionID string) (*agentTypes.AgentSession, error) {
 	session := &agentTypes.AgentSession{
 		ID:        sessionID,
 		Tools:     []agentTypes.Message{},
@@ -199,7 +200,7 @@ func newSession(data exec.ExecData, sessionID string) (*agentTypes.AgentSession,
 		Role:    "user",
 		Content: userText,
 	})
-	exec.SaveUserInputHistory(sessionID, userText)
+	exec.SaveUserInputHistory(ctx, sessionID, userText)
 
 	return session, nil
 }

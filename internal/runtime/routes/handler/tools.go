@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -70,7 +69,7 @@ func CallTool() gin.HandlerFunc {
 			return
 		}
 
-		result, err := tools.Execute(context.Background(), executor, toolName, args)
+		result, err := tools.Execute(c.Request.Context(), executor, toolName, args)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

@@ -2,6 +2,7 @@ package exec
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/base64"
 	"fmt"
@@ -64,7 +65,7 @@ func buildContent(content string, imageInputs []string, fileInputs []string) any
 	return parts
 }
 
-func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
+func GetSession(ctx context.Context, execData ExecData) (*agentTypes.AgentSession, error) {
 	scanner := execData.SkillScanner
 	if scanner == nil {
 		scanner = agents.Scanner()
@@ -105,7 +106,7 @@ func GetSession(execData ExecData) (*agentTypes.AgentSession, error) {
 		Role:    "user",
 		Content: buildContent(userText, execData.ImageInputs, execData.FileInputs),
 	}
-	SaveUserInputHistory(overrideID, userText)
+	SaveUserInputHistory(ctx, overrideID, userText)
 
 	session.ID = overrideID
 	return &session, nil

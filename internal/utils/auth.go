@@ -6,14 +6,18 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
+const pendingTTL = 5 * time.Minute
+
 type PendingAuth[MsgID any] struct {
 	Code        string
 	PromptMsgID MsgID
+	createdAt   time.Time
 }
 
 type PendingRegistry[ChatID comparable, MsgID any] struct {
@@ -27,7 +31,7 @@ func NewPendingRegistry[ChatID comparable, MsgID any]() *PendingRegistry[ChatID,
 
 func (r *PendingRegistry[ChatID, MsgID]) Set(id ChatID, code string, promptMsgID MsgID) {
 	r.mu.Lock()
-	r.items[id] = &PendingAuth[MsgID]{Code: code, PromptMsgID: promptMsgID}
+	r.items[id] = &PendingAuth[MsgID]{Code: code, PromptMsgID: promptMsgID, createdAt: time.Now()}
 	r.mu.Unlock()
 }
 
@@ -35,7 +39,14 @@ func (r *PendingRegistry[ChatID, MsgID]) Get(id ChatID) (*PendingAuth[MsgID], bo
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	p, ok := r.items[id]
-	return p, ok
+	if !ok {
+		return nil, false
+	}
+	if time.Since(p.createdAt) > pendingTTL {
+		delete(r.items, id)
+		return nil, false
+	}
+	return p, true
 }
 
 func (r *PendingRegistry[ChatID, MsgID]) Clear(id ChatID) {

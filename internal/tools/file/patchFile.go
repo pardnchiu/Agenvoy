@@ -18,7 +18,7 @@ import (
 
 func registPatchFile() {
 	toolRegister.Regist(toolRegister.Def{
-		Name: "patch_file",
+		Name:        "patch_file",
 		Description: "Replace an exact string match inside a file. Default for targeted edits; use replace_all=true for rename/pattern-replace. Mandatory cycle: read_file first → patch_file → read_file to verify → max 3 retries on failure. If old_string not found, re-read and extend the anchor to make it unique. Never use run_command (sed/awk/python) for edits this tool can handle.",
 		Parameters: map[string]any{
 			"type": "object",

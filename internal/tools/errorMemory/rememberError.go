@@ -58,7 +58,7 @@ func registRememberError() {
 				"outcome",
 			},
 		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				ToolName string   `json:"tool_name"`
 				Keywords []string `json:"keywords"`
@@ -97,7 +97,7 @@ func registRememberError() {
 			if outcome == "" {
 				return "", fmt.Errorf("outcome is required")
 			}
-			return memory.Save(e.SessionID, memory.Record{
+			return memory.Save(ctx, e.SessionID, memory.Record{
 				ToolName: toolName,
 				Keywords: keywords,
 				Symptom:  symptom,

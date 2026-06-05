@@ -18,7 +18,7 @@ import (
 
 func registWriteFile() {
 	toolRegister.Regist(toolRegister.Def{
-		Name: "write_file",
+		Name:        "write_file",
 		Description: "Create a new file or fully rewrite. For targeted edits use patch_file. Call read_file after to verify. One write per change; trust success strings. Default export path: ~/Downloads or ~/.config/agenvoy/download/.",
 		Parameters: map[string]any{
 			"type": "object",

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/telegram"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -138,6 +140,10 @@ func (t TUI) Init() tea.Cmd {
 		path := filesystem.ActionLogPath(sid)
 		if go_pkg_filesystem_reader.Exists(path) && fileSize(path) > 0 {
 			seq = append(seq, func() tea.Msg { return LoadHistoryCheck{id: sid} })
+		}
+		if n := len(interactive.ListPendingTasks(sid)); n > 0 {
+			hint := fmt.Sprintf("  %d pending task(s) — /pending to resume", n)
+			seq = append(seq, tea.Println(hintStyle.Render(hint)+"\n"))
 		}
 	} else {
 		seq = append(seq, func() tea.Msg { return StartupSelectSession{} })

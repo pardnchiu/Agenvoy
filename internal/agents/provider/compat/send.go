@@ -18,7 +18,7 @@ func (a *Agent) Execute(ctx context.Context, skill *skill.Skill, userInput strin
 		Skill:   skill,
 		Content: userInput,
 	}
-	session, err := exec.GetSession(data)
+	session, err := exec.GetSession(ctx, data)
 	if err != nil {
 		return fmt.Errorf("exec.GetSession: %w", err)
 	}

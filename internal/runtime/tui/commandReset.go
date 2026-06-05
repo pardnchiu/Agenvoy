@@ -71,7 +71,7 @@ func (t TUI) runResetSession(sid string) (TUI, tea.Cmd) {
 	t.activity = "resetting (summary refresh first)…"
 
 	return t, tea.Batch(
-		tea.Println(hintStyle.Render(fmt.Sprintf("⎯ refreshing summary for %s, then clearing history…", utils.ShortenSessionID(sid))) + "\n"),
+		tea.Println(hintStyle.Render(fmt.Sprintf("⎯ refreshing summary for %s, then clearing history…", utils.ShortenSessionID(sid)))+"\n"),
 		t.spinner.Tick,
 		func() tea.Msg {
 			ctx := context.Background()

@@ -184,9 +184,6 @@ func writePending(sessionID, taskHash string, meta *pendingMeta) error {
 	return nil
 }
 
-
-
-
 func CleanupPending(sessionID, taskHash string) {
 	if taskHash == "" {
 		return

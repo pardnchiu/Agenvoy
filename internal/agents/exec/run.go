@@ -95,7 +95,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		WebMode:        webMode,
 		PendingTask:    pendingTask,
 	}
-	session, err := GetSession(execData)
+	session, err := GetSession(ctx, execData)
 	if err != nil {
 		return fmt.Errorf("GetSession: %w", err)
 	}

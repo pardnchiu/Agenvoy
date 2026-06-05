@@ -80,7 +80,7 @@ func (b *Bot) resumeFromPending(sessionID, taskHash string, answers []any) {
 		ChannelID: channelID,
 		Username:  "user",
 	}
-	sess, err := getSession(syntheticIn, content, execData)
+	sess, err := getSession(ctx, syntheticIn, content, execData)
 	if err != nil {
 		slog.Error("ask_user resume: getSession",
 			slog.String("session", sessionID),

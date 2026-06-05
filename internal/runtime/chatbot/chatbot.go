@@ -63,9 +63,9 @@ func TranscribeSavedAttachments(ctx context.Context, attachments []SavedAttachme
 }
 
 type VoiceExtractResult struct {
-	CleanText  string
-	Texts      []string
-	AutoReply  bool
+	CleanText string
+	Texts     []string
+	AutoReply bool
 }
 
 func SendAdminCode(ctx context.Context, ch Channel, targetID, text string) error {

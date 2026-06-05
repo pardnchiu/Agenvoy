@@ -62,6 +62,10 @@ func Append(sessionID string, delta []agentTypes.Message) error {
 	return nil
 }
 
+func ClearMutex(sessionID string) {
+	muMap.Delete(sessionID)
+}
+
 func Get(sessionID string) (old, max []agentTypes.Message) {
 	historyPath := filesystem.HistoryPath(sessionID)
 	oldHistory, err := go_pkg_filesystem.ReadJSON[[]agentTypes.Message](historyPath)

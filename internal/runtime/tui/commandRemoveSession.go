@@ -11,6 +11,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
@@ -67,6 +68,7 @@ func (t TUI) openRemoveSessionConfirm2(sid string) (TUI, tea.Cmd) {
 func (t TUI) runRemoveSession(sid string) (TUI, tea.Cmd) {
 	deletedKeys := deleteSessionHistKeys(sid)
 	historyStore.Clear(sid)
+	sessionHistory.ClearMutex(sid)
 
 	sessionDir := filesystem.SessionDir(sid)
 	if err := os.RemoveAll(sessionDir); err != nil {
