@@ -38,7 +38,7 @@ func activityVerb(activity string) string {
 		case "search_web", "search_error_memory", "search_conversation_history":
 			return "Searching"
 
-		case "fetch_page", "fetch_google_rss", "fetch_yahoo_finance", "fetch_youtube_transcript", "save_page_to_file":
+		case "fetch_page", "fetch_google_rss", "fetch_yahoo_finance", "script_fetch_youtube_transcript", "save_page_to_file":
 			return "Fetching"
 
 		case "invoke_subagent", "invoke_external_agent", "cross_review_with_external_agents":

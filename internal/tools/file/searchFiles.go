@@ -17,9 +17,9 @@ import (
 
 func registSearchFiles() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:       "search_files",
-		AlwaysAllow:   true,
-		Concurrent: true,
+		Name:        "search_files",
+		AlwaysAllow: true,
+		Concurrent:  true,
 		Description: `
 Search file contents by RE2 regex within a directory.
 Locate code or text when the matching string is known but the file is not.
@@ -46,7 +46,10 @@ Scope with file_pattern glob (e.g. '**/*.go', 'configs/**').`,
 				"pattern",
 			},
 		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
 			var params struct {
 				Dir         string `json:"dir"`
 				Pattern     string `json:"pattern"`
@@ -90,6 +93,9 @@ Scope with file_pattern glob (e.g. '**/*.go', 'configs/**').`,
 
 			if len(matches) == 0 {
 				return fmt.Sprintf("no files found: %s", pattern), nil
+			}
+			if err := ctx.Err(); err != nil {
+				return "", err
 			}
 
 			for i, f := range matches {

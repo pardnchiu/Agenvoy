@@ -101,6 +101,22 @@ func MarkAlwaysAllow(name string) {
 	readOnlySet[name] = true
 }
 
+func MarkConcurrent(name string) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return
+	}
+	concurrentSet[name] = true
+}
+
+func MarkTimeout(name string, timeout time.Duration) {
+	name = strings.TrimSpace(name)
+	if name == "" || timeout <= 0 {
+		return
+	}
+	timeoutMap[name] = timeout
+}
+
 func IsConcurrent(name string) bool {
 	return concurrentSet[name]
 }

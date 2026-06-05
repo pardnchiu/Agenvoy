@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <strong>一句話，它自己長出工具——不需編程能力。</strong> Claude／GPT／Gemini 自動分工，在 Telegram、Discord、終端機隨叫隨到。
+  <strong>一句話，它自己長出工具——不需編程能力。</strong> Claude／GPT／Gemini 自動分工，在 Telegram、Discord、LINE（alpha）、終端機隨叫隨到。
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
 
 ## Agenvoy 是什麼
 
-一個跑在你自己機器上的**個人 AI Agent**。設定一次，從任何地方對話——Telegram、Discord、終端機 TUI、瀏覽器都行，跨所有 channel 共享同一份記憶、工具、技能。
+一個跑在你自己機器上的**個人 AI Agent**。設定一次，從任何地方對話——Telegram、Discord、LINE（alpha）、終端機 TUI、瀏覽器都行，跨所有 channel 共享同一份記憶、工具、技能。
 
 為了想擁有自己的常駐助理、而非再訂閱另一個 SaaS 的人而設計。
 
@@ -43,8 +43,8 @@
 
 開箱即用的還有：
 
-- **在任何地方對話**——Telegram 內嵌按鈕、Discord 下拉選單／modal、終端機 TUI、瀏覽器 canvas。一個 daemon、所有介面。
-- **生成圖片、語音回覆（TTS）、轉錄音訊／影片。**
+- **在任何地方對話**——Telegram 內嵌按鈕、Discord 下拉選單／modal、LINE（alpha）、終端機 TUI、瀏覽器 canvas。一個 daemon、所有介面。
+- **語音回覆（TTS）、轉錄音訊／影片。**
 - **自我排程**——說一句「每個工作天早上 8 點把 Hacker News 熱門摘要推到 Telegram」，Agent 會自動建立 cron 與推送管線。
 - **依任務挑模型**——Claude 寫程式、Gemini 處理影音、GPT 做研究，自動路由。
 - **語意搜尋你的檔案**——KuraDB 把本機文件／筆記做成向量索引（file → embedding），Agent 從你的知識庫回答，而非通用訓練資料。
@@ -73,7 +73,6 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | Agent 自己生成並保存工具 | ✅ FaaS 沙箱 script + API | ❌ | ⚠️ 僅 skill |
 | Telegram／Discord 首次對話驗證 | ✅ 6 碼 OTP | ⚠️ pairing code（人工核准） | ❌ 僅 allowlist |
 | 跨 session 推送（任一 session → chat） | ✅ `send_to_telegram_chat` / `send_to_discord_channel` | ❌ | ❌ |
-| 對話中直接生成圖片 | ✅ gpt-image-2 | ❌ | ❌ |
 | 原生文件 RAG（file → embedding） | ✅ KuraDB in-process（語意＋關鍵字） | ❌（需走 MCP） | ❌（需走 MCP） |
 
 > 想看完整逐項對照？往下捲到 [**What makes it different**](#what-makes-it-different)。
@@ -114,7 +113,9 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | GitHub Copilot | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Nvidia NIM | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
 | OpenAI-compat | ✅ | ✅ Ollama／LM Studio | ✅ OpenRouter 200+ | ❌ | ❌ | ❌ |
-| DeepSeek / Mistral / xAI | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| DeepSeek | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| xAI (Grok) | ✅ API key | ✅ | ✅ OAuth + API key | ❌ | ❌ | ❌ |
+| Mistral | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Dispatcher 路由 | ✅ 專屬 dispatcher 模型 | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ---
@@ -139,7 +140,8 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | Telegram | ✅ 原生 daemon | ✅ 原生 daemon | ✅ 原生 daemon | ⚠️ Channels MCP（需有 active session） | ❌ | ❌ |
 | Discord | ✅ 原生 daemon | ✅ 原生 daemon | ✅ 原生 daemon | ⚠️ Channels MCP（需有 active session） | ❌ | ❌ |
 | iMessage | ❌ | ✅ BlueBubbles | ✅ BlueBubbles | ⚠️ Channels MCP（僅 macOS） | ❌ | ❌ |
-| WhatsApp / Slack / LINE | ❌ | ✅ 50+ 平台 | ✅ 20+ 平台 | ❌ | ❌ | ❌ |
+| LINE | ⚠️ alpha（[linebot 分支](https://github.com/pardnchiu/Agenvoy/tree/linebot)） | ❌ | ❌ | ❌ | ❌ | ❌ |
+| WhatsApp / Slack | ❌ | ✅ 50+ 平台 | ✅ 20+ 平台 | ❌ | ❌ | ❌ |
 | Always-on 收訊（不需 session） | ✅ daemon | ✅ | ✅ | ❌ | ❌ | ❌ |
 | 跨 session 發送（任一 session → chat） | ✅ `send_to_telegram_chat` / `send_to_discord_channel` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | 首次對話驗證 | ✅ 6 碼 OTP（crypto/rand） | ✅ pairing code（dmPolicy: pairing） | ❌（僅 allowlist） | ❌ | ❌ | ❌ |
@@ -213,7 +215,6 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | 工具 registry（跨機器發布／安裝） | ✅ pkg.agenvoy.com（Cloudflare Worker + R2 + D1，email 驗證碼 + 降版本封鎖） | ❌ | ⚠️ agentskills.io（僅 skill） | ❌ | ❌ | ❌ |
 | Skill 系統 | ✅ SKILL.md lazy-load | ✅ SKILL.md 5400+ 社群 | ✅ SKILL.md agentskills.io | ✅ CLAUDE.md | ❌ | ❌ |
 | Format reference 作為 lazy-load tool | ✅ `telegram_format` / `discord_format` | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 圖像生成 | ✅ DALL-E／Codex Image | ❌ | ❌ | ❌ | ❌ | ❌ |
 | 文件 RAG（外部知識庫） | ✅ KuraDB（in-process 向量＋語意／關鍵字） | ❌（僅對話記憶向量） | ❌（僅對話記憶 FTS5） | ❌ | ❌ | ❌ |
 | 媒體 STT 轉錄 | ✅ Gemini，14 種格式 | ✅ Whisper／Gemini | ✅ faster-whisper（本機） | ❌ | ❌ | ❌ |
 | TTS 語音輸出 | ✅ Gemini TTS | ✅ ElevenLabs／Hume／MS | ✅ Edge TTS／ElevenLabs／OpenAI | ❌ | ❌ | ❌ |
@@ -254,7 +255,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 | 維度 | 細節 |
 |-----------|--------|
-| **明確優勢** | 單一 Go binary、12 個依賴、自家 ecosystem（pardnchiu universe）、dispatcher 路由、Session Canvas、原生平台 UI（真按鈕／modal）、OTP 驗證、從任一 session 跨送 Telegram／Discord、API 工具自動探索、圖像生成、format reference 做 lazy-load tool、純本機 scheduler（不需雲端） |
+| **明確優勢** | 單一 Go binary、12 個依賴、自家 ecosystem（pardnchiu universe）、dispatcher 路由、Session Canvas、原生平台 UI（真按鈕／modal）、OTP 驗證、從任一 session 跨送 Telegram／Discord、API 工具自動探索、format reference 做 lazy-load tool、純本機 scheduler（不需雲端） |
 | **與競爭者相當** | Telegram／Discord daemon、TTS／STT、scheduler 結果推送、Skill 系統、MCP、瀏覽器自動化、附件接收 |
 | **競爭者領先處** | OpenClaw 50+ 平台、Hermes MCP server 模式、Hermes 本機 STT、OpenClaw／Hermes 內建跨 session 記憶、Claude Code Computer Use beta、Claude Code 雲端 cron／task |
 | **Codex CLI** | 功能最少——僅 CLI + TUI + OpenAI OAuth，無 daemon、無對話平台、無 scheduler |
@@ -328,15 +329,12 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | `save_page_to_file` | 抓取網頁並把內容存到本機檔案。 |
 | `search_web` | 透過 DuckDuckGo Lite 搜尋網頁；回傳前 10 筆。 |
 | `fetch_google_rss` | 搜尋 Google News RSS，回傳標題、摘要、連結。 |
-| `fetch_yahoo_finance` | 查詢 Yahoo Finance 報價與 K 線（OHLCV）。 |
-| `fetch_youtube_transcript` | 帶時間戳轉錄 YouTube 影片。*(需 gemini)* |
 | `transcribe_media` | 轉錄本機音訊／影片（ogg、mp3、wav、m4a、flac、aac、mp4、mov、webm、mpeg、3gp、…），上限 20 MiB。*(需 gemini)* |
 | `send_http_request` | 對指定 URL 送 HTTP request。 |
 | **Shell** |  |
 | `run_command` | 以 argv 執行 binary；回傳合併的 stdout／stderr。 |
 | **Render** |  |
 | `update_page` | 覆寫當前 session 的渲染 HTML 頁；分頁自動 reload。 |
-| `generate_image` | 透過 gpt-image-2 生圖（size 與 quality 由使用者選）。*(需 codex)* |
 | **Channel** |  |
 | `list_telegram_chat` | 列出已授權 Telegram chat（id + name）。*(需 telegram)* |
 | `send_to_telegram_chat` | 依 chat_id 送 HTML 格式訊息到已授權 Telegram chat。*(需 telegram)* |

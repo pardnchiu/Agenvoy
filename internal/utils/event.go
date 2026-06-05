@@ -90,7 +90,7 @@ func FormatToolEvent(name, raw string) string {
 			return val
 		}
 
-	case "fetch_page", "fetch_youtube_transcript":
+	case "fetch_page":
 		if val := arg("link", "url"); val != "" {
 			return val
 		}

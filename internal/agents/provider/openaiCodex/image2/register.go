@@ -10,7 +10,7 @@ func Register() {
 
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "generate_image",
-		Timeout:     5 * time.Minute,
+		Timeout:     15 * time.Minute,
 		Description: "Generate an image via gpt-image-2 on the codex@ subscription quota. Use when the user asks to create / draw / render an image. Confirm size and quality via ask_user first (no defaults; high ≈ 5× quota). Output path appears on the last line as `[SEND_FILE:<path>]`.",
 		Parameters: map[string]any{
 			"type": "object",

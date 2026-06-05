@@ -25,6 +25,8 @@ type Config struct {
 	TelegramEnabled  bool          `json:"telegram_enabled"`
 	TelegramUsername string        `json:"telegram_username"`
 	KuradbEnabled    bool          `json:"kuradb_enabled"`
+	EnableVoice      bool          `json:"enable_voice"`
+	EnableImage2     bool          `json:"enable_image2"`
 	AdminChannel     string        `json:"admin_channel"`
 }
 
@@ -101,6 +103,11 @@ func Save(cfg *Config) error {
 	maps.Copy(oldDic, newDic)
 	delete(oldDic, "planner_model")
 	return Write(oldDic)
+}
+
+func VoiceEnabled() bool {
+	cfg, err := Load()
+	return err == nil && cfg != nil && cfg.EnableVoice
 }
 
 func SaveKey(key string) error {

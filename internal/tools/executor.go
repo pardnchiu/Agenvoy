@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -82,6 +83,12 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 
 	for _, name := range scriptToolbox.AlwaysAllowNames() {
 		toolRegister.MarkAlwaysAllow(name)
+	}
+	for _, name := range scriptToolbox.ConcurrentNames() {
+		toolRegister.MarkConcurrent(name)
+	}
+	for name, timeoutSec := range scriptToolbox.Timeouts() {
+		toolRegister.MarkTimeout(name, time.Duration(timeoutSec)*time.Second)
 	}
 
 	// * order fixed, for cache hit

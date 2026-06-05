@@ -18,7 +18,7 @@
 - **OS sandbox** — Linux bubblewrap / macOS sandbox-exec; tools execute in isolation
 - **MCP client** — stdio + HTTP/SSE; tools auto-inject as `mcp__<server>__<tool>`
 - **Chat platform integration** — Telegram (6-digit OTP first-contact verification) + Discord (native select menus / modals); cross-session push via `send_to_telegram_chat` / `send_to_discord_channel`
-- **Voice & image** — `[SEND_VOICE:text]` → Gemini TTS (OGG/OPUS); `generate_image` → gpt-image-2 (codex OAuth backend); inbound attachments saved to download dir
+- **Voice & attachments** — `[SEND_VOICE:text]` → Gemini TTS (OGG/OPUS); inbound attachments saved to download dir
 - **Sub-agents & external agents** — `invoke_subagent` (in-process) + `invoke_external_agent` (codex / copilot / claude / gemini CLI) + `cross_review_with_external_agents` (parallel review)
 - **Scheduler** — cron / one-shot tasks, fsnotify hot-reload, output push back to Telegram/Discord
 - **Send-timeout 3-layer system** — Transport `ResponseHeaderTimeout=10s` · `Client.Timeout` 5m / 10m (SSE) · exec layer `AgentSendTimeout` 600s with retry

@@ -36,7 +36,10 @@ func registListFiles() {
 				},
 			},
 		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(ctx context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
 			var params struct {
 				Dir       string `json:"dir"`
 				Recursive bool   `json:"recursive"`
@@ -80,6 +83,9 @@ func registListFiles() {
 				if err != nil {
 					return "", fmt.Errorf("go_pkg_filesystem_reader.ListAll: %w", err)
 				}
+			}
+			if err := ctx.Err(); err != nil {
+				return "", err
 			}
 
 			raw, err := json.Marshal(files)

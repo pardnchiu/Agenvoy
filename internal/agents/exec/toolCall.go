@@ -88,6 +88,13 @@ type toolSlot struct {
 	execErr string
 }
 
+func toolNeedsConfirmation(exec *toolTypes.Executor, toolName, toolArgs string, turnAllowAll bool) bool {
+	if turnAllowAll || toolRegister.IsReadOnly(toolName) {
+		return false
+	}
+	return !allowTool.Match(allowTool.List(exec.WorkDir), toolName, toolArgs)
+}
+
 func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, toolFailCount map[string]int, turnAllowAll *bool) (*agentTypes.AgentSession, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 
@@ -149,10 +156,10 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			continue
 		}
 
-		if !allowAll && !*turnAllowAll && !toolRegister.IsReadOnly(toolName) {
+		if !allowAll && toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll) {
 			proceed := true
 			reason := ""
-			if runtime.HasListener(sessionData.ID) && !allowTool.Match(getAllowList(ctx), toolName, toolArg) {
+			if runtime.HasListener(sessionData.ID) {
 				reply, err := runtime.Ask(ctx, runtime.Request{
 					Kind:      runtime.KindToolConfirm,
 					SessionID: sessionData.ID,

@@ -305,7 +305,7 @@ func printLog(name, raw, cwd string) string {
 			return sym
 		}
 
-	case "fetch_page", "fetch_youtube_transcript":
+	case "fetch_page":
 		if s := pick("link", "url"); s != "" {
 			return s
 		}

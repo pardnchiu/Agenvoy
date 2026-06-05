@@ -26,6 +26,7 @@ type ScriptDoc struct {
 	Name        string          `json:"name"`
 	Description string          `json:"description"`
 	AlwaysAllow bool            `json:"always_allow,omitempty"`
+	Concurrent  bool            `json:"concurrent,omitempty"`
 	Timeout     int             `json:"timeout,omitempty"`
 	Parameters  json.RawMessage `json:"parameters,omitempty"`
 }
@@ -106,6 +107,26 @@ func (t *Translator) AlwaysAllowNames() []string {
 		}
 	}
 	return names
+}
+
+func (t *Translator) ConcurrentNames() []string {
+	names := make([]string, 0, len(t.scripts))
+	for _, script := range t.scripts {
+		if script.Doc.Concurrent {
+			names = append(names, "script_"+script.Doc.Name)
+		}
+	}
+	return names
+}
+
+func (t *Translator) Timeouts() map[string]int {
+	out := make(map[string]int, len(t.scripts))
+	for _, script := range t.scripts {
+		if script.Doc.Timeout > 0 {
+			out["script_"+script.Doc.Name] = script.Doc.Timeout
+		}
+	}
+	return out
 }
 
 func loadDir(dir string) (*ScriptDoc, string, string, error) {

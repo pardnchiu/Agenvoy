@@ -76,7 +76,7 @@ configs/
 | `MAX_SUBAGENT_TIMEOUT_MIN` | 否 | `10`（cap `60`） | `invoke_subagent` 總上限（分鐘） |
 | `MAX_EXTERNAL_AGENT_TIMEOUT_MIN` | 否 | `10`（cap `60`） | 外部 CLI subprocess 上限（分鐘） |
 | `AGENT_SEND_TIMEOUT_SECONDS` | 否 | `600` | Exec 層 ceiling，用 `context.WithTimeout` 包 provider 呼叫。主要對 codex SSE（10m client timeout）有意義；非 SSE provider 因 `Client.Timeout=5m` 一律先 fire |
-| `OPENAI_API_KEY` | 否 | — | 啟用語意搜尋（`text-embedding-3-small`）、KuraDB embeddings、generate_image（codex backend 走訂閱額度，與此獨立） |
+| `OPENAI_API_KEY` | 否 | — | 啟用語意搜尋（`text-embedding-3-small`）與 KuraDB embeddings |
 
 外部 CLI agent（`codex` / `gh` / `claude` / `gemini`）以 `exec.LookPath` 自動偵測；只要 binary 存在於 `PATH` 即啟用，不需設定 env flag。
 

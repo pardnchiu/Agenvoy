@@ -357,7 +357,7 @@ multiSelect: false
 ```json
 {
   "name": "calculate_rsi",
-  "description": "Compute the Relative Strength Index (RSI) momentum oscillator for a given ticker over N trading periods. Use when the user asks 'is X overbought/oversold', 'compute RSI for Y', or mentions any momentum / mean-reversion analysis. RSI > 70 typically signals overbought, < 30 oversold — the tool returns the raw number plus a derived signal label. Pair with fetch_yahoo_finance when you need the underlying OHLCV data first.",
+  "description": "Compute the Relative Strength Index (RSI) momentum oscillator for a given ticker over N trading periods. Use when the user asks 'is X overbought/oversold', 'compute RSI for Y', or mentions any momentum / mean-reversion analysis. RSI > 70 typically signals overbought, < 30 oversold — the tool returns the raw number plus a derived signal label. Pair with a market data API or fetched OHLCV source when you need the underlying price data first.",
   "always_allow": true,
   "parameters": {
     "type": "object",

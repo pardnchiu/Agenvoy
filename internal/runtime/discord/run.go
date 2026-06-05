@@ -15,16 +15,26 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
+	geminiSummary "github.com/pardnchiu/agenvoy/internal/agents/provider/gemini/summary"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	sessionDiscord "github.com/pardnchiu/agenvoy/internal/session/discord"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 var voiceMarkerRegex = regexp.MustCompile(`\[SEND_VOICE:([^\]]+)\]`)
+
+func runtimeExcludeTools(autoTranscribed bool) []string {
+	excluded := append([]string{}, tools.TUIOnlyTools...)
+	if autoTranscribed {
+		excluded = append(excluded, "transcribe_media")
+	}
+	return excluded
+}
 
 func channelName(in go_bot_discord.Input) string {
 	if in.ChannelName != "" {
@@ -127,16 +137,33 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		return nil
 	}
 
+	autoTranscribed := false
 	if hasAttachment {
-		paths := saveAttachments(ctx, b, in)
-		if len(paths) > 0 {
+		if hasVoiceAttachment(in) && !config.VoiceEnabled() {
+			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, "Please enable it with `/enable-voice enable` first.")
+			return nil
+		}
+		attachments := saveAttachments(ctx, b, in)
+		transcripts, paths, err := transcribeSavedAttachments(ctx, attachments)
+		if err != nil {
+			slog.Warn("transcribeSavedAttachments",
+				slog.String("channel", channelName(in)),
+				slog.String("error", err.Error()))
+			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, fmt.Sprintf("⚠️ Voice transcription failed\n`%s`", err.Error()))
+			return nil
+		}
+		if len(transcripts) > 0 || len(paths) > 0 {
 			var lines []string
 			if content != "" {
 				lines = append(lines, content)
 			}
-			lines = append(lines, "[Discord attachments]")
-			for _, p := range paths {
-				lines = append(lines, "- "+p)
+			lines = append(lines, transcripts...)
+			autoTranscribed = len(transcripts) > 0
+			if len(paths) > 0 {
+				lines = append(lines, "[Discord attachments]")
+				for _, p := range paths {
+					lines = append(lines, "- "+p)
+				}
 			}
 			content = strings.Join(lines, "\n")
 		}
@@ -196,7 +223,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		WorkDir:        workDir,
 		Skill:          matchedSkill,
 		Content:        content,
-		ExcludeTools:   tools.TUIOnlyTools,
+		ExcludeTools:   runtimeExcludeTools(autoTranscribed),
 		ExcludeSkills:  tools.TUIOnlySkills,
 		AllowAll:       false,
 	}
@@ -264,6 +291,13 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		}
 	}
 	replyText = strings.TrimSpace(voiceMarkerRegex.ReplaceAllString(replyText, ""))
+	autoVoiceReply := false
+	if autoTranscribed && len(voiceTexts) == 0 {
+		if t := utils.CleanVoiceReplyText(replyText); t != "" {
+			voiceTexts = append(voiceTexts, t)
+			autoVoiceReply = true
+		}
+	}
 
 	model := doneEvent.Model
 	if model == "" && agent != nil {
@@ -318,6 +352,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		reply := replyToID
 		client := b.client
 		texts := voiceTexts
+		summarizeTexts := autoVoiceReply
 		sessID := sess.ID
 		go func() {
 			sendFailure := func(errMsg string) {
@@ -338,6 +373,23 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 				return
 			}
 			for _, text := range texts {
+				if summarizeTexts {
+					summary, err := geminiSummary.VoiceReply(bgCtx, text)
+					if err != nil {
+						slog.Warn("gemini summary VoiceReply",
+							slog.String("session", sessID),
+							slog.String("channel", channel),
+							slog.String("error", err.Error()))
+						summary = utils.VoiceReplyText(text)
+					}
+					if strings.TrimSpace(summary) == "" {
+						summary = utils.VoiceReplyText(text)
+					}
+					text = summary
+				}
+				if strings.TrimSpace(text) == "" {
+					continue
+				}
 				if _, err := client.SendVoice(bgCtx, channelID, reply, text, apiKey); err != nil {
 					slog.Error("github.com/pardnchiu/go-bot/discord Bot.client.SendVoice",
 						slog.String("session", sessID),

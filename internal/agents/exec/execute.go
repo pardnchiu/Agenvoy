@@ -252,14 +252,13 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		data.ExcludeTools = append(data.ExcludeTools,
 			"rag_list_db", "rag_search_keyword", "rag_search_semantic")
 	}
-	if go_pkg_keychain.Get("agenvoy.codex.token") == "" {
+	cfg, _ := config.Load()
+	if go_pkg_keychain.Get("agenvoy.codex.token") == "" || cfg == nil || !cfg.EnableImage2 {
 		data.ExcludeTools = append(data.ExcludeTools, "generate_image")
 	}
 	if go_pkg_keychain.Get("GEMINI_API_KEY") == "" {
-		data.ExcludeTools = append(data.ExcludeTools,
-			"fetch_youtube_transcript", "transcribe_media")
+		data.ExcludeTools = append(data.ExcludeTools, "transcribe_media")
 	}
-	cfg, _ := config.Load()
 	if cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "" {
 		data.ExcludeTools = append(data.ExcludeTools,
 			"telegram_format", "list_telegram_chat", "send_to_telegram_chat")
