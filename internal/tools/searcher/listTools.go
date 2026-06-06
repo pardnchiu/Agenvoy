@@ -25,8 +25,8 @@ func registListTools() {
 				Description string `json:"description"`
 			}
 
-			list := make([]entry, 0, len(e.Tools))
-			for _, t := range e.Tools {
+			list := make([]entry, 0, len(e.AllTools))
+			for _, t := range e.AllTools {
 				list = append(list, entry{
 					Name:        t.Function.Name,
 					Description: t.Function.Description,

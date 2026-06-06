@@ -287,6 +287,11 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 	limit := filesystem.MaxSkillIterations
 
+	allAgents := make([]agentTypes.Agent, 0, 1+len(data.FallbackAgents))
+	allAgents = append(allAgents, data.Agent)
+	allAgents = append(allAgents, data.FallbackAgents...)
+	fallbackRound := 0
+
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
 	toolFailCount := make(map[string]int)
@@ -332,7 +337,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				if utils.CheckAgentEndpointAlive(ctx, data.Agent, HealthCheckTimeout) {
 					continue
 				}
-				next, nextName := pickHealthyFallback(ctx, &data.FallbackAgents)
+				next, nextName := nextAgent(ctx, &data.FallbackAgents, allAgents, &fallbackRound)
 				if next == nil {
 					watchdog.Stop()
 					cancelSend()
@@ -407,7 +412,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				slog.String("session", session.ID),
 				slog.String("error", err.Error()),
 				slog.Bool("timeout", isTimeout))
-			next, nextName := pickHealthyFallback(ctx, &data.FallbackAgents)
+			next, nextName := nextAgent(ctx, &data.FallbackAgents, allAgents, &fallbackRound)
 			if next != nil {
 				slog.Warn("data.Agent.Send failed, switching model",
 					slog.String("session", session.ID),

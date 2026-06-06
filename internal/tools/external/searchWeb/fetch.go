@@ -16,6 +16,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
@@ -113,6 +114,11 @@ func fetch(ctx context.Context, query, timeRange string) (string, error) {
 		return "[]", nil
 	}
 
+	items = filterLinks(ctx, items)
+	if len(items) == 0 {
+		return "[]", nil
+	}
+
 	raw, err := json.Marshal(items)
 	if err != nil {
 		return "", fmt.Errorf("json.Marshal: %w", err)
@@ -121,14 +127,10 @@ func fetch(ctx context.Context, query, timeRange string) (string, error) {
 }
 
 func parse(html string) []data {
-	const limit = 10
 	anchors := regexLiteAnchor.FindAllStringIndex(html, -1)
 
 	var results []data
 	for i, pos := range anchors {
-		if len(results) >= limit {
-			break
-		}
 		anchor := html[pos[0]:pos[1]]
 
 		title := ""
@@ -182,6 +184,26 @@ func extractURL(str string) string {
 		}
 	}
 	return ""
+}
+
+func filterLinks(ctx context.Context, items []data) []data {
+	urls := make([]string, len(items))
+	for i, it := range items {
+		urls[i] = it.URL
+	}
+	checks := utils.CheckLinks(ctx, urls)
+	filtered := make([]data, 0, len(items))
+	pos := 1
+	for i, it := range items {
+		if checks[i].Status >= 400 {
+			continue
+		}
+		it.URL = checks[i].URL
+		it.Position = pos
+		pos++
+		filtered = append(filtered, it)
+	}
+	return filtered
 }
 
 func extractText(str string) string {
