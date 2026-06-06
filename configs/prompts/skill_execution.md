@@ -30,10 +30,10 @@ Skill instructions may reference tool names from other environments. Always map 
 | Search web / Google / web search / 搜尋網路 | `search_web` | `{"query": "<search terms>"}` |
 | Fetch page / open URL / 讀取網頁 / 開啟連結 | `fetch_page` | `{"url": "<full URL>"}` |
 | Download page / save URL / 下載網頁 | `fetch_page` | `{"url": "<full URL>", "save": true}` |
-| News / RSS / 新聞 | `fetch_google_news` | `{"query": "<topic>"}` |
+| News / RSS / 新聞 | `search_google_news` | `{"query": "<topic>"}` |
 | HTTP request / API call / 發送請求 | `send_http_request` | `{"url": "<URL>", "method": "<GET|POST|...>"}` |
 | Calculate / math / 計算 | `calculate` | `{"expression": "<math expression>"}` |
-| Search history / 歷史查詢 | `search_conversation_history` | `{"keyword": "<search term>"}` |
+| Search history / 歷史查詢 | `search_chat_history` | `{"keyword": "<search term>"}` |
 
 **Concrete mapping example:**
 > Skill step: "使用 Bash 工具執行 `git diff --cached --name-only` 檢查是否有 staged 檔案"

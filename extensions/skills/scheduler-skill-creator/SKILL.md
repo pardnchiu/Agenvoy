@@ -174,9 +174,9 @@ python3 scripts/init_scheduler_skill.py <short-name>
 
 | 任務類型 | 候選 skill（優先） | 候選 tool（退一步） |
 |---|---|---|
-| 比特幣行情／分析 | `bitcoin-lookup` | `search_web` / `fetch_google_news` → `fetch_page` |
-| 一般股價／財經 | （視 `## Skills` 是否有對應）| `search_web` / `fetch_google_news` → `fetch_page` |
-| HN／RSS 摘要 | （視是否有 digest skill）| `fetch_google_news` |
+| 比特幣行情／分析 | `bitcoin-lookup` | `search_web` / `search_google_news` → `fetch_page` |
+| 一般股價／財經 | （視 `## Skills` 是否有對應）| `search_web` / `search_google_news` → `fetch_page` |
+| HN／RSS 摘要 | （視是否有 digest skill）| `search_google_news` |
 | 網頁／API 抓取 | — | `fetch_page`／`send_http_request`／`api_*` |
 | 程式碼 review | `code-reviewer` | — |
 | Commit／版號 | `commit-generate`／`version-generate` | — |
@@ -295,7 +295,7 @@ description: 每 5 分鐘抓取台積電 2330.TW 即時股價並提醒。
 
 ## 任務
 
-透過 `search_web` / `fetch_google_news` 找到 `2330.TW` 最新報價來源，再用 `fetch_page` 讀取結果。
+透過 `search_web` / `search_google_news` 找到 `2330.TW` 最新報價來源，再用 `fetch_page` 讀取結果。
 
 ## 輸出格式
 

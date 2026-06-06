@@ -19,7 +19,7 @@ Audits all Agenvoy tool definitions against the four design rules in project `CL
 
 **Lazy-schema context**: every tool's `name` + `description` is always in LLM context; the `parameters` JSON schema is replaced with a stub `{"type":"object","properties":{}}` unless `AlwaysLoad=true`. The LLM decides whether to invoke a tool (or call `search_tools` to load its schema) using `name` + `description` alone. Schema is the call contract, loaded on demand.
 
-1. **Name is self-explanatory** — verb + noun, direct, distinguishable from siblings (e.g. `search_conversation_history` ≻ `search_history`). Name is the anchor; description elaborates the trigger.
+1. **Name is self-explanatory** — verb + noun, direct, distinguishable from siblings (e.g. `search_chat_history` ≻ `search_history`). Name is the anchor; description elaborates the trigger.
 2. **Description describes WHEN to invoke — maximally concise and precise** — one or two sentences covering trigger signals + trade-offs against similar tools, then stop. This is the LLM's only signal before the schema loads, but bloat dilutes the trigger. Required content (kept tight):
    - Trigger conditions (when the tool applies; what user intents map to it)
    - Contrast with similar tools when one exists (`prefer over X when Y`)
@@ -76,7 +76,7 @@ Audits all Agenvoy tool definitions against the four design rules in project `CL
                      (e.g. `verify` whose description says "cross-review with external agents"
                      → rename to `cross_review_with_external_agents`)
                    • Inconsistent suffix vocabulary across a cluster
-                     (e.g. `read_tool_error` / `remember_error` / `search_error_memory`
+                     (e.g. `read_tool_error` / `remember_error` / `search_error_history`
                      — same domain, three different shapes)
                  Verdicts are emitted in the report's `## Name Audit` section (see output_format.md).
 
@@ -130,7 +130,7 @@ For **every** tool the script returns — no skipping — apply these checks. Co
   - Verb inconsistency within a cluster (one tool uses `analyze_*` while every sibling uses `fetch_*`)
   - Verb redundancy (`patch_edit`, `delete_remove_*`)
   - Name buries the discriminator in description (`verify` whose description reveals it actually means `cross_review_with_external_agents`)
-  - Inconsistent suffix vocabulary across same-domain tools (`read_tool_error` / `remember_error` / `search_error_memory` — pick one shape)
+  - Inconsistent suffix vocabulary across same-domain tools (`read_tool_error` / `remember_error` / `search_error_history` — pick one shape)
 - **Description trigger coverage AND concision (R2)**: re-read each description and ask two questions: "could another LLM, seeing only this, know WHEN to call this tool?" AND "is anything here filler that doesn't aid selection?" Flag as R2 violation when EITHER fails. Look for:
   - Action-only descriptions ("Lists files", "Sends HTTP request") with no trigger context — under-spec
   - Missing contrast when sibling tools exist (`search_tools` vs `list_tools` — when to use which) — under-spec

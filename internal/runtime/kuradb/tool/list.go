@@ -11,11 +11,11 @@ import (
 
 func registRagListDB() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "rag_list_db",
+		Name:        "list_rag",
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     15 * time.Second,
-		Description: "[system-default] List RAG knowledge base databases. Call first before any external tool for non-smalltalk queries. Skip if already enumerated this session.",
+		Description: "[system-default] List RAG knowledge base databases. Call first before any external tool for non-smalltalk queries. Skip if already enumerated this turn.",
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},

@@ -41,38 +41,6 @@ func (t TUI) viewIdle() string {
 	left := hintStyle.Render(" " + t.shortCwd())
 	right := t.sessionTag()
 
-	if t.mode == webMode {
-		left = hintStyle.Render(" / commands · enter send · alt+enter newline · /mode to switch")
-	}
-
-	if t.mode == webMode {
-		left = hintStyle.Render(" / commands · enter send · alt+enter newline · /mode to switch")
-	}
-
-	if t.mode == webMode {
-		left = hintStyle.Render(" / commands · enter send · alt+enter newline · /mode to switch")
-	}
-
-	if t.mode == webMode {
-		left = hintStyle.Render(" / commands · enter send · alt+enter newline · /mode to switch")
-	}
-
-	if t.mode == webMode {
-		left = hintStyle.Render(" / commands · enter send · alt+enter newline · /mode to switch")
-	}
-
-	if t.mode == webMode {
-		left = hintStyle.Render(" / commands · enter send · alt+enter newline · /mode to switch")
-	}
-
-	if t.mode == webMode {
-		left = hintStyle.Render(" / commands · enter send · alt+enter newline · /mode to switch")
-	}
-
-	if t.mode == webMode {
-		left = hintStyle.Render(" / commands · enter send · alt+enter newline · /mode to switch")
-	}
-
 	prefix := "\n"
 	var top string
 	if t.running {

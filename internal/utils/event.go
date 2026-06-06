@@ -74,7 +74,7 @@ func FormatToolEvent(name, raw string) string {
 	case "update_page":
 		return ""
 
-	case "search_web", "fetch_google_rss":
+	case "search_web", "search_google_news":
 		if val := arg("query", "keyword"); val != "" {
 			if timeRange := arg("time_range", "time"); timeRange != "" {
 				return fmt.Sprintf("%s (%s)", val, timeRange)
@@ -105,7 +105,7 @@ func FormatToolEvent(name, raw string) string {
 			return val
 		}
 
-	case "search_error_memory", "search_conversation_history":
+	case "search_error_history", "search_chat_history":
 		if val := arg("keyword", "query"); val != "" {
 			return val
 		}

@@ -59,6 +59,9 @@ var ExcludeList []byte
 //go:embed jsons/white_list.json
 var WhiteList []byte
 
+//go:embed jsons/net_white_list.json
+var NetWhiteList []byte
+
 // * Providers
 
 //go:embed jsons/providors/claude.json

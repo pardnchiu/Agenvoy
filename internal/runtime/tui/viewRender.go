@@ -294,7 +294,7 @@ func printLog(name, raw, cwd string) string {
 		}
 		return loc
 
-	case "search_web", "fetch_google_rss":
+	case "search_web", "search_google_news":
 		if q := pick("query", "keyword"); q != "" {
 			if tr := pick("time_range", "time"); tr != "" {
 				return fmt.Sprintf("%s (%s)", q, tr)
@@ -325,7 +325,7 @@ func printLog(name, raw, cwd string) string {
 			return s
 		}
 
-	case "search_error_memory", "search_conversation_history":
+	case "search_error_history", "search_chat_history":
 		if s := pick("keyword", "query"); s != "" {
 			return s
 		}

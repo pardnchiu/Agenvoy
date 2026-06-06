@@ -18,7 +18,7 @@ var timeRanges = []string{
 
 func Register() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "fetch_google_rss",
+		Name:        "search_google_news",
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: "[system-default] Search Google News RSS. Primary tool for news and real-time info. Empty results → escalate window (1h → 24h → 7d) → fallback to search_web. Results are summaries only — call fetch_page for full content on research tasks.",

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/textproto"
 	"net/url"
@@ -15,6 +16,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 type ResponseData struct {
@@ -84,9 +87,56 @@ func buildMultipart(body map[string]any) (*bytes.Buffer, string, error) {
 	return &buf, w.FormDataContentType(), nil
 }
 
+var privateNets = []net.IPNet{
+	{IP: net.IP{10, 0, 0, 0}, Mask: net.CIDRMask(8, 32)},
+	{IP: net.IP{172, 16, 0, 0}, Mask: net.CIDRMask(12, 32)},
+	{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)},
+	{IP: net.IP{169, 254, 0, 0}, Mask: net.CIDRMask(16, 32)},
+	{IP: net.IPv4(127, 0, 0, 0), Mask: net.CIDRMask(8, 32)},
+	{IP: net.ParseIP("::1"), Mask: net.CIDRMask(128, 128)},
+	{IP: net.ParseIP("fe80::"), Mask: net.CIDRMask(10, 128)},
+	{IP: net.ParseIP("fc00::"), Mask: net.CIDRMask(7, 128)},
+}
+
+func checkSSRF(rawURL string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid url: %w", err)
+	}
+	host := u.Hostname()
+	if host == "" {
+		return fmt.Errorf("url has no host")
+	}
+	if strings.EqualFold(u.Scheme, "file") || strings.EqualFold(u.Scheme, "ftp") {
+		return fmt.Errorf("scheme %q not allowed", u.Scheme)
+	}
+	if slices.Contains(filesystem.NetWhiteList, strings.ToLower(host)) {
+		return nil
+	}
+
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return fmt.Errorf("dns lookup %q: %w", host, err)
+	}
+	for _, ip := range ips {
+		if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return fmt.Errorf("host %q resolves to non-routable address %s", host, ip)
+		}
+		for _, pn := range privateNets {
+			if pn.Contains(ip) {
+				return fmt.Errorf("host %q resolves to private address %s", host, ip)
+			}
+		}
+	}
+	return nil
+}
+
 func Send(ctx context.Context, api, method string, headers map[string]string, body map[string]any, contentType string, timeout int) (string, error) {
 	if api == "" {
 		return "", fmt.Errorf("url is required")
+	}
+	if err := checkSSRF(api); err != nil {
+		return "", err
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -178,7 +228,7 @@ func Send(ctx context.Context, api, method string, headers map[string]string, bo
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 	if err != nil {
 		return "", fmt.Errorf("io.ReadAll: %w", err)
 	}

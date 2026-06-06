@@ -250,7 +250,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 	if !go_pkg_filesystem_reader.Exists(filesystem.KuradbEndpointPath) {
 		data.ExcludeTools = append(data.ExcludeTools,
-			"rag_list_db", "rag_search_keyword", "rag_search_semantic")
+			"list_rag", "search_rag")
 	}
 	cfg, _ := config.Load()
 	if go_pkg_keychain.Get("agenvoy.codex.token") == "" || cfg == nil || !cfg.EnableImage2 {

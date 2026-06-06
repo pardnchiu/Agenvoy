@@ -13,23 +13,28 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-func registRagSearchSemantic() {
+func registSearchRag() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "rag_search_semantic",
+		Name:        "search_rag",
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     15 * time.Second,
-		Description: "[system-default] Semantic search over RAG knowledge base. Prefer over rag_search_keyword for natural-language queries. If results are sufficient, answer directly without external tools.",
+		Description: "[system-default] Search RAG knowledge base by keyword or semantic mode. Use mode=keyword for precise strings (filenames, terms, names, symbols); use mode=semantic for natural-language queries. If results are sufficient, answer directly without external tools.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
+				"mode": map[string]any{
+					"type":        "string",
+					"enum":        []string{"keyword", "semantic"},
+					"description": "Search mode: 'keyword' for exact token match, 'semantic' for embedding similarity.",
+				},
 				"db": map[string]any{
 					"type":        "string",
-					"description": "Target RAG database name. Call rag_list_db to discover available databases at runtime.",
+					"description": "Target RAG database name. Call list_rag to discover available databases at runtime.",
 				},
 				"q": map[string]any{
 					"type":        "string",
-					"description": "Natural-language query; semantic similarity is computed against indexed chunk embeddings.",
+					"description": "Search query.",
 				},
 				"limit": map[string]any{
 					"type":        "integer",
@@ -37,10 +42,11 @@ func registRagSearchSemantic() {
 					"default":     10,
 				},
 			},
-			"required": []string{"db", "q"},
+			"required": []string{"mode", "db", "q"},
 		},
 		Handler: func(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
+				Mode  string `json:"mode"`
 				DB    string `json:"db"`
 				Q     string `json:"q"`
 				Limit int    `json:"limit"`
@@ -60,11 +66,22 @@ func registRagSearchSemantic() {
 			if limit < 1 || limit > 100 {
 				limit = 10
 			}
+
+			var apiPath string
+			switch strings.ToLower(strings.TrimSpace(params.Mode)) {
+			case "keyword":
+				apiPath = "/api/keyword"
+			case "semantic":
+				apiPath = "/api/semantic"
+			default:
+				return "", fmt.Errorf("mode must be 'keyword' or 'semantic' (got %q)", params.Mode)
+			}
+
 			query := url.Values{}
 			query.Set("db", db)
 			query.Set("q", q)
 			query.Set("limit", strconv.Itoa(limit))
-			return kuradbGet(ctx, "/api/semantic", query)
+			return kuradbGet(ctx, apiPath, query)
 		},
 	})
 }

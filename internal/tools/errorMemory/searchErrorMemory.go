@@ -13,7 +13,7 @@ import (
 
 func registSearchErrorMemory() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "search_error_memory",
+		Name:        "search_error_history",
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: "Search past tool-error records for root cause and resolution. Call before 2nd retry when no error hints were injected. Results are authoritative: resolved → apply, failed/abandoned → avoid.",

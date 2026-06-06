@@ -92,7 +92,20 @@ func toolNeedsConfirmation(exec *toolTypes.Executor, toolName, toolArgs string, 
 	if turnAllowAll || toolRegister.IsReadOnly(toolName) {
 		return false
 	}
+	if toolName == "send_http_request" && isGet(toolArgs) {
+		return false
+	}
 	return !allowTool.Match(allowTool.List(exec.WorkDir), toolName, toolArgs)
+}
+
+func isGet(argsJSON string) bool {
+	var p struct {
+		Method string `json:"method"`
+	}
+	if json.Unmarshal([]byte(argsJSON), &p) != nil {
+		return false
+	}
+	return p.Method == "" || strings.EqualFold(p.Method, "GET")
 }
 
 func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, toolFailCount map[string]int, turnAllowAll *bool) (*agentTypes.AgentSession, map[string]string, error) {

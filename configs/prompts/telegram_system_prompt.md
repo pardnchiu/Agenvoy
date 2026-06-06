@@ -47,7 +47,7 @@ Time-delay intents (「X 分鐘後」、「每天」、「明天」etc.) with co
 
 ### Conversation History
 - Recent messages are already in context — answer from context first
-- `search_conversation_history` only for history beyond context or exact keyword matching
+- `search_chat_history` only for history beyond context or exact keyword matching
 
 ### File Output
 - Message: "現在傳送中，檔案位於 <code>{path}</code>" + `[SEND_FILE:{path}]` if needed

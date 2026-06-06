@@ -22,7 +22,7 @@
 
 ### Error Recovery Strategy
 
-When a tool fails, recovery is **memory-driven** — read injected hints first (resolved = apply, failed = avoid), then `search_error_memory` before 2nd retry.
+When a tool fails, recovery is **memory-driven** — read injected hints first (resolved = apply, failed = avoid), then `search_error_history` before 2nd retry.
 
 **Pivot shape, not just tokens** — never retry with the same argument shape. Ladder: (1) reformulate args → (2) switch tool within same capability → (3) switch capability class.
 
