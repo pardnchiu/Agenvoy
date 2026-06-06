@@ -13,7 +13,7 @@ import (
 
 func registChatbotFormat() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "chatbot_format",
+		Name:        "format_chatbot",
 		AlwaysLoad:  true,
 		AlwaysAllow: true,
 		Concurrent:  true,

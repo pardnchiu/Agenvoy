@@ -53,7 +53,7 @@ func activityVerb(activity string) string {
 		case "remember_error":
 			return "Remembering"
 
-		case "activate_skill":
+		case "run_skill":
 			return "Activating skill"
 		}
 		return tool

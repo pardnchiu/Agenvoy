@@ -51,7 +51,7 @@ func FormatToolEvent(name, raw string) string {
 		}
 		return fmt.Sprintf("%s: %s", val, strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ").Replace(task))
 
-	case "activate_skill":
+	case "run_skill":
 		if s := arg("skill", "name"); s != "" {
 			return s
 		}
@@ -71,7 +71,7 @@ func FormatToolEvent(name, raw string) string {
 			return val
 		}
 
-	case "update_page":
+	case "render_page":
 		return ""
 
 	case "search_web", "search_google_news":

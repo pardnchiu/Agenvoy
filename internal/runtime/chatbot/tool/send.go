@@ -24,7 +24,7 @@ import (
 func registSendToChatbot() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "send_to_chatbot",
-		Description: `[system-default] Send a formatted message to an authorized chat. Use chatbot_format to get the correct formatting reference before composing.`,
+		Description: `[system-default] Send a formatted message to an authorized chat. Use format_chatbot to get the correct formatting reference before composing.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -41,7 +41,7 @@ func getSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.
 	if list := toolSearcher.ListBlock(scanner, excludeSkills); list != "" {
 		skillsSection = "## Skills\n\n" +
 			"**Slash invocations (`/<name>`) are STRICT EXECUTION.** The user has explicitly authorized the skill's full procedure; every step in SKILL.md is binding and must complete via tool calls in order. The FIRST step (often `ask_user` for requirement gathering) must run before any other tool call — no exceptions, no \"the user input looks complete so I'll skip ahead\".\n\n" +
-			"The `activate_skill` tool path is advisory — consult, integrate parts that fit, ignore parts that don't. Consider activating a skill when its description matches the user's intent on each turn, even without an explicit `/<name>` invocation.\n\n" +
+			"The `run_skill` tool path is advisory — consult, integrate parts that fit, ignore parts that don't. Consider activating a skill when its description matches the user's intent on each turn, even without an explicit `/<name>` invocation.\n\n" +
 			list
 	}
 
@@ -90,7 +90,7 @@ func getChatCompletionsSystemPrompt(workDir string, scanner *runtime.SkillScanne
 	if list := toolSearcher.ListBlock(scanner, excludeSkills); list != "" {
 		skillsSection = "## Skills\n\n" +
 			"**Slash invocations (`/<name>`) are STRICT EXECUTION.** The user has explicitly authorized the skill's full procedure; every step in SKILL.md is binding and must complete via tool calls in order. The FIRST step (often `ask_user` for requirement gathering) must run before any other tool call — no exceptions, no \"the user input looks complete so I'll skip ahead\".\n\n" +
-			"The `activate_skill` tool path is advisory — consult, integrate parts that fit, ignore parts that don't. Consider activating a skill when its description matches the user's intent on each turn, even without an explicit `/<name>` invocation.\n\n" +
+			"The `run_skill` tool path is advisory — consult, integrate parts that fit, ignore parts that don't. Consider activating a skill when its description matches the user's intent on each turn, even without an explicit `/<name>` invocation.\n\n" +
 			list
 	}
 

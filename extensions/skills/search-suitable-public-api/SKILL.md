@@ -174,7 +174,7 @@ multi-endpoint API（如 OpenWeatherMap 含 `/current`／`/forecast`／`/onecall
 
 ### Step 6：交棒給 api-tool-add
 
-呼叫 `activate_skill` 啟動 `api-tool-add` skill，並以 Step 5 整理好的描述作為輸入，按其 5 關卡流程處理：
+呼叫 `run_skill` 啟動 `api-tool-add` skill，並以 Step 5 整理好的描述作為輸入，按其 5 關卡流程處理：
 
 | api-tool-add Gate | 本 skill 已提供 / 仍需處理 |
 |---|---|

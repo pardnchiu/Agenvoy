@@ -152,7 +152,7 @@ python3 scripts/init_scheduler_skill.py <short-name>
    - 「分析比特幣」「BTC 價格」→ `bitcoin-lookup`（描述含「BTC／Bitcoin／比特幣價格／行情／分析」）
    - 「彙整 commit 訊息」→ `commit-generate`
    - 「跑程式碼 review」→ `code-reviewer`
-2. **逐個 `activate_skill` 驗證**候選：activate 成功代表存在，body 改寫成 `任務：呼叫 /<skill-name> 觸發本任務`。失敗（skill 不存在）才往下一步。
+2. **逐個 `run_skill` 驗證**候選：activate 成功代表存在，body 改寫成 `任務：呼叫 /<skill-name> 觸發本任務`。失敗（skill 不存在）才往下一步。
 3. **無匹配 skill 時，`search_tools` 找 raw tool**：抽出步驟 1 任務的動詞，對每個動詞呼一次 `search_tools`。回傳的 tool name 才能寫進 body：
 
    ```

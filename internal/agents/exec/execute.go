@@ -262,7 +262,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	if (cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "") &&
 		(cfg == nil || !cfg.DiscordEnabled || go_pkg_keychain.Get("DISCORD_TOKEN") == "") {
 		data.ExcludeTools = append(data.ExcludeTools,
-			"chatbot_format", "list_chatbot", "send_to_chatbot")
+			"format_chatbot", "list_chatbot", "send_to_chatbot")
 	}
 
 	if len(data.ExcludeTools) > 0 {
@@ -692,11 +692,11 @@ func buildCrossChannelPrompt() string {
 	sb.WriteString("When sending via `send_to_chatbot` from any session (including TUI / CLI / cron):\n\n")
 	if cfg.TelegramEnabled {
 		sb.WriteString("- **Telegram** (`platform=telegram`) — if the user did not name a specific chat, `list_chatbot(platform=telegram)` → `ask_user(options=[names])` → map chosen name → target_id → send. Never fabricate target_id; group ids carrying `-` prefix are especially prone to LLM hallucination and may target chats the bot was kicked from (→ 403 forbidden).\n")
-		sb.WriteString("- Before composing the message argument, call `chatbot_format(platform=telegram)` (HTML mode only — markdown leaks render literally).\n")
+		sb.WriteString("- Before composing the message argument, call `format_chatbot(platform=telegram)` (HTML mode only — markdown leaks render literally).\n")
 	}
 	if cfg.DiscordEnabled {
 		sb.WriteString("- **Discord** (`platform=discord`) — if the user did not name a specific channel, `list_chatbot(platform=discord)` → `ask_user(options=[names])` → map chosen name → target_id → send. Never fabricate target_id.\n")
-		sb.WriteString("- Before composing the message argument, call `chatbot_format(platform=discord)` (Discord markdown only — HTML / LaTeX / tables render literally).\n")
+		sb.WriteString("- Before composing the message argument, call `format_chatbot(platform=discord)` (Discord markdown only — HTML / LaTeX / tables render literally).\n")
 	}
 	return strings.TrimRight(sb.String(), "\n")
 }

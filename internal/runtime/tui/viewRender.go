@@ -254,7 +254,7 @@ func printLog(name, raw, cwd string) string {
 		}
 		return label
 
-	case "activate_skill":
+	case "run_skill":
 		if s := pick("skill", "name"); s != "" {
 			return s
 		}
@@ -274,7 +274,7 @@ func printLog(name, raw, cwd string) string {
 			return s
 		}
 
-	case "update_page":
+	case "render_page":
 		return ""
 
 	case "search_files":

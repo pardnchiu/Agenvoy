@@ -16,7 +16,7 @@ import (
 
 func registUpdatePage() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "update_page",
+		Name:        "render_page",
 		AlwaysLoad:  true,
 		AlwaysAllow: true,
 		Description: "Overwrite the rendered page for the current session (index.html under the session's page directory). Browser tabs viewing this session auto-reload. Pass the complete HTML; partial diffs unsupported.",
@@ -45,7 +45,7 @@ func registUpdatePage() {
 
 			sid := strings.TrimSpace(e.SessionID)
 			if sid == "" {
-				return "", fmt.Errorf("update_page requires an active session; current executor has no SessionID")
+				return "", fmt.Errorf("render_page requires an active session; current executor has no SessionID")
 			}
 
 			pageDir := filesystem.PagePath(sid)

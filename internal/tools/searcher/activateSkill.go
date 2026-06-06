@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ToolName          = "activate_skill"
+	ToolName          = "run_skill"
 	maxDescLen        = 512
 	staticDescription = "Load a named skill's reference material into the current turn. Use when the system prompt's '## Skills' lists a skill that fits, or when the user names a skill. Result is advisory — integrate what fits."
 )
