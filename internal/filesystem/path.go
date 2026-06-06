@@ -185,10 +185,6 @@ func McpSessionPath(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), "mcp.json")
 }
 
-func PagePath(sessionID string) string {
-	return filepath.Join(SessionDir(sessionID), "page")
-}
-
 func PendingDir(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), "pending")
 }

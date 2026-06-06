@@ -59,6 +59,9 @@ var WhiteList []byte
 //go:embed jsons/net_white_list.json
 var NetWhiteList []byte
 
+//go:embed jsons/tui_tools.json
+var TUITools []byte
+
 // * Providers
 
 //go:embed jsons/providors/claude.json

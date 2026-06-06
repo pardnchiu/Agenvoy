@@ -71,9 +71,6 @@ func FormatToolEvent(name, raw string) string {
 			return val
 		}
 
-	case "render_page":
-		return ""
-
 	case "search_web", "search_google_news":
 		if val := arg("query", "keyword"); val != "" {
 			if timeRange := arg("time_range", "time"); timeRange != "" {

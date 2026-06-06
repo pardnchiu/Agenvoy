@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,7 +14,26 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+
+	"github.com/pardnchiu/agenvoy/configs"
 )
+
+var (
+	TUIOnlyTools  []string
+	TUIOnlySkills []string
+)
+
+func init() {
+	var data struct {
+		Tools  []string `json:"tools"`
+		Skills []string `json:"skills"`
+	}
+	if err := json.Unmarshal(configs.TUITools, &data); err != nil {
+		return
+	}
+	TUIOnlyTools = data.Tools
+	TUIOnlySkills = data.Skills
+}
 
 var WorkDirChangeHook func(path string)
 

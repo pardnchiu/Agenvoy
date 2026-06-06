@@ -24,8 +24,6 @@ func New() *gin.Engine {
 	r.GET("/v1/session/:session_id/status", handler.GetSessionStatus())
 	r.GET("/v1/session/:session_id/log", handler.StreamSessionLog())
 	r.POST("/v1/session/:session_id/event", localhostOnly(), handler.PublishSessionEvent())
-	r.GET("/v1/page/listener/:session_id", handler.PageListener())
-	r.GET("/:session_id/*filepath", handler.PageView())
 	r.GET("/v1/key", localhostOnly(), handler.GetKey())
 
 	return r

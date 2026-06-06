@@ -35,7 +35,6 @@ func init() {
 	interactive.Register()
 
 	registRunCommand()
-	registUpdatePage()
 	registDownloadFile()
 
 	toolRegister.RegistGroup("api_", func(ctx context.Context, e *toolTypes.Executor, name string, args json.RawMessage) (string, error) {
