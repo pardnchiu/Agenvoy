@@ -160,7 +160,6 @@ func runOAuthFlow(ctx context.Context, prov string) {
 				url:      code.VerificationURI,
 				userCode: code.UserCode,
 			})
-			_ = openBrowser(code.VerificationURI)
 		})
 	case "codex":
 		if openaicodex.HasToken() {
@@ -171,7 +170,6 @@ func runOAuthFlow(ctx context.Context, prov string) {
 		}
 		err = openaicodex.AuthWithCallback(ctx, func(url string) {
 			send(OAuthInfo{url: url})
-			_ = openBrowser(url)
 		})
 	default:
 		err = fmt.Errorf("unsupported oauth provider: %s", prov)

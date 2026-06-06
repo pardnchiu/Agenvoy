@@ -13,7 +13,7 @@ import (
 	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 )
 
-func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *runtime.SkillScanner, sessionID string, allowAll, webMode bool, excludeSkills []string) []agentTypes.Message {
+func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *runtime.SkillScanner, sessionID string, allowAll bool, excludeSkills []string) []agentTypes.Message {
 	var prompts []agentTypes.Message
 	switch {
 	case strings.HasPrefix(sessionID, "tg-"):
@@ -21,11 +21,11 @@ func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *runtime.Skil
 	case strings.HasPrefix(sessionID, "dc-"):
 		prompts = append(prompts, agentTypes.Message{Role: "system", Content: configs.DiscordSystemPrompt})
 	}
-	prompts = append(prompts, agentTypes.Message{Role: "system", Content: getSystemPrompt(workDir, extraSystemPrompt, scanner, sessionID, allowAll, webMode, excludeSkills)})
+	prompts = append(prompts, agentTypes.Message{Role: "system", Content: getSystemPrompt(workDir, extraSystemPrompt, scanner, sessionID, allowAll, excludeSkills)})
 	return prompts
 }
 
-func getSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.SkillScanner, sessionID string, allowAll bool, webMode bool, excludeSkills []string) string {
+func getSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.SkillScanner, sessionID string, allowAll bool, excludeSkills []string) string {
 	systemOS := goRuntime.GOOS
 	var extraSection string
 	if extra := strings.TrimSpace(extraSystemPrompt); extra != "" {
@@ -33,9 +33,6 @@ func getSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.
 	}
 
 	template := configs.SystemPrompt
-	if webMode {
-		template = configs.WebModeSystemPrompt
-	}
 
 	skillsSection := ""
 	if list := toolSearcher.ListBlock(scanner, excludeSkills); list != "" {

@@ -21,9 +21,6 @@ var SummaryContext string
 //go:embed prompts/system_prompt.md
 var SystemPrompt string
 
-//go:embed prompts/webmode_system_prompt.md
-var WebModeSystemPrompt string
-
 //go:embed prompts/chatcompletions_system_prompt.md
 var ChatCompletionsSystemPrompt string
 
@@ -88,5 +85,3 @@ var NvidiaModels []byte
 //go:embed jsons/providors/deepseek.json
 var DeepseekModels []byte
 
-//go:embed webmode.html
-var WebmodeHTML string

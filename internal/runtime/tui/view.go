@@ -248,8 +248,7 @@ func (t TUI) viewPopup() string {
 }
 
 func (t TUI) sessionTag() string {
-	modeTag := lipgloss.NewStyle().Foreground(t.mode.color()).Render(t.mode.String())
-	parts := []string{modeTag}
+	var parts []string
 	if name := t.sessionName(); name != "" {
 		parts = append(parts, hintStyle.Render(name))
 	}
