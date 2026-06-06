@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 type Skill struct {
@@ -73,6 +74,17 @@ func getHeader(content []byte) ([]byte, string, error) {
 	result := bytes.TrimSpace(matches[1])
 	body := strings.TrimSpace(string(matches[2]))
 	return result, body, nil
+}
+
+func (s *Skill) ResolvedContent() string {
+	content := s.Content
+	for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
+		resolved := filepath.Join(s.Path, prefix)
+		if go_pkg_filesystem_reader.Exists(resolved) {
+			content = strings.ReplaceAll(content, prefix, resolved+string(filepath.Separator))
+		}
+	}
+	return content
 }
 
 func getDescription(header []byte) string {

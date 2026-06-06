@@ -33,7 +33,6 @@ import (
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
-	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -652,7 +651,7 @@ func assignBindingSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 		ID:   id,
 		Type: "function",
 	}
-	call.Function.Name = toolSearcher.ToolName
+	call.Function.Name = "run_skill"
 	call.Function.Arguments = string(argsJSON)
 
 	session.ToolHistories = append(session.ToolHistories,
@@ -662,7 +661,7 @@ func assignBindingSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 		},
 		agentTypes.Message{
 			Role:       "tool",
-			Content:    toolSearcher.RenderActivation(s),
+			Content:    renderActivation(s),
 			ToolCallID: id,
 		},
 	)
@@ -673,7 +672,7 @@ func assignBindingSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 	)
 	session.SystemPrompts = append(session.SystemPrompts, agentTypes.Message{
 		Role:    "system",
-		Content: bindingHeader + toolSearcher.RenderActivation(s),
+		Content: bindingHeader + renderActivation(s),
 	})
 }
 
