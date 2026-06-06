@@ -3,13 +3,10 @@ package toolTypes
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	apiAdapter "github.com/pardnchiu/agenvoy/internal/toolAdapter/api"
 )
-
-var ToolError = errors.New("tool failure")
 
 type ScriptToolExecutor interface {
 	IsExist(name string) bool

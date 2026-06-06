@@ -310,9 +310,11 @@ When a tool fails, recovery is **memory-driven**, not improvisation. Error memor
    - Rung 2 — switch tool within same capability (e.g. `search_google_news` → `search_web`; `patch_file` anchor miss → `write_file` full rewrite)
    - Rung 3 — switch capability class or reframe (structured → free-form; single-source → multi-source; or decompose task)
 
-5. **Record on resolution** — after a non-trivial pivot succeeds, **immediately call `remember_error`** with `outcome: resolved` and `action` describing the exact change that worked. This is mandatory per §3.3 — skipping means future sessions repeat the mistake.
+5. **`search_web` 202 circuit-breaker**: when `search_web` returns HTTP 202, DuckDuckGo is rate-limiting. **Stop calling `search_web` for the remainder of this turn.** Switch to `fetch_page` with `https://html.duckduckgo.com/html/?q=URL_ENCODED_QUERY` for all subsequent searches in this turn.
 
-6. **Record on failure** — if a specific pivot is confirmed non-working (reproducible, not transient), call `remember_error` with `outcome: failed` per §3.4. If 3 pivots across rungs all fail, call with `outcome: abandoned` per §3.5.
+6. **Record on resolution** — after a non-trivial pivot succeeds, **immediately call `remember_error`** with `outcome: resolved` and `action` describing the exact change that worked. This is mandatory per §3.3 — skipping means future sessions repeat the mistake.
+
+7. **Record on failure** — if a specific pivot is confirmed non-working (reproducible, not transient), call `remember_error` with `outcome: failed` per §3.4. If 3 pivots across rungs all fail, call with `outcome: abandoned` per §3.5.
 
 **Hard constraints:**
 - Never retry the same tool with the same shape twice in a row.

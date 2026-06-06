@@ -12,7 +12,6 @@ import (
 	allowTool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
@@ -109,7 +108,7 @@ func isGet(argsJSON string) bool {
 	return p.Method == "" || strings.EqualFold(p.Method, "GET")
 }
 
-func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, toolFailCount map[string]int, turnAllowAll *bool) (*agentTypes.AgentSession, map[string]string, error) {
+func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.OutputChoices, sessionData *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool, alreadyCall map[string]string, turnAllowAll *bool) (*agentTypes.AgentSession, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 
 	calls := choice.Message.ToolCalls
@@ -229,19 +228,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 				ToolArgs: toolArg,
 				ToolID:   toolID,
 			}
-			events <- agentTypes.Event{
-				Type:     agentTypes.EventExecError,
-				ToolName: toolName,
-				ToolID:   toolID,
-				Text:     earlyErr,
-			}
-			toolFailCount[hash]++
-			var content string
-			if toolFailCount[hash] >= filesystem.MaxRetry {
-				content = fmt.Sprintf("[ABORT] tool=%s failed %d consecutive times with the same args: %s\nSwitch to a different tool or significantly change the arguments. Do not call %s again.", toolName, toolFailCount[hash], earlyErr, toolName)
-			} else {
-				content = fmt.Sprintf("tool=%s dropped (incomplete args: %s). Do NOT re-issue the same call; if still needed, pivot to a different tool or provide the missing fields from context in a differently-shaped call.", toolName, earlyErr)
-			}
+			content := fmt.Sprintf("tool=%s failed: %s", toolName, earlyErr)
 			slots[i].state = slotValidateFailed
 			slots[i].preMsg = content
 			continue
@@ -342,22 +329,11 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		result := s.result
 		historyResult := ""
 		if s.execErr != "" {
-			if errors.Is(s.execErrVal, toolTypes.ToolError) {
-				result = fmt.Sprintf("[BLOCKED] %s: %s", s.name, s.execErr)
-				historyResult = fmt.Sprintf("[BLOCKED] %s — do not retry this call", s.name)
+			hint := memory.Search(ctx, s.name, s.execErr, 3)
+			if hint != "" {
+				result = fmt.Sprintf("tool=%s failed: %s\nrelated_errors: %s", s.name, s.execErr, hint)
 			} else {
-				toolFailCount[s.hash]++
-				if toolFailCount[s.hash] >= filesystem.MaxRetry {
-					result = fmt.Sprintf("[ABORT] tool=%s failed %d consecutive times: %s\nSwitch to a different tool or significantly change the arguments. Do not call %s again.", s.name, toolFailCount[s.hash], s.execErr, s.name)
-					historyResult = fmt.Sprintf("[ABORT] %s", s.name)
-				} else {
-					if hint := memory.Search(ctx, s.name, s.execErr, 3); hint != "" {
-						result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nrelated_errors: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", s.name, s.execErr, hint, s.name)
-					} else {
-						result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", s.name, s.execErr, s.name)
-					}
-					delete(alreadyCall, s.hash)
-				}
+				result = fmt.Sprintf("tool=%s failed: %s", s.name, s.execErr)
 			}
 		} else if result == "" || result == "no data" {
 			if hint := memory.Search(ctx, s.name, "no data", 3); hint != "" {
@@ -439,12 +415,6 @@ func runToolExec(ctx context.Context, exec *toolTypes.Executor, s *toolSlot, eve
 	}
 	result, err := tools.Execute(ctx, exec, s.name, json.RawMessage(s.args))
 	if err != nil {
-		events <- agentTypes.Event{
-			Type:     agentTypes.EventExecError,
-			ToolName: s.name,
-			ToolID:   s.id,
-			Text:     err.Error(),
-		}
 		s.execErr = err.Error()
 		s.execErrVal = err
 		go interactive.AppendToolResult(exec.SessionID, exec.PendingTask, interactive.ToolResult{

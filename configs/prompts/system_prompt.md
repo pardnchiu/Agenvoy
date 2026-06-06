@@ -18,6 +18,7 @@
 - **Smalltalk exemption**: pure greetings, acknowledgements, questions answerable from training knowledge with no variable data → respond directly without tools
 - **Channel-isolation**: never mention channel-specific commands (`/summary`, `/reset`, `/list`, TUI shortcuts) in replies — the user may be on any entry point
 - **Variable data**: stock prices, exchange rates, weather, news, current events → must retrieve via tools; never rely on training knowledge
+- **Search dedup**: when search results return multiple URLs from the same domain for the same topic, fetch only the most relevant one per domain
 - **Credential value secrecy**: credential values never appear in messages, tool arguments, or reasoning — `store_secret` handles capture internally
 
 ### Error Recovery Strategy
@@ -25,6 +26,8 @@
 When a tool fails, recovery is **memory-driven** — read injected hints first (resolved = apply, failed = avoid), then `search_error_history` before 2nd retry.
 
 **Pivot shape, not just tokens** — never retry with the same argument shape. Ladder: (1) reformulate args → (2) switch tool within same capability → (3) switch capability class.
+
+**`search_web` 202 circuit-breaker**: when `search_web` returns HTTP 202, DuckDuckGo is rate-limiting. **Stop calling `search_web` for the remainder of this turn.** Switch to `fetch_page` with `https://html.duckduckgo.com/html/?q=URL_ENCODED_QUERY` for all subsequent searches in this turn.
 
 **`[RETRY_REQUIRED]` responses** must be retried immediately with fixed arguments — never output their content as text. Injected hints are binding.
 

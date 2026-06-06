@@ -190,11 +190,15 @@ func handler(ctx context.Context, link string, keepLinks, sameSession bool, outT
 	}
 	if parsed.Scheme == "http" {
 		parsed.Scheme = "https"
-		link = parsed.String()
 	}
+	if parsed.Path == "" {
+		parsed.Path = "/"
+	}
+	parsed.Fragment = ""
+	link = parsed.String()
 
-	if hit, status, _ := isSkipped(link); hit {
-		return "", fmt.Errorf("blocked (status %d): %w", status, toolTypes.ToolError)
+	if hit, _, _ := isSkipped(link); hit {
+		return "", fmt.Errorf("%s blocked", link)
 	}
 
 	cacheVariant := fmt.Sprintf("|type=%d|links=%t|session=%t", outType, keepLinks, sameSession)
@@ -236,25 +240,25 @@ func handler(ctx context.Context, link string, keepLinks, sameSession bool, outT
 				title = result.Title
 			}
 			addToSkippedMap(link, status, title)
-			return "", fmt.Errorf("fetch failed (status %d): %w", status, toolTypes.ToolError)
+			return "", fmt.Errorf("%s fetch failed [%d]", link, status)
 		}
 
 		if isPage4xx(result.Title, result.FinalURL) {
 			addToSkippedMap(link, 404, result.Title)
-			return "", fmt.Errorf("fetch failed (status 404): %w", toolTypes.ToolError)
+			return "", fmt.Errorf("%s fetch failed [404]", link)
 		}
 
 		switch outType {
 		case go_browser.TypeMarkdown:
 			if strings.TrimSpace(result.Content) == "" {
 				addToSkippedMap(link, 0, result.Title)
-				return "", fmt.Errorf("empty content: %w", toolTypes.ToolError)
+				return "", fmt.Errorf("%s empty content", link)
 			}
 			full = buildFrontmatter(result)
 		case go_browser.TypeJSON:
 			if len(result.Tree) == 0 {
 				addToSkippedMap(link, 0, result.Title)
-				return "", fmt.Errorf("empty content: %w", toolTypes.ToolError)
+				return "", fmt.Errorf("%s empty content", link)
 			}
 			raw, err := json.Marshal(result.Tree)
 			if err != nil {
@@ -264,7 +268,7 @@ func handler(ctx context.Context, link string, keepLinks, sameSession bool, outT
 		default:
 			if strings.TrimSpace(result.Content) == "" {
 				addToSkippedMap(link, 0, result.Title)
-				return "", fmt.Errorf("empty content: %w", toolTypes.ToolError)
+				return "", fmt.Errorf("%s empty content", link)
 			}
 			full = result.Content
 		}
