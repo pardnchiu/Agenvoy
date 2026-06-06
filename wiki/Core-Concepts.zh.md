@@ -35,9 +35,9 @@ Session 是 Agenvoy 的核心單元，每個 session 對應獨立的對話上下
 每個 session 可以宣告自己的 persona：
 
 ```markdown
----
+***
 name: mobile-builder
----
+***
 
 You are an expert mobile application architect specializing in
 SwiftUI, Jetpack Compose, and React Native...
@@ -84,7 +84,7 @@ frontmatter `name` 也是 lookup key（`GetSessionIDByName`）；body 在每輪 
 | 2 · 執行 | `IsConcurrent` 標記者併發；其餘序列 | `tools.Execute` |
 | 3 · commit | 序列 | 落地 `sessionData.Tools`／`ToolHistories`、更新 cache、發 `EventToolResult`、處理 review tool |
 
-Concurrent 標記：`fetch_page`、`invoke_subagent`、`calculator`、`send_http_request`、`fetch_google_rss`、`transcribe_media`。`search_web`／寫入類／`api_*`／MCP 一律序列。
+Concurrent 標記：`read_file`、`list_files`、`glob_files`、`search_files`、`fetch_page`、`search_google_news`、`send_http_request`、`download_file`、`transcribe_media`、`calculate`、`invoke_subagent`、`search_chat_history`、`search_error_history`、`read_error`、`read_log`、`list_rag`、`search_rag`、`format_chatbot`、`list_chatbot`、`list_tools`、`list_schedule`。`search_web`／寫入類／`api_*`／MCP 一律序列。
 
 ## Pending Registry
 
@@ -127,3 +127,8 @@ Concurrent 標記：`fetch_page`、`invoke_subagent`、`calculator`、`send_http
 - **L2（per-message）** —— 所有 user message 包成 `---\n當前時間: ...\n工作目錄: <data.WorkDir>\n---\n<input>`；workDir 行是最強 anchor，覆蓋 history recency bias
 
 TUI 透過 `stripUserMetaHeader` 視覺剝除 wrapper；LLM 仍收到原始字串。
+
+***
+
+> [!NOTE]
+> 本文件由 Claude 讀取完整原始碼後自動生成。

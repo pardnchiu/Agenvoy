@@ -29,7 +29,7 @@ Rolling summary（`summary.json`）濃縮舊對話，每輪注入 system prompt 
 
 ### 2. 語意搜尋 — ToriiDB（近期對話）
 
-`search_conversation_history` 工具以 `mode=semantic` 走 ToriiDB `db.VSearch` 向量相似搜尋。每筆命中觸發 context window 擴展：前 2 後 1。
+`search_chat_history` 工具以 `mode=semantic` 走 ToriiDB `db.VSearch` 向量相似搜尋。每筆命中觸發 context window 擴展：前 2 後 1。
 
 ToriiDB entries 在 `history.json` compact 時清理——早於裁剪點的 entries 會被移除，讓 ToriiDB 聚焦近期對話。更舊的資料由 SQLite（第 3 層）承接。
 
@@ -37,7 +37,7 @@ ToriiDB entries 在 `history.json` compact 時清理——早於裁剪點的 ent
 
 每筆寫入 `history.json` 的訊息會**同步雙寫**到 SQLite（`~/.config/agenvoy/.store/history.db`），透過 [pardnchiu/go-sqlite](https://github.com/pardnchiu/go-sqlite)。SQLite 永遠持有完整對話歷史，即使 `history.json` 被裁剪。
 
-`search_conversation_history` 工具以 `mode=keyword` 走 SQLite FTS5 全文搜尋（歸檔）+ ToriiDB 子字串比對（近期），合併結果輸出。
+`search_chat_history` 工具以 `mode=keyword` 走 SQLite FTS5 全文搜尋（歸檔）+ ToriiDB 子字串比對（近期），合併結果輸出。
 
 **裁剪（Compact）：** 當 `history.json` 超過 `max_history_bytes`（預設 5 MiB），從最舊端裁剪至 80%（必在完整 user+assistant pair 邊界）。裁剪點 timestamp 記錄到 SQLite `session_meta.start_at`，讓 keyword 搜尋排除 `history.json` 已有的內容（避免重複）。同時清除 ToriiDB 中早於裁剪點的 entries。
 
@@ -86,10 +86,15 @@ ToriiDB entries 在 `history.json` compact 時清理——早於裁剪點的 ent
 
 上述三層皆服務對話記憶——歷史對話、摘要、錯誤紀錄。要查詢**使用者自管的文件集**（筆記、收件匣、程式碼倉……），Agenvoy 委派給 [KuraDB](KuraDB-RAG.zh.md)——daemon 在 `kuradb_enabled=true` 時 spawn 的 in-process child。
 
-KuraDB 對 agent 暴露三個工具（`rag_list_db` / `rag_search_keyword` / `rag_search_semantic`），endpoint 不存在時 per-turn 動態排除。載入時 system prompt 強制 information query 第一波先呼這三者（外部 web 工具退為補足角色）。
+KuraDB 對 agent 暴露兩個工具（`list_rag` / `search_rag`），endpoint 不存在時 per-turn 動態排除。載入時 system prompt 強制 information query 第一波先呼這兩者（外部 web 工具退為補足角色）。
 
 這個切割是刻意的：ToriiDB + SQLite 是整合在 runtime 的記憶層（不能停用）；KuraDB 是 opt-in 的索引知識庫（透過 `/kuradb` TUI 啟用）。
 
 ## 遷移備註
 
 Session 與 error memory 過去存在 per-session JSON 檔。從 ToriiDB v0.5.0 起改進 embedded store。**勿恢復 JSON 路徑**。
+
+***
+
+> [!NOTE]
+> 本文件由 Claude 讀取完整原始碼後自動生成。

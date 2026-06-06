@@ -96,3 +96,8 @@ Subagent（`invoke_subagent`）含 slot-wait 時間：
 - `MAX_SUBAGENT_TIMEOUT_MIN` —— 預設 `10`，hard cap `60`
 
 避免失控的 subprocess 無限阻塞父程序。
+
+***
+
+> [!NOTE]
+> 本文件由 Claude 讀取完整原始碼後自動生成。

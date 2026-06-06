@@ -22,12 +22,12 @@ graph TB
         Reg["前綴路由 listener registry<br/>per-entry buffered=1 reply ch<br/>TUI/CLI 監聽 '' · Telegram 監聽 'tg-'"]
     end
 
-    subgraph Providers["LLM Providers · 7"]
+    subgraph Providers["LLM Providers · 9"]
         P["Claude · OpenAI · Codex · Gemini<br/>Copilot · Nvidia · Compat"]
     end
 
     subgraph Tools["Tool Subsystem"]
-        T["File · Web · Git · API · Script<br/>activate_skill · invoke_subagent<br/>ask_user · scheduler · memory"]
+        T["File · Web · Git · API · Script<br/>run_skill · invoke_subagent<br/>ask_user · scheduler · memory"]
         MCP["MCP Adapter<br/>stdio · HTTP/SSE"]
         Ext["External CLI<br/>codex · claude · copilot · gemini"]
     end
@@ -45,7 +45,7 @@ graph TB
     end
 
     subgraph Kura["KuraDB · daemon-managed child"]
-        K["/usr/local/bin/kura<br/>endpoint @ ~/.config/kuradb/endpoint<br/>3-strike health check · 5s backoff<br/>rag_list_db · rag_search_{keyword,semantic}"]
+        K["/usr/local/bin/kura<br/>endpoint @ ~/.config/kuradb/endpoint<br/>3-strike health check · 5s backoff<br/>list_rag · search_rag"]
     end
 
     App --> Run
@@ -57,7 +57,7 @@ graph TB
     Tools --> MCP
     Tools --> Ext
     Tools --> Security
-    Tools -.->|rag_*<br/>endpoint 不存在時<br/>per-turn 排除| Kura
+    Tools -.->|list_rag · search_rag<br/>endpoint 不存在時<br/>per-turn 排除| Kura
     Execute <-->|confirm/ask| Pending
     Sub <-->|subagent ask_user| Pending
     Execute <--> Memory
@@ -82,7 +82,7 @@ graph TB
 | Pending | `internal/runtime/pending.go` | 前綴路由 confirm/ask listener registry；各 runtime 透過 `RegisterListener(prefix)` 註冊、`PickNextFor(prefix)` 取對應條目 |
 | Memory | ToriiDB（`DBSessionHist` / `DBSessionSummary` / `error_memory`） | 語意搜尋 + 90 天 TTL |
 | Scheduler | `internal/runtime/scheduler.go`（+ `runtime.SchedulerWatcher` fsnotify） | scheduler skill 綁定 cron／one-shot；`{tasks,crons}.json` 變動熱重載 |
-| KuraDB | `internal/runtime/kuradb/`（`kuradb.go` / `spawn.go` / `health.go`）+ `internal/runtime/kuradb/tool/` | RAG provider child process；daemon-managed spawn + 3-strike health check；endpoint 不存在時 per-turn 動態排除 tool。見 [KuraDB RAG](KuraDB-RAG.zh.md) |
+| KuraDB | `internal/runtime/kuradb/`（`kuradb.go` / `run.go`）+ `internal/runtime/kuradb/tool/` | RAG provider child process；daemon-managed spawn + 3-strike health check；endpoint 不存在時 per-turn 動態排除 tool。見 [KuraDB RAG](KuraDB-RAG.zh.md) |
 | TUI | `internal/runtime/tui` | bubbletea inline-chat 前端；單一 package 設計 |
 
 ## 跨切原則
@@ -98,11 +98,11 @@ graph TB
 
 > 依據 pardn chiu 的理由：「bubbletea 的設計不適合切割成獨立模組相互引用，會搞得生命週期麻煩，我暫時沒心力處理」—— 此模組刻意不分割。
 
-TUI 全部放在單一 package（`internal/tui`），**不拆 subpackage**。`internal/tui/` 底下所有檔案皆遵循此原則。
+TUI 全部放在單一 package（`internal/runtime/tui`），**不拆 subpackage**。`internal/runtime/tui/` 底下所有檔案皆遵循此原則。
 
 ### 為什麼選 bubbletea（而不是 tview / tcell）
 
-舊版 TUI 用 `rivo/tview`（封存在 `internal/_tui_archived/`），更換原因：
+舊版 TUI 用 `rivo/tview`），更換原因：
 
 - **Inline scrollback**：bubbletea 的 `tea.Println` 把字寫到終端原生的 scrollback buffer 並滾上去，與 shell 歷史共存。tview 整個畫面是它的，無法與 shell scrollback 並存。
 - **lipgloss style 組合性**：邊框、padding、前後景組合乾淨，跨 component 重用方便。tview 的樣式是 tag-based，跨元件難複用。
@@ -116,7 +116,7 @@ TUI 全部放在單一 package（`internal/tui`），**不拆 subpackage**。`in
 
 - `Update` 的全部邏輯被綁在跟 model 同一 package
 - 拆 sub-package 必須在第三個（root）package 寫 wrapper，並把 model 所有欄位都 export，讓 sub-package 能讀寫 state
-- 目前 unexported 的型別如 `popupState`、`commandPickerState`、`viewMode` 全要變 export，等於對外開「假 API」（沒人會在 `internal/tui` 之外用）
+- 目前 unexported 的型別如 `popupState`、`commandPickerState`、`viewMode` 全要變 export，等於對外開「假 API」（沒人會在 `internal/runtime/tui` 之外用）
 - `send()` 與 `program atomic.Pointer[tea.Program]` 要嘛搬進 sub-package（root 用 setter 注入），要嘛留 root 但讓 handler 們 import root → 二次循環
 
 真正 Go-style 的 TUI 應該是「每個 widget 獨立 package、自己持 state、自己渲染、自己處理事件」，bubbletea 退化成純 event loop。這個重構約 600–800 LOC、4 phase。對目前 ~1.1k LOC、單人維護的 TUI，收益不抵成本。
@@ -141,3 +141,8 @@ TUI 全部放在單一 package（`internal/tui`），**不拆 subpackage**。`in
 | MCP transport、生命週期 | [MCP 整合](MCP-Integration.zh.md) |
 | KuraDB RAG 生命週期、healthcheck、`/kuradb` wizard | [KuraDB RAG](KuraDB-RAG.zh.md) |
 | 架構規則與限制的真理來源 | [CLAUDE.md](https://github.com/pardnchiu/Agenvoy/blob/master/CLAUDE.md) |
+
+***
+
+> [!NOTE]
+> 本文件由 Claude 讀取完整原始碼後自動生成。

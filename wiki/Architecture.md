@@ -22,12 +22,12 @@ graph TB
         Reg["Prefix-routed listener registry<br/>per-entry buffered=1 reply ch<br/>TUI/CLI listen '' · Telegram listens 'tg-'"]
     end
 
-    subgraph Providers["LLM Providers · 7"]
+    subgraph Providers["LLM Providers · 9"]
         P["Claude · OpenAI · Codex · Gemini<br/>Copilot · Nvidia · Compat"]
     end
 
     subgraph Tools["Tool Subsystem"]
-        T["File · Web · Git · API · Script<br/>activate_skill · invoke_subagent<br/>ask_user · scheduler · memory"]
+        T["File · Web · Git · API · Script<br/>run_skill · invoke_subagent<br/>ask_user · scheduler · memory"]
         MCP["MCP Adapter<br/>stdio · HTTP/SSE"]
         Ext["External CLI<br/>codex · claude · copilot · gemini"]
     end
@@ -45,7 +45,7 @@ graph TB
     end
 
     subgraph Kura["KuraDB · daemon-managed child"]
-        K["/usr/local/bin/kura<br/>endpoint @ ~/.config/kuradb/endpoint<br/>3-strike health check · 5s backoff<br/>rag_list_db · rag_search_{keyword,semantic}"]
+        K["/usr/local/bin/kura<br/>endpoint @ ~/.config/kuradb/endpoint<br/>3-strike health check · 5s backoff<br/>list_rag · search_rag"]
     end
 
     App --> Run
@@ -57,7 +57,7 @@ graph TB
     Tools --> MCP
     Tools --> Ext
     Tools --> Security
-    Tools -.->|rag_*<br/>per-turn excluded if endpoint absent| Kura
+    Tools -.->|list_rag · search_rag<br/>per-turn excluded if endpoint absent| Kura
     Execute <-->|confirm/ask| Pending
     Sub <-->|subagent ask_user| Pending
     Execute <--> Memory
@@ -82,7 +82,7 @@ graph TB
 | Pending | `internal/runtime/pending.go` | prefix-routed confirm/ask listener registry; per-runtime listener via `RegisterListener(prefix)`, claim via `PickNextFor(prefix)` |
 | Memory | ToriiDB (`DBSessionHist` / `DBSessionSummary` / `error_memory`) | semantic search + 90-day TTL |
 | Scheduler | `internal/runtime/scheduler.go` (+ `runtime.SchedulerWatcher` fsnotify) | cron / one-shot tasks bound to scheduler skills; hot-reload on `{tasks,crons}.json` change |
-| KuraDB | `internal/runtime/kuradb/` (`kuradb.go` / `spawn.go` / `health.go`) + `internal/runtime/kuradb/tool/` | RAG provider child process; daemon-managed spawn + 3-strike health check; per-turn dynamic tool exclusion when endpoint missing. See [KuraDB RAG](KuraDB-RAG.md) |
+| KuraDB | `internal/runtime/kuradb/` (`kuradb.go` / `run.go`) + `internal/runtime/kuradb/tool/` | RAG provider child process; daemon-managed spawn + 3-strike health check; per-turn dynamic tool exclusion when endpoint missing. See [KuraDB RAG](KuraDB-RAG.md) |
 | TUI | `internal/runtime/tui` | bubbletea inline-chat front-end; single-package by design |
 
 ## Cross-cutting principles
@@ -98,11 +98,11 @@ graph TB
 
 > Per pardn chiu: *"bubbletea isn't designed to be split into separate modules that reference each other — splitting it would make the lifecycle a mess. I don't have the bandwidth to handle it right now."* This module is intentionally kept undivided.
 
-The TUI lives in a single package (`internal/tui`) and is **not** split into subpackages. Every file under `internal/tui/` follows this principle.
+The TUI lives in a single package (`internal/runtime/tui`) and is **not** split into subpackages. Every file under `internal/runtime/tui/` follows this principle.
 
 ### Why bubbletea (not tview / tcell)
 
-The previous TUI used `rivo/tview` (archived under `internal/_tui_archived/`). It was replaced because:
+The previous TUI used `rivo/tview` ). It was replaced because:
 
 - **Inline scrollback**: bubbletea's `tea.Println` writes lines that scroll into the terminal's native buffer above the input box. tview owns the entire screen and can't co-exist with shell scrollback.
 - **lipgloss styling primitives**: borders, padding, foreground/background composition compose cleanly. tview styles are tag-based and harder to reuse across components.
@@ -116,7 +116,7 @@ The cost is that bubbletea is a Go port of [The Elm Architecture](https://guide.
 
 - All `Update` logic in the same package as the model
 - Splitting into subpackages requires a wrapper in a third (root) package, plus exporting **every** model field so the sub-packages can read/write state
-- Currently `unexported` types like `popupState`, `commandPickerState`, `viewMode` would have to become exported, creating an "API" that no one outside `internal/tui` will ever consume
+- Currently `unexported` types like `popupState`, `commandPickerState`, `viewMode` would have to become exported, creating an "API" that no one outside `internal/runtime/tui` will ever consume
 - `send()` and `program atomic.Pointer[tea.Program]` either move into a sub-package (root sets via setter API) or stay in root and force handlers to import root, which creates a second cycle
 
 A real Go-style TUI would build per-domain widget packages (each owning its state struct, render method, and event handler) with bubbletea acting only as event loop. That refactor is a 600–800 LOC rewrite split into 4 phases. For the current ~1.1k LOC TUI maintained by one developer, the gain doesn't justify the cost.
@@ -141,3 +141,8 @@ Switch to per-domain widget packages when **any one** of:
 | MCP transports, lifecycle | [MCP Integration](MCP-Integration.md) |
 | KuraDB RAG lifecycle, healthcheck, `/kuradb` wizard | [KuraDB RAG](KuraDB-RAG.md) |
 | Source of truth for architecture rules | [CLAUDE.md](https://github.com/pardnchiu/Agenvoy/blob/master/CLAUDE.md) |
+
+***
+
+> [!NOTE]
+> This document was auto-generated by Claude after reading the full source code.

@@ -85,9 +85,9 @@ configs/
 ## bot.md 格式
 
 ```markdown
----
+***
 name: <session 顯示名稱>     # 用於 :name 路由與 invoke_subagent name 參數
----
+***
 
 <persona 內容，自由 markdown>
 ```
@@ -144,7 +144,7 @@ URL 慣例對齊 Zed：使用者填到 `/v1` 為止（例：`http://localhost:11
 
 | Key | 位置 |
 |---|---|
-| `t_enabled` / `d_enabled` | `config.json` |
+| `telegram_enabled` / `discord_enabled` | `config.json` |
 | `TELEGRAM_TOKEN` / `DISCORD_TOKEN` | keychain（`agenvoy` service） |
 | 已授權 chat ID | `~/.config/agenvoy/.telegram`（一行一個 chat ID，6 碼 OTP 驗證成功後寫入） |
 | 已授權 Discord channel | 透過 guild mention + per-server `d_allowed` 設定 |
@@ -158,3 +158,8 @@ URL 慣例對齊 Zed：使用者填到 `/v1` 為止（例：`http://localhost:11
 - **`store_secret` 取得的密鑰** —— 只進 keychain；不進 LLM context、history、action.log 或 tool args
 - **Session 歷史** —— 在 ToriiDB，不在 per-session JSON 檔（ToriiDB v0.5.0 遷移後）
 - **工具呼叫結果** —— 只 cache 在記憶體，不跨重啟持久化（除了透過 error_memory 與 conversation_history）
+
+***
+
+> [!NOTE]
+> 本文件由 Claude 讀取完整原始碼後自動生成。

@@ -2,7 +2,7 @@
 
 > [English](KuraDB-RAG.md)
 
-KuraDB 是 Agenvoy 的 in-process RAG（Retrieval-Augmented Generation）提供者。以 daemon 管理的 child process 形式運行，對 agent 暴露三個語意／關鍵字搜尋工具（`rag_list_db`、`rag_search_keyword`、`rag_search_semantic`）。
+KuraDB 是 Agenvoy 的 in-process RAG（Retrieval-Augmented Generation）提供者。以 daemon 管理的 child process 形式運行，對 agent 暴露兩個搜尋工具（`list_rag`、`search_rag`）。
 
 ## 是什麼
 
@@ -22,8 +22,7 @@ KuraDB 程式碼住在 `internal/runtime/kuradb/`：
 | 檔案 | 職責 |
 |---|---|
 | `kuradb.go` | 公開介面：`BinaryPath`、`EndpointExists()`、`ReadEndpoint()`、`BinaryInstalled()`、`HasOpenAIKey()`、`SetOpenAIKey()` |
-| `spawn.go` | `RunChild(ctx)`——`exec.Cmd` start + `StdoutPipe`/`StderrPipe` → slog；5 秒 crash backoff |
-| `health.go` | Goroutine 每分鐘 poll `<endpoint>/api/health`（5s timeout）；連續 3 次失敗 → auto-disable |
+| `run.go` | `RunChild(ctx)`——`exec.Cmd` start + `StdoutPipe`/`StderrPipe` → slog；5 秒 crash backoff；health check goroutine 每分鐘 poll `<endpoint>/api/health`（5s timeout），連續 3 次失敗 → auto-disable |
 
 ### Daemon 編排（`cmd/app/cmdDeamon.go::reloadKuradb`）
 
@@ -42,23 +41,22 @@ Daemon 透過 fsnotify 監聽 `~/.config/agenvoy/config.json` 變動：
 
 ## Tool 註冊
 
-三個 RAG 工具住在 `internal/runtime/kuradb/tool/`，在三個入口（`cmd/app/{main,cmdDeamon,newTUI}.go`）以明確的 `kuradbTool.Register()` 呼叫註冊（不走 `init()`——`init()` 早於 `filesystem.Init()`，gate 檢查必 fail）。
+兩個 RAG 工具住在 `internal/runtime/kuradb/tool/`，在三個入口（`cmd/app/{main,cmdDeamon,newTUI}.go`）以明確的 `kuradbTool.Register()` 呼叫註冊（不走 `init()`——`init()` 早於 `filesystem.Init()`，gate 檢查必 fail）。
 
 | Tool | 說明 |
 |---|---|
-| `rag_list_db` | 列出可用的 KuraDB 資料庫（例：`notes`、`inbox`、`code`） |
-| `rag_search_keyword` | 透過 `gse` 分詞對資料庫做關鍵字搜尋 |
-| `rag_search_semantic` | 透過 OpenAI embeddings 對資料庫做語意搜尋 |
+| `list_rag` | 列出可用的 KuraDB 資料庫（例：`notes`、`inbox`、`code`） |
+| `search_rag` | 透過 `mode=keyword`（`gse` 分詞）或 `mode=semantic`（OpenAI embeddings）搜尋資料庫 |
 
 Tool gate 為單一條件 `cfg.KuradbEnabled`——per-handler 內的 `ReadEndpoint()` 呼叫是第二道防線（萬一 endpoint 在 turn 中消失）。
 
 ## Per-turn 動態排除
 
-`exec.Execute()` 在 `NewExecutor` 之後檢查 `kuradb.EndpointExists()`。為 false 時把三個 `rag_*` tool 加進 `data.ExcludeTools`，既有的 filter 機制把它們從 `exec.Tools` 中拔掉。
+`exec.Execute()` 在 `NewExecutor` 之後檢查 `kuradb.EndpointExists()`。為 false 時把兩個 RAG tool 加進 `data.ExcludeTools`，既有的 filter 機制把它們從 `exec.Tools` 中拔掉。
 
-結果：endpoint down 時 LLM **完全看不到** `rag_*` tool——連 stub 名都沒。system prompt 內條件式「when rag_* tools are present」段落自然失效。
+結果：endpoint down 時 LLM **完全看不到** `list_rag` / `search_rag` tool——連 stub 名都沒。system prompt 內條件式「when `list_rag` / `search_rag` tools are present」段落自然失效。
 
-**為何重要：** 沒有動態排除的話，LLM 在 startup race（KuraDB child 還沒 spawn 之前）會看到 `rag_*` stub、呼叫它、拿到 error——LLM 與使用者都被搞糊。
+**為何重要：** 沒有動態排除的話，LLM 在 startup race（KuraDB child 還沒 spawn 之前）會看到 RAG tool stub、呼叫它、拿到 error——LLM 與使用者都被搞糊。
 
 ## `/kuradb` TUI wizard
 
@@ -87,9 +85,9 @@ enable／disable 只透過 TUI（**無** CLI 子命令——install.sh + sudo pr
 
 ## RAG-first prompting
 
-當 `rag_*` 工具被載入時，base system prompt 要求：**任何 information query 的第一波 tool calls** 必為 `rag_list_db` + `rag_search_*`——外部 web／search 工具為**次要**（補足 RAG 沒命中的部分），不是 fallback 也不是替代。
+當 `list_rag` / `search_rag` 工具被載入時，base system prompt 要求：**任何 information query 的第一波 tool calls** 必為 `list_rag` + `search_rag`——外部 web／search 工具為**次要**（補足 RAG 沒命中的部分），不是 fallback 也不是替代。
 
-規則寫在 `configs/prompts/system_prompt.md`；KuraDB off 時規則自動失效（因為 `rag_*` 不會在 tool list 內）。
+規則寫在 `configs/prompts/system_prompt.md`；KuraDB off 時規則自動失效（因為 `list_rag` / `search_rag` 不會在 tool list 內）。
 
 ## 檔案與路徑
 
@@ -102,7 +100,12 @@ enable／disable 只透過 TUI（**無** CLI 子命令——install.sh + sudo pr
 
 ## 相關頁面
 
-- [工具系統](Tools.zh.md#rag) —— `rag_*` 工具定義
+- [工具系統](Tools.zh.md#rag) —— `list_rag` / `search_rag` 工具定義
 - [記憶系統](Memory-System.zh.md) —— KuraDB 如何補足 ToriiDB-backed 對話記憶
 - [命令列參考](CLI-Reference.zh.md) —— `/kuradb` TUI 指令
 - [設定檔](Configuration.zh.md#kuradb) —— config 鍵與路徑
+
+***
+
+> [!NOTE]
+> 本文件由 Claude 讀取完整原始碼後自動生成。

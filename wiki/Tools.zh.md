@@ -8,25 +8,40 @@
 
 | 工具 | 說明 |
 |---|---|
-| `read_file` | 讀取檔案（text／PDF 透過 `pdftotext`／PPTX slide-level／DOCX line-level／CSV-TSV → JSON 2D 陣列／image 副檔名 error 導向 `read_image`） |
-| `read_image` | 讀取影像為 base64 + metadata，給支援 vision 的 model |
+| `read_file` | 讀取 text／PDF／DOCX／PPTX／CSV-TSV／image 檔。`patch_file` 前必先呼叫 |
 | `write_file` | 建立或完整覆寫檔案 |
 | `patch_file` | 精準字串替換（支援 `replace_all`） |
 | `list_files` | 列出目錄 |
 | `glob_files` | glob pattern 搜尋 |
-| `search_content` | 檔案內容 regex 搜尋 |
+| `search_files` | 檔案內容 regex 搜尋 |
 
 ### Web（read-only，多數可並發）
 
 | 工具 | 並發 | 說明 |
 |---|---|---|
-| `fetch_page` | ✓ | 抓網頁（readability + 4xx/5xx skip cache 經 ToriiDB） |
-| `save_page_to_file` | | 抓網頁後存檔 |
+| `fetch_page` | ✓ | 抓網頁（readability + 4xx/5xx skip cache 經 ToriiDB）；`save=true` 存檔至本地 |
 | `search_web` | | DuckDuckGo lite endpoint，package 層 rate limit（2 s gap） |
-| `fetch_google_rss` | ✓ | Google News RSS |
-| `transcribe_media` | ✓ | 本地音訊／影片轉逐字稿，走 Gemini `inline_data`（ogg、mp3、wav、m4a、flac、aac、mp4、mov、webm、mpeg、3gp）；單檔上限 20 MiB，與 Telegram `Bot.Save` 對齊 |
-| `send_http_request` | ✓ | 原始 HTTP 請求，回 status + headers + body |
-| `calculator` | ✓ | 數學表達式求值 |
+| `search_google_news` | ✓ | Google News RSS |
+
+### HTTP
+
+| 工具 | 並發 | 說明 |
+|---|---|---|
+| `send_http_request` | ✓ | 原始 HTTP 請求，回 status + headers + body。GET 免 confirm，其他 method 走 confirm gate。內建 SSRF guard（DNS resolve 後比對 loopback／private／link-local），可透過 `config.json` `net_white_list` 放行指定 host |
+| `download_file` | ✓ | 下載 binary 檔至本地磁碟（tar.gz、image、archive 等）；JSON／HTML 用 `send_http_request` 或 `fetch_page` |
+
+### 媒體
+
+| 工具 | 並發 | 說明 |
+|---|---|---|
+| `transcribe_media` | ✓ | 本地音訊／影片轉逐字稿，走 Gemini `inline_data`（ogg、mp3、wav、m4a、flac、aac、mp4、mov、webm、mpeg、3gp）；單檔上限 20 MiB。*(需 gemini credential)* |
+| `generate_image` | | 透過 gpt-image-2 生圖（走 codex@ 訂閱額度）。先經 `ask_user` 確認 size 與 quality。輸出 `[SEND_FILE:<path>]`。15 分上限。*(需 codex credential)* |
+
+### 工具
+
+| 工具 | 並發 | 說明 |
+|---|---|---|
+| `calculate` | ✓ | 數學表達式求值 |
 
 ### Agent 編排
 
@@ -36,36 +51,48 @@
 | `invoke_external_agent` | 一次性外部 CLI（claude / codex / copilot / gemini）；`readonly` 旗標控制寫入權限。Subprocess timeout 由 `MAX_EXTERNAL_AGENT_TIMEOUT_MIN`（default 10 分）封頂 |
 | `cross_review_with_external_agents` | 串四家外部 CLI 互審至三輪上限（`MaxVerifyRounds=3`，package 常數）。15 分硬上限 |
 | `review_result` | 內部優先 model 自審 |
-| `generate_plan` | 回傳結構化 markdown 計畫（需求總結／前置／步驟+驗收／整體驗收／風險／回退）。走 `exec.SelectAgent(ctx, dispatcher, registry, "[plan] " + requirement, ...)` —— `[plan]` prefix 觸發 `agent_selector.md` P0.6 routing 挑強 reasoning agent（claude-opus > codex-pro > codex > claude-sonnet > ...）。送 agent 時 `toolDefs=nil`，planner 無 tool 可呼 —— plan only, no execution。5 分上限 |
+| `generate_plan` | 回傳結構化 markdown 計畫（需求總結／前置／步驟+驗收／整體驗收／風險／回退）。走 `exec.SelectAgent` + `[plan]` prefix 觸發 P0.6 routing 挑強 reasoning agent。`toolDefs=nil`——plan only, no execution。5 分上限 |
+
+### 互動
+
+| 工具 | 說明 |
+|---|---|
 | `ask_user` | free-text／single-select／multi-select／`secret` 遮罩輸入；`pending` 啟用時走 registry，否則 fallback 至 stdin（CLI）或非互動引導訊息 |
 | `store_secret` | 透過遮罩輸入取值並直接寫 keychain —— **value 從未進入 LLM context、history 或 log**。Schema **不**收 `value` 參數；agent 只看到 `name` + description |
+| `install_dependence` | 跨平台安裝缺失的系統 binary（僅 TUI/CLI）。已在 PATH 則跳過。Sandbox 擋 sudo，此 tool 繞過。語言級套件（pip/npm/cargo/gem）→ 輸出指令讓使用者手動執行 |
 
 ### 記憶
 
 | 工具 | 說明 |
 |---|---|
-| `search_conversation_history` | 當前 session 歷史的 keyword + semantic 並聯 |
+| `search_chat_history` | 當前 session 歷史的 keyword + semantic 並聯搜尋 |
 | `remember_error` | 記錄工具錯誤與解法／策略 |
-| `search_error_memory` | 跨 session 的 error memory 語意搜尋 |
-| `read_error_memory` | 依 key 讀取指定錯誤紀錄 |
+| `search_error_history` | 跨 session 的 error memory 語意搜尋 |
+| `read_error` | 依 key 讀取指定錯誤紀錄 |
 
-### RAG
-
-透過 KuraDB child process 的外部文件 RAG。生命週期／health check 見 [KuraDB RAG](KuraDB-RAG.zh.md)。`~/.config/kuradb/endpoint` 不存在時三個工具會**per-turn 動態排除**——LLM 完全看不到。
+### 診斷
 
 | 工具 | 說明 |
 |---|---|
-| `rag_list_db` | 列出可用的 KuraDB 資料庫（例：`notes`、`inbox`、`code`） |
-| `rag_search_keyword` | 透過 `gse` 分詞做關鍵字搜尋（支援中文） |
-| `rag_search_semantic` | 透過 OpenAI embeddings（`text-embedding-3-small`）做語意搜尋 |
+| `read_log` | 回傳 daemon.log 近 `h` 小時的 WARN/ERROR 行 |
+| `report_error` | 掃描 daemon.log WARN/ERROR 並上傳至 report.agenvoy.com。Fire-and-forget |
 
-當 `rag_*` 工具被載入時，system prompt 強制：任何 information query 的**第一波** tool calls 必為 `rag_list_db` + `rag_search_*`。外部 web／search 工具為次要（補足 RAG 沒命中的部分），非 fallback 也非替代。
+### RAG
+
+透過 KuraDB child process 的外部文件 RAG。生命週期／health check 見 [KuraDB RAG](KuraDB-RAG.zh.md)。`~/.config/kuradb/endpoint` 不存在時工具會**per-turn 動態排除**——LLM 完全看不到。
+
+| 工具 | 說明 |
+|---|---|
+| `list_rag` | 列出可用的 KuraDB 資料庫（例：`notes`、`inbox`、`code`） |
+| `search_rag` | 透過 `mode=keyword`（`gse` 分詞，支援中文）或 `mode=semantic`（OpenAI `text-embedding-3-small`）搜尋資料庫 |
+
+當 `list_rag` / `search_rag` 工具被載入時，system prompt 強制：任何 information query 的**第一波** tool calls 必為 `list_rag` + `search_rag`。外部 web／search 工具為次要（補足 RAG 沒命中的部分），非 fallback 也非替代。
 
 ### 渲染
 
 | 工具 | 說明 |
 |---|---|
-| `update_page` | 覆寫當前 session canvas 的 HTML 頁；瀏覽器分頁透過 SSE 自動 reload |
+| `render_page` | 覆寫當前 session canvas 的 HTML 頁；瀏覽器分頁透過 SSE 自動 reload |
 
 ### Channel
 
@@ -73,12 +100,9 @@
 
 | 工具 | 說明 |
 |---|---|
-| `list_telegram_chat` | 列出已授權 Telegram chat（`id` + `name`）；讀取 `~/.config/agenvoy/.telegram`。*(需 telegram)* |
-| `send_to_telegram_chat` | 依 `chat_id` 送 HTML 格式訊息。Transient client（非 daemon long-poll bot）。強制 `parse_mode=HTML`。*(需 telegram)* |
-| `telegram_format` | `AlwaysLoad=true`；回傳完整 Telegram HTML formatting reference（允許 tag、escape 規則、檔案／語音 markers、字數上限）。*(需 telegram)* |
-| `list_discord_channel` | 列出已授權 Discord channel（`id` + `name`）。*(需 discord)* |
-| `send_to_discord_channel` | 依 `channel_id` 送 markdown 格式訊息。透過 daemon REST 走 transient client。*(需 discord)* |
-| `discord_format` | `AlwaysLoad=true`；回傳 Discord markdown reference。*(需 discord)* |
+| `list_chatbot` | 列出指定平台的已授權 chat（`platform=telegram` 或 `platform=discord`）。*(需 telegram 或 discord)* |
+| `send_to_chatbot` | 依 `target_id` 送格式化訊息至指定平台。需 `platform` 參數。Telegram：HTML + transient client。Discord：markdown + transient client。*(需 telegram 或 discord)* |
+| `format_chatbot` | `AlwaysLoad=true`；回傳指定平台的完整格式化參考（Telegram HTML 或 Discord markdown）。*(需 telegram 或 discord)* |
 
 ### 輸出 markers（channel-specific 行為）
 
@@ -86,19 +110,26 @@
 
 | Marker | 行為 |
 |---|---|
-| `FILE: <path>`（單獨一行） | Channel runtime 自動 attach 檔案（Telegram → 依副檔名分 photo/document，Discord → 統一 `SendFiles`，10 個/訊息分批） |
-| `[SEND_FILE:<path>]`（inline） | 同上 —— LLM 主動要求 attach 時用 |
+| `[SEND_FILE:<path>]` | Channel runtime 自動 attach 檔案（Telegram → 依副檔名分 photo/document，Discord → 統一 `SendFiles`，10 個/訊息分批） |
 | `[SEND_VOICE:<text>]` | 僅 Telegram。透過 Gemini TTS 合成 OGG voice 送出。Run.go **async** 觸發（`go func` + `context.WithoutCancel`），reply 文字立即 return。失敗 → `slog.Error` + chat notify `⚠️ SendVoice failed (background)`（不能靜默） |
 
-Marker regex + dedupe + `os.Stat` 過濾的唯一住處在 `internal/utils/fileMarker.go`。Push hook（`telegram.PushTelegramResult` / `discord.PushDiscordResult`）共用同一 extractor —— cron fire 期間生圖也能正確 attach。
+Marker regex + dedupe + `os.Stat` 過濾住在 `internal/utils/utils.go`。Telegram 專用 photo/document split wrapper 在 `internal/runtime/telegram/fileMarker.go`。Push hook（`telegram.PushTelegramResult` / `discord.PushDiscordResult`）共用同一 extractor。
 
 ### Skill 探索
 
 | 工具 | 說明 |
 |---|---|
-| `activate_skill` | 載入 skill 進當前迴圈（合成 tool_call/tool_result pair 注入 ToolHistories） |
+| `run_skill` | 載入 skill 進當前迴圈（合成 tool_call/tool_result pair 注入 ToolHistories） |
 | `search_tools` | 搜尋已註冊 tool 目錄 |
 | `list_tools` | 列所有 tool |
+
+### Skill 版控
+
+| 工具 | 說明 |
+|---|---|
+| `skill_git_commit` | 提交 `~/.config/agenvoy/skills` 下所有變更至 git |
+| `skill_git_log` | 列出 `~/.config/agenvoy/skills` 的 git commit 歷史 |
+| `skill_git_rollback` | 將 `~/.config/agenvoy/skills` 還原至指定 git commit |
 
 ### 系統
 
@@ -110,11 +141,12 @@ Marker regex + dedupe + `os.Stat` 過濾的唯一住處在 `internal/utils/fileM
 
 | 工具 | 說明 |
 |---|---|
-| `add_task` / `add_cron` | 把既有 scheduler skill 綁定至 one-shot 時間或 5 欄 cron expression。`add_task` time 格式：`+5m`（相對）／`HH:MM`（今天）／`YYYY-MM-DD HH:MM`／RFC3339。**應由 `scheduler-skill-creator` skill 呼叫，不直接呼**——直呼前提是 skill 已存在於 `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/`。 |
-| `patch_task` / `patch_cron` | 依 `skill_name` 改時間；只動時間、不動 SKILL body。 |
-| `remove_task` / `remove_cron` | 依 `skill_name` 取消；綁定的 scheduler skill 目錄一併搬到 `.Trash/`。 |
+| `add_schedule` | 把既有 scheduler skill 綁定至 one-shot 時間（`target=task`）或 5 欄 cron expression（`target=cron`）。Task time 格式：`+5m`（相對）／`HH:MM`（今天）／`YYYY-MM-DD HH:MM`／RFC3339。**應由 `scheduler-skill-creator` skill 呼叫，不直接呼**——直呼前提是 skill 已存在於 `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/`。 |
+| `patch_schedule` | 依 `skill_name` 與 `target` 改時間；只動時間、不動 SKILL body。 |
+| `remove_schedule` | 依 `skill_name` 與 `target` 取消；綁定的 scheduler skill 目錄一併搬到 `.Trash/`。 |
+| `list_schedule` | 列出當前 session 的 task 與 cron。`target` 接受 `task`、`cron`、`all`（預設）。 |
 
-`scheduler-skill-creator` 是高階 skill：**建立** scheduler skill body 後呼叫 `add_task`／`add_cron` 完成綁定。新的週期／一次性任務需求應 activate 該 skill，而非直呼低階 tool。
+`scheduler-skill-creator` 是高階 skill：**建立** scheduler skill body 後呼叫 `add_schedule` 完成綁定。新的週期／一次性任務需求應 activate 該 skill，而非直呼低階 tool。
 
 Daemon 端 runtime（`internal/runtime/scheduler.go`）用 fsnotify 監看 `~/.config/agenvoy/{tasks,crons}.json`，Write／Create／Rename 觸發即熱重載；過期 task 在啟動或重載時自動觸發並移除；觸發走 `runtime.SetRunner` → 對 scheduler skill body 起 in-process subagent（always-allow context）。
 
@@ -176,8 +208,13 @@ Description 長度：預設**單句**動詞開頭。**禁止**：觸發條件（
 
 長跑 tool（script + API）每 30s 在 daemon log 印 `running name=... elapsed=Ys/Zs` 提供可見性。
 
-Subagent + external-agent 工具另有多分鐘 cap（`invoke_subagent` = `MAX_SUBAGENT_TIMEOUT_MIN`、`invoke_external_agent` = 10 分、`cross_review_with_external_agents` = 15 分、`generate_plan` / `transcribe_media` = 5 分）。
+Subagent + external-agent 工具另有多分鐘 cap（`invoke_subagent` = `MAX_SUBAGENT_TIMEOUT_MIN`、`invoke_external_agent` = 10 分、`cross_review_with_external_agents` = 15 分、`generate_plan` / `transcribe_media` = 5 分、`generate_image` = 15 分）。
 
 ## 憑證自動修復
 
 `store_secret` 是 `AlwaysLoad: true`，agent 第一輪即可看到。當下游 tool 回傳 missing-key 或 invalid credential（`401`／`403`／`invalid api key`／`expired token`），system prompt `§10 Credential auto-heal` SOP 引導 agent 呼叫 `store_secret`（透過遮罩輸入取新值 —— value 從未進 LLM）後 retry 原 tool。每個 failing tool per turn 上限 2 輪 `store_secret`。
+
+***
+
+> [!NOTE]
+> 本文件由 Claude 讀取完整原始碼後自動生成。

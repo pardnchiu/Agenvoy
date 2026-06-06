@@ -59,3 +59,8 @@ make run "用 playwright 打開 example.com 截圖"
 - [Provider 設定](Providers.zh.md) —— 支援的 LLM 後端與 dispatcher model
 - [MCP 整合](MCP-Integration.zh.md) —— 接入外部工具 server
 - [命令列參考](CLI-Reference.zh.md) —— 完整指令清單
+
+***
+
+> [!NOTE]
+> 本文件由 Claude 讀取完整原始碼後自動生成。

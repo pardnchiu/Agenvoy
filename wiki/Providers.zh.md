@@ -115,3 +115,8 @@ Send 端 timeout 有三層獨立的層級，各自捕捉不同失敗模式：
 - 重試中（`sendFailCount < MaxRetry`）→ **只** `slog.Warn`；不送 chat event（避免 "retrying 1/3、2/3" 雜訊 —— 只有最終結果到 user）
 
 OAuth device-code polling（`copilot/login.go`）有獨立 `http.Client{Timeout: 30s}` per-poll —— 零 timeout 會讓 GitHub OAuth backend hang 鎖死整個登入流程。
+
+***
+
+> [!NOTE]
+> 本文件由 Claude 讀取完整原始碼後自動生成。

@@ -108,3 +108,8 @@ MCP tool 走最保守預設：
 | `mcp-server-time` | 時區轉換 / 相對時間 |
 
 避免註冊與內建工具能力重疊的 MCP server（例如 `filesystem`、`git`、`fetch`、`shell`）—— 重複只會撐大 LLM tool list。
+
+***
+
+> [!NOTE]
+> 本文件由 Claude 讀取完整原始碼後自動生成。

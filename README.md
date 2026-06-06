@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <strong>Say it. It builds the tool. No programming required.</strong> Claude / GPT / Gemini auto-routed; lives in Telegram, Discord, LINE (alpha), and your terminal.
+  Generative power and natural-language automation are the computing power of the AI era.<br><strong>Agenvoy is your productivity infrastructure.</strong>
 </p>
 
 <p align="center">
@@ -27,16 +27,16 @@
 
 ## What is Agenvoy
 
-A **personal AI agent** that runs on your own machine. Configure it once, talk to it from anywhere — Telegram, Discord, LINE (alpha), terminal TUI, or browser. Same memory, same tools, same skills across every channel.
+Computing power defined what you could build in the computer age. In the AI era, that role belongs to generative capability and natural-language automation — and like computing power, it needs infrastructure you own.
 
-Built for people who want their own always-on assistant, not another SaaS subscription.
+Agenvoy is that infrastructure. A single Go binary on your machine turns Claude, GPT, and Gemini into a unified, always-on productivity layer. Configure it once, talk to it from anywhere — Telegram, Discord, LINE (alpha), terminal TUI, or browser. Same memory, same tools, same skills across every channel.
 
 ## What it can do
 
 **Teach the agent to build its own tools — no programming required.** Just describe what you need; the agent writes a script or wires up an API, sandboxes it, and loads it as a tool. Next time you ask, it just runs.
 
 | Demo · Auto-generate tools | Demo · Skill-based scheduler |
-| --- | --- |
+| :-: | :-: |
 | [![](https://i.ytimg.com/vi/WBCjLQ-nQFo/maxresdefault.jpg)](https://www.youtube.com/watch?v=WBCjLQ-nQFo) | [![](https://i.ytimg.com/vi/bO9AMrW3L9c/maxresdefault.jpg)](https://www.youtube.com/watch?v=bO9AMrW3L9c) |
 | **Demo · Sub-agents co-work** | **Demo · Tool install from registry** |
 | [![](https://i.ytimg.com/vi/wM3NU4ARz4w/maxresdefault.jpg)](https://www.youtube.com/watch?v=wM3NU4ARz4w) | [![](https://i.ytimg.com/vi/UrR5i7YAHRc/maxresdefault.jpg)](https://www.youtube.com/watch?v=UrR5i7YAHRc) |
@@ -69,11 +69,11 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 |---|---|---|---|
 | One-line install, single binary | ✅ Go | ❌ pnpm monorepo | ❌ pip + docker |
 | Use Claude + GPT + Gemini in one chat | ✅ auto-routed by dispatcher | ✅ manual switch | ✅ manual switch |
-| Native chat buttons / menus / modals | ✅ inline keyboard / select / modal | ⚠️ text-based options | ⚠️ text-based options |
+| Native chat buttons / menus / modals | ✅ inline keyboard / select / modal | ⚠️ reactions / text-based | ⚠️ text-based options |
 | Agent builds & saves its own tools | ✅ FaaS-sandboxed scripts + APIs | ❌ | ⚠️ skill-only |
-| First-contact verification on Telegram/Discord | ✅ 6-digit OTP | ⚠️ pairing code (manual approve) | ❌ allowlist only |
-| Cross-session push (any session → chat) | ✅ `send_to_telegram_chat` / `send_to_discord_channel` | ❌ | ❌ |
-| Native document RAG (file → embedding) | ✅ KuraDB in-process (semantic + keyword) | ❌ (MCP only) | ❌ (MCP only) |
+| First-contact verification on Telegram/Discord | ✅ 6-digit OTP | ⚠️ pairing code (manual approve) | ⚠️ pairing code (`gateway/pairing.py`) |
+| Cross-session push (any session → chat) | ✅ `send_to_chatbot` | ❌ | ⚠️ `send_message` tool (scope differs) |
+| Native document RAG (file → embedding) | ✅ KuraDB in-process (semantic + keyword) | ❌ (conversation memory only) | ❌ (conversation memory only) |
 
 > Looking for the full feature-by-feature breakdown? See [**What makes it different**](#what-makes-it-different) below.
 
@@ -100,7 +100,7 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | **Primary use** | Multi-platform AI Agent framework | Multi-platform AI Agent | Multi-platform AI Agent | Terminal coding assistant | Terminal coding assistant | Terminal coding assistant |
 | **Architecture** | Daemon + TUI + Chat | Daemon + TUI + Chat | Daemon + TUI + Chat | CLI session | CLI session | CLI session |
 
----
+***
 
 ### 2. AI Provider Support
 
@@ -109,16 +109,16 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | Claude | ✅ | ✅ | ✅ | ✅ only | ❌ | ❌ |
 | OpenAI / GPT | ✅ | ✅ | ✅ | ❌ | ✅ only | ❌ |
 | Gemini | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ only |
-| Codex (OpenAI OAuth) | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
-| GitHub Copilot | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Nvidia NIM | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Codex (OpenAI OAuth) | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
+| GitHub Copilot | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Nvidia NIM | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | OpenAI-compat | ✅ | ✅ Ollama/LM Studio | ✅ OpenRouter 200+ | ❌ | ❌ | ❌ |
 | DeepSeek | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | xAI (Grok) | ✅ API key | ✅ | ✅ OAuth + API key | ❌ | ❌ | ❌ |
-| Mistral | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Mistral | ❌ | ✅ | ⚠️ via OpenRouter (no dedicated) | ❌ | ❌ | ❌ |
 | Dispatcher routing | ✅ dedicated dispatcher model | ❌ | ❌ | ❌ | ❌ | ❌ |
 
----
+***
 
 ### 3. Runtime & Frontend
 
@@ -126,12 +126,12 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 |--|--|--|--|--|--|--|
 | TUI | ✅ bubbletea | ✅ `openclaw tui` | ✅ React Ink | ✅ ink | ✅ | ✅ |
 | CLI | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| HTTP API / Web UI | ✅ gin | ❌ | ✅ Web Dashboard | ❌ | ❌ | ❌ |
+| HTTP API / Web UI | ✅ gin | ✅ dashboard / webchat | ✅ Web Dashboard | ❌ | ❌ | ❌ |
 | Daemon mode | ✅ native `--daemon` | ✅ systemd/launchd | ✅ gateway daemon | ❌ | ❌ | ❌ |
-| Session Canvas (HTML+SSE) | ✅ `update_page` | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Named sessions | ✅ | ❌ | ✅ session picker | ❌ | ❌ | ❌ |
+| Session Canvas (HTML+SSE) | ✅ `render_page` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Named sessions | ✅ | ⚠️ workspaces / per-agent sessions | ✅ session picker | ❌ | ❌ | ❌ |
 
----
+***
 
 ### 4. Chat Platform Integration
 
@@ -140,18 +140,18 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | Telegram | ✅ native daemon | ✅ native daemon | ✅ native daemon | ⚠️ Channels MCP (requires active session) | ❌ | ❌ |
 | Discord | ✅ native daemon | ✅ native daemon | ✅ native daemon | ⚠️ Channels MCP (requires active session) | ❌ | ❌ |
 | iMessage | ❌ | ✅ BlueBubbles | ✅ BlueBubbles | ⚠️ Channels MCP (macOS only) | ❌ | ❌ |
-| LINE | ⚠️ alpha ([linebot branch](https://github.com/pardnchiu/Agenvoy/tree/linebot)) | ❌ | ❌ | ❌ | ❌ | ❌ |
-| WhatsApp / Slack | ❌ | ✅ 50+ platforms | ✅ 20+ platforms | ❌ | ❌ | ❌ |
+| LINE | ⚠️ alpha ([linebot branch](https://github.com/pardnchiu/Agenvoy/tree/linebot)) | ✅ | ✅ | ❌ | ❌ | ❌ |
+| WhatsApp / Slack | ❌ | ✅ 24+ platforms | ✅ 24+ platforms | ❌ | ❌ | ❌ |
 | Always-on receiving (no session needed) | ✅ daemon | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Cross-session send (any session → chat) | ✅ `send_to_telegram_chat` / `send_to_discord_channel` | ❌ | ❌ | ❌ | ❌ | ❌ |
-| First-contact verification | ✅ 6-digit OTP (crypto/rand) | ✅ pairing code (dmPolicy: pairing) | ❌ (allowlist only) | ❌ | ❌ | ❌ |
-| Native platform UI (buttons / menus / modals) | ✅ inline keyboard / select menu / modal | ⚠️ text-based options | ⚠️ text-based options | ❌ | ❌ | ❌ |
+| Cross-session send (any session → chat) | ✅ `send_to_chatbot` | ❌ | ⚠️ `send_message` tool | ❌ | ❌ | ❌ |
+| First-contact verification | ✅ 6-digit OTP (crypto/rand) | ✅ pairing code (dmPolicy: pairing) | ✅ pairing code (`gateway/pairing.py`) | ❌ | ❌ | ❌ |
+| Native platform UI (buttons / menus / modals) | ✅ inline keyboard / select menu / modal | ⚠️ reactions / text-based | ⚠️ text-based options | ❌ | ❌ | ❌ |
 
 > **Platform layer**: Agenvoy's Telegram and Discord integrations are both built on [pardnchiu/go-bot](https://github.com/pardnchiu/go-bot), independently maintained and open source. go-bot encapsulates the bot protocol details for both platforms — Agenvoy only implements business logic, while the platform API layer is entirely handled by go-bot.
 
-> **Key difference**: Claude Code Channels requires an active session. OpenClaw and Hermes have daemons but their in-chat confirmations are text-based. Agenvoy uses native platform UI — Telegram inline keyboards and Discord select menus / modals. Additionally, Agenvoy's cross-session send tools allow any session type (CLI, TUI, HTTP, scheduled script) to push messages to Telegram/Discord — no competitor exposes this capability.
+> **Key difference**: Claude Code Channels requires an active session. OpenClaw and Hermes have daemons but their in-chat confirmations are largely text/reaction-based. Agenvoy uses native platform UI — Telegram inline keyboards and Discord select menus / modals. Additionally, Agenvoy's cross-session send tools let any session type (CLI, TUI, HTTP, scheduled script) push to a specific Telegram/Discord chat — a capability competitors expose only partially (e.g. Hermes' `send_message` within its own gateway scope).
 
----
+***
 
 ### 5. Telegram Feature Comparison
 
@@ -164,12 +164,12 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | Voice-to-text (STT) | ✅ Gemini, 14 formats | ✅ Whisper/Gemini | ✅ faster-whisper (local) | ❌ |
 | Tool confirm (interactive) | ✅ native inline keyboard | ⚠️ text approval prompt | ⚠️ text options | ❌ |
 | ask_user (picker) | ✅ native button/modal | ⚠️ `/models` picker | ⚠️ text options, up to 4 | ❌ |
-| Format reference (lazy-load tool) | ✅ `telegram_format` | ❌ | ❌ | ❌ |
+| Format reference (lazy-load tool) | ✅ `format_chatbot` | ❌ | ❌ | ❌ |
 | Scheduler output push | ✅ | ✅ | ✅ | ❌ |
-| Cross-session push (from any session) | ✅ `send_to_telegram_chat` | ❌ | ❌ | ❌ |
+| Cross-session push (from any session) | ✅ `send_to_chatbot` | ❌ | ⚠️ `send_message` tool | ❌ |
 | Offline receiving (daemon) | ✅ | ✅ | ✅ | ❌ |
 
----
+***
 
 ### 6. Discord Feature Comparison
 
@@ -181,13 +181,13 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | Receive user attachments | ✅ photo/doc/voice/video | ✅ | ✅ | ❌ |
 | Tool confirm (interactive) | ✅ select menu button | ✅ `/model` picker | ⚠️ text options | ❌ |
 | ask_user (modal) | ✅ select/multi-select/modal | ⚠️ limited | ⚠️ text options | ❌ |
-| Format reference (lazy-load tool) | ✅ `discord_format` | ❌ | ❌ | ❌ |
+| Format reference (lazy-load tool) | ✅ `format_chatbot` | ❌ | ❌ | ❌ |
 | Guild mention guard | ✅ | ✅ | ✅ | ❌ |
 | Discord Markdown aware | ✅ full spec as lazy-load tool | ⚠️ partial | ⚠️ partial | ❌ |
 | Character limit aware | ✅ 1600 char hard limit in prompt | ❌ | ❌ | ❌ |
-| Cross-session push (from any session) | ✅ `send_to_discord_channel` | ❌ | ❌ | ❌ |
+| Cross-session push (from any session) | ✅ `send_to_chatbot` | ❌ | ⚠️ `send_message` tool | ❌ |
 
----
+***
 
 ### 7. Scheduler
 
@@ -203,7 +203,7 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 
 > **Scheduler layer**: Agenvoy's scheduler is built on [pardnchiu/go-scheduler](https://github.com/pardnchiu/go-scheduler), a self-maintained ecosystem package providing cron expression parsing, one-shot tasks, fsnotify hot-reload, and full output routing back to chat platforms.
 
----
+***
 
 ### 8. Tool Ecosystem
 
@@ -212,33 +212,33 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | MCP support | ✅ client | ✅ client | ✅ client + server | ✅ client | ❌ | ✅ client |
 | Custom tools (script-tool-add) | ✅ AI-generated | ❌ | ✅ auto-creates skill | ❌ | ❌ | ❌ |
 | API tool discovery (search-api → add) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Tool registry (publish + install across machines) | ✅ pkg.agenvoy.com (Cloudflare Worker + R2 + D1, email verification + downgrade guard) | ❌ | ⚠️ agentskills.io (skills only) | ❌ | ❌ | ❌ |
+| Tool registry (publish + install across machines) | ✅ pkg.agenvoy.com (Cloudflare Worker + R2 + D1, email verification + downgrade guard) | ⚠️ ClawHub (skills + plugins) | ⚠️ agentskills.io (skills only) | ❌ | ❌ | ❌ |
 | Skill system | ✅ SKILL.md lazy-load | ✅ SKILL.md 5400+ community | ✅ SKILL.md agentskills.io | ✅ CLAUDE.md | ❌ | ❌ |
-| Format reference as lazy-load tool | ✅ `telegram_format` / `discord_format` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Format reference as lazy-load tool | ✅ `format_chatbot` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Document RAG (external knowledge base) | ✅ KuraDB (in-process vector + semantic/keyword) | ❌ (conversation memory only) | ❌ (conversation memory only) | ❌ | ❌ | ❌ |
 | Media transcription STT | ✅ Gemini, 14 formats | ✅ Whisper/Gemini | ✅ faster-whisper (local) | ❌ | ❌ | ❌ |
 | TTS voice output | ✅ Gemini TTS | ✅ ElevenLabs/Hume/MS | ✅ Edge TTS/ElevenLabs/OpenAI | ❌ | ❌ | ❌ |
-| Computer use / browser | ✅ go-rod + Playwright MCP | ✅ Chrome CDP | ✅ Playwright (Chromium/Firefox) | ✅ beta | ❌ | ❌ |
+| Computer use / browser | ✅ go-rod + Playwright MCP | ✅ Chrome CDP | ✅ browser CDP + computer-use (cua-driver) | ✅ beta | ❌ | ❌ |
 
 > **Tool sandbox architecture**: Agenvoy's Python/JavaScript/API custom tool interfaces are built on the [pardnchiu/go-faas](https://github.com/pardnchiu/go-faas) (Function as a Service) concept. Each AI-generated tool runs as an isolated function unit with its own lifecycle and security boundary. This is the only FaaS-level sandbox design for tool extension among all compared products.
 
----
+***
 
 ### 9. Memory System
 
 | | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
 |--|--|--|--|--|--|--|
 | Instruction file system | ✅ SKILL.md | ✅ SKILL.md | ✅ SKILL.md | ✅ CLAUDE.md | ❌ | ❌ |
-| Conversation history search | ✅ Three-tier: context + ToriiDB vector + SQLite FTS5 | ✅ SQLite vector | ✅ SQLite FTS5 | ❌ | ❌ | ❌ |
+| Conversation history search | ✅ Three-tier: context + ToriiDB vector + SQLite FTS5 | ✅ LanceDB vector | ✅ SQLite FTS5 | ❌ | ❌ | ❌ |
 | External document RAG (native, in-process) | ✅ KuraDB (semantic + keyword, OpenAI embeddings) | ❌ (use MCP) | ❌ (use MCP) | ❌ | ❌ | ❌ |
 | Error memory | ✅ ToriiDB | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Action log | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Long-term persistent memory | ✅ SQLite full-text archive (dual-write, never loses data) | ✅ Wiki-style MEMORY.md | ✅ MEMORY.md + USER.md | ⚠️ CLAUDE.md manual | ❌ | ❌ |
 | Cross-session memory | ⚠️ session-isolated by default, extensible with external memory | ✅ built-in cross-session | ✅ built-in cross-session | ⚠️ session-isolated by default, extensible with external memory | ⚠️ session-isolated by default | ⚠️ session-isolated by default |
 
-> **Three-tier conversation memory**: (1) **Context** — latest 16 messages loaded directly into LLM context + periodic summary; (2) **ToriiDB** — self-developed embedded vector database ([pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)) for semantic similarity search on recent conversations; (3) **SQLite FTS5** — full-text archive via [pardnchiu/go-sqlite](https://github.com/pardnchiu/go-sqlite), dual-written on every message, never loses data even after history compaction. `search_conversation_history` routes by `mode`: `semantic` → ToriiDB, `keyword` → SQLite FTS5.
+> **Three-tier conversation memory**: (1) **Context** — latest 16 messages loaded directly into LLM context + periodic summary; (2) **ToriiDB** — self-developed embedded vector database ([pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)) for semantic similarity search on recent conversations; (3) **SQLite FTS5** — full-text archive via [pardnchiu/go-sqlite](https://github.com/pardnchiu/go-sqlite), dual-written on every message, never loses data even after history compaction. `search_chat_history` routes by `mode`: `semantic` → ToriiDB, `keyword` → SQLite FTS5.
 
----
+***
 
 ### 10. Dependencies & Deployment
 
@@ -249,149 +249,32 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | Runtime | Go (static binary) | Node.js | Python | Node.js | Node.js + Rust | Node.js |
 | Deployment | **single binary** | npm install | pip + docker/VPS | npm install | npm install | npm install |
 
----
+***
 
 ### Where Agenvoy Stands
 
 | Dimension | Detail |
 |-----------|--------|
 | **Clear advantages** | Single Go binary, 12 dependencies, self-maintained ecosystem (pardnchiu universe), dispatcher model routing, Session Canvas, native platform UI (real buttons/modals), OTP verification, cross-session send to Telegram/Discord from any session, API tool auto-discovery, format reference as lazy-load tool, local-only scheduler (no cloud required) |
-| **On par with competitors** | Telegram/Discord daemon, TTS/STT, scheduler output push, Skill system, MCP, browser automation, inbound attachment handling |
-| **Where competitors lead** | OpenClaw 50+ platforms, Hermes MCP server mode, Hermes local STT, OpenClaw/Hermes built-in cross-session memory, Claude Code Computer Use beta, Claude Code cloud cron/task |
+| **On par with competitors** | Telegram/Discord daemon, TTS/STT, scheduler output push, Skill system, MCP, browser automation, inbound attachment handling, provider coverage (compat layer covers any OpenAI-compatible endpoint) |
+| **Where competitors lead** | Hermes context compression engine (token-budget compaction: head preservation + middle-turn summarization + iterative recompression, vs Agenvoy's reactive trim-only), OpenClaw 24+ platforms, Hermes MCP server mode, Hermes local STT, OpenClaw/Hermes built-in cross-session memory, Claude Code Computer Use beta, Claude Code cloud cron/task |
 | **Codex CLI** | Fewest features — CLI + TUI + OpenAI OAuth only, no daemon, no chat platforms, no scheduler |
-
-</details>
-
-<details>
-<summary><strong>CLI commands</strong></summary>
-
-> Run as `agen <sub>`. `make <sub>` wrappers exist in the repo Makefile for development.
-
-| Command | Description |
-|---|---|
-| `agen` | Attach interactive TUI; forks daemon (HTTP + Discord + Telegram + scheduler + summary cron) if not running. |
-| `agen cli <input>` | One-shot agent run; every tool call asks for confirmation. |
-| `agen run <input>` | One-shot agent run; auto-approves every tool call. |
-| `agen stop` | Stop the running daemon (SIGTERM 5s grace → SIGKILL → clear `runtime.uid`). |
-| `agen update` | Fetch latest release, rebuild, stop daemon — re-attach to load the new binary. |
-| `agen model {add\|remove\|list\|dispatcher\|reasoning}` | Manage providers / worker models, pick dispatcher model, set reasoning level. |
-| `agen mcp {list\|add\|remove}` | Manage MCP servers (stdio / HTTP) across global and per-session scope. |
-| `agen session {new\|switch\|config} [name]` | Manage CLI sessions; bare `switch` / `config` opens an interactive picker. |
-
-</details>
-
-<details>
-<summary><strong>TUI slash commands</strong></summary>
-
-> Available inside `agen`'s TUI prompt. Type `/` to filter; popup commands transition cleanly back to the prompt.
-
-| Command | Description |
-|---|---|
-| `/switch` | Switch active session via picker (current session pre-selected). |
-| `/new [name]` | Create a new session; optional name pins it to the registry. Name is conflict-checked against existing sessions; abort on duplicate. |
-| `/bot` | Edit the current session's bot via two sequential popups: name textfield (conflict-checked against other sessions; abort on conflict) → description textarea (`Ctrl+S` confirms, `Enter` newline, `Esc` cancels). |
-| `/model [global\|session]` | Scope picker; `global` → `[add, remove]` (registry), `session` → pick a configured model. Inline arg skips the scope popup. |
-| `/mcp [add\|remove]` | Action picker; `add` walks a chained popup form (name → transport → command/args/env or url/headers → scope → optional session pick), `remove` lists configured servers across global and session scopes. Restart the daemon to apply changes. Inline arg skips the action popup. |
-| `/dispatcher-model` | Pick the dispatcher model from `cfg.Models` via popup. No inline arg. |
-| `/summary-model` | Pick the model used for summary generation from `cfg.Models` (or `(use dispatcher)` to fall back). No inline arg. |
-| `/reasoning [global\|session]` | Pick `low` / `medium` / `high` for the dispatcher (global) or the active session. Inline arg skips the scope popup. |
-| `/discord [enable\|disable]` | Toggle Discord bot connection (token entry, verification, keychain write, daemon reload all happen in-TUI). Inline arg switches without the popup. |
-| `/telegram [enable\|disable]` | Toggle Telegram bot connection (same in-TUI popup chain as `/discord`; first chat to message the bot must pass an in-chat verification code). Inline arg switches without the popup. |
-| `/kuradb [enable\|disable]` | Toggle KuraDB RAG service. `enable` runs `install.sh` via `tea.ExecProcess` (sudo TTY handed back), prompts for `OPENAI_API_KEY` (stored in keychain), and writes `kuradb_enabled=true` — daemon picks up via fsnotify and spawns the child + endpoint file. `disable` removes `/usr/local/bin/kura` and clears the flag. Inline arg switches without the popup. |
-| `/cron [add\|remove\|edit]` | Manage recurring schedules. `add` opens a multiline requirement textarea → dispatches `/scheduler-skill-creator <requirement>` (asks for missing when/what via `ask_user`). `remove` lists crons → confirm popup → `runtime.RemoveCron` + trashes the skill dir. `edit` lists crons → requirement textarea → agent picks `patch_cron` or rewrites the SKILL.md body. Inline arg skips the action popup. |
-| `/task [add\|remove\|edit]` | Manage one-shot scheduled tasks (mirrors `/cron`; uses `add_task` / `patch_task` / `remove_task`). Picker shows `<YYYY-MM-DD HH:MM>  <skill>`. |
-| `/sched-<name>` | Execute an existing scheduler skill body inline (manual trigger). Surfaced at the bottom of the `/` picker after regular skills; label rendered in warn-purple to mark it as an invocation. The dispatch wraps the body with an explicit "execute, do NOT activate scheduler-skill-creator" preamble. |
-| `/mode [cli\|web]` | Switch between `cli` (TUI rendering) and `web` (browser page). Inline arg switches without the popup. |
-| `/update` | Confirm popup → `agen stop && agen update` via `tea.ExecProcess` → quit TUI. |
-| `/history` | Reload visible transcript — clear screen, reprint header, render the last 100 entries from the session's `action.log`. |
-| `/log` | Open the raw `action.log` in `$PAGER` (fallback `less -Rf +G`, jumps to bottom). `\x1F` markers are expanded back to newlines for readability. |
-| `/clear` | Clear the current window display only — like terminal `clear`; conversation memory is untouched. |
-| `/exit`, `/quit` | Exit TUI (daemon keeps running; re-attach with `agen`). |
-
-</details>
-
-<details>
-<summary><strong>Built-in tools</strong></summary>
-
-> Tools auto-load on demand; stub names appear first, full schema activates on use. See [Tools wiki](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Tools.md) for parameters and routing.
-
-| Tool | Description |
-|---|---|
-| **File** |  |
-| `read_file` | Read a text, PDF, DOCX, PPTX, CSV/TSV, or image file. |
-| `write_file` | Write content to a file, overwriting if it exists. |
-| `patch_file` | Replace an exact string match inside a file. |
-| `list_files` | List directory entries; `recursive=true` walks subtree files. |
-| `glob_files` | Find files matching a glob pattern within a directory. |
-| `search_files` | Search file contents by RE2 regex within a directory. |
-| **Web** |  |
-| `fetch_page` | Fetch a web page and return its content as Markdown. |
-| `save_page_to_file` | Fetch a web page and save its content to a local file. |
-| `search_web` | Search the web via DuckDuckGo Lite; returns top 10 results. |
-| `fetch_google_rss` | Search Google News RSS and return article titles, summaries, links. |
-| `transcribe_media` | Transcribe a local audio / video file (ogg, mp3, wav, m4a, flac, aac, mp4, mov, webm, mpeg, 3gp, …) up to 20 MiB. *(gemini needed)* |
-| `send_http_request` | Send an HTTP request to a specified URL. |
-| **Shell** |  |
-| `run_command` | Run a binary with argv; returns combined stdout/stderr. |
-| **Render** |  |
-| `update_page` | Overwrite the rendered HTML page for the current session; tabs auto-reload. |
-| **Channel** |  |
-| `list_telegram_chat` | List authorized Telegram chats (id + name). *(telegram needed)* |
-| `send_to_telegram_chat` | Send an HTML-formatted message to an authorized Telegram chat by chat_id. *(telegram needed)* |
-| `telegram_format` | Return the Telegram HTML formatting reference (allowed tags, escape rules, file/voice markers). *(telegram needed)* |
-| `list_discord_channel` | List authorized Discord channels (id + name). *(discord needed)* |
-| `send_to_discord_channel` | Send a markdown-formatted message to an authorized Discord channel by channel_id. *(discord needed)* |
-| `discord_format` | Return the Discord markdown formatting reference (allowed markdown, special tokens, file/voice markers). *(discord needed)* |
-| **Calc** |  |
-| `calculate` | Evaluate a mathematical expression and return the exact result. |
-| **Discovery** |  |
-| `list_tools` | List all currently available built-in and dynamically loaded tools. |
-| `search_tools` | Search available tools by keyword and inject matches into the request. |
-| `activate_skill` | Fetch a skill's reference material by exact name. |
-| **Interactive** |  |
-| `ask_user` | Ask the user one or more questions and return their answers. |
-| `store_secret` | Prompt the user for a secret with masked input and persist to the system keychain. |
-| **Memory** |  |
-| `search_conversation_history` | Search the session's past messages by keyword and semantic similarity. |
-| `search_error_memory` | Semantically search past tool-error records; hits refresh 3-month TTL. |
-| `read_error_memory` | Fetch a prior tool-error record by hash. |
-| `remember_error` | Persist a tool-error record for future retrieval. |
-| **RAG (KuraDB)** |  |
-| `rag_list_db` | List available KuraDB databases (e.g. notes, inbox, code). *(kuradb needed)* |
-| `rag_search_keyword` | Keyword search a KuraDB database via gse tokenization. *(kuradb needed)* |
-| `rag_search_semantic` | Semantic search a KuraDB database via OpenAI embeddings. *(kuradb needed)* |
-| **Agent** |  |
-| `invoke_subagent` | Run a subtask in an internal subagent session and return its final text. |
-| `invoke_external_agent` | Invoke one external CLI agent (codex / copilot / claude / gemini) for a second opinion. |
-| `cross_review_with_external_agents` | Cross-review a completed result across all available external agents in parallel. |
-| `review_result` | Review a result against the original input and return issues and improvements. |
-| **Scheduler** |  |
-| `add_task` | Bind an existing scheduler skill to fire once at a specific time (`+5m` / `HH:MM` / `YYYY-MM-DD HH:MM` / RFC3339). |
-| `add_cron` | Bind an existing scheduler skill to a recurring 5-field cron expression. |
-| `patch_task` / `patch_cron` | Reschedule an existing task / cron by skill name (changes only the time, leaves the bound skill body untouched). |
-| `remove_task` / `remove_cron` | Cancel a scheduled task / cron by skill name; the bound scheduler skill dir is moved to `.Trash/`. |
-| **Skill Git** |  |
-| `skill_git_commit` / `skill_git_log` / `skill_git_rollback` | Commit, list, or roll back the `~/.config/agenvoy/skills` git history. |
-
-Dynamic tool families (auto-registered, not listed above): `mcp__<server>__<tool>` from configured MCP servers, `api_<name>` from `extensions/apis/*.json`, `script_<name>` from `extensions/scripts/<name>/`.
 
 </details>
 
 ## Wiki
 
-| English | 中文 |
-|---|---|
-| [Getting Started](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Getting-Started.md) | [新手入門](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Getting-Started.zh.md) |
-| [Architecture](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Architecture.md) | [架構](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Architecture.zh.md) |
-| [Core Concepts](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Core-Concepts.md) | [核心概念](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Core-Concepts.zh.md) |
-| [Providers](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Providers.md) | [Provider 設定](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Providers.zh.md) |
-| [Tools](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Tools.md) | [工具系統](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Tools.zh.md) |
-| [Memory System](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Memory-System.md) | [記憶系統](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Memory-System.zh.md) |
-| [Skill System](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Skill-System.md) | [Skill 系統](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Skill-System.zh.md) |
-| [MCP Integration](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/MCP-Integration.md) | [MCP 整合](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/MCP-Integration.zh.md) |
-| [Security and Sandbox](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Security-and-Sandbox.md) | [安全與沙箱](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Security-and-Sandbox.zh.md) |
-| [CLI Reference](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/CLI-Reference.md) | [命令列參考](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/CLI-Reference.zh.md) |
-| [Configuration](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Configuration.md) | [設定檔](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Configuration.zh.md) |
+- [Getting Started](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Getting-Started.md)
+- [Architecture](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Architecture.md)
+- [Core Concepts](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Core-Concepts.md)
+- [Providers](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Providers.md)
+- [Tools](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Tools.md)
+- [Memory System](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Memory-System.md)
+- [Skill System](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Skill-System.md)
+- [MCP Integration](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/MCP-Integration.md)
+- [Security and Sandbox](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Security-and-Sandbox.md)
+- [CLI Reference](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/CLI-Reference.md)
+- [Configuration](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Configuration.md)
 
 ## License
 
@@ -429,3 +312,8 @@ When the curve trends up — that's the signal we want to see. Hit ★ to push i
 ***
 
 ©️ 2026 [邱敬幃 Pardn Chiu](https://www.linkedin.com/in/pardnchiu)
+
+***
+
+> [!NOTE]
+> This document was auto-generated by Claude after reading the full source code.
