@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	go_browser "github.com/pardnchiu/go-browser"
+
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
@@ -65,22 +67,21 @@ type data struct {
 	Description string `json:"description,omitempty"`
 }
 
-func handler(ctx context.Context, query, timeRange string) (string, error) {
-	hash := sha256.Sum256([]byte(query + "|" + string(timeRange)))
+func handler(ctx context.Context, query, timeRange string, cdp bool) (string, error) {
+	hash := sha256.Sum256([]byte(query + "|" + timeRange))
 	cacheKey := "search:" + hex.EncodeToString(hash[:])
 	db := torii.DB(torii.DBToolCache)
 	if entry, ok := db.Get(cacheKey); ok {
 		return entry.Value(), nil
 	}
 
-	if err := reserveSlot(ctx); err != nil {
-		return "", err
+	if !cdp {
+		if err := reserveSlot(ctx); err != nil {
+			return "", err
+		}
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	items, err := fetch(ctx, query, timeRange)
+	items, err := fetch(ctx, query, timeRange, cdp)
 	if err != nil {
 		return "", err
 	}
@@ -150,7 +151,11 @@ func primeCookies(ctx context.Context, headers map[string]string) {
 	resp.Body.Close()
 }
 
-func fetch(ctx context.Context, query, timeRange string) (string, error) {
+func fetch(ctx context.Context, query, timeRange string, cdp bool) (string, error) {
+	if cdp {
+		return fetchCDP(ctx, query, timeRange)
+	}
+
 	headers := browserHeaders()
 	primeCookies(ctx, headers)
 
@@ -160,19 +165,60 @@ func fetch(ctx context.Context, query, timeRange string) (string, error) {
 		"df": timeRange,
 	}
 
-	html, status, err := go_pkg_http.POST[string](ctx, ddgClient, ddgPath, headers, params, "form")
+	httpCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	html, status, err := go_pkg_http.POST[string](httpCtx, ddgClient, ddgPath, headers, params, "form")
 	if err != nil {
 		return "", err
 	}
 	if status == http.StatusAccepted {
-		encoded := url.QueryEscape(query)
-		return "", fmt.Errorf("search_web rate-limited (HTTP 202); stop calling search_web this turn, use fetch_page with URL https://html.duckduckgo.com/html/?q=%s instead", encoded)
+		slog.Warn("search_web HTTP 202, fallback to CDP")
+		result, err := fetchCDP(ctx, query, timeRange)
+		if err != nil {
+			return "", err
+		}
+		return "[rate-limited] use cdp=true for remaining search_web calls this turn.\n" + result, nil
 	}
 	if status != http.StatusOK {
 		return "", fmt.Errorf("status %d", status)
 	}
 
 	items := parse(html)
+	if len(items) == 0 {
+		return "[]", nil
+	}
+
+	items = filterLinks(ctx, items)
+	if len(items) == 0 {
+		return "[]", nil
+	}
+
+	raw, err := json.Marshal(items)
+	if err != nil {
+		return "", fmt.Errorf("json.Marshal: %w", err)
+	}
+	return string(raw), nil
+}
+
+func fetchCDP(ctx context.Context, query, timeRange string) (string, error) {
+	params := url.Values{}
+	params.Set("q", query)
+	params.Set("kl", "tw-tzh")
+	if timeRange != "" {
+		params.Set("df", timeRange)
+	}
+	link := ddgPath + "?" + params.Encode()
+
+	result, err := go_browser.Fetch(ctx, link, 15*time.Second, &go_browser.Option{
+		MaxLength: 200 << 10,
+		Type:      go_browser.TypeHTML,
+	})
+	if err != nil {
+		return "", fmt.Errorf("go_browser.Fetch: %w", err)
+	}
+
+	items := parse(result.Content)
 	if len(items) == 0 {
 		return "[]", nil
 	}
