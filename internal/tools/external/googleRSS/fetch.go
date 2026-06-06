@@ -93,6 +93,11 @@ func fetch(ctx context.Context, reqPath string) (string, error) {
 		items = items[:10]
 	}
 
+	items = resolveLinks(ctx, items)
+	if len(items) == 0 {
+		return "[]", nil
+	}
+
 	raw, err := json.Marshal(items)
 	if err != nil {
 		return "", fmt.Errorf("json.Marshal: %w", err)
@@ -122,4 +127,51 @@ func hash(parts ...string) uint64 {
 		io.WriteString(h, p)
 	}
 	return h.Sum64()
+}
+
+func resolveLinks(ctx context.Context, items []item) []item {
+	type result struct {
+		idx    int
+		url    string
+		status int
+	}
+	ch := make(chan result, len(items))
+	for i, it := range items {
+		go func(idx int, link string) {
+			u, s := resolveLink(ctx, link)
+			ch <- result{idx: idx, url: u, status: s}
+		}(i, it.Link)
+	}
+	resolved := make(map[int]result, len(items))
+	for range items {
+		r := <-ch
+		resolved[r.idx] = r
+	}
+	filtered := make([]item, 0, len(items))
+	for i, it := range items {
+		r := resolved[i]
+		if r.status >= 400 {
+			continue
+		}
+		it.Link = r.url
+		filtered = append(filtered, it)
+	}
+	return filtered
+}
+
+func resolveLink(ctx context.Context, link string) (string, int) {
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, link, nil)
+	if err != nil {
+		return link, 0
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+	resp, err := client.Do(req)
+	if err != nil {
+		return link, 0
+	}
+	resp.Body.Close()
+	return resp.Request.URL.String(), resp.StatusCode
 }

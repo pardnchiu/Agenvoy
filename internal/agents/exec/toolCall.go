@@ -84,8 +84,9 @@ type toolSlot struct {
 	isImage  bool
 	imageURL string
 
-	result  string
-	execErr string
+	result     string
+	execErr    string
+	execErrVal error
 }
 
 func toolNeedsConfirmation(exec *toolTypes.Executor, toolName, toolArgs string, turnAllowAll bool) bool {
@@ -122,7 +123,14 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		if idx := strings.Index(toolName, "<|"); idx != -1 {
 			toolName = toolName[:idx]
 		}
-		hash := fmt.Sprintf("%v|%v", toolName, toolArg)
+		hashArg := toolArg
+		var argMap map[string]any
+		if json.Unmarshal([]byte(toolArg), &argMap) == nil {
+			if normalized, err := json.Marshal(argMap); err == nil {
+				hashArg = string(normalized)
+			}
+		}
+		hash := fmt.Sprintf("%v|%v", toolName, hashArg)
 
 		slots[i] = toolSlot{
 			idx:   i,
@@ -230,7 +238,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			toolFailCount[hash]++
 			var content string
 			if toolFailCount[hash] >= filesystem.MaxRetry {
-				content = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次以相同參數觸發 validator 錯誤: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", toolName, toolFailCount[hash], earlyErr, toolName)
+				content = fmt.Sprintf("[ABORT] tool=%s failed %d consecutive times with the same args: %s\nSwitch to a different tool or significantly change the arguments. Do not call %s again.", toolName, toolFailCount[hash], earlyErr, toolName)
 			} else {
 				content = fmt.Sprintf("tool=%s dropped (incomplete args: %s). Do NOT re-issue the same call; if still needed, pivot to a different tool or provide the missing fields from context in a differently-shaped call.", toolName, earlyErr)
 			}
@@ -332,17 +340,24 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		}
 
 		result := s.result
+		historyResult := ""
 		if s.execErr != "" {
-			toolFailCount[s.hash]++
-			if toolFailCount[s.hash] >= filesystem.MaxRetry {
-				result = fmt.Sprintf("[ABORT] tool=%s 連續 %d 次失敗: %s\n請改用其他工具或顯著調整參數，不要使用相同工具 %s。", s.name, toolFailCount[s.hash], s.execErr, s.name)
+			if errors.Is(s.execErrVal, toolTypes.ToolError) {
+				result = fmt.Sprintf("[BLOCKED] %s: %s", s.name, s.execErr)
+				historyResult = fmt.Sprintf("[BLOCKED] %s — do not retry this call", s.name)
 			} else {
-				if hint := memory.Search(ctx, s.name, s.execErr, 3); hint != "" {
-					result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nrelated_errors: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", s.name, s.execErr, hint, s.name)
+				toolFailCount[s.hash]++
+				if toolFailCount[s.hash] >= filesystem.MaxRetry {
+					result = fmt.Sprintf("[ABORT] tool=%s failed %d consecutive times: %s\nSwitch to a different tool or significantly change the arguments. Do not call %s again.", s.name, toolFailCount[s.hash], s.execErr, s.name)
+					historyResult = fmt.Sprintf("[ABORT] %s", s.name)
 				} else {
-					result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", s.name, s.execErr, s.name)
+					if hint := memory.Search(ctx, s.name, s.execErr, 3); hint != "" {
+						result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nrelated_errors: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", s.name, s.execErr, hint, s.name)
+					} else {
+						result = fmt.Sprintf("[RETRY_REQUIRED] tool=%s failed: %s\nFix the arguments and call %s again immediately. Do NOT output this message as your response.", s.name, s.execErr, s.name)
+					}
+					delete(alreadyCall, s.hash)
 				}
-				delete(alreadyCall, s.hash)
 			}
 		} else if result == "" || result == "no data" {
 			if hint := memory.Search(ctx, s.name, "no data", 3); hint != "" {
@@ -374,7 +389,15 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 			ToolCallID: s.id,
 		}
 		sessionData.Tools = append(sessionData.Tools, toolMsg)
-		sessionData.ToolHistories = append(sessionData.ToolHistories, toolMsg)
+		if historyResult != "" {
+			sessionData.ToolHistories = append(sessionData.ToolHistories, agentTypes.Message{
+				Role:       "tool",
+				Content:    historyResult,
+				ToolCallID: s.id,
+			})
+		} else {
+			sessionData.ToolHistories = append(sessionData.ToolHistories, toolMsg)
+		}
 
 		switch s.name {
 		case "cross_review_with_external_agents":
@@ -423,6 +446,7 @@ func runToolExec(ctx context.Context, exec *toolTypes.Executor, s *toolSlot, eve
 			Text:     err.Error(),
 		}
 		s.execErr = err.Error()
+		s.execErrVal = err
 		go interactive.AppendToolResult(exec.SessionID, exec.PendingTask, interactive.ToolResult{
 			Name:   s.name,
 			ID:     s.id,

@@ -193,8 +193,8 @@ func handler(ctx context.Context, link string, keepLinks, sameSession bool, outT
 		link = parsed.String()
 	}
 
-	if hit, status, title := isSkipped(link); hit {
-		return skippedMessage(link, status, title), nil
+	if hit, status, _ := isSkipped(link); hit {
+		return "", fmt.Errorf("blocked (status %d): %w", status, toolTypes.ToolError)
 	}
 
 	cacheVariant := fmt.Sprintf("|type=%d|links=%t|session=%t", outType, keepLinks, sameSession)
@@ -236,25 +236,25 @@ func handler(ctx context.Context, link string, keepLinks, sameSession bool, outT
 				title = result.Title
 			}
 			addToSkippedMap(link, status, title)
-			return skippedMessage(link, status, title), nil
+			return "", fmt.Errorf("fetch failed (status %d): %w", status, toolTypes.ToolError)
 		}
 
 		if isPage4xx(result.Title, result.FinalURL) {
 			addToSkippedMap(link, 404, result.Title)
-			return skippedMessage(link, 404, result.Title), nil
+			return "", fmt.Errorf("fetch failed (status 404): %w", toolTypes.ToolError)
 		}
 
 		switch outType {
 		case go_browser.TypeMarkdown:
 			if strings.TrimSpace(result.Content) == "" {
 				addToSkippedMap(link, 0, result.Title)
-				return skippedMessage(link, 0, result.Title), nil
+				return "", fmt.Errorf("empty content: %w", toolTypes.ToolError)
 			}
 			full = buildFrontmatter(result)
 		case go_browser.TypeJSON:
 			if len(result.Tree) == 0 {
 				addToSkippedMap(link, 0, result.Title)
-				return skippedMessage(link, 0, result.Title), nil
+				return "", fmt.Errorf("empty content: %w", toolTypes.ToolError)
 			}
 			raw, err := json.Marshal(result.Tree)
 			if err != nil {
@@ -264,7 +264,7 @@ func handler(ctx context.Context, link string, keepLinks, sameSession bool, outT
 		default:
 			if strings.TrimSpace(result.Content) == "" {
 				addToSkippedMap(link, 0, result.Title)
-				return skippedMessage(link, 0, result.Title), nil
+				return "", fmt.Errorf("empty content: %w", toolTypes.ToolError)
 			}
 			full = result.Content
 		}

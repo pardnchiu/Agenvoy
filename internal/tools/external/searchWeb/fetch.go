@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
+	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
@@ -104,7 +105,7 @@ func fetch(ctx context.Context, query, timeRange string) (string, error) {
 		return "", err
 	}
 	if status != http.StatusOK {
-		return "", fmt.Errorf("status %d", status)
+		return "", fmt.Errorf("status %d: %w", status, toolTypes.ToolError)
 	}
 
 	items := parse(html)
