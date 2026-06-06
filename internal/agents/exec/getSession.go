@@ -89,7 +89,7 @@ func GetSession(ctx context.Context, execData ExecData) (*agentTypes.AgentSessio
 	session.Histories = oldHistory
 	session.BaseLen = len(oldHistory)
 
-	session.SystemPrompts = BuildSystemPrompts(execData.WorkDir, execData.ExtraSystemPrompt, scanner, overrideID, execData.AllowAll, execData.WebMode, execData.ExcludeSkills)
+	session.SystemPrompts = BuildSystemPrompts(execData.WorkDir, execData.ExtraSystemPrompt, scanner, overrideID, execData.AllowAll, execData.ExcludeSkills)
 	if summary := summary.GetPrompt(overrideID, OldestMessageTime(maxHistory)); summary != "" {
 		session.SummaryMessage = agentTypes.Message{Role: "assistant", Content: summary}
 	}

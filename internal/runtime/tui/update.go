@@ -162,7 +162,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.runStartedAt = time.Now()
 			t.runTarget = targetSession(content, t.currentSessionID)
 
-			go runExec(t.ctx, content, false, t.cwd, t.currentSessionID, "", t.mode == webMode)
+			go runExec(t.ctx, content, false, t.cwd, t.currentSessionID, "")
 
 			cmds = append(cmds,
 				tea.Println(messageBlock(content)),
@@ -223,7 +223,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.running = true
 		t.runStartedAt = time.Now()
 		t.runTarget = targetSession(content, t.currentSessionID)
-		go runExec(t.ctx, content, t.allowAll, t.cwd, t.currentSessionID, "", t.mode == webMode)
+		go runExec(t.ctx, content, t.allowAll, t.cwd, t.currentSessionID, "")
 		return t, tea.Batch(
 			tea.Println(messageBlock(content)),
 			t.spinner.Tick,
@@ -271,9 +271,6 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ExecProcessDone:
 		return t, nil
-
-	case ModeSelect:
-		return t.runModeSelect(msg.mode)
 
 	case SessionSelect:
 		next, cmd := t.runCommandSwitch(msg.id)
@@ -944,13 +941,13 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t, tea.Sequence(loadSessionTail(msg.id)...)
 
 	case tailLine:
-		if t.mode != cliMode || t.onceCall {
+		if t.onceCall {
 			return t, nil
 		}
 		return t, tea.Println(msg.line)
 
 	case Log:
-		if t.mode != cliMode || t.onceCall {
+		if t.onceCall {
 			return t, nil
 		}
 		return t, tea.Println(renderLogLine(msg))
@@ -996,6 +993,6 @@ func (t TUI) startResume(msg ResumeExec) (tea.Model, tea.Cmd) {
 	t.running = true
 	t.runStartedAt = time.Now()
 	t.runTarget = ""
-	go runExec(t.ctx, msg.Content, false, t.cwd, sid, msg.PendingTask, t.mode == webMode)
+	go runExec(t.ctx, msg.Content, false, t.cwd, sid, msg.PendingTask)
 	return t, t.spinner.Tick
 }

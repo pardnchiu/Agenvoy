@@ -25,6 +25,9 @@
 
 ***
 
+> [!NOTE]
+> 2026/06/07 — Web mode 已從本分支移除，後續開發遷移至 `jarvis-alpha` 分支。
+
 ## Agenvoy 是什麼
 
 計算力定義了計算機時代能做什麼。AI 時代，這個角色屬於生成能力與自然語言的自動化——跟計算力一樣，它需要你掌控的基礎建設。
@@ -264,17 +267,17 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 ## Wiki
 
-- [新手入門](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Getting-Started.zh.md)
-- [架構](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Architecture.zh.md)
-- [核心概念](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Core-Concepts.zh.md)
-- [Provider 設定](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Providers.zh.md)
-- [工具系統](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Tools.zh.md)
-- [記憶系統](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Memory-System.zh.md)
-- [Skill 系統](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Skill-System.zh.md)
-- [MCP 整合](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/MCP-Integration.zh.md)
-- [安全與沙箱](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Security-and-Sandbox.zh.md)
-- [命令列參考](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/CLI-Reference.zh.md)
-- [設定檔](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Configuration.zh.md)
+- [新手入門](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Getting-Started.zh.md)
+- [架構](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Architecture.zh.md)
+- [核心概念](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Core-Concepts.zh.md)
+- [Provider 設定](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Providers.zh.md)
+- [工具系統](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Tools.zh.md)
+- [記憶系統](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Memory-System.zh.md)
+- [Skill 系統](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Skill-System.zh.md)
+- [MCP 整合](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/MCP-Integration.zh.md)
+- [安全與沙箱](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Security-and-Sandbox.zh.md)
+- [命令列參考](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/CLI-Reference.zh.md)
+- [設定檔](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Configuration.zh.md)
 
 ## License
 

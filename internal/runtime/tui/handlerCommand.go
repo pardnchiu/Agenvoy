@@ -93,9 +93,6 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 	case "/update":
 		return t.commandUpdate()
 
-	case "/mode":
-		return t.commandMode(parts)
-
 	case "/history":
 		return t.commandHistory()
 

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
@@ -93,6 +94,11 @@ func fetch(ctx context.Context, reqPath string) (string, error) {
 		items = items[:10]
 	}
 
+	items = resolveLinks(ctx, items)
+	if len(items) == 0 {
+		return "[]", nil
+	}
+
 	raw, err := json.Marshal(items)
 	if err != nil {
 		return "", fmt.Errorf("json.Marshal: %w", err)
@@ -122,4 +128,21 @@ func hash(parts ...string) uint64 {
 		io.WriteString(h, p)
 	}
 	return h.Sum64()
+}
+
+func resolveLinks(ctx context.Context, items []item) []item {
+	urls := make([]string, len(items))
+	for i, it := range items {
+		urls[i] = it.Link
+	}
+	checks := utils.CheckLinks(ctx, urls)
+	filtered := make([]item, 0, len(items))
+	for i, it := range items {
+		if checks[i].Status >= 400 {
+			continue
+		}
+		it.Link = checks[i].URL
+		filtered = append(filtered, it)
+	}
+	return filtered
 }

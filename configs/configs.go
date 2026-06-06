@@ -21,9 +21,6 @@ var SummaryContext string
 //go:embed prompts/system_prompt.md
 var SystemPrompt string
 
-//go:embed prompts/webmode_system_prompt.md
-var WebModeSystemPrompt string
-
 //go:embed prompts/chatcompletions_system_prompt.md
 var ChatCompletionsSystemPrompt string
 
@@ -62,6 +59,9 @@ var WhiteList []byte
 //go:embed jsons/net_white_list.json
 var NetWhiteList []byte
 
+//go:embed jsons/tui_tools.json
+var TUITools []byte
+
 // * Providers
 
 //go:embed jsons/providors/claude.json
@@ -87,6 +87,3 @@ var NvidiaModels []byte
 
 //go:embed jsons/providors/deepseek.json
 var DeepseekModels []byte
-
-//go:embed webmode.html
-var WebmodeHTML string

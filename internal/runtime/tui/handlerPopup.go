@@ -101,9 +101,6 @@ func (t TUI) updateOAuthPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			p.oauth.cancel()
 		}
 	case tea.KeyEnter:
-		if p.oauth.url != "" {
-			_ = openBrowser(p.oauth.url)
-		}
 	}
 	return t, nil
 }

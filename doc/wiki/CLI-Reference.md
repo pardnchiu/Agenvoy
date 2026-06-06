@@ -98,7 +98,6 @@ The TUI auto-tails the active session's `action.log` (foreign-process writes pre
 | `/task [add\|remove\|edit]` | One-shot tasks (mirrors `/cron`; uses `add_schedule` / `patch_schedule` / `remove_schedule` with `target=task`). Session-scoped picker. |
 | `/sched-<name>` | Surfaced in the slash picker after regular skills (warn-purple label) — picks an existing scheduler skill and dispatches its body with an explicit "execute, do NOT activate scheduler-skill-creator" preamble. Filtered by session — only skills bound to the current session's task/cron entries appear. |
 | `/allow-skill` | Two-level popup (scope → skill list with `✓` mark) for marking a skill as always-allow. Writes to `<workDir>/.agenvoy/allow_skill` (project) or `~/.config/agenvoy/allow_skill` (global). Always-allow upgrades `AllowAll=true` at exec start — bypasses the confirm gate but sandbox / validator still apply. **Dangerous**: only mark skills you trust. |
-| `/mode [cli\|web]` | TUI rendering vs browser page (browser page is the `render_page` session canvas served by REST). |
 | `/history` | Reload visible transcript — clear screen, reprint header, render last 100 entries from session `action.log`. |
 | `/log` | Open raw `action.log` in `$PAGER` (fallback `less -Rf +G`, jumps to bottom). `\x1F` markers expanded to newlines for readability. |
 | `/cmd` | Run a shell command directly in the current workDir (`sh -c`). |

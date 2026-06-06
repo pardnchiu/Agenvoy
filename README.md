@@ -25,6 +25,9 @@
 
 ***
 
+> [!NOTE]
+> 2026/06/07 — Web mode has been removed from this branch. Development continues on the `jarvis-alpha` branch.
+
 ## What is Agenvoy
 
 Computing power defined what you could build in the computer age. In the AI era, that role belongs to generative capability and natural-language automation — and like computing power, it needs infrastructure you own.
@@ -264,17 +267,17 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 
 ## Wiki
 
-- [Getting Started](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Getting-Started.md)
-- [Architecture](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Architecture.md)
-- [Core Concepts](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Core-Concepts.md)
-- [Providers](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Providers.md)
-- [Tools](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Tools.md)
-- [Memory System](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Memory-System.md)
-- [Skill System](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Skill-System.md)
-- [MCP Integration](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/MCP-Integration.md)
-- [Security and Sandbox](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Security-and-Sandbox.md)
-- [CLI Reference](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/CLI-Reference.md)
-- [Configuration](https://github.com/pardnchiu/Agenvoy/blob/master/wiki/Configuration.md)
+- [Getting Started](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Getting-Started.md)
+- [Architecture](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Architecture.md)
+- [Core Concepts](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Core-Concepts.md)
+- [Providers](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Providers.md)
+- [Tools](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Tools.md)
+- [Memory System](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Memory-System.md)
+- [Skill System](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Skill-System.md)
+- [MCP Integration](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/MCP-Integration.md)
+- [Security and Sandbox](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Security-and-Sandbox.md)
+- [CLI Reference](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/CLI-Reference.md)
+- [Configuration](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Configuration.md)
 
 ## License
 

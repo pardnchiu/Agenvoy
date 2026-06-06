@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -12,16 +13,10 @@ import (
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
-const systemDefaultMarker = "[system-default]"
-
-type result struct {
-	Name          string `json:"name"`
-	Description   string `json:"description"`
-	SystemDefault bool   `json:"system_default,omitempty"`
-}
-
-func isSystemDefault(description string) bool {
-	return strings.HasPrefix(strings.TrimSpace(description), systemDefaultMarker)
+type ToolMatch struct {
+	Injected   []Tool `json:"injected"`
+	Query      string `json:"query"`
+	TotalTools int    `json:"total_tools"`
 }
 
 func registSearchTools() {
@@ -29,57 +24,58 @@ func registSearchTools() {
 		Name:        "search_tools",
 		AlwaysAllow: true,
 		AlwaysLoad:  true,
-		Description: "Search tool registry by keyword (or 'select:<name>' for exact activation) and inject schemas. Use when a capability isn't loaded. Prefer unmarked tools (mcp__* > api_* > script_*) over [system-default] for same intent.",
+		Concurrent:  true,
+		Description: `
+Search tool registry by keyword (or 'select:<name>' for exact activation) and inject schemas.
+Use when a capability isn't loaded.
+Prefer unmarked tools (mcp__* > script_* > api_*) over [system-default] for same intent.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"query": map[string]any{
 					"type":        "string",
-					"description": `Search query. Use "select:<name>" to activate tools directly (comma-separated for multiple); use space-separated keywords for fuzzy match; prefix "+" marks a required term (e.g. "+file read").`,
-				},
-				"max_results": map[string]any{
-					"type":        "integer",
-					"description": "Maximum number of results to return. Defaults to 5.",
-					"default":     5,
+					"description": `Keywords (all must match), or "select:<name>,<name>" for exact activation.`,
 				},
 			},
 			"required": []string{"query"},
 		},
 		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+			if len(args) < 1 {
+				return "", fmt.Errorf("arguments are required")
+			}
+
 			var params struct {
-				Query      string `json:"query"`
-				MaxResults int    `json:"max_results"`
+				Query string `json:"query"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
-			}
-			if params.MaxResults <= 0 {
-				params.MaxResults = 5
+				return "", fmt.Errorf("json Unmarshal: %w", err)
 			}
 
-			var matches []result
-			if after, ok := strings.CutPrefix(params.Query, "select:"); ok {
-				matches = selectByName(after, e.AllTools)
+			var matches []Tool
+			if name, ok := strings.CutPrefix(params.Query, "select:"); ok {
+				matches = matchName(name, e.AllTools)
 			} else {
-				matches = searchByKeyword(params.Query, e.AllTools, params.MaxResults)
+				matches = matchKeyword(params.Query, e.AllTools)
 			}
 
-			fullSchema := make(map[string]toolTypes.Tool, len(e.AllTools))
-			for _, t := range e.AllTools {
-				fullSchema[t.Function.Name] = t
+			toolDic := make(map[string]toolTypes.Tool, len(e.AllTools))
+			for _, tool := range e.AllTools {
+				toolDic[tool.Function.Name] = tool
 			}
 
-			for _, m := range matches {
-				if e.ExcludeTools[m.Name] {
+			for _, match := range matches {
+				if e.ExcludeTools[match.Name] {
 					continue
 				}
-				full, ok := fullSchema[m.Name]
+
+				full, ok := toolDic[match.Name]
 				if !ok {
 					continue
 				}
+
 				replaced := false
 				for i, t := range e.Tools {
-					if t.Function.Name == m.Name {
+					if t.Function.Name == match.Name {
 						e.Tools[i] = full
 						replaced = true
 						break
@@ -88,49 +84,71 @@ func registSearchTools() {
 				if !replaced {
 					e.Tools = append(e.Tools, full)
 				}
-				delete(e.StubTools, m.Name)
+				delete(e.StubTools, match.Name)
 			}
 
-			type output struct {
-				Injected   []result `json:"injected"`
-				Query      string   `json:"query"`
-				TotalTools int      `json:"total_tools"`
-			}
-			raw, err := json.Marshal(output{
+			raw, err := json.Marshal(ToolMatch{
 				Injected:   matches,
 				Query:      params.Query,
 				TotalTools: len(e.AllTools),
 			})
 			if err != nil {
-				return "", fmt.Errorf("json.Marshal: %w", err)
+				return "", fmt.Errorf("json Marshal: %w", err)
 			}
 			return string(raw), nil
 		},
 	})
 }
 
-func searchByKeyword(query string, tools []toolTypes.Tool, maxResults int) []result {
-	queryLower := strings.ToLower(strings.TrimSpace(query))
-	rawTerms := strings.Fields(queryLower)
+func matchName(names string, tools []toolTypes.Tool) []Tool {
+	dic := make(map[string]toolTypes.Tool, len(tools))
+	for _, tool := range tools {
+		dic[strings.ToLower(tool.Function.Name)] = tool
+	}
 
-	var required, optional []string
-	for _, t := range rawTerms {
-		if strings.HasPrefix(t, "+") && len(t) > 1 {
-			required = append(required, t[1:])
-		} else {
-			optional = append(optional, t)
+	var list []Tool
+	dicSeen := make(map[string]bool)
+	for name := range strings.SplitSeq(names, ",") {
+		name := strings.ToLower(strings.TrimSpace(name))
+		if name == "" {
+			continue
+		}
+		if tool, ok := dic[name]; ok && !dicSeen[name] {
+			dicSeen[name] = true
+			list = append(list, Tool{
+				Name:          tool.Function.Name,
+				Description:   tool.Function.Description,
+				SystemDefault: strings.HasPrefix(strings.TrimSpace(tool.Function.Description), systemDefaultMarker),
+			})
 		}
 	}
+	return list
+}
 
-	scoringTerms := rawTerms
-	if len(required) > 0 {
-		scoringTerms = append(required, optional...)
+func toolCategory(name string) string {
+	switch {
+	case strings.HasPrefix(name, "mcp__"):
+		return "mcp"
+	case strings.HasPrefix(name, "api_"):
+		return "api"
+	case strings.HasPrefix(name, "script_"):
+		return "script"
+	default:
+		return "sys"
+	}
+}
+
+func matchKeyword(query string, tools []toolTypes.Tool) []Tool {
+	query = strings.ToLower(strings.TrimSpace(query))
+	terms := strings.Fields(query)
+	if len(terms) == 0 {
+		return nil
 	}
 
-	patterns := make(map[string]*regexp.Regexp, len(scoringTerms))
-	for _, term := range scoringTerms {
-		if _, ok := patterns[term]; !ok {
-			patterns[term] = regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(term) + `\b`)
+	dic := make(map[string]*regexp.Regexp, len(terms))
+	for _, term := range terms {
+		if _, ok := dic[term]; !ok {
+			dic[term] = regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(term) + `\b`)
 		}
 	}
 
@@ -140,125 +158,83 @@ func searchByKeyword(query string, tools []toolTypes.Tool, maxResults int) []res
 	}
 
 	var candidates []scored
-
 	for _, tool := range tools {
-		nameLower := strings.ToLower(tool.Function.Name)
-		descLower := strings.ToLower(tool.Function.Description)
+		name := strings.ToLower(tool.Function.Name)
+		desc := strings.ToLower(tool.Function.Description)
 
-		if nameLower == queryLower {
+		if name == query {
 			candidates = append(candidates, scored{tool, 9999})
 			continue
 		}
 
-		parts := strings.Split(nameLower, "_")
-
-		if len(required) > 0 {
-			ok := true
-			for _, req := range required {
-				pat := patterns[req]
-				partMatch := false
-				for _, p := range parts {
-					if p == req || strings.Contains(p, req) {
-						partMatch = true
-						break
-					}
-				}
-				if !partMatch && !pat.MatchString(descLower) {
-					ok = false
-					break
-				}
-			}
-			if !ok {
-				continue
-			}
-		}
+		parts := strings.Split(name, "_")
 
 		score := 0
-		for _, term := range scoringTerms {
-			pat := patterns[term]
+		allHit := true
+		for _, term := range terms {
+			pat := dic[term]
+			hit := false
 
-			exactPart := false
-			for _, p := range parts {
-				if p == term {
-					exactPart = true
-					break
-				}
-			}
-			if exactPart {
+			if slices.Contains(parts, term) {
 				score += 10
+				hit = true
+			}
+			if hit {
 				continue
 			}
 
-			partialPart := false
 			for _, p := range parts {
 				if strings.Contains(p, term) {
-					partialPart = true
+					score += 5
+					hit = true
 					break
 				}
 			}
-			if partialPart {
-				score += 5
+			if hit {
 				continue
 			}
 
-			if strings.Contains(nameLower, term) {
+			if strings.Contains(name, term) {
 				score += 3
-				continue
-			}
-
-			if pat.MatchString(descLower) {
+				hit = true
+			} else if pat.MatchString(desc) {
 				score += 4
+				hit = true
+			}
+
+			if !hit {
+				allHit = false
+				break
 			}
 		}
 
-		if score > 0 {
-			if isSystemDefault(tool.Function.Description) {
-				score--
-			}
-			candidates = append(candidates, scored{tool, score})
+		if !allHit {
+			continue
 		}
+
+		if strings.HasPrefix(strings.TrimSpace(tool.Function.Description), systemDefaultMarker) {
+			score--
+		}
+		candidates = append(candidates, scored{tool, score})
 	}
 
 	sort.Slice(candidates, func(i, j int) bool {
 		return candidates[i].score > candidates[j].score
 	})
 
-	if maxResults > 0 && len(candidates) > maxResults {
-		candidates = candidates[:maxResults]
-	}
-
-	out := make([]result, 0, len(candidates))
-	for _, c := range candidates {
-		out = append(out, result{
-			Name:          c.tool.Function.Name,
-			Description:   c.tool.Function.Description,
-			SystemDefault: isSystemDefault(c.tool.Function.Description),
-		})
-	}
-	return out
-}
-
-func selectByName(names string, tools []toolTypes.Tool) []result {
-	idx := make(map[string]toolTypes.Tool, len(tools))
-	for _, t := range tools {
-		idx[strings.ToLower(t.Function.Name)] = t
-	}
-
-	var out []result
-	seen := make(map[string]bool)
-	for _, raw := range strings.Split(names, ",") {
-		name := strings.ToLower(strings.TrimSpace(raw))
-		if name == "" {
+	dicCount := map[string]int{}
+	var list []Tool
+	for _, candidate := range candidates {
+		name := toolCategory(candidate.tool.Function.Name)
+		if dicCount[name] >= 5 {
 			continue
 		}
-		if t, ok := idx[name]; ok && !seen[name] {
-			seen[name] = true
-			out = append(out, result{
-				Name:          t.Function.Name,
-				Description:   t.Function.Description,
-				SystemDefault: isSystemDefault(t.Function.Description),
-			})
-		}
+		dicCount[name]++
+		list = append(list, Tool{
+			Name:          candidate.tool.Function.Name,
+			Description:   candidate.tool.Function.Description,
+			SystemDefault: strings.HasPrefix(strings.TrimSpace(candidate.tool.Function.Description), systemDefaultMarker),
+		})
 	}
-	return out
+	return list
 }

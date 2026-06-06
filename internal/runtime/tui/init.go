@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
@@ -26,34 +25,9 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
-type TUIMode int
-
 const (
-	cliMode TUIMode = iota
-	webMode
-
 	historyLoad = 100
 )
-
-func (m TUIMode) String() string {
-	switch m {
-	case cliMode:
-		return "cli"
-	case webMode:
-		return "web"
-	}
-	return "unknow"
-}
-
-func (m TUIMode) color() lipgloss.Color {
-	switch m {
-	case cliMode:
-		return colSystem
-	case webMode:
-		return colOk
-	}
-	return colError
-}
 
 type TUI struct {
 	ctx      context.Context
@@ -80,8 +54,6 @@ type TUI struct {
 	activity           string
 	lastIn             int
 	lastOut            int
-
-	mode TUIMode
 
 	tailCancel context.CancelFunc
 
@@ -231,7 +203,6 @@ func newModel(ctx context.Context, userInput string, onceCall, allowAll bool) TU
 		httpStatus:         getHttpStatus(),
 		discordStatus:      getDiscordStatus(),
 		telegramStatus:     getTelegramStatus(),
-		mode:               cliMode,
 		width:              80,
 		currentSessionID:   currentSID,
 		currentSessionName: currentName,

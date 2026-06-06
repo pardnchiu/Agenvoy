@@ -33,7 +33,6 @@ import (
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
-	toolSearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -105,7 +104,6 @@ type ExecData struct {
 	ExcludeSkills     []string
 	ExtraSystemPrompt string
 	AllowAll          bool
-	WebMode           bool
 	PendingTask       string
 }
 
@@ -287,9 +285,13 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 	limit := filesystem.MaxSkillIterations
 
+	allAgents := make([]agentTypes.Agent, 0, 1+len(data.FallbackAgents))
+	allAgents = append(allAgents, data.Agent)
+	allAgents = append(allAgents, data.FallbackAgents...)
+	fallbackRound := 0
+
 	var usage agentTypes.Usage
 	alreadyCall := make(map[string]string)
-	toolFailCount := make(map[string]int)
 	turnAllowAll := false
 	emptyCount := 0
 	trimmedToolCalls := false
@@ -332,7 +334,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				if utils.CheckAgentEndpointAlive(ctx, data.Agent, HealthCheckTimeout) {
 					continue
 				}
-				next, nextName := pickHealthyFallback(ctx, &data.FallbackAgents)
+				next, nextName := nextAgent(ctx, &data.FallbackAgents, allAgents, &fallbackRound)
 				if next == nil {
 					watchdog.Stop()
 					cancelSend()
@@ -407,7 +409,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				slog.String("session", session.ID),
 				slog.String("error", err.Error()),
 				slog.Bool("timeout", isTimeout))
-			next, nextName := pickHealthyFallback(ctx, &data.FallbackAgents)
+			next, nextName := nextAgent(ctx, &data.FallbackAgents, allAgents, &fallbackRound)
 			if next != nil {
 				slog.Warn("data.Agent.Send failed, switching model",
 					slog.String("session", session.ID),
@@ -457,7 +459,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 		choice := resp.Choices[0]
 		if len(choice.Message.ToolCalls) > 0 {
-			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, toolFailCount, &turnAllowAll)
+			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, &turnAllowAll)
 			if err != nil {
 				if errors.Is(err, ErrAskUserInterrupted) {
 					if !session.Stateless && len(session.Tools) > 0 {
@@ -649,7 +651,7 @@ func assignBindingSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 		ID:   id,
 		Type: "function",
 	}
-	call.Function.Name = toolSearcher.ToolName
+	call.Function.Name = "run_skill"
 	call.Function.Arguments = string(argsJSON)
 
 	session.ToolHistories = append(session.ToolHistories,
@@ -659,7 +661,7 @@ func assignBindingSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 		},
 		agentTypes.Message{
 			Role:       "tool",
-			Content:    toolSearcher.RenderActivation(s),
+			Content:    renderActivation(s),
 			ToolCallID: id,
 		},
 	)
@@ -670,7 +672,7 @@ func assignBindingSkill(session *agentTypes.AgentSession, s *skill.Skill) {
 	)
 	session.SystemPrompts = append(session.SystemPrompts, agentTypes.Message{
 		Role:    "system",
-		Content: bindingHeader + toolSearcher.RenderActivation(s),
+		Content: bindingHeader + renderActivation(s),
 	})
 }
 

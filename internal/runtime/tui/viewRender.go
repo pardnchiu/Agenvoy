@@ -274,9 +274,6 @@ func printLog(name, raw, cwd string) string {
 			return s
 		}
 
-	case "render_page":
-		return ""
-
 	case "search_files":
 		dir := strings.TrimSpace(pick("dir"))
 		if dir == "" {

@@ -147,6 +147,27 @@ func SelectAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes.
 	return registry.Fallback
 }
 
+const maxFallbackRounds = 3
+
+func nextAgent(ctx context.Context, fallbacks *[]agentTypes.Agent, allAgents []agentTypes.Agent, round *int) (agentTypes.Agent, string) {
+	for {
+		agent, name := pickHealthyFallback(ctx, fallbacks)
+		if agent != nil {
+			return agent, name
+		}
+		*round++
+		if *round >= maxFallbackRounds {
+			return nil, ""
+		}
+		slog.Warn("all agents failed, starting retry round",
+			slog.Int("round", *round+1),
+			slog.Int("max", maxFallbackRounds))
+		rebuilt := make([]agentTypes.Agent, len(allAgents))
+		copy(rebuilt, allAgents)
+		*fallbacks = rebuilt
+	}
+}
+
 func pickHealthyFallback(ctx context.Context, fallbacks *[]agentTypes.Agent) (agentTypes.Agent, string) {
 	for len(*fallbacks) > 0 {
 		cand := (*fallbacks)[0]
