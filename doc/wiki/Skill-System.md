@@ -122,6 +122,38 @@ The preamble blocks weaker models from misreading the SKILL.md-shaped body as a 
 
 One-shot tasks are removed and the skill dir is trashed after a successful fire.
 
+## Self-improvement (auto-fix on failure)
+
+When a skill execution encounters tool errors, Agenvoy automatically rewrites the skill definition to prevent the same failure next time. This is a closed-loop evolution cycle — no user intervention required.
+
+### How it works
+
+1. **Trace collection** — during `Execute`, every tool call result is recorded as an `execStep{Tool, Error}`. If the skill's session used `run_skill` to activate additional skills, those are tracked too.
+2. **Trigger** — at the end of `Execute` (in the defer), if the trace contains at least one error, `postSkillImprove` runs synchronously for each activated skill.
+3. **Improvement agent** — `postSkillImprove` loads the built-in `improve-skill` skill body, builds a stateless session with the execution trace, and runs a full `Execute` loop (2 min timeout, always-allow, no interactive tools).
+4. **Auto-commit** — on success, `skill.AutoCommit(ctx, "improve", skillName)` commits the rewritten files under `~/.config/agenvoy/skills/` to git, creating a versioned history of improvements.
+
+### What the improve-skill fixes
+
+| Issue detected | Action |
+|---|---|
+| Wrong tool name in SKILL.md (e.g. `Bash` instead of `run_command`) | Replace with correct registered tool name |
+| Step caused repeated failures | Add fallback strategy or remove the step |
+| Unclear instruction caused LLM miscall | Rewrite with more precise wording |
+| Step ordering caused dependency failure | Reorder steps |
+| Typos or grammar issues | Fix while preserving original language |
+
+### Constraints
+
+- The improvement agent cannot use interactive tools (`ask_user`), web tools (`search_web`, `fetch_page`), media tools (`generate_image`), or agent-orchestration tools
+- Only file read/write and command execution are available — the agent reads the current skill, analyzes the trace, and writes corrected files
+- Improvements are scoped to the skill's own files; system prompts and runtime code are never modified
+- Each improvement run is a stateless session with no conversation history
+
+### Rollback
+
+All skill changes are git-tracked. Use the `skill_git_log` and `skill_git_rollback` tools to inspect history or revert an unwanted auto-fix.
+
 ***
 
 > [!NOTE]

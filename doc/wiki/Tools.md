@@ -123,13 +123,15 @@ Marker regex + dedupe + `os.Stat` filtering lives in `internal/utils/utils.go`. 
 | `search_tools` | Search the registered tool catalog |
 | `list_tools` | List all registered tools |
 
-### Skill versioning
+### Skill versioning & self-improvement
 
 | Tool | Description |
 |---|---|
 | `skill_git_commit` | Commit all changes under `~/.config/agenvoy/skills` to git |
 | `skill_git_log` | List the git commit history for `~/.config/agenvoy/skills` |
 | `skill_git_rollback` | Roll back `~/.config/agenvoy/skills` to a specified git commit |
+
+**Self-improvement loop**: when a skill execution produces tool errors (wrong tool name, failed steps), `postSkillImprove` runs synchronously at the end of `Execute`. It loads the built-in `improve-skill` definition, feeds it the execution trace, rewrites the faulty SKILL.md/scripts, and auto-commits the fix. See [Skill System § Self-improvement](Skill-System.md#self-improvement-auto-fix-on-failure) for the full lifecycle.
 
 ### System
 
@@ -153,6 +155,25 @@ The daemon-side runtime (`internal/runtime/scheduler.go`) watches `~/.config/age
 TUI surfaces three slash commands for managing schedules: `/cron`, `/task` (add / remove / edit), and `/sched-<name>` (manual trigger of an existing scheduler skill body). See [CLI Reference](CLI-Reference) for popup flows.
 
 ## Tool extension
+
+### Auto-generation (Capability Gap → create → run)
+
+When the user's request needs live external data (weather, currency, stock, geocoding, translation, etc.) and no existing tool covers it, the agent **creates the tool on the spot, then runs it to answer**. This is the "teach the agent to build its own tools" flow — no programming required.
+
+The system prompt's `§ Capability Gap` section drives the sequence:
+
+| Step | Action |
+|---|---|
+| 1. Find a suitable API | `api_public_api_list(type=category)` → pick relevant categories → select best candidate (prefer no-auth + HTTPS) → `fetch_page` the docs |
+| 2. Create the script tool | `mkdir` the tool dir → `write_file` a `tool.json` (name, description, schema) + `script.py` (stdin JSON → HTTP call → stdout JSON) |
+| 3. Run and answer | Pipe the user query into the new script; if it fails, fix and retry (max 3) |
+
+After creation, the tool persists at `~/.config/agenvoy/tools/script/<name>/` and is available in all future sessions. Auth-required APIs are handled via `store_secret` + keychain integration in the generated script.
+
+Key constraints:
+- The agent must never answer with raw `send_http_request` or inline `python3 -c`; it must write a reusable script to disk
+- `fetch_page` is allowed only for reading API documentation, not for fetching answer data
+- The generated `tool.json` uses `"always_allow": true` so the tool runs without confirmation on subsequent calls
 
 ### Script tools (`script_*`)
 
