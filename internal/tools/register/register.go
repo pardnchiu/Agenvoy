@@ -32,6 +32,7 @@ type Def struct {
 var handlerMap = map[string]Handler{}
 var groupHandlerMap = map[string]GroupHandler{}
 var defList []toolTypes.Tool
+var builtinNames []string
 var readOnlySet = map[string]bool{}
 var alwaysLoadSet = map[string]bool{}
 var concurrentSet = map[string]bool{}
@@ -61,6 +62,7 @@ func Regist(d Def) {
 	}
 	handlerMap[d.Name] = d.Handler
 	defList = append(defList, tool)
+	builtinNames = append(builtinNames, d.Name)
 	if d.AlwaysAllow {
 		readOnlySet[d.Name] = true
 	}
@@ -123,6 +125,12 @@ func IsConcurrent(name string) bool {
 
 func IsFireAndForget(name string) bool {
 	return fireAndForgetSet[name]
+}
+
+func BuiltinNames() []string {
+	dst := make([]string, len(builtinNames))
+	copy(dst, builtinNames)
+	return dst
 }
 
 func JSON() []byte {

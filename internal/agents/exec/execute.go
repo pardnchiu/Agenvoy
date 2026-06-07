@@ -117,8 +117,36 @@ type (
 func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSession, events chan<- agentTypes.Event, allowAll bool) error {
 	executeStart := time.Now()
 
-	if !allowAll && data.Skill != nil && strings.TrimSpace(data.Skill.Content) != "" && allowSkill.Match(data.WorkDir, data.Skill.Name) {
-		allowAll = true
+	usedSkills := make(map[string]*skill.Skill)
+	var execTrace []execStep
+	if data.Skill != nil {
+		usedSkills[data.Skill.Name] = data.Skill
+	}
+	defer func() {
+		if len(usedSkills) == 0 {
+			return
+		}
+		hasError := false
+		for _, step := range execTrace {
+			if step.Error != "" {
+				hasError = true
+				break
+			}
+		}
+		if !hasError {
+			return
+		}
+		trace := make([]execStep, len(execTrace))
+		copy(trace, execTrace)
+		for _, s := range usedSkills {
+			postSkillImprove(s, trace)
+		}
+	}()
+
+	if !allowAll {
+		if data.Skill != nil && strings.TrimSpace(data.Skill.Content) != "" && allowSkill.Match(data.WorkDir, data.Skill.Name) {
+			allowAll = true
+		}
 	}
 
 	ctx = context.WithValue(ctx, allowAllCtxKey{}, allowAll)
@@ -459,6 +487,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 
 		choice := resp.Choices[0]
 		if len(choice.Message.ToolCalls) > 0 {
+			toolsBefore := len(session.Tools)
 			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, &turnAllowAll)
 			if err != nil {
 				if errors.Is(err, ErrAskUserInterrupted) {
@@ -471,6 +500,41 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 				}
 				keepPending = false
 				return err
+			}
+			for _, msg := range session.Tools[toolsBefore:] {
+				content, _ := msg.Content.(string)
+				step := execStep{Tool: extractToolName(content)}
+				if strings.Contains(content, " failed: ") {
+					if _, after, ok := strings.Cut(content, " failed: "); ok {
+						step.Error = after
+					}
+				}
+				if step.Tool != "" {
+					execTrace = append(execTrace, step)
+				}
+			}
+			if scanner != nil && scanner.Skills != nil {
+				for _, tc := range choice.Message.ToolCalls {
+					if strings.TrimSpace(tc.Function.Name) != "run_skill" {
+						continue
+					}
+					var p struct {
+						Skill string `json:"skill"`
+					}
+					if json.Unmarshal([]byte(tc.Function.Arguments), &p) != nil {
+						continue
+					}
+					name := strings.TrimSpace(p.Skill)
+					if name == "" {
+						continue
+					}
+					if _, ok := usedSkills[name]; ok {
+						continue
+					}
+					if s, ok := scanner.Skills.ByName[name]; ok && s != nil {
+						usedSkills[name] = s
+					}
+				}
 			}
 			continue
 		}
@@ -567,6 +631,17 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	}
 	events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 	return nil
+}
+
+func extractToolName(content string) string {
+	if len(content) < 3 || content[0] != '[' {
+		return ""
+	}
+	end := strings.Index(content, "]")
+	if end < 0 {
+		return ""
+	}
+	return content[1:end]
 }
 
 func actionError(emptyCount *int, events chan<- agentTypes.Event) bool {

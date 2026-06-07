@@ -38,12 +38,12 @@ func NewSkillScanner() *SkillScanner {
 	paths := []string{
 		filepath.Join(cwd, ".claude", "skills"),
 		filepath.Join(cwd, ".skills"),
+		filesystem.SystemSkillsDir,
 		filesystem.SkillsDir,
 		filepath.Join(home, ".claude", "skills"),
 		filepath.Join(home, ".codex", "skills"),
 		filepath.Join(home, ".opencode", "skills"),
 		filepath.Join(home, ".openai", "skills"),
-		filesystem.SystemSkillsDir,
 	}
 
 	scanner := &SkillScanner{paths: paths}

@@ -16,7 +16,8 @@ func registRememberError() {
 		Name:          "remember_error",
 		AlwaysAllow:   true,
 		FireAndForget: true,
-		Description:   "Persist tool-error record to cross-session memory. Auto-call when: resolved via non-trivial fallback → resolved; strategy confirmed non-working → failed; 3 approaches exhausted → abandoned. Skip trivial typos, 1st-retry fixes, transient errors.",
+		Concurrent:    true,
+		Description:   "Persist tool-error record to cross-session memory. Auto-call when: resolved via non-trivial fallback → resolved; strategy confirmed non-working → failed; 3 approaches exhausted → abandoned. Skip trivial typos, 1st-retry fixes, transient errors. Always batch with other tool calls in the same turn; only call alone when no other tool call remains.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

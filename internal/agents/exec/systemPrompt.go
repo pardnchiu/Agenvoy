@@ -13,6 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 )
 
 func BuildSystemPrompts(workDir, extraSystemPrompt string, scanner *runtime.SkillScanner, sessionID string, allowAll bool, excludeSkills []string) []agentTypes.Message {
@@ -141,6 +142,15 @@ func renderActivation(s *skill.Skill) string {
 	if ext := strings.TrimSpace(configs.SkillExecution); ext != "" {
 		b.WriteString(ext)
 		b.WriteString("\n\n---\n\n")
+	}
+	if names := toolRegister.BuiltinNames(); len(names) > 0 {
+		b.WriteString("### Built-in Tools\n\n")
+		for _, name := range names {
+			b.WriteString("- `")
+			b.WriteString(name)
+			b.WriteString("`\n")
+		}
+		b.WriteString("\n---\n\n")
 	}
 	b.WriteString(s.ResolvedContent())
 	return b.String()

@@ -20,7 +20,7 @@ func Register() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "search_web",
 		AlwaysAllow: true,
-		Description: "[system-default] Web search. Mandatory for named entities and facts that drift (versions, prices, dates, news). Training knowledge is untrusted for proper nouns and post-cutoff topics. URL given → use fetch_page instead. Results are snippets only — call fetch_page for full content.",
+		Description: "[system-default] Web search via DuckDuckGo. Use for named entities, post-cutoff facts, versions, prices, news. Results are snippets. cdp=true forces browser fetch, auto-enabled on 202.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -34,6 +34,11 @@ func Register() {
 					"default":     "w",
 					"enum":        timeRanges,
 				},
+				"cdp": map[string]any{
+					"type":        "boolean",
+					"description": "Force browser-based fetch via Chrome DevTools Protocol instead of HTTP POST. Slower but bypasses HTTP rate-limiting. Automatically enabled on HTTP 202.",
+					"default":     false,
+				},
 			},
 			"required": []string{
 				"query",
@@ -43,6 +48,7 @@ func Register() {
 			var params struct {
 				Query     string `json:"query"`
 				TimeRange string `json:"time_range"`
+				CDP       bool   `json:"cdp"`
 				// avoid small agent like 4.1 be stupid to call with different parameter name
 				Q string `json:"q"`
 			}
@@ -64,7 +70,7 @@ func Register() {
 				slog.Warn("invalid time_range, fallback to 'w'")
 				params.TimeRange = "w"
 			}
-			return handler(ctx, query, timeRange)
+			return handler(ctx, query, timeRange, params.CDP)
 		},
 	})
 }

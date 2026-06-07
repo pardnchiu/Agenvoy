@@ -27,6 +27,7 @@ import (
 const (
 	cacheExpired      = 1 * time.Hour
 	skippedExpired    = 12 * time.Hour
+	emptySkipExpired  = 72 * time.Hour
 	maxMarkdownLength = 100 << 10
 	defaultScroll     = 3
 )
@@ -228,7 +229,7 @@ func handler(ctx context.Context, link string, keepLinks, sameSession bool, outT
 		if sameSession {
 			opt.Profile = currentProfile()
 		}
-		result, err := go_browser.Fetch(ctx, link, 15*time.Second, opt)
+		result, err := go_browser.Fetch(ctx, link, 30*time.Second, opt)
 		if err != nil {
 			status := 503
 			title := ""
