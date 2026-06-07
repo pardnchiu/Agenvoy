@@ -101,7 +101,7 @@ func postSkillImprove(s *skill.Skill, trace []execStep) {
 		return
 	}
 
-	skill.AutoCommit(context.Background(), "improve", s.Name)
+	skill.AutoCommit(ctx, "improve", s.Name)
 	slog.Info("postSkillImprove completed",
 		slog.String("skill", s.Name))
 }
