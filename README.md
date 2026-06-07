@@ -26,6 +26,8 @@
 ***
 
 > [!NOTE]
+> 2026/06/08 — Skills now self-improve on failure (execution trace → rewrite → auto-commit) and tools are auto-generated when the agent detects a capability gap (find API → scaffold script → run).
+>
 > 2026/06/07 — Web mode has been removed from this branch. Development continues on the `jarvis-alpha` branch.
 
 ## What is Agenvoy
@@ -36,7 +38,9 @@ Agenvoy is that infrastructure. A single Go binary on your machine turns Claude,
 
 ## What it can do
 
-**Teach the agent to build its own tools — no programming required.** Just describe what you need; the agent writes a script or wires up an API, sandboxes it, and loads it as a tool. Next time you ask, it just runs.
+**Teach the agent to build its own tools — no programming required.** Ask "what's the weather in Taipei?" and if no weather tool exists, the agent searches a public API catalog, picks a free endpoint, scaffolds a Python script with `tool.json` schema, sandboxes it, and answers — all in one turn. The tool persists; next time you (or any session) asks, it just runs.
+
+How auto-generation works: the system prompt enforces a **Capability Gap** rule — whenever a request needs live external data and no registered tool covers it, the agent must create one before answering. It cannot shortcut with raw HTTP or inline scripts. The generated tool lives at `~/.config/agenvoy/tools/script/<name>/` with `always_allow: true`, so future calls skip confirmation. Auth-required APIs route through `store_secret` + keychain; the API key never touches the LLM context.
 
 | Demo · Auto-generate tools | Demo · Skill-based scheduler |
 | :-: | :-: |
@@ -53,6 +57,7 @@ Out of the box it also:
 - **Searches your files semantically** — KuraDB indexes your local docs / notes (file → embedding vector); the agent answers from your own knowledge base, not generic training data.
 - **Remembers across sessions** — three-tier memory: recent context + vector similarity (ToriiDB) + full-text archive (SQLite FTS5). Every message is dual-written; nothing is ever lost.
 - **Publishes and installs custom tools** — share AI-built tools across machines through the pkg.agenvoy.com registry; email-verified uploads with downgrade-proof versioning, one-popup install with dependency auto-resolve.
+- **Self-improves skills after failures** — when a skill execution hits tool errors, the agent rewrites the skill definition (fixes wrong tool names, unclear steps, broken sequences) and commits the fix automatically. The skill gets better every time it fails.
 
 ## One-line install
 
@@ -217,6 +222,7 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | API tool discovery (search-api → add) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Tool registry (publish + install across machines) | ✅ pkg.agenvoy.com (Cloudflare Worker + R2 + D1, email verification + downgrade guard) | ⚠️ ClawHub (skills + plugins) | ⚠️ agentskills.io (skills only) | ❌ | ❌ | ❌ |
 | Skill system | ✅ SKILL.md lazy-load | ✅ SKILL.md 5400+ community | ✅ SKILL.md agentskills.io | ✅ CLAUDE.md | ❌ | ❌ |
+| Skill self-improvement (auto-fix on failure) | ✅ trace → rewrite → auto-commit | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Format reference as lazy-load tool | ✅ `format_chatbot` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Document RAG (external knowledge base) | ✅ KuraDB (in-process vector + semantic/keyword) | ❌ (conversation memory only) | ❌ (conversation memory only) | ❌ | ❌ | ❌ |
 | Media transcription STT | ✅ Gemini, 14 formats | ✅ Whisper/Gemini | ✅ faster-whisper (local) | ❌ | ❌ | ❌ |

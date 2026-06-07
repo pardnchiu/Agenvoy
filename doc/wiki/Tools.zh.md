@@ -123,13 +123,15 @@ Marker regex + dedupe + `os.Stat` 過濾住在 `internal/utils/utils.go`。Teleg
 | `search_tools` | 搜尋已註冊 tool 目錄 |
 | `list_tools` | 列所有 tool |
 
-### Skill 版控
+### Skill 版控與自我改進
 
 | 工具 | 說明 |
 |---|---|
 | `skill_git_commit` | 提交 `~/.config/agenvoy/skills` 下所有變更至 git |
 | `skill_git_log` | 列出 `~/.config/agenvoy/skills` 的 git commit 歷史 |
 | `skill_git_rollback` | 將 `~/.config/agenvoy/skills` 還原至指定 git commit |
+
+**自我改進迴圈**：當 skill 執行產生 tool 錯誤（錯誤 tool name、步驟失敗），`postSkillImprove` 在 `Execute` 結束時同步執行。載入內建 `improve-skill` 定義、餵入執行軌跡、改寫有問題的 SKILL.md/scripts、並 auto-commit 修正。完整生命週期見 [Skill 系統 § 自我改進](Skill-System.zh.md#自我改進失敗時自動修正)。
 
 ### 系統
 
@@ -153,6 +155,25 @@ Daemon 端 runtime（`internal/runtime/scheduler.go`）用 fsnotify 監看 `~/.c
 TUI 提供三個 slash command 管排程：`/cron`、`/task`（add／remove／edit）、`/sched-<name>`（手動觸發既有 scheduler skill body）。Popup 流程見 [CLI Reference](CLI-Reference.zh)。
 
 ## 工具擴展
+
+### 自動生成（Capability Gap → 建立 → 執行）
+
+當使用者的請求需要即時外部資料（天氣、匯率、股價、地理編碼、翻譯等）且沒有現有 tool 能覆蓋時，Agent **先建立工具、再執行它來回答**。這就是「讓 Agent 自己生成工具」的流程——不需編程能力。
+
+System prompt 的 `§ Capability Gap` 區段驅動此序列：
+
+| 步驟 | 動作 |
+|---|---|
+| 1. 尋找適合的 API | `api_public_api_list(type=category)` → 挑選相關分類 → 選最佳候選（偏好免 auth + HTTPS）→ `fetch_page` 讀文件 |
+| 2. 建立 script tool | `mkdir` tool 目錄 → `write_file` 寫 `tool.json`（name、description、schema）+ `script.py`（stdin JSON → HTTP call → stdout JSON） |
+| 3. 執行並回答 | 把使用者查詢 pipe 進新 script；失敗則修復重試（最多 3 次） |
+
+建立後，tool 持久存放在 `~/.config/agenvoy/tools/script/<name>/`，所有未來 session 皆可使用。需要 auth 的 API 透過 `store_secret` + keychain 整合在生成的 script 內處理。
+
+關鍵限制：
+- Agent 不可用 raw `send_http_request` 或 inline `python3 -c` 回答；必須寫可重複使用的 script 至磁碟
+- `fetch_page` 僅允許用於閱讀 API 文件，不可直接取得答案資料
+- 生成的 `tool.json` 使用 `"always_allow": true`，後續呼叫免 confirm
 
 ### Script 工具（`script_*`）
 

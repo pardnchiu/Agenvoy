@@ -122,6 +122,38 @@ Preamble 防止較弱 model 把 SKILL.md 結構的 body 誤判為「建立排程
 
 One-shot task 成功 fire 後移除 entry、skill 目錄移至 `.Trash/`。
 
+## 自我改進（失敗時自動修正）
+
+當 skill 執行遇到 tool 錯誤時，Agenvoy 自動改寫 skill 定義以防止下次重蹈覆轍。這是一個閉環進化循環——不需使用者介入。
+
+### 運作方式
+
+1. **Trace 收集** —— `Execute` 過程中，每個 tool call 結果記錄為 `execStep{Tool, Error}`。若 session 透過 `run_skill` 啟用了額外 skill，也會追蹤。
+2. **觸發** —— `Execute` 結束時（在 defer 中），若 trace 含至少一個 error，對每個啟用的 skill 同步呼叫 `postSkillImprove`。
+3. **改進 agent** —— `postSkillImprove` 載入內建 `improve-skill` skill body，建立帶執行軌跡的 stateless session，跑一輪完整 `Execute`（2 分鐘 timeout、always-allow、無互動工具）。
+4. **Auto-commit** —— 成功後 `skill.AutoCommit(ctx, "improve", skillName)` 把改寫後的檔案 commit 進 `~/.config/agenvoy/skills/` 的 git 歷史。
+
+### improve-skill 修正的內容
+
+| 偵測到的問題 | 處理 |
+|---|---|
+| SKILL.md 中的錯誤 tool name（如 `Bash` 而非 `run_command`） | 替換為正確的已註冊 tool name |
+| 步驟導致重複失敗 | 加入 fallback 策略或移除該步驟 |
+| 不清楚的指令導致 LLM 誤呼叫 | 改寫為更精確的措辭 |
+| 步驟順序導致依賴缺失 | 重新排序 |
+| 錯字或語法問題 | 修正，保留原始語言 |
+
+### 限制
+
+- 改進 agent 不可使用互動工具（`ask_user`）、web 工具（`search_web`、`fetch_page`）、媒體工具（`generate_image`）或 agent 協作工具
+- 只有檔案讀寫與指令執行可用——agent 讀取當前 skill、分析 trace、寫入修正後檔案
+- 改進範圍限於 skill 自身檔案；system prompt 與 runtime 程式碼不會被修改
+- 每次改進是獨立的 stateless session，無對話歷史
+
+### 回滾
+
+所有 skill 變更都有 git 追蹤。使用 `skill_git_log` 與 `skill_git_rollback` 工具可檢視歷史或還原不想要的自動修正。
+
 ***
 
 > [!NOTE]
