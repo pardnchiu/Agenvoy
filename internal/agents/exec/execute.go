@@ -323,6 +323,9 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 	turnAllowAll := false
 	emptyCount := 0
 	trimmedToolCalls := false
+	compactedToolCalls := false
+	compactFailed := false
+	lastInputTokens := 0
 	type sendOutcome struct {
 		resp *agentTypes.Output
 		err  error
@@ -332,6 +335,14 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		if ctx.Err() != nil {
 			keepPending = false
 			return ctx.Err()
+		}
+		if !compactFailed && lastInputTokens >= execCompactTokenThreshold {
+			if compactExec(ctx, data.Agent, session, &usage) {
+				compactedToolCalls = true
+				lastInputTokens = 0
+			} else {
+				compactFailed = true
+			}
 		}
 		assembled := assembleMessages(session.SystemPrompts, session.OldHistories, session.SummaryMessage, session.UserInput, session.ToolHistories)
 		sendStart := time.Now()
@@ -476,6 +487,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		usage.Output += resp.Usage.Output
 		usage.CacheCreate += resp.Usage.CacheCreate
 		usage.CacheRead += resp.Usage.CacheRead
+		lastInputTokens = resp.Usage.Input + resp.Usage.CacheRead
 
 		if len(resp.Choices) == 0 {
 			if actionError(&emptyCount, events) {
@@ -561,6 +573,9 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			responseText := stripped
 			if trimmedToolCalls {
 				responseText += "\n\n> 因超過模型 max input，部分工具查詢資料已被裁減，建議使用更大 context window 的模型再試一次。"
+			}
+			if compactedToolCalls {
+				responseText += "\n\n> 已自動整合壓縮工具查詢資料以維持回應品質。"
 			}
 			sendText(events, responseText)
 
