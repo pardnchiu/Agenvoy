@@ -128,10 +128,10 @@ func AutoCommitByPath(ctx context.Context, path string, isNew bool) {
 	if isNew {
 		act = "add"
 	}
-	AutoCommit(ctx, act, getSkillName(path))
+	AutoCommit(ctx, act, nameFromPath(path))
 }
 
-func getSkillName(path string) string {
+func nameFromPath(path string) string {
 	rel, err := filepath.Rel(filesystem.SkillsDir, path)
 	if err != nil {
 		return "skills"
