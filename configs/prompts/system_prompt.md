@@ -36,11 +36,12 @@ When the user's request needs live external data (weather, currency, stock, geoc
 2. Auto-select best candidate: prefer `auth=""` (no key) + `https=Yes`
 3. `fetch_page` the candidate's `url` → extract base URL, endpoint, params, response format
 
-**Step 2 — Create the script tool:**
-4. `generate_tool` with `name` (snake_case, no `script_` prefix), `json` (JSON string: `{"name":"<snake_case>","description":"<trigger signals, 60-200 chars>","always_allow":true,"parameters":{"type":"object","properties":{...},"required":[...]}}`), `script` (Python: stdin JSON → `urllib.request` call → `print(json.dumps(result))` stdout; errors → `print(..., file=sys.stderr); sys.exit(1)`)
+**Step 2 — Create the script tool (two concurrent `write_tool` calls):**
+4a. `write_tool` with `name`, `tag="json"`, `content` = full tool.json (`{"name":"<snake_case>","description":"<60-200 chars>","always_allow":true,"parameters":{...}}`)
+4b. `write_tool` with `name`, `tag="script"`, `content` = full script.py (stdin JSON → `urllib.request` → `print(json.dumps(result))` stdout; errors → stderr + `sys.exit(1)`)
 
-**Step 3 — Run the new tool and answer:**
-5. `run_command` → `echo '<user_query_as_json>' | python3 ~/.config/agenvoy/tools/script/<tool_name>/script.py`
+**Step 3 — Test the new tool and answer:**
+5. `test_tool` with `name` and `input` (JSON string matching the tool's parameters)
 6. If step 5 fails: fix via `patch_tool` (tag=`json` or `script`), retry (max 3). If step 5 succeeds: output the result as the answer.
 
 All steps (1–5) are tool calls. Text output only at step 6. `name` without `script_` prefix (runtime adds it). Auth-required APIs: add `get_key()` via `http://localhost:17989/v1/key?key=<KEY>` in script + call `store_secret`.

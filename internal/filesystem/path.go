@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -28,6 +29,8 @@ var (
 	SystemToolsDir          string
 	ExtensionAPIToolsDir    string
 	ExtensionScriptToolsDir string
+	ToolGitignorePath       string
+	ScriptToolTrashDir      string
 	ErrorsDir               string
 	TasksPath               string
 	CronsPath               string
@@ -39,6 +42,7 @@ var (
 	SystemSkillsDir         string
 	ScheduleSkillsDir       string
 	ScheduleSkillTrashDir   string
+	SkillTrashDir           string
 	DownloadDir             string
 	DownloadTrashDir        string
 	SessionsTrashDir        string
@@ -89,6 +93,8 @@ func Init() error {
 		SystemToolsDir = filepath.Join(ToolsDir, ".system")
 		ExtensionAPIToolsDir = filepath.Join(ToolsDir, ".extension", "api")
 		ExtensionScriptToolsDir = filepath.Join(ToolsDir, ".extension", "script")
+		ToolGitignorePath = filepath.Join(ToolsDir, ".gitignore")
+		ScriptToolTrashDir = filepath.Join(ScriptToolsDir, ".Trash")
 		ErrorsDir = filepath.Join(AgenvoyDir, "errors")
 		TasksPath = filepath.Join(AgenvoyDir, "tasks.json")
 		CronsPath = filepath.Join(AgenvoyDir, "crons.json")
@@ -101,6 +107,7 @@ func Init() error {
 		SystemSkillsDir = filepath.Join(SkillsDir, ".system")
 		ScheduleSkillsDir = filepath.Join(SkillsDir, "scheduler")
 		ScheduleSkillTrashDir = filepath.Join(ScheduleSkillsDir, ".Trash")
+		SkillTrashDir = filepath.Join(SkillsDir, ".Trash")
 
 		LegacyAPIToolsDir = filepath.Join(AgenvoyDir, "api_tools")
 		LegacyScriptToolsDir = filepath.Join(AgenvoyDir, "script_tools")
@@ -223,4 +230,18 @@ func GetKuradbEndpoint() (string, error) {
 		return "", fmt.Errorf("endpoint file %s is empty", path)
 	}
 	return url, nil
+}
+
+func TrashDir(src, trashBase, name string) (string, error) {
+	if err := go_pkg_filesystem.CheckDir(trashBase, true); err != nil {
+		return "", fmt.Errorf("go_pkg_filesystem.CheckDir [%s]: %w", trashBase, err)
+	}
+	dst := filepath.Join(trashBase, name)
+	if go_pkg_filesystem_reader.Exists(dst) {
+		dst = filepath.Join(trashBase, fmt.Sprintf("%s-%d", name, time.Now().Unix()))
+	}
+	if err := os.Rename(src, dst); err != nil {
+		return "", fmt.Errorf("os.Rename [%s → %s]: %w", src, dst, err)
+	}
+	return dst, nil
 }

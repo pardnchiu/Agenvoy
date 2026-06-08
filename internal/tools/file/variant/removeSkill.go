@@ -4,14 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -20,15 +18,14 @@ func registRemoveSkill() {
 	toolRegister.Regist(toolRegister.Def{
 		Name: "remove_skill",
 		Description: `
-Remove a skill directory under ~/.config/agenvoy/skills/<name>/.
-Use when a skill is no longer needed or must be rebuilt from scratch.
-Auto-commits to skill git after removal.`,
+Move a skill directory to ~/.config/agenvoy/skills/.Trash/.
+Use when a skill is obsolete or must be rebuilt; recoverable via git_rollback.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"name": map[string]any{
 					"type":        "string",
-					"description": "Skill directory name (e.g. 'my-skill').",
+					"description": "Skill directory name, single segment (e.g. 'my-skill').",
 				},
 			},
 			"required": []string{"name"},
@@ -38,15 +35,12 @@ Auto-commits to skill git after removal.`,
 				Name string `json:"name"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
+				return "", fmt.Errorf("encoding/json: Unmarshal: %w", err)
 			}
 
 			name := strings.TrimSpace(params.Name)
 			if name == "" {
 				return "", fmt.Errorf("name is required")
-			}
-			if strings.Contains(name, "/") || strings.Contains(name, "..") {
-				return "", fmt.Errorf("name must be a single directory name")
 			}
 
 			dir := filepath.Join(filesystem.SkillsDir, name)
@@ -54,12 +48,13 @@ Auto-commits to skill git after removal.`,
 				return "", fmt.Errorf("skill %q does not exist", name)
 			}
 
-			if err := os.RemoveAll(dir); err != nil {
-				return "", fmt.Errorf("os.RemoveAll [%s]: %w", dir, err)
+			dst, err := filesystem.TrashDir(dir, filesystem.SkillTrashDir, name)
+			if err != nil {
+				return "", err
 			}
 
-			skill.AutoCommit(ctx, "remove", name)
-			return fmt.Sprintf("removed: %s", dir), nil
+			filesystem.GitAutoCommit(ctx, filesystem.GitSkills, "trash", name)
+			return fmt.Sprintf("trashed: %s → %s", dir, dst), nil
 		},
 	})
 }

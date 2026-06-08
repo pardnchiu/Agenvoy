@@ -1,4 +1,4 @@
-package skill
+package filesystem
 
 import (
 	"context"
@@ -10,19 +10,47 @@ import (
 
 	"os/exec"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
-var skillGitignoreEntries = []string{".system/", ".Trash/"}
+type GitTarget int
 
-func CheckGit(ctx context.Context) error {
-	if err := checkGitignore(); err != nil {
+const (
+	GitSkills GitTarget = iota
+	GitTools
+)
+
+type gitConfig struct {
+	dir           func() string
+	gitignorePath func() string
+	ignoreEntries []string
+	fallbackName  string
+}
+
+var gitConfigs = map[GitTarget]gitConfig{
+	GitSkills: {
+		dir:           func() string { return SkillsDir },
+		gitignorePath: func() string { return SkillGitignorePath },
+		ignoreEntries: []string{".system/", ".Trash/"},
+		fallbackName:  "skills",
+	},
+	GitTools: {
+		dir:           func() string { return ToolsDir },
+		gitignorePath: func() string { return ToolGitignorePath },
+		ignoreEntries: []string{".system/", ".extension/", ".Trash/"},
+		fallbackName:  "tools",
+	},
+}
+
+func GitCheckInit(ctx context.Context, t GitTarget) error {
+	cfg := gitConfigs[t]
+	dir := cfg.dir()
+
+	if err := gitCheckIgnore(cfg); err != nil {
 		return err
 	}
 
-	dir := filesystem.SkillsDir
 	if go_pkg_filesystem_reader.IsDir(filepath.Join(dir, ".git")) {
 		return nil
 	}
@@ -32,17 +60,16 @@ func CheckGit(ctx context.Context) error {
 	if _, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("exec.Cmd.CombinedOutput(git init): %w", err)
 	}
-
 	return nil
 }
 
-func checkGitignore() error {
-	dir := filesystem.SkillsDir
+func gitCheckIgnore(cfg gitConfig) error {
+	dir := cfg.dir()
 	if err := go_pkg_filesystem.CheckDir(dir, true); err != nil {
 		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir [%s]: %w", dir, err)
 	}
 
-	ignorePath := filesystem.SkillGitignorePath
+	ignorePath := cfg.gitignorePath()
 	var content string
 	if go_pkg_filesystem_reader.Exists(ignorePath) {
 		str, err := go_pkg_filesystem.ReadText(ignorePath)
@@ -61,7 +88,7 @@ func checkGitignore() error {
 	if content != "" && !strings.HasSuffix(content, "\n") {
 		content += "\n"
 	}
-	for _, entry := range skillGitignoreEntries {
+	for _, entry := range cfg.ignoreEntries {
 		if have[entry] {
 			continue
 		}
@@ -78,18 +105,19 @@ func checkGitignore() error {
 	return nil
 }
 
-func Commit(ctx context.Context, act, skillName string) error {
+func GitCommit(ctx context.Context, t GitTarget, act, name string) error {
+	dir := gitConfigs[t].dir()
 	now := time.Now().Format("20060102")
-	message := fmt.Sprintf("%s_%s_%s", act, skillName, now)
+	message := fmt.Sprintf("%s_%s_%s", act, name, now)
 
 	cmd := exec.CommandContext(ctx, "git", "add", "-A")
-	cmd.Dir = filesystem.SkillsDir
+	cmd.Dir = dir
 	if _, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("exec.Cmd.CombinedOutput (git add -A): %w", err)
 	}
 
 	status := exec.CommandContext(ctx, "git", "status", "--porcelain")
-	status.Dir = filesystem.SkillsDir
+	status.Dir = dir
 	output, err := status.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("exec.Cmd.CombinedOutput (git status --porcelain): %w", err)
@@ -99,27 +127,30 @@ func Commit(ctx context.Context, act, skillName string) error {
 	}
 
 	cmd = exec.CommandContext(ctx, "git", "commit", "-m", message)
-	cmd.Dir = filesystem.SkillsDir
+	cmd.Dir = dir
 	if _, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("exec.Cmd.CombinedOutput (git commit -m): %w", err)
 	}
 	return nil
 }
 
-func AutoCommit(ctx context.Context, act, name string) {
-	if err := CheckGit(ctx); err != nil {
+func GitAutoCommit(ctx context.Context, t GitTarget, act, name string) {
+	if err := GitCheckInit(ctx, t); err != nil {
 		return
 	}
-	if err := Commit(ctx, act, name); err != nil {
-		slog.Warn("Commit",
+	if err := GitCommit(ctx, t, act, name); err != nil {
+		slog.Warn("GitCommit",
+			slog.String("target", gitConfigs[t].fallbackName),
 			slog.String("action", act),
 			slog.String("name", name),
 			slog.String("error", err.Error()))
 	}
 }
 
-func AutoCommitByPath(ctx context.Context, path string, isNew bool) {
-	rel, err := filepath.Rel(filesystem.SkillsDir, path)
+func GitAutoCommitByPath(ctx context.Context, t GitTarget, path string, isNew bool) {
+	cfg := gitConfigs[t]
+	dir := cfg.dir()
+	rel, err := filepath.Rel(dir, path)
 	if !(err == nil && !strings.HasPrefix(rel, "..")) {
 		return
 	}
@@ -128,29 +159,29 @@ func AutoCommitByPath(ctx context.Context, path string, isNew bool) {
 	if isNew {
 		act = "add"
 	}
-	AutoCommit(ctx, act, nameFromPath(path))
+	GitAutoCommit(ctx, t, act, gitNameFromPath(cfg, path))
 }
 
-func nameFromPath(path string) string {
-	rel, err := filepath.Rel(filesystem.SkillsDir, path)
+func gitNameFromPath(cfg gitConfig, path string) string {
+	rel, err := filepath.Rel(cfg.dir(), path)
 	if err != nil {
-		return "skills"
+		return cfg.fallbackName
 	}
 
 	parts := strings.SplitN(filepath.ToSlash(rel), "/", 2)
 	if parts[0] == "" || parts[0] == "." {
-		return "skills"
+		return cfg.fallbackName
 	}
 	return parts[0]
 }
 
-func GetGitLog(ctx context.Context, limit int) (string, error) {
+func GitLog(ctx context.Context, t GitTarget, limit int) (string, error) {
 	if limit <= 0 {
 		limit = 20
 	}
 
 	cmd := exec.CommandContext(ctx, "git", "log", "--oneline", fmt.Sprintf("-n%d", limit))
-	cmd.Dir = filesystem.SkillsDir
+	cmd.Dir = gitConfigs[t].dir()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("exec.Cmd.CombinedOutput (git log --oneline): %w", err)
@@ -158,9 +189,9 @@ func GetGitLog(ctx context.Context, limit int) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func Rollback(ctx context.Context, commit string) (string, error) {
+func GitRollback(ctx context.Context, t GitTarget, commit string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", "reset", "--hard", commit)
-	cmd.Dir = filesystem.SkillsDir
+	cmd.Dir = gitConfigs[t].dir()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("exec.Cmd.CombinedOutput (git reset --hard): %w", err)

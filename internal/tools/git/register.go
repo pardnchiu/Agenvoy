@@ -1,6 +1,6 @@
 package git
 
 func init() {
-	skillLog()
-	skillRollback()
+	registLog()
+	registRollback()
 }

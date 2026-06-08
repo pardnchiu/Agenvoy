@@ -10,7 +10,6 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -19,11 +18,10 @@ func registWriteSkill() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "write_skill",
 		AlwaysAllow: true,
+		Concurrent:  true,
 		Description: `
 Create or fully rewrite a file under ~/.config/agenvoy/skills/.
-Use when building or updating a skill (SKILL.md, scripts/, templates/, etc.).
-Auto-commits to skill git after each write.
-For targeted edits use patch_skill.`,
+Use for new skill files or full rewrites; patch_skill for targeted edits.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -33,7 +31,7 @@ For targeted edits use patch_skill.`,
 				},
 				"content": map[string]any{
 					"type":        "string",
-					"description": "Content to write.",
+					"description": "Full file content to write. Must be complete, not a diff.",
 				},
 			},
 			"required": []string{"path", "content"},
@@ -44,7 +42,7 @@ For targeted edits use patch_skill.`,
 				Content string `json:"content"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
+				return "", fmt.Errorf("encoding/json: Unmarshal: %w", err)
 			}
 
 			path := strings.TrimSpace(params.Path)
@@ -55,26 +53,16 @@ For targeted edits use patch_skill.`,
 				return "", fmt.Errorf("content is required")
 			}
 
-			absPath := filepath.Join(filesystem.SkillsDir, path)
-			absPath, err := filepath.Abs(absPath)
-			if err != nil {
-				return "", fmt.Errorf("filepath.Abs: %w", err)
-			}
+			absPath := filepath.Clean(filepath.Join(filesystem.SkillsDir, path))
 			if !strings.HasPrefix(absPath, filesystem.SkillsDir+string(filepath.Separator)) {
 				return "", fmt.Errorf("path must stay within skills dir")
 			}
 
-			dir := filepath.Dir(absPath)
-			if err := go_pkg_filesystem.CheckDir(dir, true); err != nil {
-				return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir [%s]: %w", dir, err)
-			}
-
 			if err := go_pkg_filesystem.WriteFile(absPath, params.Content, 0644); err != nil {
-				return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteFile [%s]: %w", absPath, err)
+				return "", fmt.Errorf("github.com/pardnchiu/agenvoy/internal/filesystem: WriteFile [%s]: %w", absPath, err)
 			}
 
-			skill.AutoCommitByPath(ctx, absPath, true)
-
+			filesystem.GitAutoCommitByPath(ctx, filesystem.GitSkills, absPath, true)
 			return fmt.Sprintf("created: %s", absPath), nil
 		},
 	})

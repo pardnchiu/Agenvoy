@@ -10,7 +10,6 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/denied"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -18,8 +17,11 @@ import (
 
 func registPatchFile() {
 	toolRegister.Regist(toolRegister.Def{
-		Name:        "patch_file",
-		Description: "Replace an exact string match inside a file. Default for targeted edits; use replace_all=true for rename/pattern-replace. Mandatory cycle: read_file first → patch_file → read_file to verify → max 3 retries on failure. If old_string not found, re-read and extend the anchor to make it unique. Never use run_command (sed/awk/python) for edits this tool can handle.",
+		Name: "patch_file",
+		Description: `
+Replace an exact string match inside a file.
+Use for targeted edits; write_file for full rewrite; patch_skill for skill files.
+Must read_file before patching to get the exact anchor string.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -129,7 +131,7 @@ func registPatchFile() {
 				return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
 			}
 
-			skill.AutoCommitByPath(ctx, absPath, false)
+			filesystem.GitAutoCommitByPath(ctx, filesystem.GitSkills, absPath, false)
 			return fmt.Sprintf("successfully updated %s", absPath), nil
 		},
 	})

@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
-	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -19,14 +18,14 @@ func registRemoveTool() {
 	toolRegister.Regist(toolRegister.Def{
 		Name: "remove_tool",
 		Description: `
-Remove an existing script tool directory under ~/.config/agenvoy/tools/script/<toolname>/.
-Use when a tool is no longer needed or must be rebuilt from scratch.`,
+Move a script tool directory to ~/.config/agenvoy/tools/script/.Trash/.
+Use when a tool is obsolete or must be rebuilt; recoverable via git_rollback.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"name": map[string]any{
 					"type":        "string",
-					"description": "Tool name in snake_case without 'script_' prefix.",
+					"description": "Snake_case name without 'script_' prefix (e.g. 'ip_geolocation_lookup').",
 				},
 			},
 			"required": []string{"name"},
@@ -36,7 +35,7 @@ Use when a tool is no longer needed or must be rebuilt from scratch.`,
 				Name string `json:"name"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", fmt.Errorf("json.Unmarshal: %w", err)
+				return "", fmt.Errorf("encoding/json: Unmarshal: %w", err)
 			}
 
 			name := strings.TrimSpace(params.Name)
@@ -44,21 +43,18 @@ Use when a tool is no longer needed or must be rebuilt from scratch.`,
 				return "", fmt.Errorf("name is required")
 			}
 
-			baseDir, err := go_pkg_filesystem.AbsPath("", scriptToolBaseDir, go_pkg_filesystem.AbsPathOption{HomeOnly: true})
-			if err != nil {
-				return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem AbsPath [%s]: %w", scriptToolBaseDir, err)
-			}
-
-			dir := filepath.Join(baseDir, name)
+			dir := filepath.Join(filesystem.ScriptToolsDir, name)
 			if !go_pkg_filesystem_reader.IsDir(dir) {
 				return "", fmt.Errorf("tool %q does not exist", name)
 			}
 
-			if err := os.RemoveAll(dir); err != nil {
-				return "", fmt.Errorf("os.RemoveAll [%s]: %w", dir, err)
+			dst, err := filesystem.TrashDir(dir, filesystem.ScriptToolTrashDir, name)
+			if err != nil {
+				return "", err
 			}
 
-			return fmt.Sprintf("removed: %s", dir), nil
+			filesystem.GitAutoCommit(ctx, filesystem.GitTools, "trash", name)
+			return fmt.Sprintf("trashed: %s → %s", dir, dst), nil
 		},
 	})
 }

@@ -3,10 +3,7 @@ package skill
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -31,19 +28,11 @@ func TrashSchedule(ctx context.Context, name string) error {
 	if !go_pkg_filesystem_reader.IsDir(dir) {
 		return nil
 	}
-	if err := go_pkg_filesystem.CheckDir(filesystem.ScheduleSkillTrashDir, true); err != nil {
-		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem CheckDir [%s]: %w", dir, err)
-	}
 
-	dst := filepath.Join(filesystem.ScheduleSkillTrashDir, name)
-	if go_pkg_filesystem_reader.Exists(dst) {
-		dst = filepath.Join(filesystem.ScheduleSkillTrashDir, fmt.Sprintf("%s-%d", name, time.Now().Unix()))
-	}
-	if err := os.Rename(dir, dst); err != nil {
+	if _, err := filesystem.TrashDir(dir, filesystem.ScheduleSkillTrashDir, name); err != nil {
 		return err
 	}
 
-	AutoCommit(ctx, "trash", name)
-
+	filesystem.GitAutoCommit(ctx, filesystem.GitSkills, "trash", name)
 	return nil
 }
