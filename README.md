@@ -136,7 +136,6 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | CLI | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | HTTP API / Web UI | ✅ gin | ✅ dashboard / webchat | ✅ Web Dashboard | ❌ | ❌ | ❌ |
 | Daemon mode | ✅ native `--daemon` | ✅ systemd/launchd | ✅ gateway daemon | ❌ | ❌ | ❌ |
-| Session Canvas (HTML+SSE) | ✅ `render_page` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Named sessions | ✅ | ⚠️ workspaces / per-agent sessions | ✅ session picker | ❌ | ❌ | ❌ |
 
 ***
@@ -264,7 +263,7 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 
 | Dimension | Detail |
 |-----------|--------|
-| **Clear advantages** | Single Go binary, 12 dependencies, self-maintained ecosystem (pardnchiu universe), dispatcher model routing, Session Canvas, native platform UI (real buttons/modals), OTP verification, cross-session send to Telegram/Discord from any session, API tool auto-discovery, format reference as lazy-load tool, local-only scheduler (no cloud required) |
+| **Clear advantages** | Single Go binary, 12 dependencies, self-maintained ecosystem (pardnchiu universe), dispatcher model routing, native platform UI (real buttons/modals), OTP verification, cross-session send to Telegram/Discord from any session, API tool auto-discovery, format reference as lazy-load tool, local-only scheduler (no cloud required) |
 | **On par with competitors** | Telegram/Discord daemon, TTS/STT, scheduler output push, Skill system, MCP, browser automation, inbound attachment handling, provider coverage (compat layer covers any OpenAI-compatible endpoint) |
 | **Where competitors lead** | Hermes context compression engine (token-budget compaction: head preservation + middle-turn summarization + iterative recompression, vs Agenvoy's reactive trim-only), OpenClaw 24+ platforms, Hermes MCP server mode, Hermes local STT, OpenClaw/Hermes built-in cross-session memory, Claude Code Computer Use beta, Claude Code cloud cron/task |
 | **Codex CLI** | Fewest features — CLI + TUI + OpenAI OAuth only, no daemon, no chat platforms, no scheduler |

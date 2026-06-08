@@ -152,7 +152,7 @@ One-shot task 成功 fire 後移除 entry、skill 目錄移至 `.Trash/`。
 
 ### 回滾
 
-所有 skill 變更都有 git 追蹤。使用 `skill_git_log` 與 `skill_git_rollback` 工具可檢視歷史或還原不想要的自動修正。
+所有 skill 變更皆自動 commit 至 git。使用 `git_log`（tag=skills）檢視歷史，或 `git_rollback`（tag=skills）還原不想要的自動修正。
 
 ***
 

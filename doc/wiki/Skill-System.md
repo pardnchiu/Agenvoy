@@ -152,7 +152,7 @@ When a skill execution encounters tool errors, Agenvoy automatically rewrites th
 
 ### Rollback
 
-All skill changes are git-tracked. Use the `skill_git_log` and `skill_git_rollback` tools to inspect history or revert an unwanted auto-fix.
+All skill changes are auto-committed to git. Use `git_log` (tag=skills) to inspect history or `git_rollback` (tag=skills) to revert an unwanted auto-fix.
 
 ***
 

@@ -20,18 +20,22 @@ Audits all Agenvoy tool definitions against the four design rules in project `CL
 **Lazy-schema context**: every tool's `name` + `description` is always in LLM context; the `parameters` JSON schema is replaced with a stub `{"type":"object","properties":{}}` unless `AlwaysLoad=true`. The LLM decides whether to invoke a tool (or call `search_tools` to load its schema) using `name` + `description` alone. Schema is the call contract, loaded on demand.
 
 1. **Name is self-explanatory** — verb + noun, direct, distinguishable from siblings (e.g. `search_chat_history` ≻ `search_history`). Name is the anchor; description elaborates the trigger.
-2. **Description describes WHEN to invoke — maximally concise and precise** — one or two sentences covering trigger signals + trade-offs against similar tools, then stop. This is the LLM's only signal before the schema loads, but bloat dilutes the trigger. Required content (kept tight):
-   - Trigger conditions (when the tool applies; what user intents map to it)
-   - Contrast with similar tools when one exists (`prefer over X when Y`)
-   What to avoid (filler dilutes selection signal):
+2. **Description is three signals, each one line** — this is the LLM's only signal before the schema loads; bloat dilutes the trigger.
+   - **Line 1 — What**: what the tool does (core action, one sentence)
+   - **Line 2 — When**: when to use it vs alternatives (`use for X; Y for Z`)
+   - **Line 3 — Precondition**: key constraint or prerequisite the caller must satisfy before invoking (omit if none)
+   Target length 60–200 chars total. What to avoid (filler dilutes selection signal):
    - Padding phrases ("This tool allows you to...", "Use this when needed...")
    - `**bold**` / markdown emphasis (token waste; structure ≠ semantics)
    - Output schema dumps (belongs in `parameters` / response examples, not selection text)
    - Implementation gossip (`uses readability under the hood`) unrelated to selection
    - Call-contract details (type/unit/enum/default) — those belong in `parameters[*].description`
    - Per-use-case bullet lists when a single sentence covers them
-   Target length 60–200 chars. Going past three sentences usually means schema content leaked in.
-3. **Schema fields are complete call contracts** — every entry in `parameters.properties` must carry a `description` covering: type, unit, accepted values (enum/regex), edge cases, interaction with other params, and at least one concrete example when the type is non-trivial (e.g. cron expression, file path with placeholders, JSON body shape).
+   Going past three lines usually means schema content leaked in.
+3. **Parameter description is three signals** — every entry in `parameters.properties` must carry a `description` covering:
+   - **How**: what it controls, type, unit, accepted values (enum/regex/range)
+   - **When**: interaction with other params (omit if standalone)
+   - **Example**: at least one concrete value for non-trivial types (cron expression, file path, JSON body)
 4. **English only** — `description`, `parameters[*].description`, `enum` text must be English. CJK / mixed-language is a violation. (User-facing handler return strings may stay in Chinese.)
 5. **Optional fields require explicit `default`** — every parameter not in `required[]` must declare `"default": <value>` so the LLM knows the omission semantics. Required fields must NOT carry `default`.
 
@@ -80,16 +84,15 @@ Audits all Agenvoy tool definitions against the four design rules in project `CL
                      — same domain, three different shapes)
                  Verdicts are emitted in the report's `## Name Audit` section (see output_format.md).
 
-2.B R2 sweep  →  Same enumeration discipline for description trigger coverage. Re-read each
-                 description and ask "could another LLM, seeing only this description, know
-                 WHEN to call this tool?" If the description only states what the tool
-                 executes ("Fetches RSS feed") without trigger signals or use cases, flag
-                 as R2 violation and suggest the expanded version with trigger context.
+2.B R2 sweep  →  Same enumeration discipline for description three-signal check. Re-read each
+                 description and verify it has: What (core action), When (vs alternatives),
+                 Precondition (if applicable). Flag as R2 violation if under-spec (missing
+                 lines) or over-spec (>3 lines, filler, schema dumps). Suggest rewrite.
 
-2.C R3 sweep  →  For each tool, walk every `parameters.properties` entry. Missing
-                 `description`, single-word descriptions, or non-trivial types (cron
-                 expression / file path with placeholders / JSON body shape) without a
-                 concrete example → flag as R3 violation.
+2.C R3 sweep  →  For each tool, walk every `parameters.properties` entry. Verify
+                 three-signal structure: How (type/unit/values), When (param interaction),
+                 Example (concrete value). Missing/single-word/name-repeat description,
+                 non-trivial type without example → flag as R3 violation.
 
 3. Gate       →  if zero deterministic + zero heuristic violations across all tools, skip Save
                  and print a one-line "no issues" message. Honor explicit OUTPUT_FILE override.
@@ -131,20 +134,15 @@ For **every** tool the script returns — no skipping — apply these checks. Co
   - Verb redundancy (`patch_edit`, `delete_remove_*`)
   - Name buries the discriminator in description (`verify` whose description reveals it actually means `cross_review_with_external_agents`)
   - Inconsistent suffix vocabulary across same-domain tools (`read_tool_error` / `remember_error` / `search_error_history` — pick one shape)
-- **Description trigger coverage AND concision (R2)**: re-read each description and ask two questions: "could another LLM, seeing only this, know WHEN to call this tool?" AND "is anything here filler that doesn't aid selection?" Flag as R2 violation when EITHER fails. Look for:
-  - Action-only descriptions ("Lists files", "Sends HTTP request") with no trigger context — under-spec
-  - Missing contrast when sibling tools exist (`search_tools` vs `list_tools` — when to use which) — under-spec
-  - Missing scenario hints for tools whose name alone doesn't carry the use case — under-spec
-  - Over three sentences, paragraph-form prose, bullet enumerations — over-spec (bloat dilutes trigger; usually call-contract content leaked in from `parameters`)
-  - Filler ("This tool allows you to...", "Useful for various tasks") that adds no selection signal — over-spec
-  - Output format dumps, response shape descriptions — belongs in `parameters` / response example, not selection text
-  Propose a tightened rewrite (60-200 chars, one or two sentences) for every fail.
-- **Parameter schema completeness (R3)**: walk every `properties` entry. Flag as R3 violation when:
-  - `description` missing or single-word
-  - Non-trivial type (`object`, `array`, cron expression, file path with placeholders, JSON body shape) without a concrete example
-  - `enum` listed without explaining what each value means
-  - Interaction with other parameters not documented (e.g. "required when `mode=advanced`")
-  - Unit not specified for numeric values (seconds vs milliseconds, bytes vs MiB)
+- **Description three-signal check (R2)**: verify each description follows the three-line structure — **What** (core action) / **When** (vs alternatives) / **Precondition** (if any). Flag as R2 violation when:
+  - Under-spec: action-only ("Lists files") with no When line; missing contrast when sibling tools exist; missing precondition when one exists
+  - Over-spec: more than three lines; paragraph prose or bullet enumerations; filler ("This tool allows you to..."); output format dumps or call-contract details that belong in `parameters`
+  Propose a rewrite (60-200 chars, three lines max) for every fail.
+- **Parameter three-signal check (R3)**: walk every `properties` entry. Verify each has: **How** (type/unit/values), **When** (param interaction, if applicable), **Example** (concrete value for non-trivial types). Flag as R3 violation when:
+  - `description` missing, single-word, or just repeats field name
+  - Non-trivial type without a concrete example
+  - `enum` listed without per-value meaning
+  - Numeric field without unit; param interaction undocumented
 
 ## Reference Files
 

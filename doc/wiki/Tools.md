@@ -123,13 +123,26 @@ Marker regex + dedupe + `os.Stat` filtering lives in `internal/utils/utils.go`. 
 | `search_tools` | Search the registered tool catalog |
 | `list_tools` | List all registered tools |
 
-### Skill versioning & self-improvement
+### Skill & tool variants (always-allowed `write_file` variants)
 
 | Tool | Description |
 |---|---|
-| `skill_git_commit` | Commit all changes under `~/.config/agenvoy/skills` to git |
-| `skill_git_log` | List the git commit history for `~/.config/agenvoy/skills` |
-| `skill_git_rollback` | Roll back `~/.config/agenvoy/skills` to a specified git commit |
+| `write_skill` | Create or rewrite a file under `~/.config/agenvoy/skills/` |
+| `patch_skill` | String replacement inside a skill file |
+| `remove_skill` | Move a skill directory to `.Trash/` |
+| `write_tool` | Create or overwrite `tool.json` or `script.py` under `~/.config/agenvoy/tools/script/` |
+| `patch_tool` | String replacement inside a script tool file (`tool.json` or `script.py`) |
+| `test_tool` | Run a script tool's `script.py` with JSON input inside sandbox |
+| `remove_tool` | Move a script tool directory to `.Trash/` |
+
+All variants are always-allowed and scoped to their respective directories. Every write/patch/remove auto-commits to the corresponding git repo (skills or tools). `write_tool` and `write_skill` support concurrent calls.
+
+### Git versioning & self-improvement
+
+| Tool | Description |
+|---|---|
+| `git_log` | List git commit history for skills or tools directory (`tag` = `skills` or `tools`) |
+| `git_rollback` | Roll back skills or tools directory to a specified git commit (`tag` = `skills` or `tools`) |
 
 **Self-improvement loop**: when a skill execution produces tool errors (wrong tool name, failed steps), `postSkillImprove` runs synchronously at the end of `Execute`. It loads the built-in `improve-skill` definition, feeds it the execution trace, rewrites the faulty SKILL.md/scripts, and auto-commits the fix. See [Skill System § Self-improvement](Skill-System.md#self-improvement-auto-fix-on-failure) for the full lifecycle.
 

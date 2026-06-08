@@ -33,55 +33,63 @@ When flagging, propose the better name. Cite the relevant sibling cluster from t
 
 ---
 
-## Rule 2 — Description writes WHEN to invoke
+## Rule 2 — Description is three signals
 
-**Why**: under the lazy-schema model, `description` is the only signal the LLM has before deciding to call (or to call `search_tools` to load the schema first). An action-only description ("Fetches RSS feed") tells the LLM what the tool does after invocation — too late. The description must front-load *when* and *why* to invoke.
+**Why**: under the lazy-schema model, `description` is the only signal the LLM has before deciding to call (or to call `search_tools` to load the schema first). The description must answer three questions in three lines max.
 
-**Pass**: description carries enough trigger signal that another LLM, seeing only the name + description, can decide whether this tool matches the user intent. Required content:
-- Trigger conditions / user-intent patterns that map to this tool
-- Use-case examples (concrete scenarios where this tool wins)
-- Contrast with similar tools when the cluster is ambiguous (`prefer over X when Y`)
-- Constraints / preconditions the LLM should check before calling
+**Structure** (each one line, 60–200 chars total):
+- **Line 1 — What**: what the tool does (core action, one sentence)
+- **Line 2 — When**: when to use it vs alternatives (`use for X; Y for Z`)
+- **Line 3 — Precondition**: key constraint or prerequisite the caller must satisfy (omit if none)
 
-**Fail patterns**:
-- **Action-only description** — single sentence describing what the tool executes with no trigger context (`R2_SHORT_DESC` deterministic flag fires when length < 60 chars; LLM heuristic catches longer-but-still-action-only cases)
+**Pass**: description follows the three-line structure; another LLM seeing only name + description can decide whether this tool matches the user intent.
+
+**Fail patterns — under-spec**:
+- Action-only description ("Fetches RSS feed") with no When line (`R2_SHORT_DESC` deterministic flag fires when length < 60 chars; LLM heuristic catches longer-but-still-action-only cases)
 - Missing contrast when sibling tools exist (e.g. `search_tools` vs `list_tools` — when to use which)
+- Missing precondition when one exists (e.g. must `read_file` first)
+
+**Fail patterns — over-spec**:
+- More than three lines / paragraph prose / bullet enumerations (schema content leaked in)
 - `**bold**` / markdown emphasis — adds tokens without changing meaning (`R2_BOLD_MARKDOWN`)
-- Output schema dumps (`Returns {"name", "path", ...}`) — belongs in `parameters` documentation, not selection text
-- Call-contract details (type/unit/enum/default) inside description — those belong in `parameters[*].description` (Rule 3)
-- Implementation gossip (`uses readability under the hood`, `auto-skips .gitignore`) unrelated to selection
-- Manual-style filler ("This tool will help you ...", "When you need to ...") — write declarative, not conversational
+- Output schema dumps (`Returns {"name", "path", ...}`) — belongs in `parameters` documentation
+- Call-contract details (type/unit/enum/default) — belong in `parameters[*].description` (Rule 3)
+- Implementation gossip (`uses readability under the hood`) unrelated to selection
+- Filler ("This tool allows you to...", "Use this when needed...") — zero selection signal
 
-**What is now welcome (previously forbidden)**:
-- Numbered / bulleted trigger conditions
-- Multiple paragraphs when trigger context genuinely needs them
-- Tool-vs-tool comparisons that aid selection (`prefer over invoke_subagent when ...`)
+**Examples**:
+- ✅ `Replace an exact string match inside a file.\nUse for targeted edits; write_file for full rewrite; patch_skill for skill files.\nMust read_file before patching to get the exact anchor string.`
+- ❌ `Replace an exact string match inside a file. Default for targeted edits; use replace_all=true for rename/pattern-replace. Mandatory cycle: read_file first → patch_file → read_file to verify → max 3 retries on failure. If old_string not found, re-read and extend the anchor to make it unique. Never use run_command (sed/awk/python) for edits this tool can handle.` (five sentences, retry protocol + replace_all detail belong in schema)
 
-When flagging, propose the expanded version with trigger signals filled in.
+When flagging, propose a rewrite (three lines max).
 
 ---
 
-## Rule 3 — Schema fields are complete call contracts
+## Rule 3 — Parameter description is three signals
 
-**Why**: schema loads on demand. When it loads, it must give the LLM everything needed to fill parameters correctly without trial-and-error. Missing examples or unit specifications cause runtime errors that waste tokens and confuse users.
+**Why**: schema loads on demand. When it loads, it must give the LLM everything needed to fill parameters correctly without trial-and-error. Each parameter description answers three questions.
 
-**Pass**: every entry in `parameters.properties` has a `description` covering:
-- Type and unit (seconds vs milliseconds, bytes vs MiB, ISO timestamp vs Unix epoch)
-- Accepted values (`enum` with per-value meaning, regex pattern, value range)
-- At least one concrete example when the type is non-trivial (cron expression, file path with placeholders, JSON body shape)
-- Interaction with other parameters (`required when mode=advanced`, `ignored when X is set`)
-- Edge cases / failure modes the LLM should anticipate
+**Structure** (each parameter's `description`):
+- **How**: what the parameter controls, type, unit, accepted values (enum/regex/range)
+- **When**: interaction with other params (`required when mode=advanced`, `ignored when X is set`); omit if standalone
+- **Example**: at least one concrete value for non-trivial types (cron expression, file path, JSON body)
+
+**Pass**: every entry in `parameters.properties` has a `description` covering the three signals appropriate to its complexity.
 
 **Fail patterns** (deterministic checks marked with → rule code):
 - `properties` entry missing `description` or empty/whitespace-only → `R3_PARAM_NO_DESC`
 - Non-trivial type (`object`, `array`, or has `enum`) with description shorter than 20 chars → `R3_PARAM_SHORT_DESC`
 - Description repeats the field name ("user_id: the user id")
-- Numeric field without unit specified
+- Numeric field without unit specified (seconds vs milliseconds, bytes vs MiB)
 - `enum` listed without per-value meaning
 - Cron / regex / template syntax without a concrete example
 - Parameter description re-pitching the whole tool (that's Rule 2's job)
 
-When flagging, propose the expanded description with the missing dimensions filled in.
+**Examples**:
+- ✅ `"Tool name in snake_case without 'script_' prefix (e.g. 'ip_geolocation_lookup')."`
+- ❌ `"The name of the tool."` (no format constraint, no example)
+
+When flagging, propose the expanded description with the missing signals filled in.
 
 ---
 

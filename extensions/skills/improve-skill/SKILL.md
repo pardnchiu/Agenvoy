@@ -25,7 +25,7 @@ description: >
 4. 若有 script 檔案，逐一使用 `read_file` 讀取
 5. 分析 execution trace 中的錯誤，對照 skill 步驟找出問題
 6. 依 **Improvement Rules** 修正檔案內容
-7. 使用 `write_file` 寫入 `~/.config/agenvoy/skills/<name>/SKILL.md` 與所有 `scripts/*.md`
+7. 使用 `write_skill` 寫入 `<name>/SKILL.md` 與所有 `<name>/scripts/*.md`（路徑相對於 skills dir）
 8. 僅輸出修改摘要
 
 ## Improvement Rules
@@ -44,8 +44,10 @@ description: >
 | Bash / bash / Shell / Terminal / run shell | `run_command` |
 | AskUserQuestion / ask the user / prompt user | `ask_user` |
 | Read / Read file / Read tool | `read_file` |
-| Write / Write file / Write tool | `write_file` |
-| Edit / Edit file / patch | `patch_file` |
+| Write / Write file / Write tool (skill files) | `write_skill` |
+| Edit / Edit file / patch (skill files) | `patch_skill` |
+| Write / Write file / Write tool (other files) | `write_file` |
+| Edit / Edit file / patch (other files) | `patch_file` |
 | List files | `list_files` |
 | Find files / glob | `glob_files` |
 | Search file content / grep / Grep | `search_content` |

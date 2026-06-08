@@ -123,13 +123,26 @@ Marker regex + dedupe + `os.Stat` 過濾住在 `internal/utils/utils.go`。Teleg
 | `search_tools` | 搜尋已註冊 tool 目錄 |
 | `list_tools` | 列所有 tool |
 
-### Skill 版控與自我改進
+### Skill 與 tool 變體（always-allowed 的 `write_file` 變體）
 
 | 工具 | 說明 |
 |---|---|
-| `skill_git_commit` | 提交 `~/.config/agenvoy/skills` 下所有變更至 git |
-| `skill_git_log` | 列出 `~/.config/agenvoy/skills` 的 git commit 歷史 |
-| `skill_git_rollback` | 將 `~/.config/agenvoy/skills` 還原至指定 git commit |
+| `write_skill` | 建立或覆寫 `~/.config/agenvoy/skills/` 下的檔案 |
+| `patch_skill` | 字串替換 skill 檔案 |
+| `remove_skill` | 將 skill 目錄搬到 `.Trash/` |
+| `write_tool` | 建立或覆寫 `~/.config/agenvoy/tools/script/` 下的 `tool.json` 或 `script.py` |
+| `patch_tool` | 字串替換 script tool 檔案（`tool.json` 或 `script.py`） |
+| `test_tool` | 在 sandbox 內以 JSON input 執行 script tool 的 `script.py` |
+| `remove_tool` | 將 script tool 目錄搬到 `.Trash/` |
+
+所有變體皆 always-allowed，限定對應目錄。每次 write/patch/remove 自動 commit 至對應 git repo（skills 或 tools）。`write_tool` 與 `write_skill` 支援並發呼叫。
+
+### Git 版控與自我改進
+
+| 工具 | 說明 |
+|---|---|
+| `git_log` | 列出 skills 或 tools 目錄的 git commit 歷史（`tag` = `skills` 或 `tools`） |
+| `git_rollback` | 將 skills 或 tools 目錄還原至指定 git commit（`tag` = `skills` 或 `tools`） |
 
 **自我改進迴圈**：當 skill 執行產生 tool 錯誤（錯誤 tool name、步驟失敗），`postSkillImprove` 在 `Execute` 結束時同步執行。載入內建 `improve-skill` 定義、餵入執行軌跡、改寫有問題的 SKILL.md/scripts、並 auto-commit 修正。完整生命週期見 [Skill 系統 § 自我改進](Skill-System.zh.md#自我改進失敗時自動修正)。
 
