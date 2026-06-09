@@ -40,9 +40,6 @@ jobs:
           build_app darwin arm64 Agenvoy-macOS-arm64
           build_app darwin amd64 Agenvoy-macOS-amd64
 
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o dist/Agenvoy-linux-arm64 ./cmd/setup/
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o dist/Agenvoy-linux-amd64 ./cmd/setup/
-
       - name: Upload to Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -50,6 +47,4 @@ jobs:
           gh release upload "${{ github.ref_name }}" \
             dist/Agenvoy-macOS-arm64.zip \
             dist/Agenvoy-macOS-amd64.zip \
-            dist/Agenvoy-linux-arm64 \
-            dist/Agenvoy-linux-amd64 \
             --clobber
