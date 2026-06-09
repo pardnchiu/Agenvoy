@@ -62,7 +62,7 @@ Out of the box it also:
 ## One-line install
 
 ```bash
-curl -fsSL https://cloud.agenvoy.com/install.sh | bash
+curl -fsSL https://agenvoy.com/static/scripts/install.sh | bash
 ```
 
 Single Go binary at `/usr/local/bin/agen`. macOS / Linux. No Node, no Python, no Docker.

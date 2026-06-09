@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Agenvoy installer
-# Usage:  curl -fsSL https://raw.githubusercontent.com/agenvoy/agenvoy/main/static/scripts/install.sh | bash
+# Usage:  curl -fsSL https://agenvoy.com/static/scripts/install.sh | bash
 #
 set -euo pipefail
 

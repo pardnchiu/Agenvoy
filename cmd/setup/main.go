@@ -9,7 +9,7 @@ import (
 	"syscall"
 )
 
-const installURL = "https://raw.githubusercontent.com/agenvoy/agenvoy/main/static/scripts/install.sh"
+const installURL = "https://agenvoy.com/static/scripts/install.sh"
 
 func main() {
 	if p := findAgen(); p != "" {
