@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Agenvoy installer
-# Usage:  curl -fsSL https://cloud.agenvoy.com/install.sh | bash
+# Usage:  curl -fsSL https://agenvoy.com/static/scripts/install.sh | bash
 #
 set -euo pipefail
 
@@ -95,6 +95,11 @@ resolve_pkg() {
   case "$1:$PKG_MGR" in
     poppler:pacman|poppler:brew) printf "poppler" ;;
     poppler:*)                   printf "poppler-utils" ;;
+    python3:pacman)              printf "python" ;;
+    python3:*)                   printf "python3" ;;
+    nodejs:brew)                 printf "node" ;;
+    nodejs:*)                    printf "nodejs" ;;
+    bubblewrap:*)                printf "bubblewrap" ;;
     *)                           printf "%s" "$1" ;;
   esac
 }
@@ -342,6 +347,13 @@ main() {
   ensure_cmd git
   ensure_cmd make
   ensure_cmd pdftotext poppler
+  ensure_cmd python3
+  ensure_cmd node nodejs
+
+  # Linux sandbox requires bubblewrap; macOS uses built-in sandbox-exec
+  if [ "$(uname -s)" = "Linux" ]; then
+    ensure_cmd bwrap bubblewrap
+  fi
 
   ensure_go "$platform"
   clone_repo

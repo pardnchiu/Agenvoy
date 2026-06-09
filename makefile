@@ -11,7 +11,7 @@ run:
 
 else
 
-.PHONY: help build app stop update test
+.PHONY: help build app stop update test setup
 
 help:
 	@echo "How to use:"
@@ -20,6 +20,7 @@ help:
 	@echo "  make stop               Stop the running server daemon"
 	@echo "  make update             Update agen to the latest release (always overwrite)"
 	@echo "  make test               Run provider integration tests (skips when API keys missing)"
+	@echo "  make setup              Cross-compile setup binaries to dist/"
 	@echo "  make cli <input...>     Run agent (requires tool confirmation)"
 	@echo "  make run <input...>     Run agent (allow all tools, no confirmation)"
 
@@ -45,5 +46,28 @@ update:
 
 test:
 	@go test -v ./test/...
+
+setup:
+	@rm -rf dist && mkdir -p dist
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o dist/Agenvoy ./cmd/setup/
+	@$(MAKE) --no-print-directory _app_bundle NAME=Agenvoy-macOS-arm64
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o dist/Agenvoy ./cmd/setup/
+	@$(MAKE) --no-print-directory _app_bundle NAME=Agenvoy-macOS-amd64
+	CGO_ENABLED=0 GOOS=linux  GOARCH=arm64 go build -ldflags "-s -w" -o dist/Agenvoy ./cmd/setup/
+	@mv dist/Agenvoy dist/Agenvoy-linux-arm64
+	CGO_ENABLED=0 GOOS=linux  GOARCH=amd64 go build -ldflags "-s -w" -o dist/Agenvoy ./cmd/setup/
+	@mv dist/Agenvoy dist/Agenvoy-linux-amd64
+
+_app_bundle:
+	@app="dist/$(NAME).app"; \
+	mkdir -p "$$app/Contents/MacOS" "$$app/Contents/Resources"; \
+	cp static/scripts/Info.plist "$$app/Contents/"; \
+	cp static/scripts/app-launcher.sh "$$app/Contents/MacOS/Agenvoy"; \
+	chmod +x "$$app/Contents/MacOS/Agenvoy"; \
+	mv dist/Agenvoy "$$app/Contents/Resources/setup"; \
+	chmod +x "$$app/Contents/Resources/setup"; \
+	cp static/AppIcon.icns "$$app/Contents/Resources/"; \
+	(cd dist && zip -qr "$(NAME).zip" "$(NAME).app"); \
+	rm -rf "$$app"
 
 endif

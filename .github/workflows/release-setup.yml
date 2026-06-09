@@ -1,0 +1,55 @@
+name: Release Setup Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Build and package
+        run: |
+          mkdir -p dist
+
+          build_app() {
+            local goos=$1 goarch=$2 zipname=$3
+            CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -ldflags "-s -w" -o dist/Agenvoy ./cmd/setup/
+            app="dist/${zipname}.app"
+            mkdir -p "${app}/Contents/MacOS" "${app}/Contents/Resources"
+            cp static/scripts/Info.plist "${app}/Contents/"
+            cp static/scripts/app-launcher.sh "${app}/Contents/MacOS/Agenvoy"
+            chmod +x "${app}/Contents/MacOS/Agenvoy"
+            mv dist/Agenvoy "${app}/Contents/Resources/setup"
+            chmod +x "${app}/Contents/Resources/setup"
+            cp static/AppIcon.icns "${app}/Contents/Resources/"
+            (cd dist && zip -qr "${zipname}.zip" "${zipname}.app")
+            rm -rf "${app}"
+          }
+
+          build_app darwin arm64 Agenvoy-macOS-arm64
+          build_app darwin amd64 Agenvoy-macOS-amd64
+
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o dist/Agenvoy-linux-arm64 ./cmd/setup/
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o dist/Agenvoy-linux-amd64 ./cmd/setup/
+
+      - name: Upload to Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.ref_name }}" \
+            dist/Agenvoy-macOS-arm64.zip \
+            dist/Agenvoy-macOS-amd64.zip \
+            dist/Agenvoy-linux-arm64 \
+            dist/Agenvoy-linux-amd64 \
+            --clobber

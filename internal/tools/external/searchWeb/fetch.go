@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	go_browser "github.com/pardnchiu/go-browser"
@@ -32,6 +33,7 @@ const (
 var (
 	ddgMu       sync.Mutex
 	ddgLastCall time.Time
+	cdpForced   atomic.Bool
 )
 
 var ddgClient *http.Client
@@ -152,7 +154,7 @@ func primeCookies(ctx context.Context, headers map[string]string) {
 }
 
 func fetch(ctx context.Context, query, timeRange string, cdp bool) (string, error) {
-	if cdp {
+	if cdp || cdpForced.Load() {
 		return fetchCDP(ctx, query, timeRange)
 	}
 
@@ -173,12 +175,9 @@ func fetch(ctx context.Context, query, timeRange string, cdp bool) (string, erro
 		return "", err
 	}
 	if status == http.StatusAccepted {
-		slog.Warn("search_web HTTP 202, fallback to CDP")
-		result, err := fetchCDP(ctx, query, timeRange)
-		if err != nil {
-			return "", err
-		}
-		return "[rate-limited] use cdp=true for remaining search_web calls this turn.\n" + result, nil
+		cdpForced.Store(true)
+		slog.Warn("search_web HTTP 202, fallback to CDP (locked)")
+		return fetchCDP(ctx, query, timeRange)
 	}
 	if status != http.StatusOK {
 		return "", fmt.Errorf("status %d", status)

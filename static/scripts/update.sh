@@ -4,7 +4,7 @@
 # Source clone is staged under /tmp and removed on exit / interrupt.
 #
 # Usage:
-#   curl -fsSL https://cloud.agenvoy.com/update.sh -o /tmp/agenvoy-update.sh \
+#   curl -fsSL https://agenvoy.com/static/scripts/update.sh -o /tmp/agenvoy-update.sh \
 #     && bash /tmp/agenvoy-update.sh; rm -f /tmp/agenvoy-update.sh
 #   agen update
 #
