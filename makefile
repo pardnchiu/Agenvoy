@@ -53,10 +53,6 @@ setup:
 	@$(MAKE) --no-print-directory _app_bundle NAME=Agenvoy-macOS-arm64
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o dist/Agenvoy ./cmd/setup/
 	@$(MAKE) --no-print-directory _app_bundle NAME=Agenvoy-macOS-amd64
-	CGO_ENABLED=0 GOOS=linux  GOARCH=arm64 go build -ldflags "-s -w" -o dist/Agenvoy ./cmd/setup/
-	@mv dist/Agenvoy dist/Agenvoy-linux-arm64
-	CGO_ENABLED=0 GOOS=linux  GOARCH=amd64 go build -ldflags "-s -w" -o dist/Agenvoy ./cmd/setup/
-	@mv dist/Agenvoy dist/Agenvoy-linux-amd64
 
 _app_bundle:
 	@app="dist/$(NAME).app"; \

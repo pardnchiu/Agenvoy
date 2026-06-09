@@ -117,7 +117,14 @@ pkg_install() {
     yum)    $SUDO yum install -y "${pkgs[@]}" ;;
     pacman) $SUDO pacman -Sy --noconfirm "${pkgs[@]}" ;;
     apk)    $SUDO apk add --no-cache "${pkgs[@]}" ;;
-    brew)   brew install "${pkgs[@]}" ;;
+    brew)
+      local prefix; prefix="$(brew --prefix)"
+      if [ ! -w "$prefix" ]; then
+        warn "$prefix not writable, fixing ownership (sudo prompt expected)"
+        sudo chown -R "$(whoami)" "$prefix"
+      fi
+      brew install "${pkgs[@]}"
+      ;;
     *) return 1 ;;
   esac
 }
