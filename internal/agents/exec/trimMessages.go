@@ -9,7 +9,12 @@ import (
 func assembleMessages(systemPart []agentTypes.Message, oldHistory []agentTypes.Message, summaryMessage agentTypes.Message, userInput agentTypes.Message, toolCall []agentTypes.Message) []agentTypes.Message {
 	result := make([]agentTypes.Message, 0, len(systemPart)+len(oldHistory)+2+len(toolCall))
 	result = append(result, systemPart...)
-	result = append(result, oldHistory...)
+	for _, msg := range oldHistory {
+		if content, ok := msg.Content.(string); ok && (strings.Contains(content, poisonRefusal) || strings.Contains(content, guardrailSentinel)) {
+			continue
+		}
+		result = append(result, msg)
+	}
 	if summaryMessage.Role != "" {
 		result = append(result, summaryMessage)
 	}

@@ -225,17 +225,34 @@ func (t TUI) updateMultiSelectPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		p.multi[p.cursor] = !p.multi[p.cursor]
 
 	case tea.KeyEsc:
-		runtime.Resolve(p.pendingId, runtime.Reply{
-			Error: fmt.Errorf("user cancelled"),
-		})
-		t = t.closePopup()
+		if p.pendingId == "" {
+			t = t.closePopup()
+		} else {
+			runtime.Resolve(p.pendingId, runtime.Reply{
+				Error: fmt.Errorf("user cancelled"),
+			})
+			t = t.closePopup()
+		}
 
 	case tea.KeyEnter:
 		selected := make([]string, 0, len(p.multi))
-		for i, opt := range p.options {
+		for i := range p.options {
 			if p.multi[i] {
-				selected = append(selected, opt)
+				v := p.options[i]
+				if p.values != nil && i < len(p.values) {
+					v = p.values[i]
+				}
+				selected = append(selected, v)
 			}
+		}
+
+		if p.pendingId == "" {
+			cb := p.onConfirm
+			t = t.closePopup()
+			if cb == nil {
+				return t, nil
+			}
+			return t, func() tea.Msg { return cb(strings.Join(selected, "\x1F")) }
 		}
 
 		resolved, reply := p.advanceOrResolve(selected)

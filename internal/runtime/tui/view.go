@@ -173,16 +173,16 @@ func (t TUI) viewPopup() string {
 		for i := start; i < end; i++ {
 			opt := truncateRune(p.options[i], maxLine)
 			cursor := "  "
+			head, tail := splitOptStyle(opt)
 			var line string
 			if i == p.cursor {
 				cursor = systemStyle.Render("> ")
-				head, tail := splitOptStyle(opt)
 				line = systemStyle.Render(head)
-				if tail != "" {
-					line += hintStyle.Render(tail)
-				}
 			} else {
-				line = hintStyle.Render(opt)
+				line = whiteStyle.Render(head)
+			}
+			if tail != "" {
+				line += hintStyle.Render(tail)
 			}
 			check := "[ ]"
 			if p.multi[i] {
