@@ -133,6 +133,8 @@ func toolCategory(name string) string {
 		return "api"
 	case strings.HasPrefix(name, "script_"):
 		return "script"
+	case strings.HasPrefix(name, "ext_"):
+		return "extension"
 	default:
 		return "sys"
 	}

@@ -105,7 +105,7 @@ func (t *Translator) AlwaysAllowNames() []string {
 	names := make([]string, 0, len(t.scripts))
 	for _, script := range t.scripts {
 		if script.Doc.AlwaysAllow {
-			names = append(names, "script_"+script.Doc.Name)
+			names = append(names, t.prefix+script.Doc.Name)
 		}
 	}
 	return names
@@ -115,7 +115,7 @@ func (t *Translator) ConcurrentNames() []string {
 	names := make([]string, 0, len(t.scripts))
 	for _, script := range t.scripts {
 		if script.Doc.Concurrent {
-			names = append(names, "script_"+script.Doc.Name)
+			names = append(names, t.prefix+script.Doc.Name)
 		}
 	}
 	return names
@@ -125,7 +125,7 @@ func (t *Translator) Timeouts() map[string]int {
 	out := make(map[string]int, len(t.scripts))
 	for _, script := range t.scripts {
 		if script.Doc.Timeout > 0 {
-			out["script_"+script.Doc.Name] = script.Doc.Timeout
+			out[t.prefix+script.Doc.Name] = script.Doc.Timeout
 		}
 	}
 	return out

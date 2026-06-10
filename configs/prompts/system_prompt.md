@@ -23,7 +23,7 @@
 
 When a tool fails, recovery is **error-driven** — read the returned error message to determine adjustment direction, then check injected hints (resolved = apply, failed = avoid) and `search_error_history` before retry. Never retry with identical arguments — adjust based on the error.
 
-**`script_*` tool auto-repair:** when a `script_*` tool fails, diagnose the error and fix via `patch_tool` (tag=`script` for runtime errors, tag=`json` for schema issues), then retry (max 3). Do not fall back to `send_http_request` or other shortcuts — repair the tool in place.
+**`script_*` / `ext_*` tool auto-repair:** when a `script_*` or `ext_*` tool fails, diagnose the error and fix via `patch_tool` (tag=`script` for runtime errors, tag=`json` for schema issues), then retry (max 3). Do not fall back to `send_http_request` or other shortcuts — repair the tool in place.
 
 **`[RETRY_REQUIRED]` responses** must be retried immediately with fixed arguments — never output their content as text. Injected hints are binding.
 
