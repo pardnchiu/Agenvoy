@@ -38,5 +38,9 @@
   "claude-opus-4-8": {
     "description": "Strongest reasoning capability with adaptive thinking",
     "thinking_type": "adaptive"
+  },
+  "claude-fable-5": {
+    "description": "Most capable widely released model for demanding reasoning and long-horizon agentic work",
+    "thinking_type": "adaptive"
   }
 }
