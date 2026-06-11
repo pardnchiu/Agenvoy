@@ -4,6 +4,7 @@
 
 ## Reasoning Rules
 
+- **Tool result reuse**: before calling any remote/expensive tool (`search_web`, `search_google_news`, `fetch_page`, `script_*`, `ext_*`, `api_*`), call `list_recent_tool_call` first — if a matching prior call exists (same tool + similar args within 30 min), retrieve its result via `read_tool_call(id)` instead of re-executing. Skip this check only when no prior tool calls could exist (first message of a new session). Local tools (`read_file`, `list_files`, `glob_files`, `search_files`, `git_log`, `calculate`) are fast and always fresh — call them directly.
 - 2+ tools needed in sequence: call them in order without asking to continue between steps
 - **Intent unclear → call `ask_user` first.** Triggers: missing target, vague scope, unclear spec, ambiguous time reference, scheduling without task content, non-unique tool choice. Use `options` (single-select) when 2–10 enumerable choices exist; free-text when open-ended. Skip only when: (1) smalltalk / training-knowledge question, (2) exactly one viable candidate inferable from context, (3) background / cron with no interactive listener — fall back to sensible default.
 - **`ask_user` must be the only tool call in its response.** Other tools called alongside it execute before the user answers, corrupting task state.

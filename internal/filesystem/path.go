@@ -200,6 +200,10 @@ func PendingMetaPath(sessionID, taskHash string) string {
 	return filepath.Join(PendingDir(sessionID), taskHash+".json")
 }
 
+func TaskHistoryDir(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "history")
+}
+
 func AllowSkillProjectPath(workDir string) string {
 	return filepath.Join(workDir, "."+projectName, "allow_skill")
 }

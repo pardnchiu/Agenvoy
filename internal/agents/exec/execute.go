@@ -513,11 +513,6 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, &turnAllowAll)
 			if err != nil {
 				if errors.Is(err, ErrAskUserInterrupted) {
-					if !session.Stateless && len(session.Tools) > 0 {
-						if raw, err := json.Marshal(session.Tools); err == nil {
-							sessionManager.SaveToToolCall(session.ID, string(raw))
-						}
-					}
 					return nil
 				}
 				keepPending = false
@@ -583,6 +578,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			if isGuardrailRefusal(stripped) {
 				sendText(events, poisonRefusal)
 				events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
+				interactive.FinalizePending(session.ID, exec.PendingTask, poisonRefusal)
 				keepPending = false
 				return nil
 			}
@@ -605,6 +601,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 					slog.String("error", err.Error()))
 			}
 
+			interactive.FinalizePending(session.ID, exec.PendingTask, responseText)
+
 		case nil:
 			if actionError(&emptyCount, events) {
 				return nil
@@ -622,11 +620,6 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		}
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 
-		if !session.Stateless && len(session.Tools) > 0 {
-			if raw, err := json.Marshal(session.Tools); err == nil {
-				sessionManager.SaveToToolCall(session.ID, string(raw))
-			}
-		}
 		keepPending = false
 		return nil
 	}
@@ -647,6 +640,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			if isGuardrailRefusal(summaryStripped) {
 				sendText(events, poisonRefusal)
 				events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
+				interactive.FinalizePending(session.ID, exec.PendingTask, poisonRefusal)
 				keepPending = false
 				return nil
 			}
@@ -657,6 +651,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 					slog.String("error", err.Error()))
 			}
 			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
+			interactive.FinalizePending(session.ID, exec.PendingTask, summaryStripped)
 			keepPending = false
 			return nil
 		}

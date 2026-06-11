@@ -3,11 +3,8 @@ package session
 import (
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"strings"
-	"time"
 
-	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
@@ -57,14 +54,3 @@ func GetSessionID(name string) string {
 	return ""
 }
 
-func SaveToToolCall(sessionID, content string) {
-	now := time.Now()
-	date := now.Format("2006-01-02")
-	filename := fmt.Sprintf("%s.json", now.Format("2006-01-02-15-04-05"))
-	toolActionsPath := filepath.Join(filesystem.SessionDir(sessionID), "tool_calls", date, filename)
-	if err := go_pkg_filesystem.WriteFile(toolActionsPath, content, 0644); err != nil {
-		slog.Warn("WriteFile",
-			slog.String("session", sessionID),
-			slog.String("error", err.Error()))
-	}
-}

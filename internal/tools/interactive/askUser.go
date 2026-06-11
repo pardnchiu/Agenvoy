@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
@@ -53,6 +55,7 @@ type pendingMeta struct {
 	Questions    []runtime.Question `json:"questions,omitempty"`
 	ToolAttempts []ToolAttempt      `json:"tool_attempts,omitempty"`
 	ToolResults  []ToolResult       `json:"tool_results,omitempty"`
+	Reply        string             `json:"reply,omitempty"`
 }
 
 var pendingMu sync.Mutex
@@ -184,11 +187,52 @@ func writePending(sessionID, taskHash string, meta *pendingMeta) error {
 	return nil
 }
 
+func FinalizePending(sessionID, taskHash, reply string) {
+	if taskHash == "" {
+		return
+	}
+	pendingMu.Lock()
+	defer pendingMu.Unlock()
+
+	meta, err := go_pkg_filesystem.ReadJSON[pendingMeta](filesystem.PendingMetaPath(sessionID, taskHash))
+	if err != nil {
+		return
+	}
+	meta.Reply = reply
+	if writeErr := writePending(sessionID, taskHash, &meta); writeErr != nil {
+		slog.Warn("FinalizePending",
+			slog.String("session", sessionID),
+			slog.String("error", writeErr.Error()))
+	}
+}
+
 func CleanupPending(sessionID, taskHash string) {
 	if taskHash == "" {
 		return
 	}
-	os.Remove(filesystem.PendingMetaPath(sessionID, taskHash))
+	src := filesystem.PendingMetaPath(sessionID, taskHash)
+	if !go_pkg_filesystem_reader.Exists(src) {
+		return
+	}
+
+	histDir := filesystem.TaskHistoryDir(sessionID)
+	if err := go_pkg_filesystem.CheckDir(histDir, true); err != nil {
+		slog.Warn("CleanupPending CheckDir",
+			slog.String("session", sessionID),
+			slog.String("error", err.Error()))
+		os.Remove(src)
+		return
+	}
+
+	ts := time.Now().Format("2006-01-02-15-04")
+	dst := filepath.Join(histDir, fmt.Sprintf("%s-%s.json", ts, taskHash))
+	if err := os.Rename(src, dst); err != nil {
+		slog.Warn("CleanupPending rename",
+			slog.String("src", src),
+			slog.String("dst", dst),
+			slog.String("error", err.Error()))
+		os.Remove(src)
+	}
 }
 
 func CreateExecPending(sessionID, objective string) string {

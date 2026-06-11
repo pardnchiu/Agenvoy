@@ -16,6 +16,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
+	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
@@ -345,6 +346,9 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 
 		if s.name != "read_file" {
 			alreadyCall[s.hash] = result
+		}
+		if s.execErr == "" && !strings.HasPrefix(result, "data:image/") && toolcache.IsCacheable(s.name) {
+			toolcache.Store(exec.SessionID, s.id, s.name, s.args, result)
 		}
 
 		events <- agentTypes.Event{

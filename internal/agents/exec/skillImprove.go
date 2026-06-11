@@ -23,6 +23,9 @@ func postSkillImprove(s *skill.Skill, trace []execStep) {
 	if s == nil || s.Name == "" {
 		return
 	}
+	if strings.Contains(s.Path, "/.system/") {
+		return
+	}
 
 	scanner := agents.Scanner()
 	if scanner == nil || scanner.Skills == nil {
@@ -76,8 +79,11 @@ func postSkillImprove(s *skill.Skill, trace []execStep) {
 		time.Now().Format("2006-01-02 15:04:05"), task)
 
 	session := &agentTypes.AgentSession{
-		Stateless:     true,
-		SystemPrompts: BuildSystemPrompts(workDir, "", scanner, "", true, execData.ExcludeSkills),
+		Stateless: true,
+		SystemPrompts: []agentTypes.Message{{
+			Role:    "system",
+			Content: "You are a background skill-improvement agent. Analyze the execution trace, identify failures or inefficiencies, and patch the skill definition using file tools only (read_file, patch_file, write_file, write_skill, patch_tool). Do not call search_web, fetch_page, ask_user, or any network tool. Output nothing — your work is the file edit.",
+		}},
 		ToolHistories: []agentTypes.Message{},
 		Tools:         []agentTypes.Message{},
 		Histories:     []agentTypes.Message{},
