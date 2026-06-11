@@ -122,7 +122,7 @@ Compared against the two closest peers — personal AI agent frameworks with dae
 | Nvidia NIM | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | OpenAI-compat | ✅ | ✅ Ollama/LM Studio | ✅ OpenRouter 200+ | ❌ | ❌ | ❌ |
 | DeepSeek | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| xAI (Grok) | ✅ API key | ✅ | ✅ OAuth + API key | ❌ | ❌ | ❌ |
+| xAI (Grok) | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Mistral | ❌ | ✅ | ⚠️ via OpenRouter (no dedicated) | ❌ | ❌ | ❌ |
 | Dispatcher routing | ✅ dedicated dispatcher model | ❌ | ❌ | ❌ | ❌ | ❌ |
 

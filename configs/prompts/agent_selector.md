@@ -45,8 +45,11 @@ Three patterns compose these tiers by task complexity:
 ## Selection Rules (priority order — stop at first match)
 
 ### P0: User explicitly specifies
-Request contains "use <name>", "用 <名稱>", "指定 <名稱>", "select <name>"
+Request contains "use <name>", "with <name>", "用 <名稱>", "指定 <名稱>", "select <name>"
 → Fuzzy prefix-match against `name` in the available list, return the full `name`.
+→ The matched directive (e.g. "with grok", "use gpt5") is a **routing instruction, not a task instruction** — the selected model should treat the remaining text as the actual task.
+
+Note: `model:<name>` prefix (e.g. `model:gpt5`) is pre-processed into `use <name>` before reaching this selector.
 
 ### P0.1: Exclude Chinese-origin models
 Request contains "no Chinese model", "不用中國模型", "排除中國", "exclude Chinese", "no CN model"
@@ -68,10 +71,10 @@ Chain order is pure priority — leftmost is most preferred, rightmost is least 
 
 | Scenario | Pattern | Preference Chain (left = most preferred) |
 |---|---|---|
-| Dense routing / planning / task decomposition / subagent dispatch / complexity evaluation / long-form writing / documentation / web research / multi-source synthesis / document analysis (PDF / DOCX / large-context) / numerical & mathematical reasoning / image & chart analysis / long-form translation | H | `claude-fable > claude-opus > grok > deepseek-reasoner > codex-pro > openai-pro > codex > deepseek > grok-fast > gemini-pro > openai > claude-sonnet > codex-mini > grok-mini > openai-mini > gemini-flash > claude-haiku > grok-code > codex-nano > openai-nano > gemini-flash-lite` |
-| Code generation / refactor / debug / config / DSL / template generation | H | `claude-fable > claude-opus > grok > grok-code > deepseek-reasoner > codex-pro > openai-pro > codex > deepseek > grok-fast > gemini-pro > openai > claude-sonnet > codex-mini > grok-mini > openai-mini > gemini-flash > claude-haiku > codex-nano > openai-nano > gemini-flash-lite` |
-| Conversational session / summary deduplication & merge / strict step-following & tool name mapping / pure data retrieval / general Q&A / single-turn factual / structured extraction | M | `codex > deepseek > grok-fast > gemini-pro > openai > claude-sonnet > claude-fable > claude-opus > grok > deepseek-reasoner > codex-pro > openai-pro > codex-mini > grok-mini > openai-mini > gemini-flash > claude-haiku > grok-code > codex-nano > openai-nano > gemini-flash-lite` |
-| Background summary (JSON output) / lightweight agent / short translation / smalltalk / greetings | L | `codex-mini > grok-mini > openai-mini > gemini-flash > claude-haiku > grok-code > codex > deepseek > grok-fast > gemini-pro > openai > claude-sonnet > claude-fable > claude-opus > grok > deepseek-reasoner > codex-pro > openai-pro > codex-nano > openai-nano > gemini-flash-lite` |
+| Dense routing / planning / task decomposition / subagent dispatch / complexity evaluation / long-form writing / documentation / web research / multi-source synthesis / document analysis (PDF / DOCX / large-context) / numerical & mathematical reasoning / image & chart analysis / long-form translation | H | `claude-fable > claude-opus > grok > deepseek-reasoner > codex-pro > openai-pro > codex > deepseek > grok-fast > gemini-pro > openai > claude-sonnet > gemini-flash > claude-haiku > grok-code` |
+| Code generation / refactor / debug / config / DSL / template generation | H | `claude-fable > claude-opus > grok > grok-code > deepseek-reasoner > codex-pro > openai-pro > codex > deepseek > grok-fast > gemini-pro > openai > claude-sonnet > gemini-flash > claude-haiku` |
+| Conversational session / summary deduplication & merge / strict step-following & tool name mapping / pure data retrieval / general Q&A / single-turn factual / structured extraction | M | `codex > deepseek > grok-fast > gemini-pro > openai > claude-sonnet > claude-fable > claude-opus > grok > deepseek-reasoner > codex-pro > openai-pro > gemini-flash > claude-haiku > grok-code` |
+| Background summary (JSON output) / lightweight agent / short translation / smalltalk / greetings | L | `gemini-flash > claude-haiku > grok-code > codex > deepseek > grok-fast > gemini-pro > openai > claude-sonnet > claude-fable > claude-opus > grok > deepseek-reasoner > codex-pro > openai-pro` |
 
 ### P2: Fallback
 
@@ -83,3 +86,4 @@ None of the above matched → return all `name` values in the available list, in
 - Never invent agent names. If no node matches the available list, fall to P2.
 - When two nodes have equal applicability and both have available variants, the leftmost in the chain wins.
 - The Version Axis applies after node selection — first pick the node, then within that node pick the newest version.
+- `*-mini` and `*-nano` nodes (`codex-mini`, `grok-mini`, `openai-mini`, `codex-nano`, `openai-nano`, `gemini-flash-lite`) are **excluded from P1 chain routing**. They are only selectable via P0 (user explicitly specifies) or when they are the sole available candidate.

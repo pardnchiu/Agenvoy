@@ -56,6 +56,12 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		}
 	}
 
+	routingInput := trimInput
+	if hint, effective := parseModelHint(trimInput); hint != "" {
+		trimInput = strings.TrimSpace(effective)
+		routingInput = "use " + hint + " " + trimInput
+	}
+
 	events <- agentTypes.Event{
 		Type: agentTypes.EventAgentSelect,
 	}
@@ -69,7 +75,7 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 			Text: "external:" + externalAgent,
 		}
 	} else {
-		primary, rest, err := ResolveAgent(ctx, bot, registry, trimInput, matchedSkill != nil, sessionOverride)
+		primary, rest, err := ResolveAgent(ctx, bot, registry, routingInput, matchedSkill != nil, sessionOverride)
 		if err != nil {
 			return fmt.Errorf("ResolveAgent: %w", err)
 		}
@@ -146,4 +152,15 @@ func Run(ctx context.Context, bot agentTypes.Agent, registry agentTypes.AgentReg
 		events <- *finalDone
 	}
 	return nil
+}
+
+func parseModelHint(input string) (hint, remaining string) {
+	if !strings.HasPrefix(input, "model:") {
+		return "", input
+	}
+	rest := input[len("model:"):]
+	if hint, remainder, ok := strings.Cut(rest, " "); ok {
+		return hint, remainder
+	}
+	return rest, ""
 }
