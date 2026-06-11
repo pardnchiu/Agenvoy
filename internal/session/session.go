@@ -53,4 +53,3 @@ func GetSessionID(name string) string {
 	}
 	return ""
 }
-

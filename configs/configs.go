@@ -82,6 +82,9 @@ var GeminiModels []byte
 //go:embed jsons/providors/grok.json
 var GrokModels []byte
 
+//go:embed jsons/providors/grok-oauth.json
+var GrokOauthModels []byte
+
 //go:embed jsons/providors/copilot.json
 var CopilotModels []byte
 

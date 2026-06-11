@@ -95,7 +95,6 @@ func splitOptStyle(s string) (head, tail string) {
 	return s, ""
 }
 
-
 func (t TUI) viewPopup() string {
 	width := t.width
 	if width < 20 {

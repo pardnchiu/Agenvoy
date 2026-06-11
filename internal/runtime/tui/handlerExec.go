@@ -25,7 +25,6 @@ type agentExecDone struct {
 	err error
 }
 
-
 func runExec(parentCtx context.Context, input string, allowAll bool, workDir, sessionID, pendingTask string) {
 	ctx, cancel := context.WithCancel(exec.WithDcPushPrefix(parentCtx, go_pkg_utils.TruncateString(input, 32)))
 	send(agentExec{cancel: cancel})

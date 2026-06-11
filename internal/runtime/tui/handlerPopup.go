@@ -3,6 +3,9 @@ package tui
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os/exec"
+	goruntime "runtime"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -103,8 +106,28 @@ func (t TUI) updateOAuthPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			p.oauth.cancel()
 		}
 	case tea.KeyEnter:
+		if p.oauth.url != "" {
+			openBrowser(p.oauth.url)
+		}
 	}
 	return t, nil
+}
+
+func openBrowser(link string) {
+	var cmd *exec.Cmd
+	switch goruntime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", link)
+	case "linux":
+		cmd = exec.Command("xdg-open", link)
+	default:
+		return
+	}
+	if err := cmd.Start(); err != nil {
+		slog.Warn("openOAuthBrowser cmd.Start",
+			slog.String("url", link),
+			slog.String("error", err.Error()))
+	}
 }
 
 func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

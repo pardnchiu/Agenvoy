@@ -11,6 +11,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/deepseek"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/gemini"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/grok"
+	grokoauth "github.com/pardnchiu/agenvoy/internal/agents/provider/grokOauth"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/nvidia"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/openai"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
@@ -20,15 +21,16 @@ import (
 
 func buildAgentRegistry() agentTypes.AgentRegistry {
 	newFn := map[string]func(string) (agentTypes.Agent, error){
-		"claude":   func(m string) (agentTypes.Agent, error) { return claude.New(m) },
-		"openai":   func(m string) (agentTypes.Agent, error) { return openai.New(m) },
-		"codex":    func(m string) (agentTypes.Agent, error) { return openaicodex.New(m) },
-		"gemini":   func(m string) (agentTypes.Agent, error) { return gemini.New(m) },
-		"grok":     func(m string) (agentTypes.Agent, error) { return grok.New(m) },
-		"copilot":  func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
-		"nvidia":   func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
-		"deepseek": func(m string) (agentTypes.Agent, error) { return deepseek.New(m) },
-		"compat":   func(m string) (agentTypes.Agent, error) { return compat.New(m) },
+		"claude":     func(m string) (agentTypes.Agent, error) { return claude.New(m) },
+		"openai":     func(m string) (agentTypes.Agent, error) { return openai.New(m) },
+		"codex":      func(m string) (agentTypes.Agent, error) { return openaicodex.New(m) },
+		"gemini":     func(m string) (agentTypes.Agent, error) { return gemini.New(m) },
+		"grok":       func(m string) (agentTypes.Agent, error) { return grok.New(m) },
+		"grok-oauth": func(m string) (agentTypes.Agent, error) { return grokoauth.New(m) },
+		"copilot":    func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
+		"nvidia":     func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
+		"deepseek":   func(m string) (agentTypes.Agent, error) { return deepseek.New(m) },
+		"compat":     func(m string) (agentTypes.Agent, error) { return compat.New(m) },
 	}
 
 	agentEntries := exec.GetAgent()

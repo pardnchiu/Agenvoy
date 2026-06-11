@@ -40,8 +40,8 @@ func (t TUI) commandModelRemove() (TUI, tea.Cmd, bool) {
 	}
 
 	t.popup = &Popup{
-		kind:  popupMultiSelect,
-		title: "Remove models (space toggle · enter confirm)",
+		kind:    popupMultiSelect,
+		title:   "Remove models (space toggle · enter confirm)",
 		options: options,
 		values:  values,
 		multi:   make(map[int]bool, len(options)),

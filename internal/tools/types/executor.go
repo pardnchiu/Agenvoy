@@ -15,18 +15,18 @@ type ScriptToolExecutor interface {
 }
 
 type Executor struct {
-	WorkDir        string
-	SessionID      string
-	Allowed        []string // * limit to these folders to use
-	AllowedCommand map[string]bool
-	Tools          []Tool
-	AllTools       []Tool
-	StubTools      map[string]bool
-	ExcludeTools   map[string]bool
-	APIToolbox        *apiAdapter.Translator
-	ScriptToolbox     ScriptToolExecutor
-	ExtAPIToolbox     *apiAdapter.Translator
-	ExtScriptToolbox  ScriptToolExecutor
+	WorkDir          string
+	SessionID        string
+	Allowed          []string // * limit to these folders to use
+	AllowedCommand   map[string]bool
+	Tools            []Tool
+	AllTools         []Tool
+	StubTools        map[string]bool
+	ExcludeTools     map[string]bool
+	APIToolbox       *apiAdapter.Translator
+	ScriptToolbox    ScriptToolExecutor
+	ExtAPIToolbox    *apiAdapter.Translator
+	ExtScriptToolbox ScriptToolExecutor
 
 	SkillScanner    *runtime.SkillScanner
 	CancelExecution context.CancelFunc

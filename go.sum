@@ -120,6 +120,8 @@ github.com/pardnchiu/ToriiDB v0.5.1 h1:+jEtX4L1Pb1CZMYk485f6ulkR0w6I3jvz69fzmge0
 github.com/pardnchiu/ToriiDB v0.5.1/go.mod h1:0p0IsrySqXyXvKIJswKKG1Zi6wQ2TD/LdKcKx4It/EA=
 github.com/pardnchiu/go-bot v0.3.6 h1:XkEaGxg/gNX/jWDkY1C7Uw2aWOadjVCa2n0fkBB6dqw=
 github.com/pardnchiu/go-bot v0.3.6/go.mod h1:OtqtjyXnlRFlh6AEgxNE6Tykqic8rUWQqmco/TAvNF4=
+github.com/pardnchiu/go-bot v0.4.3 h1:N+uQv+cdNZgNXMeSEfCRfYBaAULYsCIFcRVJYIAYDTw=
+github.com/pardnchiu/go-bot v0.4.3/go.mod h1:9eE+MLerrx6XTz/WS0tGPiPdjKCGGeOHPRhIGfD1HfI=
 github.com/pardnchiu/go-browser v0.1.6 h1:eVwCl5H2wQHbP8W1LtP3S+q73PEAur6sMVkZgeDXX2U=
 github.com/pardnchiu/go-browser v0.1.6/go.mod h1:F4Ms8dIbPb23MX0FMZ6w3PKnjFs+wNsd4QJmirXkEd0=
 github.com/pardnchiu/go-pkg v0.13.3 h1:6ROu+sQgIpl+gtRiDuJIibRwnUJzPv6QIdk+TOVFHi0=

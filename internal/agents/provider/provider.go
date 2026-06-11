@@ -63,14 +63,15 @@ func parse(data []byte) map[string]ModelItem {
 
 func providers() map[string]map[string]ModelItem {
 	return map[string]map[string]ModelItem{
-		"claude":   parse(configs.ClaudeModels),
-		"openai":   parse(configs.OpenaiModels),
-		"codex":    parse(configs.CodexModels),
-		"gemini":   parse(configs.GeminiModels),
-		"grok":     parse(configs.GrokModels),
-		"copilot":  parse(configs.CopilotModels),
-		"nvidia":   parse(configs.NvidiaModels),
-		"deepseek": parse(configs.DeepseekModels),
+		"claude":     parse(configs.ClaudeModels),
+		"openai":     parse(configs.OpenaiModels),
+		"codex":      parse(configs.CodexModels),
+		"gemini":     parse(configs.GeminiModels),
+		"grok":       parse(configs.GrokModels),
+		"grok-oauth": parse(configs.GrokOauthModels),
+		"copilot":    parse(configs.CopilotModels),
+		"nvidia":     parse(configs.NvidiaModels),
+		"deepseek":   parse(configs.DeepseekModels),
 	}
 }
 

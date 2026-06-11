@@ -13,6 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
+	grokoauth "github.com/pardnchiu/agenvoy/internal/agents/provider/grokOauth"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
@@ -46,15 +47,16 @@ var modelAddProviders = []struct {
 	name  string
 	label string
 }{
-	{"copilot", "Github Copilot"},
-	{"openai", "OpenAI"},
 	{"codex", "Codex (OpenAI Subscription)"},
+	{"openai", "OpenAI"},
+	{"grok-oauth", "Grok (xAI Subscription)"},
+	{"grok", "Grok"},
 	{"claude", "Claude"},
 	{"gemini", "Gemini"},
-	{"grok", "Grok"},
+	{"copilot", "Github Copilot (Github Subscription)"},
 	{"deepseek", "DeepSeek"},
 	{"nvidia", "NVIDIA NIM"},
-	{"compat", "Compatibility (custom endpoint)"},
+	{"compat", "(custom endpoint)"},
 }
 
 func (t TUI) commandModelAdd() (TUI, tea.Cmd, bool) {
@@ -83,7 +85,7 @@ func (t TUI) runModelAddProviderPick(name string) (TUI, tea.Cmd) {
 	}
 	t.modelAdd.provider = name
 	switch name {
-	case "copilot", "codex":
+	case "copilot", "codex", "grok-oauth":
 		return t.modelAddViaOAuth()
 	case "compat":
 		return t.openModelAddCompatName()
@@ -100,6 +102,8 @@ func (t TUI) modelAddViaOAuth() (TUI, tea.Cmd) {
 		hasToken = copilot.HasToken()
 	case "codex":
 		hasToken = openaicodex.HasToken()
+	case "grok-oauth":
+		hasToken = grokoauth.HasToken()
 	}
 	if hasToken {
 		label := strings.ToUpper(prov[:1]) + prov[1:]
@@ -171,6 +175,16 @@ func runOAuthFlow(ctx context.Context, prov string) {
 		err = openaicodex.AuthWithCallback(ctx, func(url string) {
 			send(OAuthInfo{url: url})
 		})
+	case "grok-oauth":
+		if grokoauth.HasToken() {
+			if cerr := grokoauth.ClearToken(); cerr != nil {
+				send(OAuthFailed{err: fmt.Errorf("ClearToken: %w", cerr)})
+				return
+			}
+		}
+		err = grokoauth.AuthWithCallback(ctx, func(url string) {
+			send(OAuthInfo{url: url})
+		})
 	default:
 		err = fmt.Errorf("unsupported oauth provider: %s", prov)
 	}
@@ -194,6 +208,9 @@ func (t TUI) runOAuthInfo(msg OAuthInfo) (TUI, tea.Cmd) {
 	}
 	t.popup.title = title
 	t.popup.subtitle = ""
+	if msg.url != "" && msg.userCode == "" {
+		openBrowser(msg.url)
+	}
 	return t, nil
 }
 
