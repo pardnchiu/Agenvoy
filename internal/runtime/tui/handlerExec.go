@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -23,18 +25,8 @@ type agentExecDone struct {
 	err error
 }
 
-func truncatePushPrefix(s string, max int) string {
-	s = strings.ReplaceAll(s, "\n", " ")
-	s = strings.TrimSpace(s)
-	r := []rune(s)
-	if len(r) > max {
-		return string(r[:max]) + "..."
-	}
-	return string(r)
-}
-
 func runExec(parentCtx context.Context, input string, allowAll bool, workDir, sessionID, pendingTask string) {
-	ctx, cancel := context.WithCancel(exec.WithDcPushPrefix(parentCtx, truncatePushPrefix(input, 32)))
+	ctx, cancel := context.WithCancel(exec.WithDcPushPrefix(parentCtx, go_pkg_utils.TruncateString(input, 32)))
 	send(agentExec{cancel: cancel})
 
 	ch := make(chan agentTypes.Event, 16)

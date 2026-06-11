@@ -5,11 +5,12 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 )
 
 type ModelRemove struct {
-	name string
+	chosen string
 }
 
 func (t TUI) commandModelRemove() (TUI, tea.Cmd, bool) {
@@ -26,59 +27,72 @@ func (t TUI) commandModelRemove() (TUI, tea.Cmd, bool) {
 	for i, m := range cfg.Models {
 		label := m.Name
 		if m.Description != "" {
-			label = fmt.Sprintf("%s  %s", m.Name, hintStyle.Render(m.Description))
+			label += " · " + m.Description
 		}
 		if cfg.DispatcherModel != "" && m.Name == cfg.DispatcherModel {
-			label += "  " + warnStyle.Render("[dispatcher]")
+			label += " · [dispatcher]"
 		}
 		if cfg.SummaryModel != "" && m.Name == cfg.SummaryModel {
-			label += "  " + warnStyle.Render("[summary]")
+			label += " · [summary]"
 		}
 		options[i] = label
 		values[i] = m.Name
 	}
 
 	t.popup = &Popup{
-		kind:    popupSingleSelect,
-		title:   "Remove model",
+		kind:    popupMultiSelect,
+		title:   "Remove models (space toggle · enter confirm)",
 		options: options,
 		values:  values,
+		multi:   make(map[int]bool, len(options)),
 		onConfirm: func(chosen string) any {
-			return ModelRemove{name: chosen}
+			return ModelRemove{chosen: chosen}
 		},
 	}
 	return t, nil, true
 }
 
-func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
+func (t TUI) runModelRemove(chosen string) (TUI, tea.Cmd) {
+	if chosen == "" {
+		return t, tea.Println(hintStyle.Render("⎯ no models selected") + "\n")
+	}
+
+	toRemove := make(map[string]bool)
+	for _, name := range strings.Split(chosen, "\x1F") {
+		if name = strings.TrimSpace(name); name != "" {
+			toRemove[name] = true
+		}
+	}
+	if len(toRemove) == 0 {
+		return t, tea.Println(hintStyle.Render("⎯ no models selected") + "\n")
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n")
 	}
 
-	if len(cfg.Models) == 0 {
-		return t, tea.Println(hintStyle.Render("no models configured") + "\n")
-	}
-
-	idx := -1
-	for i, m := range cfg.Models {
-		if m.Name == name {
-			idx = i
-			break
+	var kept []config.ModelEntry
+	var removed []string
+	for _, m := range cfg.Models {
+		if toRemove[m.Name] {
+			removed = append(removed, m.Name)
+		} else {
+			kept = append(kept, m)
 		}
 	}
-	if idx < 0 {
-		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] model %q not found", name)) + "\n")
+	if len(removed) == 0 {
+		return t, tea.Println(hintStyle.Render("⎯ no matching models found") + "\n")
 	}
 
-	cfg.Models = append(cfg.Models[:idx], cfg.Models[idx+1:]...)
+	cfg.Models = kept
 	clearedDispatcher := false
-	if cfg.DispatcherModel == name {
+	if toRemove[cfg.DispatcherModel] {
 		cfg.DispatcherModel = ""
 		clearedDispatcher = true
 	}
 	clearedSummary := false
-	if cfg.SummaryModel == name {
+	if toRemove[cfg.SummaryModel] {
 		cfg.SummaryModel = ""
 		clearedSummary = true
 	}
@@ -87,7 +101,9 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Save: %v", err)) + "\n")
 	}
 
-	lines := []string{hintStyle.Render(fmt.Sprintf("⎯ removed: %s", name))}
+	agents.Reload()
+
+	lines := []string{hintStyle.Render(fmt.Sprintf("⎯ removed: %s · registry reloaded", strings.Join(removed, ", ")))}
 	if clearedDispatcher {
 		lines = append(lines, warnStyle.Render("dispatcher cleared · run /model or set a new dispatcher"))
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
+	grokoauth "github.com/pardnchiu/agenvoy/internal/agents/provider/grokOauth"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
@@ -31,7 +32,7 @@ type ModelAddAPIKeySubmit struct{ key string }
 type ModelAddCompatNameSubmit struct{ name string }
 type ModelAddCompatURLSubmit struct{ url string }
 type ModelAddCompatKeySubmit struct{ key string }
-type ModelAddModelPick struct{ name, description string }
+type ModelAddModelMultiPick struct{ chosen string }
 type ModelAddDone struct{ err error }
 
 type OAuthInfo struct {
@@ -46,15 +47,16 @@ var modelAddProviders = []struct {
 	name  string
 	label string
 }{
-	{"copilot", "Github Copilot"},
-	{"openai", "OpenAI"},
 	{"codex", "Codex (OpenAI Subscription)"},
+	{"openai", "OpenAI"},
+	{"grok-oauth", "Grok (xAI Subscription)"},
+	{"grok", "Grok"},
 	{"claude", "Claude"},
 	{"gemini", "Gemini"},
-	{"grok", "Grok"},
+	{"copilot", "Github Copilot (Github Subscription)"},
 	{"deepseek", "DeepSeek"},
 	{"nvidia", "NVIDIA NIM"},
-	{"compat", "Compatibility (custom endpoint)"},
+	{"compat", "(custom endpoint)"},
 }
 
 func (t TUI) commandModelAdd() (TUI, tea.Cmd, bool) {
@@ -83,7 +85,7 @@ func (t TUI) runModelAddProviderPick(name string) (TUI, tea.Cmd) {
 	}
 	t.modelAdd.provider = name
 	switch name {
-	case "copilot", "codex":
+	case "copilot", "codex", "grok-oauth":
 		return t.modelAddViaOAuth()
 	case "compat":
 		return t.openModelAddCompatName()
@@ -100,6 +102,8 @@ func (t TUI) modelAddViaOAuth() (TUI, tea.Cmd) {
 		hasToken = copilot.HasToken()
 	case "codex":
 		hasToken = openaicodex.HasToken()
+	case "grok-oauth":
+		hasToken = grokoauth.HasToken()
 	}
 	if hasToken {
 		label := strings.ToUpper(prov[:1]) + prov[1:]
@@ -171,6 +175,16 @@ func runOAuthFlow(ctx context.Context, prov string) {
 		err = openaicodex.AuthWithCallback(ctx, func(url string) {
 			send(OAuthInfo{url: url})
 		})
+	case "grok-oauth":
+		if grokoauth.HasToken() {
+			if cerr := grokoauth.ClearToken(); cerr != nil {
+				send(OAuthFailed{err: fmt.Errorf("ClearToken: %w", cerr)})
+				return
+			}
+		}
+		err = grokoauth.AuthWithCallback(ctx, func(url string) {
+			send(OAuthInfo{url: url})
+		})
 	default:
 		err = fmt.Errorf("unsupported oauth provider: %s", prov)
 	}
@@ -194,6 +208,9 @@ func (t TUI) runOAuthInfo(msg OAuthInfo) (TUI, tea.Cmd) {
 	}
 	t.popup.title = title
 	t.popup.subtitle = ""
+	if msg.url != "" && msg.userCode == "" {
+		openBrowser(msg.url)
+	}
 	return t, nil
 }
 
@@ -379,17 +396,41 @@ func (t TUI) openModelAddModelPick() (TUI, tea.Cmd) {
 		prefix = fmt.Sprintf("compat[%s]@", t.modelAdd.compatProvider)
 	}
 
-	var models map[string]provider.ModelItem
-	if t.modelAdd.provider != "compat" {
-		models = provider.Models(t.modelAdd.provider)
+	cfg, err := config.Load()
+	if err != nil {
+		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n")
+	}
+	existing := make(map[string]bool, len(cfg.Models))
+	for _, m := range cfg.Models {
+		existing[m.Name] = true
 	}
 
+	if t.modelAdd.provider == "compat" {
+		t.popup = &Popup{
+			kind:  popupText,
+			title: fmt.Sprintf("Model name (prefix: %s)", prefix),
+			onConfirm: func(value string) any {
+				name := strings.TrimSpace(value)
+				if name == "" {
+					return ModelAddModelMultiPick{chosen: ""}
+				}
+				return ModelAddModelMultiPick{chosen: name + "\x00"}
+			},
+		}
+		return t, nil
+	}
+
+	models := provider.Models(t.modelAdd.provider)
 	if len(models) == 0 {
 		t.popup = &Popup{
 			kind:  popupText,
 			title: fmt.Sprintf("Model name (prefix: %s)", prefix),
 			onConfirm: func(value string) any {
-				return ModelAddModelPick{name: strings.TrimSpace(value)}
+				name := strings.TrimSpace(value)
+				if name == "" {
+					return ModelAddModelMultiPick{chosen: ""}
+				}
+				return ModelAddModelMultiPick{chosen: name + "\x00"}
 			},
 		}
 		return t, nil
@@ -410,73 +451,123 @@ func (t TUI) openModelAddModelPick() (TUI, tea.Cmd) {
 
 	options := make([]string, len(names))
 	values := make([]string, len(names))
+	preSelected := make(map[int]bool, len(names))
+
 	for i, n := range names {
+		fullName := prefix + n
 		desc := models[n].Description
+		label := n
 		if desc != "" {
-			options[i] = fmt.Sprintf("%s  %s", n, hintStyle.Render(desc))
-		} else {
-			options[i] = n
+			label += " · " + desc
 		}
+		if existing[fullName] {
+			label += " · (added)"
+			preSelected[i] = true
+		}
+		options[i] = label
 		values[i] = n + "\x00" + desc
 	}
 
 	t.popup = &Popup{
-		kind:    popupSingleSelect,
-		title:   fmt.Sprintf("Select %s model", t.modelAdd.provider),
+		kind:    popupMultiSelect,
+		title:   fmt.Sprintf("Select %s models (space toggle · enter confirm)", t.modelAdd.provider),
 		options: options,
 		values:  values,
+		multi:   preSelected,
 		onConfirm: func(chosen string) any {
-			parts := strings.SplitN(chosen, "\x00", 2)
-			name := parts[0]
-			desc := ""
-			if len(parts) > 1 {
-				desc = parts[1]
-			}
-			return ModelAddModelPick{name: name, description: desc}
+			return ModelAddModelMultiPick{chosen: chosen}
 		},
 	}
 	return t, nil
 }
 
-func (t TUI) runModelAddModelPick(name, description string) (TUI, tea.Cmd) {
+func (t TUI) runModelAddModelMultiPick(chosen string) (TUI, tea.Cmd) {
 	if t.modelAdd == nil {
 		return t, tea.Println(errorStyle.Render("[!] model add state lost") + "\n")
 	}
-	name = strings.TrimSpace(name)
-	if name == "" {
-		t.modelAdd = nil
-		return t, tea.Println(errorStyle.Render("[!] model name required") + "\n")
-	}
+
 	prefix := t.modelAdd.provider + "@"
 	if t.modelAdd.provider == "compat" {
 		prefix = fmt.Sprintf("compat[%s]@", t.modelAdd.compatProvider)
 	}
-	fullName := prefix + name
-	t.modelAdd = nil
+
+	selected := make(map[string]string)
+	if chosen != "" {
+		for _, entry := range strings.Split(chosen, "\x1F") {
+			parts := strings.SplitN(entry, "\x00", 2)
+			name := parts[0]
+			desc := ""
+			if len(parts) > 1 {
+				desc = parts[1]
+			}
+			selected[prefix+name] = desc
+		}
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
+		t.modelAdd = nil
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Load: %v", err)) + "\n")
 	}
 
-	found := false
-	for i, m := range cfg.Models {
-		if m.Name == fullName {
-			cfg.Models[i].Description = description
-			found = true
-			break
+	var kept []config.ModelEntry
+	var removed []string
+	for _, m := range cfg.Models {
+		if strings.HasPrefix(m.Name, prefix) {
+			if desc, ok := selected[m.Name]; ok {
+				kept = append(kept, config.ModelEntry{Name: m.Name, Description: desc})
+				delete(selected, m.Name)
+			} else {
+				removed = append(removed, m.Name)
+			}
+		} else {
+			kept = append(kept, m)
 		}
 	}
-	if !found {
-		cfg.Models = append(cfg.Models, config.ModelEntry{Name: fullName, Description: description})
+
+	var added []string
+	for fullName, desc := range selected {
+		kept = append(kept, config.ModelEntry{Name: fullName, Description: desc})
+		added = append(added, fullName)
 	}
-	if cfg.DispatcherModel == "" {
-		cfg.DispatcherModel = fullName
+	sort.Slice(added, func(i, j int) bool { return added[i] < added[j] })
+
+	cfg.Models = kept
+	if cfg.DispatcherModel != "" && strings.HasPrefix(cfg.DispatcherModel, prefix) {
+		found := false
+		for _, m := range kept {
+			if m.Name == cfg.DispatcherModel {
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.DispatcherModel = ""
+		}
 	}
+	if cfg.DispatcherModel == "" && len(kept) > 0 {
+		cfg.DispatcherModel = kept[0].Name
+	}
+
 	if err := config.Save(cfg); err != nil {
+		t.modelAdd = nil
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.Save: %v", err)) + "\n")
 	}
 
 	agents.Reload()
-	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ added: %s · registry reloaded", fullName)) + "\n")
+
+	var summary []string
+	if len(added) > 0 {
+		summary = append(summary, fmt.Sprintf("added: %s", strings.Join(added, ", ")))
+	}
+	if len(removed) > 0 {
+		summary = append(summary, fmt.Sprintf("removed: %s", strings.Join(removed, ", ")))
+	}
+
+	providerName := t.modelAdd.provider
+	t.modelAdd = nil
+	if len(summary) == 0 {
+		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ %s models unchanged", providerName)) + "\n")
+	}
+	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ %s · registry reloaded", strings.Join(summary, " · "))) + "\n")
 }

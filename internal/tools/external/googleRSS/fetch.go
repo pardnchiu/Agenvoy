@@ -2,26 +2,19 @@ package googleRSS
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
-const (
-	path = "https://news.google.com/rss/search"
-	ttl  = 300
-)
+const path = "https://news.google.com/rss/search"
 
 type data struct {
 	Channel struct {
@@ -49,29 +42,10 @@ func handler(ctx context.Context, keyword, timeRange, ceid, geo, lang string) (s
 		url.QueryEscape(ceid),
 	)
 
-	hash := sha256.Sum256([]byte(keyword + "|" + timeRange + "|" + ceid))
-	cacheKey := "rss:" + hex.EncodeToString(hash[:])
-	db := torii.DB(torii.DBToolCache)
-	if entry, ok := db.Get(cacheKey); ok {
-		return entry.Value(), nil
-	}
-
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	items, err := fetch(ctx, reqPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch google rss: %w", err)
-	}
-
-	if items != "[]" {
-		if err = db.Set(cacheKey, items, torii.SetDefault, torii.TTL(ttl)); err != nil {
-			slog.Warn("db.Set",
-				slog.String("error", err.Error()))
-		}
-	}
-
-	return items, nil
+	return fetch(ctx, reqPath)
 }
 
 func fetch(ctx context.Context, reqPath string) (string, error) {

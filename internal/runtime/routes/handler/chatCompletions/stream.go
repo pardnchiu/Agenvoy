@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	internalUtils "github.com/pardnchiu/agenvoy/internal/utils"
 )
@@ -83,11 +85,7 @@ func stream(c *gin.Context, id string, created int64, model string, events <-cha
 		if arg == "" {
 			return name
 		}
-		const max = 80
-		if r := []rune(arg); len(r) > max {
-			arg = string(r[:max]) + "…"
-		}
-		return name + "  " + arg
+		return name + "  " + go_pkg_utils.TruncateString(arg, 128)
 	}
 
 	for ev := range events {

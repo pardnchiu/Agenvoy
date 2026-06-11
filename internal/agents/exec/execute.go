@@ -36,9 +36,19 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
-var timestampHeaderRegex = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
+const (
+	poisonRefusal     = "無法執行此操作"
+	guardrailSentinel = "[KARAPPO]"
+)
 
-var summaryLeakMarkerRegex = regexp.MustCompile(`(?mi)^\s*(?:[#*>\-]+\s*)?(?:Prior Conversation Context|Prior summary \(reference only\)|background summary of prior discussion|Strict rules:)`)
+var (
+	timestampHeaderRegex   = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
+	summaryLeakMarkerRegex = regexp.MustCompile(`(?i)(?:Prior Conversation Context|Prior summary|background summary of prior discussion|Strict rules:|"key_decisions"\s*:\s*\[|"current_discussion"\s*:\s*\{)`)
+)
+
+func isGuardrailRefusal(content string) bool {
+	return strings.Contains(content, guardrailSentinel)
+}
 
 func StripModelResponse(str string) string {
 	str = timestampHeaderRegex.ReplaceAllString(str, "")
@@ -48,7 +58,7 @@ func StripModelResponse(str string) string {
 		if len(head) > 120 {
 			head = head[:120]
 		}
-		str = str[:loc[0]]
+		str = strings.TrimRight(str[:loc[0]], " \t\n\r#")
 		slog.Warn("StripModelResponse summary leak stripped",
 			slog.Int("dropped_chars", len(dropped)),
 			slog.String("dropped_head", head))
@@ -503,11 +513,6 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			session, alreadyCall, err = toolCall(ctx, exec, choice, session, events, allowAll, alreadyCall, &turnAllowAll)
 			if err != nil {
 				if errors.Is(err, ErrAskUserInterrupted) {
-					if !session.Stateless && len(session.Tools) > 0 {
-						if raw, err := json.Marshal(session.Tools); err == nil {
-							sessionManager.SaveToToolCall(session.ID, string(raw))
-						}
-					}
 					return nil
 				}
 				keepPending = false
@@ -570,6 +575,14 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 			emptyCount = 0
 
+			if isGuardrailRefusal(stripped) {
+				sendText(events, poisonRefusal)
+				events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
+				interactive.FinalizePending(session.ID, exec.PendingTask, poisonRefusal)
+				keepPending = false
+				return nil
+			}
+
 			responseText := stripped
 			if trimmedToolCalls {
 				responseText += "\n\n> 因超過模型 max input，部分工具查詢資料已被裁減，建議使用更大 context window 的模型再試一次。"
@@ -588,6 +601,8 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 					slog.String("error", err.Error()))
 			}
 
+			interactive.FinalizePending(session.ID, exec.PendingTask, responseText)
+
 		case nil:
 			if actionError(&emptyCount, events) {
 				return nil
@@ -605,11 +620,6 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		}
 		events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
 
-		if !session.Stateless && len(session.Tools) > 0 {
-			if raw, err := json.Marshal(session.Tools); err == nil {
-				sessionManager.SaveToToolCall(session.ID, string(raw))
-			}
-		}
 		keepPending = false
 		return nil
 	}
@@ -626,13 +636,22 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		usage.CacheCreate += resp.Usage.CacheCreate
 		usage.CacheRead += resp.Usage.CacheRead
 		if text, ok := resp.Choices[0].Message.Content.(string); ok && text != "" {
-			sendText(events, StripModelResponse(text))
+			summaryStripped := StripModelResponse(text)
+			if isGuardrailRefusal(summaryStripped) {
+				sendText(events, poisonRefusal)
+				events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
+				interactive.FinalizePending(session.ID, exec.PendingTask, poisonRefusal)
+				keepPending = false
+				return nil
+			}
+			sendText(events, summaryStripped)
 			if err := record.UpdateUsage(data.Agent.Name(), usage.Input, usage.Output, usage.CacheCreate, usage.CacheRead); err != nil {
 				slog.Warn("usageManager.Update",
 					slog.String("session", session.ID),
 					slog.String("error", err.Error()))
 			}
 			events <- agentTypes.Event{Type: agentTypes.EventDone, Model: data.Agent.Name(), Usage: &usage, Duration: time.Since(executeStart)}
+			interactive.FinalizePending(session.ID, exec.PendingTask, summaryStripped)
 			keepPending = false
 			return nil
 		}
@@ -692,6 +711,9 @@ func saveNewHistory(ctx context.Context, choice agentTypes.OutputChoices, sessio
 		if message.Role == "system" ||
 			message.Role == "tool" ||
 			(message.Role == "assistant" && len(message.ToolCalls) > 0) {
+			continue
+		}
+		if content, ok := message.Content.(string); ok && (strings.Contains(content, poisonRefusal) || strings.Contains(content, guardrailSentinel)) {
 			continue
 		}
 		delta = append(delta, message)

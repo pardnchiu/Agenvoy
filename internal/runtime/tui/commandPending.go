@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
@@ -33,9 +34,9 @@ func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 		if !ok {
 			continue
 		}
-		label := truncate(h, 8)
+		label := go_pkg_utils.TruncateString(h, 8)
 		if info.Objective != "" {
-			label = truncate(info.Objective, 60)
+			label = go_pkg_utils.TruncateString(info.Objective, 64)
 		}
 		if info.HasQuestions {
 			label += " (awaiting answer)"

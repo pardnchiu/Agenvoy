@@ -43,7 +43,7 @@ func Online(sessionID, input string) string {
 	status := get(sessionID)
 	task := Task{
 		ID:        go_pkg_utils.UUID(),
-		Input:     go_pkg_utils.TruncateString(input, 160),
+		Input:     go_pkg_utils.TruncateString(input, 256),
 		StartedAt: time.Now().Format("2006-01-02 15:04:05.000"),
 	}
 	status.Active = append(status.Active, task)

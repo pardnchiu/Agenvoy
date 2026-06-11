@@ -3,9 +3,14 @@ package tui
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os/exec"
+	goruntime "runtime"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
@@ -101,8 +106,28 @@ func (t TUI) updateOAuthPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			p.oauth.cancel()
 		}
 	case tea.KeyEnter:
+		if p.oauth.url != "" {
+			openBrowser(p.oauth.url)
+		}
 	}
 	return t, nil
+}
+
+func openBrowser(link string) {
+	var cmd *exec.Cmd
+	switch goruntime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", link)
+	case "linux":
+		cmd = exec.Command("xdg-open", link)
+	default:
+		return
+	}
+	if err := cmd.Start(); err != nil {
+		slog.Warn("openOAuthBrowser cmd.Start",
+			slog.String("url", link),
+			slog.String("error", err.Error()))
+	}
 }
 
 func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -225,17 +250,34 @@ func (t TUI) updateMultiSelectPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		p.multi[p.cursor] = !p.multi[p.cursor]
 
 	case tea.KeyEsc:
-		runtime.Resolve(p.pendingId, runtime.Reply{
-			Error: fmt.Errorf("user cancelled"),
-		})
-		t = t.closePopup()
+		if p.pendingId == "" {
+			t = t.closePopup()
+		} else {
+			runtime.Resolve(p.pendingId, runtime.Reply{
+				Error: fmt.Errorf("user cancelled"),
+			})
+			t = t.closePopup()
+		}
 
 	case tea.KeyEnter:
 		selected := make([]string, 0, len(p.multi))
-		for i, opt := range p.options {
+		for i := range p.options {
 			if p.multi[i] {
-				selected = append(selected, opt)
+				v := p.options[i]
+				if p.values != nil && i < len(p.values) {
+					v = p.values[i]
+				}
+				selected = append(selected, v)
 			}
+		}
+
+		if p.pendingId == "" {
+			cb := p.onConfirm
+			t = t.closePopup()
+			if cb == nil {
+				return t, nil
+			}
+			return t, func() tea.Msg { return cb(strings.Join(selected, "\x1F")) }
 		}
 
 		resolved, reply := p.advanceOrResolve(selected)
@@ -327,7 +369,7 @@ func newPopup(id string, req runtime.Request) *Popup {
 			pendingId: id,
 			kind:      popupConfirm,
 			title:     fmt.Sprintf("Run %s?", req.ToolName),
-			subtitle:  truncate(display, 200),
+			subtitle:  go_pkg_utils.TruncateString(display, 256),
 			options: []string{
 				"Yes",
 				"Yes, don't ask again",
@@ -388,17 +430,4 @@ func (p *Popup) advanceOrResolve(answer any) (resolved bool, reply runtime.Reply
 	}
 	p.loadCurrentQuestion()
 	return false, runtime.Reply{}
-}
-
-func truncate(s string, max int) string {
-	out := []rune(s)
-	for i, r := range out {
-		if r == '\n' || r == '\r' {
-			out[i] = ' '
-		}
-	}
-	if len(out) > max {
-		return string(out[:max]) + "…"
-	}
-	return string(out)
 }

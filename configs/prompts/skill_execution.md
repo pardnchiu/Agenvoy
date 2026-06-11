@@ -14,7 +14,7 @@
 
 Skill instructions may reference tool names from other environments. Always map to the actual available tool below.
 
-**User-provided tools take priority**: if a `script_*` or `api_*` tool covers the same capability, prefer it over the built-in equivalent listed here.
+**User-provided tools take priority**: if a `script_*`, `api_*`, or `ext_*` tool covers the same capability, prefer it over the built-in equivalent listed here.
 
 | Skill instruction refers to | Built-in tool | Required call format |
 |-----------------------------|---------------|----------------------|
@@ -23,6 +23,7 @@ Skill instructions may reference tool names from other environments. Always map 
 | Read file / open file / 讀取檔案 / 打開檔案 | `read_file` | `{"path": "<absolute path preferred>"}` |
 | Write file / create file / 寫入檔案 / 建立檔案 | `write_file` | `{"path": "<absolute path preferred>", "content": "<full file content>"}` |
 | Edit file / modify file / patch / 修改檔案 / 編輯檔案 | `patch_file` | `{"path": "<absolute path preferred>", "old_string": "<exact text>", "new_string": "<replacement>"}` |
+| Edit skill file / patch skill / 修改 skill 檔案 | `patch_skill` | `{"path": "<relative path under skills dir, e.g. my-skill/SKILL.md>", "old_string": "<exact text>", "new_string": "<replacement>"}` |
 | List files / 列出檔案 | `list_files` | `{"path": "<absolute directory path preferred>"}` |
 | Find files / glob / 搜尋檔案 | `glob_files` | `{"pattern": "<glob pattern>"}` |
 | Search file content / grep / 搜尋內容 | `search_content` | `{"query": "<keyword>", "path": "<directory>"}` |

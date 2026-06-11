@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -92,10 +94,7 @@ func formatFeedback(results []external.Result) string {
 		if r.Err != nil {
 			sb.WriteString(fmt.Sprintf("[%s] ❌ %s\n\n", r.Agent, r.Err.Error()))
 		} else {
-			preview := r.Output
-			if len(preview) > 600 {
-				preview = preview[:600] + "…"
-			}
+			preview := go_pkg_utils.TruncateString(r.Output, 512)
 			sb.WriteString(fmt.Sprintf("[%s]\n%s\n\n", r.Agent, preview))
 		}
 	}

@@ -187,7 +187,7 @@ python3 scripts/init_scheduler_skill.py <short-name>
 
 ### 4. 填充 skill body
 
-用 `patch_file` 取代模板中的 `[TODO: ...]` 段：
+用 `patch_skill` 取代模板中的 `[TODO: ...]` 段：
 
 - `description:` ← 步驟 1 收集到的「一句話描述」
 - `## 任務` ← 步驟 1 收集到的「行為細節」，引用**步驟 3.5 已確認存在**的 tool 名稱與參數
@@ -283,7 +283,7 @@ stdout：
 
 抓出 full name `tsmc-stock-watch-a3f9b2c1`。
 
-**步驟 4** `patch_file` 填入（frontmatter `name` 用 full name）：
+**步驟 4** `patch_skill` 填入（frontmatter `name` 用 full name）：
 
 ```markdown
 ---

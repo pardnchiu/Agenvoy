@@ -2,8 +2,6 @@ package searchWeb
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -19,14 +17,12 @@ import (
 
 	go_browser "github.com/pardnchiu/go-browser"
 
-	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
 const (
 	ddgPath   = "https://html.duckduckgo.com/html/"
-	ttl       = 300
 	ddgMinGap = 5 * time.Second // prevent status code 202
 )
 
@@ -70,32 +66,13 @@ type data struct {
 }
 
 func handler(ctx context.Context, query, timeRange string, cdp bool) (string, error) {
-	hash := sha256.Sum256([]byte(query + "|" + timeRange))
-	cacheKey := "search:" + hex.EncodeToString(hash[:])
-	db := torii.DB(torii.DBToolCache)
-	if entry, ok := db.Get(cacheKey); ok {
-		return entry.Value(), nil
-	}
-
 	if !cdp {
 		if err := reserveSlot(ctx); err != nil {
 			return "", err
 		}
 	}
 
-	items, err := fetch(ctx, query, timeRange, cdp)
-	if err != nil {
-		return "", err
-	}
-
-	if items != "[]" {
-		if err = db.Set(cacheKey, items, torii.SetDefault, torii.TTL(ttl)); err != nil {
-			slog.Warn("db.Set",
-				slog.String("error", err.Error()))
-		}
-	}
-
-	return items, nil
+	return fetch(ctx, query, timeRange, cdp)
 }
 
 func reserveSlot(ctx context.Context) error {

@@ -1,0 +1,71 @@
+package grokoauth
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+)
+
+func (a *Agent) ensureFreshToken(ctx context.Context) error {
+	if a.token == nil || a.token.expired() {
+		if err := a.refreshToken(ctx); err != nil {
+			return fmt.Errorf("grok-oauth token refresh failed: %w; run `agen model add` to re-authenticate", err)
+		}
+	}
+	return nil
+}
+
+func (a *Agent) refreshToken(ctx context.Context) error {
+	if a.token == nil || a.token.RefreshToken == "" {
+		return fmt.Errorf("no refresh token available")
+	}
+
+	form := url.Values{
+		"grant_type":    {"refresh_token"},
+		"refresh_token": {a.token.RefreshToken},
+		"client_id":     {clientID},
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL,
+		strings.NewReader(form.Encode()))
+	if err != nil {
+		return fmt.Errorf("http.NewRequestWithContext: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := a.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("httpClient.Do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var raw oauthTokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return fmt.Errorf("json.Decode: %w", err)
+	}
+	if raw.Error != nil {
+		return fmt.Errorf("refresh error %v: %v", raw.Error, raw.ErrorDesc)
+	}
+
+	expiry := time.Now().Add(time.Duration(raw.ExpiresIn) * time.Second)
+	if raw.ExpiresIn == 0 {
+		expiry = time.Now().Add(3600 * time.Second)
+	}
+
+	refreshToken := raw.RefreshToken
+	if refreshToken == "" {
+		refreshToken = a.token.RefreshToken
+	}
+
+	a.token = &StoredToken{
+		AccessToken:  raw.AccessToken,
+		RefreshToken: refreshToken,
+		ExpiresAt:    expiry,
+	}
+
+	return saveToken(a.token)
+}

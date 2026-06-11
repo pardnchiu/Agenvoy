@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionTelegram "github.com/pardnchiu/agenvoy/internal/session/telegram"
@@ -45,8 +47,9 @@ func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolN
 	const limit = 3200
 	var str string
 	var modes []go_bot_telegram.MessageOption
-	if r := []rune(toolArgs); len(r) > limit {
-		str = fmt.Sprintf("Run %s?\n\n%s...", toolName, string(r[:limit]))
+	truncated := go_pkg_utils.TruncateString(toolArgs, limit)
+	if truncated != toolArgs {
+		str = fmt.Sprintf("Run %s?\n\n%s", toolName, truncated)
 	} else {
 		var body string
 		if multiline {

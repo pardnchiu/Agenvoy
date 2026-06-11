@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -144,7 +145,7 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 	case agentTypes.EventToolSkipped:
 		line := "  ⎿ " + srcPrefix + "skipped: " + ev.ToolName
 		if arg := printLog(ev.ToolName, ev.ToolArgs, cwd); arg != "" {
-			line += "(" + truncate(arg, 120) + ")"
+			line += "(" + go_pkg_utils.TruncateString(arg, 128) + ")"
 		}
 		return hintStyle.Render(line), true
 
@@ -196,7 +197,7 @@ func buildToolLine(bullet, source, name, args, cwd string) string {
 	}
 	line := bullet + " " + srcPrefix + name
 	if arg := printLog(name, args, cwd); arg != "" {
-		line += "(" + truncate(arg, 120) + ")"
+		line += "(" + go_pkg_utils.TruncateString(arg, 128) + ")"
 	}
 	style := hintStyle
 	if name == "invoke_subagent" {

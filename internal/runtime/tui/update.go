@@ -427,8 +427,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return next, cmd
 
 	case ModelRemove:
-		next, cmd := t.runModelRemove(msg.name)
-		agents.Reload()
+		next, cmd := t.runModelRemove(msg.chosen)
 		return next, cmd
 
 	case BotNameSubmit:
@@ -478,8 +477,8 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ModelAddCompatKeySubmit:
 		return t.runModelAddCompatKeySubmit(msg.key)
 
-	case ModelAddModelPick:
-		return t.runModelAddModelPick(msg.name, msg.description)
+	case ModelAddModelMultiPick:
+		return t.runModelAddModelMultiPick(msg.chosen)
 
 	case OAuthInfo:
 		return t.runOAuthInfo(msg)

@@ -123,17 +123,17 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 	}
 
 	return &toolTypes.Executor{
-		WorkDir:        workPath,
-		SessionID:      sessionID,
-		AllowedCommand: allowedCommand,
-		Tools:          initial,
-		AllTools:       tools,
-		StubTools:      stubTools,
+		WorkDir:          workPath,
+		SessionID:        sessionID,
+		AllowedCommand:   allowedCommand,
+		Tools:            initial,
+		AllTools:         tools,
+		StubTools:        stubTools,
 		APIToolbox:       apiToolbox,
 		ScriptToolbox:    scriptToolbox,
 		ExtAPIToolbox:    extAPIToolbox,
 		ExtScriptToolbox: extScriptToolbox,
-		SkillScanner:   scanner,
+		SkillScanner:     scanner,
 	}, nil
 }
 

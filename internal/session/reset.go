@@ -21,8 +21,8 @@ func Reset(sessionID string) (int, error) {
 		return 0, fmt.Errorf("os.Remove [%s]: %w", filesystem.HistoryPath(sessionID), err)
 	}
 
-	if err := os.RemoveAll(filepath.Join(sessionDir, "tool_calls")); err != nil {
-		return 0, fmt.Errorf("os.RemoveAll [%s]: %w", filepath.Join(sessionDir, "tool_calls"), err)
+	if err := os.RemoveAll(filepath.Join(sessionDir, "history")); err != nil {
+		return 0, fmt.Errorf("os.RemoveAll [%s]: %w", filepath.Join(sessionDir, "history"), err)
 	}
 
 	os.RemoveAll(filesystem.PendingDir(sessionID))

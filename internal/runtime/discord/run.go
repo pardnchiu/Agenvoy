@@ -293,10 +293,11 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	for _, part := range chunks {
 		msg, sendErr := b.client.Send(ctx, in.ChannelID, replyTo, part)
 		if sendErr != nil {
-			slog.Warn("github.com/pardnchiu/go-bot/discord Bot.client.Send",
+			slog.Error("github.com/pardnchiu/go-bot/discord Bot.client.Send",
 				slog.String("session", sess.ID),
 				slog.String("channel", channelName(in)),
 				slog.String("error", sendErr.Error()))
+			b.client.Send(ctx, in.ChannelID, in.MessageID, fmt.Sprintf("⚠️ send failed: %s", sendErr.Error()))
 			break
 		}
 		replyMsg = msg

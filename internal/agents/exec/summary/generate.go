@@ -163,7 +163,7 @@ func exec(ctx context.Context, agent agentTypes.Agent, messages []agentTypes.Mes
 	}
 
 	slog.Warn("agentTypes.Agent Send: unparseable",
-		slog.String("preview", go_pkg_utils.TruncateString(str, 160)))
+		slog.String("preview", go_pkg_utils.TruncateString(str, 256)))
 	return nil
 }
 

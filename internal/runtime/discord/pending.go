@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionDiscord "github.com/pardnchiu/agenvoy/internal/session/discord"
@@ -39,10 +41,7 @@ func (t *discordTransport) LookupChatID(sessionID string) (string, error) {
 }
 
 func (t *discordTransport) SendConfirm(ctx context.Context, channelID, toolName, toolArgs string, multiline bool) (string, error) {
-	const limit = 1500
-	if r := []rune(toolArgs); len(r) > limit {
-		toolArgs = string(r[:limit]) + "..."
-	}
+	toolArgs = go_pkg_utils.TruncateString(toolArgs, 1024)
 	var str string
 	if multiline {
 		str = fmt.Sprintf("Run `%s`?\n```\n%s\n```", toolName, toolArgs)

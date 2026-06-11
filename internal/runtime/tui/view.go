@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -94,17 +95,6 @@ func splitOptStyle(s string) (head, tail string) {
 	return s, ""
 }
 
-func truncateRune(s string, maxRunes int) string {
-	runes := []rune(s)
-	if len(runes) <= maxRunes {
-		return s
-	}
-	if maxRunes < 1 {
-		return ""
-	}
-	return string(runes[:maxRunes-1]) + "…"
-}
-
 func (t TUI) viewPopup() string {
 	width := t.width
 	if width < 20 {
@@ -137,7 +127,7 @@ func (t TUI) viewPopup() string {
 		}
 		maxLine := max(width-10, 20)
 		for i := start; i < end; i++ {
-			opt := truncateRune(p.options[i], maxLine)
+			opt := go_pkg_utils.TruncateString(p.options[i], maxLine)
 			marker := "  "
 			var line string
 			if i == p.cursor {
@@ -171,18 +161,18 @@ func (t TUI) viewPopup() string {
 		}
 		maxLine := max(width-14, 20)
 		for i := start; i < end; i++ {
-			opt := truncateRune(p.options[i], maxLine)
+			opt := go_pkg_utils.TruncateString(p.options[i], maxLine)
 			cursor := "  "
+			head, tail := splitOptStyle(opt)
 			var line string
 			if i == p.cursor {
 				cursor = systemStyle.Render("> ")
-				head, tail := splitOptStyle(opt)
 				line = systemStyle.Render(head)
-				if tail != "" {
-					line += hintStyle.Render(tail)
-				}
 			} else {
-				line = hintStyle.Render(opt)
+				line = whiteStyle.Render(head)
+			}
+			if tail != "" {
+				line += hintStyle.Render(tail)
 			}
 			check := "[ ]"
 			if p.multi[i] {
