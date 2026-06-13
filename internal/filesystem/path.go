@@ -204,10 +204,6 @@ func TaskHistoryDir(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), "history")
 }
 
-func PagePath(sessionID string) string {
-	return filepath.Join(SessionDir(sessionID), "page")
-}
-
 func AllowSkillProjectPath(workDir string) string {
 	return filepath.Join(workDir, "."+projectName, "allow_skill")
 }

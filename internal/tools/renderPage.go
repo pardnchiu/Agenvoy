@@ -4,22 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
-	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
-
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
+
+const jarvisPageTTL = 3 * 24 * 3600 // 3 days
 
 func init() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "render_page",
 		AlwaysLoad:  true,
 		AlwaysAllow: true,
-		Description: "Overwrite the rendered page for the current session (index.html under the session's page directory). Browser tabs viewing this session auto-reload. Pass the complete HTML; partial diffs unsupported.",
+		Description: "Render a complete HTML page for the current session. Browser tabs viewing this session auto-reload on completion. Pass the complete HTML document; partial diffs unsupported.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -45,20 +46,28 @@ func init() {
 
 			sid := strings.TrimSpace(e.SessionID)
 			if sid == "" {
-				return "", fmt.Errorf("render_page requires an active session; current executor has no SessionID")
+				return "", fmt.Errorf("render_page requires an active session")
 			}
 
-			pageDir := filesystem.PagePath(sid)
-			if err := go_pkg_filesystem.CheckDir(pageDir, true); err != nil {
-				return "", fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
+			ts := strconv.FormatInt(time.Now().UnixMilli(), 10)
+
+			db := torii.DB(torii.DBJarvisPage)
+			pageKey := sid + ":" + ts
+			if err := db.Set(pageKey, content, torii.SetDefault, torii.TTL(jarvisPageTTL)); err != nil {
+				return "", fmt.Errorf("torii.Set page: %w", err)
 			}
 
-			indexPath := filepath.Join(pageDir, "index.html")
-			if err := go_pkg_filesystem.WriteFile(indexPath, content, 0644); err != nil {
-				return "", fmt.Errorf("go_pkg_filesystem.WriteFile: %w", err)
+			histKey := sid + ":history"
+			entry, ok := db.Get(histKey)
+			var list []string
+			if ok {
+				_ = json.Unmarshal([]byte(entry.Value()), &list)
 			}
+			list = append(list, ts)
+			raw, _ := json.Marshal(list)
+			_ = db.Set(histKey, string(raw), torii.SetDefault, nil)
 
-			return fmt.Sprintf("page updated: %s (browser will reload)", indexPath), nil
+			return fmt.Sprintf("page rendered: ts=%s (browser will reload)", ts), nil
 		},
 	})
 }

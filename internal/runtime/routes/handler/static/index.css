@@ -1,0 +1,193 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html,
+body {
+  width: 100vw;
+  height: 100vh;
+}
+#frame {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #06090d;
+}
+#fab {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+
+#input-panel {
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  border-radius: 2rem;
+  overflow: hidden;
+  background-color: rgba(12, 17, 24, 0.92);
+  box-shadow: 0 0 2rem rgba(255, 255, 255, 0.25);
+}
+
+#input-panel[data-open="0"] {
+  max-width: 4rem;
+  max-height: 4rem;
+}
+
+#input-panel[data-open="1"] {
+  max-width: 50vw;
+  max-height: 50vh;
+}
+
+#input-panel[data-open="1"] > button#input-panel-toggle {
+  display: none;
+}
+
+#input-panel[data-open="1"] > label {
+  display: block;
+}
+
+#input-panel[data-open="1"] > button#input-panel-send {
+  display: block;
+}
+
+#input-panel[data-open="0"] > button#input-panel-send {
+  display: none;
+}
+
+#input-panel > button {
+  position: relative;
+  display: block;
+  width: 4rem;
+  height: 4rem;
+  font-size: large;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  color: #eee;
+}
+
+#input-panel > label {
+  position: relative;
+  display: none;
+  padding: 1.5rem 0 1.5rem 1.5rem;
+  line-height: 1.5rem;
+  min-width: 20rem;
+  min-height: 10rem;
+  max-width: 50vw;
+  max-height: 50vh;
+  font-family: sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+#input-panel > label > pre,
+#input-panel > label > textarea {
+  margin: 0;
+  line-height: inherit;
+  min-height: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+#input-panel > label > pre {
+  display: block;
+  padding: 0;
+  width: 100%;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+  color: transparent;
+  background-color: transparent;
+  background-color: transparent;
+}
+
+#input-panel > label > textarea {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  padding: inherit;
+  width: inherit;
+  height: inherit;
+  resize: none;
+  border: none;
+  outline: none;
+  color: #eee;
+  overflow: hidden;
+  background-color: transparent;
+}
+
+#input-panel > label > textarea::placeholder {
+  color: transparent;
+}
+
+#status {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+  font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
+  z-index: 100;
+  background: rgba(12, 17, 24, 0.8);
+  backdrop-filter: blur(12px);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+#status.active {
+  opacity: 1;
+  color: #38bdf8;
+}
+#status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #64748b;
+  flex-shrink: 0;
+}
+#status.active .dot {
+  background: #38bdf8;
+  animation: pulse 1s ease infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}

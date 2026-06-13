@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Agenvoy</title>
+
+    <link rel="stylesheet" href="/jarvis/src/index.css" />
+    <script defer src="/jarvis/src/index.js"></script>
+    <link rel="stylesheet" href="index.css" />
+    <link
+      rel="preload"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
+      as="style"
+    />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" />
+  </head>
+  <body>
+    <iframe id="frame"></iframe>
+    <div id="status"><span class="dot"></span><span id="stxt">idle</span></div>
+    <div id="input-panel" data-open="0">
+      <button id="input-panel-toggle">
+        <i class="fa-solid fa-message"></i>
+      </button>
+      <label data-hint="test">
+        <textarea
+          id="input-panel-input"
+          oninput="this.nextElementSibling.innerHTML = this.value.replace(/\n/g, '<br>')"
+          placeholder=""
+        ></textarea>
+        <pre></pre>
+      </label>
+      <button id="input-panel-send">
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </div>
+    <!--<script>
+      var panel = document.getElementById("input-panel");
+      var toggle = document.getElementById("input-panel-toggle");
+      var input = document.getElementById("input-panel-input");
+      var send = document.getElementById("input-panel-send");
+      toggle.addEventListener("click", () => {
+        let open = panel.dataset.open === "1";
+        if (open) {
+          panel.dataset.open = "0";
+        } else {
+          panel.dataset.open = "1";
+          input.focus();
+        }
+      });
+      send.addEventListener("click", () => {
+        let value = input.value.trim();
+        if (value) {
+          window.parent.postMessage({ type: "input", value: value }, "*");
+          input.value = "";
+          input.nextElementSibling.innerHTML = "";
+        } else {
+          panel.dataset.open = "0";
+        }
+      });
+    </script>-->
+  </body>
+</html>

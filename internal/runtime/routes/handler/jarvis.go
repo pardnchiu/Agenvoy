@@ -2,24 +2,34 @@ package handler
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
+	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
-
-	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 )
 
 const jarvisSessionID = "jarvis"
 
-//go:embed jarvis.html
+//go:embed static/index.html
 var jarvisShellHTML string
+
+//go:embed static/index.css
+var jarvisCSS string
+
+//go:embed static/index.js
+var jarvisJS string
 
 const defaultPageHTML = `<!DOCTYPE html>
 <html lang="en">
@@ -34,33 +44,100 @@ body{min-height:100vh;display:flex;align-items:center;justify-content:center;bac
 </head>
 <body>
 <div class="greeting">
-<h1>Hi, I'm Jarvis</h1>
+<h1>Agenvoy</h1>
 <p>Your personal agent — type below to start.</p>
 </div>
 </body>
 </html>`
 
-func Jarvis() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		pageDir := filesystem.PagePath(jarvisSessionID)
-		_ = go_pkg_filesystem.CheckDir(pageDir, true)
+var jarvisStaticDir string
 
-		indexPath := filepath.Join(pageDir, "index.html")
-		if _, err := go_pkg_filesystem.ReadText(indexPath); err != nil {
-			_ = go_pkg_filesystem.WriteFile(indexPath, defaultPageHTML, 0644)
+func InitJarvisStatic() {
+	pageDir := filepath.Join(filesystem.SessionDir(jarvisSessionID), "page")
+	_ = go_pkg_filesystem.CheckDir(pageDir, true)
+
+	link := filepath.Join(pageDir, "static")
+	target := filepath.Join(filesystem.AgenvoyDir, "download")
+
+	if go_pkg_filesystem_reader.Exists(link) {
+		resolved, err := os.Readlink(link)
+		if err == nil && resolved == target {
+			jarvisStaticDir = link
+		} else {
+			_ = os.Remove(link)
+			if err := os.Symlink(target, link); err != nil {
+				slog.Warn("jarvis symlink static",
+					slog.String("link", link),
+					slog.String("target", target),
+					slog.String("error", err.Error()))
+			} else {
+				jarvisStaticDir = link
+			}
+		}
+	} else {
+		if err := os.Symlink(target, link); err != nil {
+			slog.Warn("jarvis symlink static",
+				slog.String("link", link),
+				slog.String("target", target),
+				slog.String("error", err.Error()))
+		} else {
+			jarvisStaticDir = link
+		}
+	}
+
+	srcDir := filepath.Join(pageDir, "src")
+	_ = go_pkg_filesystem.CheckDir(srcDir, true)
+
+	_ = go_pkg_filesystem.WriteFile(filepath.Join(srcDir, "index.css"), jarvisCSS, 0644)
+	_ = go_pkg_filesystem.WriteFile(filepath.Join(srcDir, "index.js"), jarvisJS, 0644)
+}
+
+func JarvisStatic() gin.HandlerFunc {
+	dir := filepath.Join(filesystem.AgenvoyDir, "download")
+	return func(c *gin.Context) {
+		fp := c.Param("filepath")
+		if fp == "" || fp == "/" {
+			c.Status(http.StatusNotFound)
+			return
 		}
 
+		absPath := filepath.Join(dir, filepath.Clean(fp))
+		if !go_pkg_filesystem_reader.Exists(absPath) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+
+		c.File(absPath)
+	}
+}
+
+func JarvisSrc() gin.HandlerFunc {
+	srcDir := filepath.Join(filesystem.SessionDir(jarvisSessionID), "page", "src")
+	return func(c *gin.Context) {
+		fp := c.Param("filepath")
+		if fp == "" || fp == "/" {
+			c.Status(http.StatusNotFound)
+			return
+		}
+
+		absPath := filepath.Join(srcDir, filepath.Clean(fp))
+		if !go_pkg_filesystem_reader.Exists(absPath) {
+			c.Status(http.StatusNotFound)
+			return
+		}
+
+		c.File(absPath)
+	}
+}
+
+func Jarvis() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(jarvisShellHTML))
 	}
 }
 
 func JarvisReset() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		indexPath := filepath.Join(filesystem.PagePath(jarvisSessionID), "index.html")
-		if err := go_pkg_filesystem.WriteFile(indexPath, defaultPageHTML, 0644); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	}
 }
@@ -85,7 +162,8 @@ func JarvisListener() gin.HandlerFunc {
 					return
 				}
 				if ev.Type == agentTypes.EventTextDone || ev.Type == agentTypes.EventDone {
-					fmt.Fprintf(c.Writer, "data: {\"type\":%q}\n\n", ev.Type)
+					ts := latestPageTS()
+					fmt.Fprintf(c.Writer, "data: {\"type\":%q,\"ts\":%q}\n\n", ev.Type, ts)
 					c.Writer.Flush()
 				}
 			}
@@ -95,19 +173,64 @@ func JarvisListener() gin.HandlerFunc {
 
 func JarvisPage() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fp := c.Param("filepath")
-		if fp == "" || fp == "/" {
-			fp = "/index.html"
-		}
-
-		pageDir := filesystem.PagePath(jarvisSessionID)
-		absPath := filepath.Join(pageDir, filepath.Clean(fp))
-
-		if !go_pkg_filesystem_reader.Exists(absPath) {
-			c.Status(http.StatusNotFound)
+		ts := strings.TrimSpace(c.Query("ts"))
+		if ts == "" {
+			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(defaultPageHTML))
 			return
 		}
 
-		c.File(absPath)
+		db := torii.DB(torii.DBJarvisPage)
+		entry, ok := db.Get(jarvisSessionID + ":" + ts)
+		if !ok {
+			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(defaultPageHTML))
+			return
+		}
+
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(entry.Value()))
 	}
+}
+
+func JarvisHistory() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		db := torii.DB(torii.DBJarvisPage)
+		entry, ok := db.Get(jarvisSessionID + ":history")
+		if !ok {
+			c.JSON(http.StatusOK, gin.H{"history": []string{}})
+			return
+		}
+
+		var list []string
+		if err := json.Unmarshal([]byte(entry.Value()), &list); err != nil {
+			c.JSON(http.StatusOK, gin.H{"history": []string{}})
+			return
+		}
+
+		// filter: only return ts entries that still exist in DB
+		var valid []string
+		for _, ts := range list {
+			if _, exists := db.Get(jarvisSessionID + ":" + ts); exists {
+				valid = append(valid, ts)
+			}
+		}
+
+		if valid == nil {
+			valid = []string{}
+		}
+		c.JSON(http.StatusOK, gin.H{"history": valid})
+	}
+}
+
+func latestPageTS() string {
+	db := torii.DB(torii.DBJarvisPage)
+	entry, ok := db.Get(jarvisSessionID + ":history")
+	if !ok {
+		return ""
+	}
+
+	var list []string
+	if err := json.Unmarshal([]byte(entry.Value()), &list); err != nil || len(list) == 0 {
+		return ""
+	}
+
+	return list[len(list)-1]
 }
