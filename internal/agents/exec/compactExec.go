@@ -23,8 +23,19 @@ func compactExec(ctx context.Context, agent agentTypes.Agent, session *agentType
 		return false
 	}
 
+	lastGroupIdx := -1
+	for i := len(session.ToolHistories) - 1; i >= 0; i-- {
+		if session.ToolHistories[i].Role == "assistant" && len(session.ToolHistories[i].ToolCalls) > 0 {
+			lastGroupIdx = i
+			break
+		}
+	}
+	if lastGroupIdx <= 0 {
+		return false
+	}
+
 	var sb strings.Builder
-	for _, msg := range session.ToolHistories {
+	for _, msg := range session.ToolHistories[:lastGroupIdx] {
 		switch {
 		case msg.Role == "assistant" && len(msg.ToolCalls) > 0:
 			for _, tc := range msg.ToolCalls {
@@ -48,6 +59,7 @@ func compactExec(ctx context.Context, agent agentTypes.Agent, session *agentType
 	if sb.Len() == 0 {
 		return false
 	}
+	tail := session.ToolHistories[lastGroupIdx:]
 
 	prompt := strings.NewReplacer(
 		"{{.UserQuestion}}", userQuestion,
@@ -86,10 +98,13 @@ func compactExec(ctx context.Context, agent agentTypes.Agent, session *agentType
 
 	session.OldHistories = nil
 	session.SummaryMessage = agentTypes.Message{}
-	session.ToolHistories = []agentTypes.Message{
-		{Role: "user", Content: "以下是先前工具查詢的整合結果，請基於此資料繼續回答原始問題。"},
-		{Role: "assistant", Content: strings.TrimSpace(result)},
-	}
+	session.ToolHistories = append(
+		[]agentTypes.Message{
+			{Role: "user", Content: "以下是先前工具查詢的整合結果，請基於此資料繼續回答原始問題。"},
+			{Role: "assistant", Content: strings.TrimSpace(result)},
+		},
+		tail...,
+	)
 
 	slog.Info("compactExec completed",
 		slog.Int("input_tokens", resp.Usage.Input),
