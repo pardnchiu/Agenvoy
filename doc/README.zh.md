@@ -5,273 +5,190 @@
 </p>
 
 <p align="center">
-  <strong>讓 AI 真正為你工作——你的個人 AI 助理。</strong>
+  <strong>跑在你電腦上的個人 AI Agent</strong>
 </p>
 
 <p align="center">
-  AI 時代的生成能力與自然語言自動化，就是計算機時代的計算力。<br><strong>讓 Agenvoy 成為你的生產力基礎建設。</strong>
+  查資料、寫工具、整理文件、建立排程。<br>
+  你說一句話，Agent 幫你完成。
 </p>
 
 <p align="center">
   <a href="https://pkg.go.dev/github.com/pardnchiu/agenvoy"><img src="https://img.shields.io/badge/GO-REFERENCE-blue?include_prereleases&style=for-the-badge" alt="Go Reference"></a>
   <a href="https://app.codecov.io/github/pardnchiu/agenvoy/tree/master"><img src="https://img.shields.io/codecov/c/github/pardnchiu/agenvoy/master?include_prereleases&style=for-the-badge" alt="Coverage"></a>
-  <a href="../LICENSE"><img src="https://img.shields.io/github/v/tag/pardnchiu/agenvoy?include_prereleases&style=for-the-badge" alt="Version"></a>
-  <a href="https://github.com/pardnchiu/agenvoy/releases"><img src="https://img.shields.io/github/license/pardnchiu/agenvoy?include_prereleases&style=for-the-badge" alt="License"></a>
+  <a href="https://github.com/pardnchiu/agenvoy/releases"><img src="https://img.shields.io/github/v/tag/pardnchiu/agenvoy?include_prereleases&style=for-the-badge" alt="Version"></a>
+  <a href="../LICENSE"><img src="https://img.shields.io/github/license/pardnchiu/agenvoy?include_prereleases&style=for-the-badge" alt="License"></a>
 </p>
 
 <p align="center">
   <a href="../README.md">English</a> · <strong>繁體中文</strong>
 </p>
 
+---
+
+## 你可以這樣用它
+
+### 查資料
+
+> 台北天氣如何？
+
+Agent 找資料、呼叫工具、整理結果後回答你。
+
+如果沒有工具，它會自己建立。
+
 ***
 
-> [!NOTE]
-> 2026/06/08 — Skill 失敗時自動修正（執行軌跡 → 改寫 → auto-commit），Tool 在偵測到能力缺口時自動生成（尋找 API → 建立 script → 執行）。
->
-> 2026/06/07 — Web mode 已從本分支移除，後續開發遷移至 `jarvis-alpha` 分支。
+### 建立自動化
 
-## Agenvoy 是什麼
+> 每天早上 8 點報台積電股價
 
-計算力定義了計算機時代能做什麼。AI 時代，這個角色屬於生成能力與自然語言的自動化——跟計算力一樣，它需要你掌控的基礎建設。
+Agent 會確認：
 
-Agenvoy 就是這個基礎建設。一個跑在你機器上的單一 Go binary，把 Claude、GPT、Gemini 統合為常駐生產力層。設定一次，從 Telegram、Discord、LINE（alpha）、終端機 TUI、瀏覽器對話。跨所有 channel 共享記憶、工具、技能。
+- 要推送到哪裡
+- 要什麼格式
+- 什麼時間執行
 
-## 它能做什麼
+確認後自動建立排程。
 
-**讓 Agent 自己生成工具——不需編程能力。** 問一句「台北天氣？」如果還沒有天氣工具，Agent 會搜尋公開 API 目錄、選免費 endpoint、生成帶 `tool.json` schema 的 Python script、沙箱執行並回答——全在同一輪完成。工具持久保存；下次任何 session 再問，直接跑。
+***
 
-運作原理：system prompt 強制執行 **Capability Gap** 規則——當請求需要即時外部資料且沒有已註冊工具能覆蓋時，Agent 必須先建工具再回答，不可用 raw HTTP 或 inline script 走捷徑。生成的工具存放 `~/.config/agenvoy/tools/script/<name>/`，帶 `always_allow: true`，後續呼叫免 confirm。需要 auth 的 API 走 `store_secret` + keychain；API key 不進入 LLM context。
+### 搜尋你的文件
 
-| Demo · 自動生成工具 | Demo · 以 Skill 為核心的排程器 |
-| :-: | :-: |
-| [![](https://i.ytimg.com/vi/WBCjLQ-nQFo/maxresdefault.jpg)](https://www.youtube.com/watch?v=WBCjLQ-nQFo) | [![](https://i.ytimg.com/vi/bO9AMrW3L9c/maxresdefault.jpg)](https://www.youtube.com/watch?v=bO9AMrW3L9c) |
-| **Demo · 召喚 sub-agent 協作** | **Demo · 從 registry 安裝工具** |
-| [![](https://i.ytimg.com/vi/wM3NU4ARz4w/maxresdefault.jpg)](https://www.youtube.com/watch?v=wM3NU4ARz4w) | [![](https://i.ytimg.com/vi/UrR5i7YAHRc/maxresdefault.jpg)](https://www.youtube.com/watch?v=UrR5i7YAHRc) |
+> 找出去年所有報價單<br>
+> 哪份文件提到 OAuth？
 
-開箱即用的還有：
+Agent 直接從你的文件搜尋答案。
 
-- **在任何地方對話**——Telegram 內嵌按鈕、Discord 下拉選單／modal、LINE（alpha）、終端機 TUI、瀏覽器 canvas。一個 daemon、所有介面。
-- **語音回覆（TTS）、轉錄音訊／影片。**
-- **自我排程**——說一句「每個工作天早上 8 點把 Hacker News 熱門摘要推到 Telegram」，Agent 會自動建立 cron 與推送管線。
-- **依任務挑模型**——Claude 寫程式、Gemini 處理影音、GPT 做研究，自動路由。
-- **語意搜尋你的檔案**——KuraDB 把本機文件／筆記做成向量索引（file → embedding），Agent 從你的知識庫回答，而非通用訓練資料。
-- **跨 session 記憶**——三層記憶：近期上下文 + 向量語意搜尋（ToriiDB）+ 全文歸檔搜尋（SQLite FTS5）。每筆訊息雙寫，資料永不遺失。
-- **發布／安裝自訂工具**——透過 pkg.agenvoy.com registry 跨機器分享 AI 生成工具；上傳走 email 驗證碼 gate、版本嚴格遞增、安裝走單一 popup 並自動安裝依賴。
-- **Skill 失敗後自我改進**——當 skill 執行遇到 tool 錯誤，Agent 自動改寫 skill 定義（修正錯誤 tool name、不明確步驟、斷裂序列）並 auto-commit。每次失敗都讓 skill 變得更好。
+***
+
+### 完成長流程工作
+
+> 幫我整理這週 GitHub Issue 並產生進度摘要
+
+Agent 可以拆解任務、呼叫工具、整合結果，再回覆給你。
+
+***
+
+## 為什麼是 Agenvoy
+
+### 不用選模型
+
+寫程式、查資料、分析文件、觀看影片。
+
+Agent 自己選擇最適合的模型完成工作。
+
+***
+
+### 沒有工具？自己做
+
+Agent 可以：
+
+- 找 API
+- 生成工具
+- 測試工具
+- 修正錯誤
+- 保存工具
+
+第一次建立。
+
+之後永久使用。
+
+***
+
+### 長期記憶
+
+Agent 不只記得目前對話。
+
+也會記住：
+
+- 重要資訊
+- 工作進度
+- 長期偏好
+
+不需要每次重新說明背景。
+
+***
+
+### 文件就是知識庫
+
+支援：
+
+- PDF
+- Markdown
+- TXT
+- 程式碼
+
+直接用自然語言詢問你的文件。
+
+***
+
+### 到哪都能用
+
+同一個 Agent。
+
+同一份記憶。
+
+同一套工具。
+
+支援：
+
+* Telegram
+* Discord
+* Terminal
+
+---
 
 ## 一鍵安裝
+
+> MacBook 建議額外執行 `sudo pmset -c sleep 0`，避免休眠影響排程。
 
 ```bash
 curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 ```
 
-單一 Go binary 安裝至 `/usr/local/bin/agen`。macOS／Linux。不需 Node、Python、Docker。
+---
 
-> 在 MacBook 跑 daemon？跑一下 `sudo pmset -c sleep 0` 讓系統在接電源時不睡眠——避免 daemon 在 AC 電源下被掛起。
+## 核心能力
 
-## 與其他工具比一比
+| 能力 | 說明 |
+| :- | :- |
+| 自動工具生成 | 缺工具時自行建立並保存 |
+| 自我排程 | 一句話建立定時任務 |
+| 長期記憶 | 保留重要資訊與上下文 |
+| 文件搜尋 | 從本機文件回答問題 |
+| Sub-Agent | 多 Agent 協作 |
+| MCP | 連接外部服務 |
+| Tool Market | 分享與安裝工具 |
+| 語音轉錄 | 音訊與影片轉文字 |
+| 自我改進 | 執行失敗後自動修正 |
 
-只跟最接近的兩個對手比——同樣是「個人 AI Agent 框架 + daemon + 對話平台整合」的同類產品。
+---
 
-| 你想要的功能 | **Agenvoy** | OpenClaw | Hermes |
+## Demo
+
+| 自動工具生成 | 以 SKILL 為核心的排程 |
+| :-: | :-: |
+| [![](https://i.ytimg.com/vi/Fj0ooIij8TM/maxresdefault.jpg)](https://youtu.be/Fj0ooIij8TM) | [![](https://i.ytimg.com/vi/bO9AMrW3L9c/maxresdefault.jpg)](https://www.youtube.com/watch?v=bO9AMrW3L9c) |
+| **呼叫 sub-agent 協作** | **從 market 安裝工具** |
+| [![](https://i.ytimg.com/vi/wM3NU4ARz4w/maxresdefault.jpg)](https://www.youtube.com/watch?v=wM3NU4ARz4w) | [![](https://i.ytimg.com/vi/UrR5i7YAHRc/maxresdefault.jpg)](https://www.youtube.com/watch?v=UrR5i7YAHRc) |
+
+---
+
+## 跟其他工具比
+
+| | **Agenvoy** | OpenClaw | Hermes-agent |
 |---|---|---|---|
-| 一鍵安裝、單一 binary | ✅ Go | ❌ pnpm monorepo | ❌ pip + docker |
-| 同一個對話同時用 Claude + GPT + Gemini | ✅ dispatcher 自動路由 | ✅ 手動切換 | ✅ 手動切換 |
-| 原生對話 UI（按鈕／選單／modal） | ✅ inline keyboard／select／modal | ⚠️ 純文字選項 | ⚠️ 純文字選項 |
-| Agent 自己生成並保存工具 | ✅ FaaS 沙箱 script + API | ❌ | ⚠️ 僅 skill |
-| Telegram／Discord 首次對話驗證 | ✅ 6 碼 OTP | ⚠️ pairing code（人工核准） | ⚠️ pairing code（`gateway/pairing.py`） |
-| 跨 session 推送（任一 session → chat） | ✅ `send_to_chatbot` | ❌ | ⚠️ `send_message` tool（scope 不同） |
-| 原生文件 RAG（file → embedding） | ✅ KuraDB in-process（語意＋關鍵字） | ❌（僅對話記憶） | ❌（僅對話記憶） |
+| 安裝方式 | 一行指令，單一檔案 | pnpm monorepo | pip + docker |
+| 多模型同時用 | 自動選 | 手動切 | 手動切 |
+| 對話 UI | 按鈕／選單／modal | 純文字 | 純文字 |
+| 自己生成工具 | ✅ | ❌ | ⚠️ 僅 skill |
+| 聊天驗證 | 6 碼驗證碼 | 人工核准 | 人工核准 |
+| 跨 session 推送 | ✅ | ❌ | ⚠️ 有限 |
+| 文件搜尋 | 語意＋關鍵字 | 僅對話記憶 | 僅對話記憶 |
 
-> 想看完整逐項對照？往下捲到 [**What makes it different**](#what-makes-it-different)。
+---
 
-***
-
-# 給開發者
-
-## What makes it different
-
-- **Dispatcher 智能路由**——dispatcher 模型把每個任務路由給最合適的 worker（Claude 寫程式、Gemini 處理影音、GPT 做研究），而非強迫單一模型萬用。
-- **Agent 會自己生成並持久化工具**——當工具不存在時，Agent 寫 script 或 API 到 `extensions/`，下次執行就以原生工具載入；同時支援 MCP server。
-- **跨所有 channel 的單一 runtime**——Telegram、Discord、TUI、Web、cron 全部接上同一個 daemon；session、記憶、工具集共享，不是每個介面各自重建。
-
-<details>
-<summary><strong>Agenvoy 對主流產品：完整逐項對照</strong></summary>
-
-### 1. 總覽
-
-| | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
-|--|--|--|--|--|--|--|
-| **語言** | Go | TypeScript | Python | TypeScript | Rust + TypeScript | TypeScript |
-| **授權** | Apache 2.0 | MIT | MIT | Proprietary | Apache 2.0 | Apache 2.0 |
-| **作者** | Individual (pardnchiu) | Community | NousResearch | Anthropic | OpenAI | Google |
-| **主要用途** | 跨平台 AI Agent 框架 | 跨平台 AI Agent | 跨平台 AI Agent | 終端機程式助理 | 終端機程式助理 | 終端機程式助理 |
-| **架構** | Daemon + TUI + Chat | Daemon + TUI + Chat | Daemon + TUI + Chat | CLI session | CLI session | CLI session |
-
-***
-
-### 2. AI Provider 支援
-
-| | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
-|--|--|--|--|--|--|--|
-| Claude | ✅ | ✅ | ✅ | ✅ 限定 | ❌ | ❌ |
-| OpenAI / GPT | ✅ | ✅ | ✅ | ❌ | ✅ 限定 | ❌ |
-| Gemini | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ 限定 |
-| Codex (OpenAI OAuth) | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ |
-| GitHub Copilot | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Nvidia NIM | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| OpenAI-compat | ✅ | ✅ Ollama／LM Studio | ✅ OpenRouter 200+ | ❌ | ❌ | ❌ |
-| DeepSeek | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| xAI (Grok) | ✅ API key | ✅ | ✅ OAuth + API key | ❌ | ❌ | ❌ |
-| Mistral | ❌ | ✅ | ⚠️ 透過 OpenRouter（無專屬） | ❌ | ❌ | ❌ |
-| Dispatcher 路由 | ✅ 專屬 dispatcher 模型 | ❌ | ❌ | ❌ | ❌ | ❌ |
-
-***
-
-### 3. Runtime 與前端
-
-| | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
-|--|--|--|--|--|--|--|
-| TUI | ✅ bubbletea | ✅ `openclaw tui` | ✅ React Ink | ✅ ink | ✅ | ✅ |
-| CLI | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| HTTP API / Web UI | ✅ gin | ✅ dashboard / webchat | ✅ Web Dashboard | ❌ | ❌ | ❌ |
-| Daemon 模式 | ✅ 原生 `--daemon` | ✅ systemd／launchd | ✅ gateway daemon | ❌ | ❌ | ❌ |
-| Session Canvas (HTML+SSE) | ✅ `render_page` | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 具名 session | ✅ | ⚠️ workspaces / per-agent sessions | ✅ session picker | ❌ | ❌ | ❌ |
-
-***
-
-### 4. 對話平台整合
-
-| | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
-|--|--|--|--|--|--|--|
-| Telegram | ✅ 原生 daemon | ✅ 原生 daemon | ✅ 原生 daemon | ⚠️ Channels MCP（需有 active session） | ❌ | ❌ |
-| Discord | ✅ 原生 daemon | ✅ 原生 daemon | ✅ 原生 daemon | ⚠️ Channels MCP（需有 active session） | ❌ | ❌ |
-| iMessage | ❌ | ✅ BlueBubbles | ✅ BlueBubbles | ⚠️ Channels MCP（僅 macOS） | ❌ | ❌ |
-| LINE | ⚠️ alpha（[linebot 分支](https://github.com/pardnchiu/Agenvoy/tree/linebot)） | ✅ | ✅ | ❌ | ❌ | ❌ |
-| WhatsApp / Slack | ❌ | ✅ 24+ 平台 | ✅ 24+ 平台 | ❌ | ❌ | ❌ |
-| Always-on 收訊（不需 session） | ✅ daemon | ✅ | ✅ | ❌ | ❌ | ❌ |
-| 跨 session 發送（任一 session → chat） | ✅ `send_to_chatbot` | ❌ | ⚠️ `send_message` tool | ❌ | ❌ | ❌ |
-| 首次對話驗證 | ✅ 6 碼 OTP（crypto/rand） | ✅ pairing code（dmPolicy: pairing） | ✅ pairing code（`gateway/pairing.py`） | ❌ | ❌ | ❌ |
-| 原生平台 UI（按鈕／選單／modal） | ✅ inline keyboard / select menu / modal | ⚠️ 純文字選項 | ⚠️ 純文字選項 | ❌ | ❌ | ❌ |
-
-> **平台層**：Agenvoy 的 Telegram 與 Discord 整合都建在 [pardnchiu/go-bot](https://github.com/pardnchiu/go-bot) 上，獨立維護、開源。go-bot 封裝兩個平台的 bot 協定細節——Agenvoy 只實作業務邏輯，平台 API 層完全交由 go-bot 處理。
-
-> **關鍵差異**：Claude Code Channels 需要 active session。OpenClaw 與 Hermes 有 daemon 但 in-chat 確認為純文字。Agenvoy 用原生平台 UI——Telegram inline keyboards 與 Discord select menus／modals。此外 Agenvoy 的 cross-session send 工具讓任一 session 類型（CLI／TUI／HTTP／scheduled script）都能推訊息到特定 Telegram／Discord chat——競爭者僅部分支援（如 Hermes 的 `send_message` 僅限自身 gateway scope）。
-
-***
-
-### 5. Telegram 功能對照
-
-| 功能 | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code Channels** |
-|---------|-------------|-------------|------------------|--------------------------|
-| 文字回覆 | ✅ | ✅ | ✅ | ✅ |
-| 語音回覆（TTS） | ✅ Gemini TTS → OGG | ✅ ElevenLabs／Hume | ✅ Edge TTS／ElevenLabs | ❌ |
-| 傳送檔案 | ✅ `[SEND_FILE:]` | ✅ | ✅ | ❌ |
-| 接收使用者附件 | ✅ photo／doc／voice／video | ✅ | ✅ | ❌ |
-| 語音轉文字（STT） | ✅ Gemini，14 種格式 | ✅ Whisper／Gemini | ✅ faster-whisper（本機） | ❌ |
-| Tool confirm（互動式） | ✅ 原生 inline keyboard | ⚠️ 文字確認提示 | ⚠️ 純文字選項 | ❌ |
-| ask_user（picker） | ✅ 原生 button／modal | ⚠️ `/models` picker | ⚠️ 純文字選項，上限 4 | ❌ |
-| Format reference（lazy-load tool） | ✅ `format_chatbot` | ❌ | ❌ | ❌ |
-| Scheduler 結果推送 | ✅ | ✅ | ✅ | ❌ |
-| 跨 session 推送（任一 session） | ✅ `send_to_chatbot` | ❌ | ⚠️ `send_message` tool | ❌ |
-| 離線收訊（daemon） | ✅ | ✅ | ✅ | ❌ |
-
-***
-
-### 6. Discord 功能對照
-
-| 功能 | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code Channels** |
-|---------|-------------|-------------|------------------|--------------------------|
-| 文字回覆 | ✅ | ✅ | ✅ | ✅ |
-| 語音回覆（TTS） | ✅ Gemini TTS → OGG／OPUS | ✅ | ✅ | ❌ |
-| 傳送檔案 | ✅ 一次最多 10 個／訊息 | ✅ | ✅ | ❌ |
-| 接收使用者附件 | ✅ photo／doc／voice／video | ✅ | ✅ | ❌ |
-| Tool confirm（互動式） | ✅ select menu button | ✅ `/model` picker | ⚠️ 純文字選項 | ❌ |
-| ask_user（modal） | ✅ select／multi-select／modal | ⚠️ 限制多 | ⚠️ 純文字選項 | ❌ |
-| Format reference（lazy-load tool） | ✅ `format_chatbot` | ❌ | ❌ | ❌ |
-| Guild mention 守門 | ✅ | ✅ | ✅ | ❌ |
-| Discord Markdown 感知 | ✅ 完整規格做 lazy-load tool | ⚠️ 部分 | ⚠️ 部分 | ❌ |
-| 字數上限感知 | ✅ prompt 內 1600 字硬限 | ❌ | ❌ | ❌ |
-| 跨 session 推送（任一 session） | ✅ `send_to_chatbot` | ❌ | ⚠️ `send_message` tool | ❌ |
-
-***
-
-### 7. Scheduler
-
-| | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
-|--|--|--|--|--|--|--|
-| Cron job | ✅ SKILL.md + cron | ✅ 內建 | ✅ 內建 | ✅ 雲端輔助 cron／task | ❌ | ❌ |
-| One-shot 任務 | ✅ | ✅ `at` 格式 | ✅ 自然語言 | ✅ 雲端輔助 | ❌ | ❌ |
-| TUI CRUD | ✅ | ✅ `openclaw cron` | ✅ `cronjob` tool | ❌ | ❌ | ❌ |
-| fsnotify 熱載入 | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 推送結果到 Telegram／Discord | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| AI 工具管理（add／list／remove） | ✅ | ❌ | ✅ `cronjob` tool | ❌ | ❌ | ❌ |
-| 本機執行（不需雲端） | ✅ | ✅ | ✅ | ❌ 需雲端 | ❌ | ❌ |
-
-> **Scheduler 層**：Agenvoy 的 scheduler 建在 [pardnchiu/go-scheduler](https://github.com/pardnchiu/go-scheduler) 上，自家維護的 ecosystem package，提供 cron 表達式解析、one-shot 任務、fsnotify 熱載入，以及完整把結果路由回對話平台。
-
-***
-
-### 8. 工具生態
-
-| | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
-|--|--|--|--|--|--|--|
-| MCP 支援 | ✅ client | ✅ client | ✅ client + server | ✅ client | ❌ | ✅ client |
-| 自訂工具（script-tool-add） | ✅ AI 生成 | ❌ | ✅ 自動建立 skill | ❌ | ❌ | ❌ |
-| API 工具自動探索（search-api → add） | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 工具 registry（跨機器發布／安裝） | ✅ pkg.agenvoy.com（Cloudflare Worker + R2 + D1，email 驗證碼 + 降版本封鎖） | ⚠️ ClawHub（skills + plugins） | ⚠️ agentskills.io（僅 skill） | ❌ | ❌ | ❌ |
-| Skill 系統 | ✅ SKILL.md lazy-load | ✅ SKILL.md 5400+ 社群 | ✅ SKILL.md agentskills.io | ✅ CLAUDE.md | ❌ | ❌ |
-| Skill 自我改進（失敗時自動修正） | ✅ trace → rewrite → auto-commit | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Format reference 作為 lazy-load tool | ✅ `format_chatbot` | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 文件 RAG（外部知識庫） | ✅ KuraDB（in-process 向量＋語意／關鍵字） | ❌（僅對話記憶向量） | ❌（僅對話記憶 FTS5） | ❌ | ❌ | ❌ |
-| 媒體 STT 轉錄 | ✅ Gemini，14 種格式 | ✅ Whisper／Gemini | ✅ faster-whisper（本機） | ❌ | ❌ | ❌ |
-| TTS 語音輸出 | ✅ Gemini TTS | ✅ ElevenLabs／Hume／MS | ✅ Edge TTS／ElevenLabs／OpenAI | ❌ | ❌ | ❌ |
-| Computer use／browser | ✅ go-rod + Playwright MCP | ✅ Chrome CDP | ✅ browser CDP + computer-use（cua-driver） | ✅ beta | ❌ | ❌ |
-
-> **工具沙箱架構**：Agenvoy 的 Python／JavaScript／API 自訂工具介面建在 [pardnchiu/go-faas](https://github.com/pardnchiu/go-faas)（Function as a Service）概念上。每個 AI 生成的工具以隔離函式單元運行，各自有生命週期與安全邊界。在所有對照產品中，唯一的 FaaS 級工具沙箱設計。
-
-***
-
-### 9. 記憶系統
-
-| | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
-|--|--|--|--|--|--|--|
-| Instruction file 系統 | ✅ SKILL.md | ✅ SKILL.md | ✅ SKILL.md | ✅ CLAUDE.md | ❌ | ❌ |
-| 對話歷史搜尋 | ✅ 三層：上下文 + ToriiDB 向量 + SQLite FTS5 | ✅ LanceDB 向量 | ✅ SQLite FTS5 | ❌ | ❌ | ❌ |
-| 外部文件 RAG（原生 in-process） | ✅ KuraDB（語意＋關鍵字，OpenAI embeddings） | ❌（需走 MCP） | ❌（需走 MCP） | ❌ | ❌ | ❌ |
-| 錯誤記憶 | ✅ ToriiDB | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Action log | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 長期持久記憶 | ✅ SQLite 全文歸檔（雙寫，資料永不遺失） | ✅ Wiki-style MEMORY.md | ✅ MEMORY.md + USER.md | ⚠️ CLAUDE.md 手動 | ❌ | ❌ |
-| 跨 session 記憶 | ⚠️ 預設 session 隔離，可外接記憶擴展 | ✅ 內建跨 session | ✅ 內建跨 session | ⚠️ 預設 session 隔離，可外接記憶擴展 | ⚠️ 預設 session 隔離 | ⚠️ 預設 session 隔離 |
-
-> **三層對話記憶**：(1) **上下文** — 最新 16 筆訊息直接載入 LLM context + 定期 summary；(2) **ToriiDB** — 自研內嵌式向量資料庫（[pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)），對近期對話做語意相似搜尋；(3) **SQLite FTS5** — 透過 [pardnchiu/go-sqlite](https://github.com/pardnchiu/go-sqlite) 的全文歸檔，每筆訊息雙寫，即使 history 裁剪後資料也不遺失。`search_chat_history` 依 `mode` 路由：`semantic` → ToriiDB、`keyword` → SQLite FTS5。
-
-***
-
-### 10. 依賴與部署
-
-| | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
-|--|--|--|--|--|--|--|
-| 直接外部依賴 | **12** | 大量（pnpm monorepo） | 30–40 core + 60+ optional | 50+ | 40+ | 40+ |
-| 自家維護的 ecosystem package | 6（go-bot／go-pkg／go-scheduler／ToriiDB／go-faas／KuraDB） | 0 | 0 | 0 | 0 | 0 |
-| Runtime | Go（靜態 binary） | Node.js | Python | Node.js | Node.js + Rust | Node.js |
-| 部署 | **單一 binary** | npm install | pip + docker／VPS | npm install | npm install | npm install |
-
-***
-
-### Agenvoy 的定位
-
-| 維度 | 細節 |
-|-----------|--------|
-| **明確優勢** | 單一 Go binary、12 個依賴、自家 ecosystem（pardnchiu universe）、dispatcher 路由、Session Canvas、原生平台 UI（真按鈕／modal）、OTP 驗證、從任一 session 跨送 Telegram／Discord、API 工具自動探索、format reference 做 lazy-load tool、純本機 scheduler（不需雲端） |
-| **與競爭者相當** | Telegram／Discord daemon、TTS／STT、scheduler 結果推送、Skill 系統、MCP、瀏覽器自動化、附件接收、provider 涵蓋範圍（compat 層支援任何 OpenAI 相容端點） |
-| **競爭者領先處** | Hermes context compression engine（token-budget compaction：head preservation + middle-turn summarization + iterative recompression，對比 Agenvoy 的 reactive trim-only）、OpenClaw 24+ 平台、Hermes MCP server 模式、Hermes 本機 STT、OpenClaw／Hermes 內建跨 session 記憶、Claude Code Computer Use beta、Claude Code 雲端 cron／task |
-| **Codex CLI** | 功能最少——僅 CLI + TUI + OpenAI OAuth，無 daemon、無對話平台、無 scheduler |
-
-</details>
-
-## Wiki
+## 文件
 
 - [新手入門](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Getting-Started.zh.md)
 - [架構](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Architecture.zh.md)
@@ -284,6 +201,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 - [安全與沙箱](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Security-and-Sandbox.zh.md)
 - [命令列參考](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/CLI-Reference.zh.md)
 - [設定檔](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Configuration.zh.md)
+- [產品對照](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Comparison.zh.md)
 
 ## License
 
@@ -321,8 +239,3 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 ***
 
 ©️ 2026 [邱敬幃 Pardn Chiu](https://www.linkedin.com/in/pardnchiu)
-
-***
-
-> [!NOTE]
-> 本文件由 Claude 讀取完整原始碼後自動生成。
