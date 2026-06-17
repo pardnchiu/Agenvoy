@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -21,7 +22,7 @@ func (s *Server) notify() {
 	})
 }
 
-func (s *Server) watch() {
+func (s *Server) watch(ctx context.Context) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		slog.Warn("fsnotify.NewWatcher",
@@ -52,6 +53,12 @@ func (s *Server) watch() {
 
 		for {
 			select {
+			case <-ctx.Done():
+				if debounce != nil {
+					debounce.Stop()
+				}
+				return
+
 			case ev, ok := <-watcher.Events:
 				if !ok {
 					return

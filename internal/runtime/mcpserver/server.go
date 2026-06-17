@@ -56,7 +56,7 @@ func New() *Server {
 }
 
 func (s *Server) Run(ctx context.Context) error {
-	s.watch()
+	s.watch(ctx)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 0, 4<<20), 4<<20)
