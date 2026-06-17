@@ -2,7 +2,90 @@
 
 > [中文](MCP-Integration.zh.md)
 
-The MCP (Model Context Protocol) client lets Agenvoy agents call tools exposed by any MCP server.
+Agenvoy is both an MCP **client** (connects to external MCP servers) and an MCP **server** (exposes its sandboxed tool layer to external agents).
+
+## MCP Server — universal sandbox tool layer for external agents
+
+When launched via stdio pipe, `agen` runs as an MCP server. Any MCP-compatible agent (Claude Code, Codex, OpenCode, etc.) can connect and use Agenvoy's tools — including building new ones on the fly.
+
+### What external agents gain
+
+- **Sandboxed execution** — all script tools run inside OS-native sandbox (macOS `sandbox-exec` / Linux `bwrap`), isolating `~/.ssh`, `~/.aws`, `.env`, `*.pem` and other sensitive paths
+- **Auto tool creation** — when no existing tool covers a request, the agent calls `script_tool_generate_guide` to get the build contract, then `write_tool` → `test_tool` to create a new Python script tool. The tool is persisted and reusable across sessions
+- **Shared tool library** — tools created by any agent (Agenvoy internal, Claude Code, Codex, etc.) are saved to `~/.config/agenvoy/tools/script/` and available to all connected agents. Build once, use everywhere
+- **Live data access** — `api_public_api_list` indexes free public APIs; the agent picks one, scaffolds a script tool around it, and answers with real data instead of training-knowledge guesses
+
+### Quick setup
+
+TUI: `/mcp install` → select your agent
+
+Manual config per agent:
+
+**Claude Code** — `~/.claude.json`
+```json
+{ "mcpServers": { "agenvoy": { "command": "agen" } } }
+```
+
+**Codex** — `~/.codex/config.toml`
+```toml
+[mcp_servers.agenvoy]
+command = "agen"
+```
+
+**OpenCode** — `~/.config/opencode/opencode.jsonc`
+```json
+{ "mcp": { "agenvoy": { "type": "local", "command": ["agen"] } } }
+```
+
+### Generic MCP client setup
+
+For any MCP client not listed above, the only requirement is:
+
+- **Transport**: stdio (JSON-RPC over stdin/stdout)
+- **Command**: `agen`
+- **Args**: none
+- **Prerequisite**: `agen` binary in `$PATH` (`curl -fsSL https://cloud.agenvoy.com/install.sh | bash`)
+
+The server speaks [MCP protocol version `2024-11-05`](https://spec.modelcontextprotocol.io/specification/2024-11-05/), supports `tools/list` (with `listChanged` notifications) and `tools/call`. No authentication required — the server runs locally as the current user.
+
+Typical config pattern across MCP clients:
+
+```json
+{
+  "<servers_key>": {
+    "agenvoy": {
+      "command": "agen"
+    }
+  }
+}
+```
+
+Where `<servers_key>` varies by client (`mcpServers`, `mcp_servers`, `mcp`, etc.). Some clients require an explicit `"type": "stdio"` or `"type": "local"` field. Check your client's documentation.
+
+### Exposed tools
+
+| Tool | Purpose |
+|---|---|
+| `script_*` / `api_*` / `ext_*` | User-created and extension tools (auto-discovered from disk) |
+| `write_tool` | Write tool.json or script.py to a script tool directory |
+| `test_tool` | Run a script tool in sandbox with sample input |
+| `patch_tool` | String-replace fix inside a tool file |
+| `remove_tool` | Move a script tool to trash |
+| `list_tools` | List all tools exposed by the server |
+| `script_tool_generate_guide` | Return the Script Tool Contract (naming, template, execution flow, checklist) |
+| `api_public_api_list` | Browse free public APIs by category for tool creation |
+
+Tool CRUD (`write_tool`, `test_tool`, `patch_tool`, `remove_tool`) are shared with Agenvoy's internal runtime — same handler, same schema, bridged via `toolRegister`. No duplicate implementation.
+
+### Hot reload
+
+The server watches tool directories via `fsnotify`. When a tool is created, modified, or deleted, the server automatically rescans and sends `notifications/tools/list_changed` — the client refreshes its tool list without reconnecting.
+
+---
+
+## MCP Client
+
+The MCP client lets Agenvoy agents call tools exposed by any MCP server.
 
 ## Configuration layout
 

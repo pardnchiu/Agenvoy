@@ -24,48 +24,82 @@
   <strong>English</strong> · <a href="./doc/README.zh.md">繁體中文</a>
 </p>
 
----
+***
 
 ## What you can do with it
 
 ### Look things up
 
 > What's the weather in Taipei?
+>
+> The agent finds data, calls tools, and gives you the answer.
+>
+> If a tool doesn't exist, it builds one.
 
-The agent finds data, calls tools, and gives you the answer.
-
-If a tool doesn't exist, it builds one.
+[![](https://i.ytimg.com/vi/floMBsAfziY/maxresdefault.jpg)](https://youtu.be/floMBsAfziY)
 
 ***
 
 ### Set up automation
 
 > Report TSMC stock price every morning at 8am
+>
+> The agent asks:
+> - Where to push results
+> - What format you want
+> - When to run
+>
+> Then creates the schedule automatically.
 
-The agent asks:
-
-- Where to push results
-- What format you want
-- When to run
-
-Then creates the schedule automatically.
+[![](https://i.ytimg.com/vi/5To3joKlFpU/maxresdefault.jpg)](https://youtu.be/5To3joKlFpU)
 
 ***
 
 ### Search your files
 
-> Find all invoices from last year<br>
-> Which document mentions OAuth?
+> Find all invoices from last year
+>
+> Which document mentions Prompt guide?
+>
+> The agent searches your local files and answers directly.
 
-The agent searches your local files and answers directly.
+[![](https://i.ytimg.com/vi/vqoQ6Qvl8qU/maxresdefault.jpg)](https://youtu.be/vqoQ6Qvl8qU)
 
 ***
 
 ### Handle multi-step work
 
-> Summarize this week's GitHub Issues and generate a progress report
+> Summarize this today's GitHub Commit and generate a progress report
+>
+> The agent breaks down the task, calls tools, combines results, and replies.
 
-The agent breaks down the task, calls tools, combines results, and replies.
+[![](https://i.ytimg.com/vi/nIV1xz_HIJg/maxresdefault.jpg)](https://youtu.be/nIV1xz_HIJg)
+
+***
+
+### Let other AI agents use your tools
+
+> Agenvoy is also an MCP server.
+>
+> Claude Code, Codex, OpenCode and other AI agents can connect and:
+> - Use all your sandboxed tools
+> - Auto-build new tools when none exist
+> - Share every tool across all agents
+>
+> One line of config. Instant shared tool library.
+> Tools created in the demo: [`fetch_weather`](doc/demo/fetch_weather/) · [`fetch_crypto_price`](doc/demo/fetch_crypto_price/)
+
+#### Claude Code creates a weather lookup tool (1)
+
+[![](https://i.ytimg.com/vi/on5IaoxBO1E/maxresdefault.jpg)](https://youtu.be/on5IaoxBO1E)
+
+#### Codex uses the weather tool created by Claude, and creates a crypto price tool (2)
+
+[![](https://i.ytimg.com/vi/2DDFCIcbnso/maxresdefault.jpg)](https://youtu.be/2DDFCIcbnso)
+
+#### Agenvoy tests both the weather and cryptocurrency tools (3)
+
+[![](https://i.ytimg.com/vi/KPs4o9xDFjM/maxresdefault.jpg)](https://youtu.be/KPs4o9xDFjM)
 
 ***
 
@@ -136,7 +170,7 @@ Works on:
 * Discord
 * Terminal
 
----
+***
 
 ## One-line install
 
@@ -146,7 +180,7 @@ Works on:
 curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 ```
 
----
+***
 
 ## Core capabilities
 
@@ -157,22 +191,13 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | Long-term memory | Retains key info and context |
 | File search | Answers from your local files |
 | Sub-Agent | Multi-agent collaboration |
-| MCP | Connect to external services |
+| MCP client | Connect to external MCP services |
+| MCP server | Expose sandboxed tools to any MCP-compatible agent |
 | Tool Market | Share and install tools |
 | Transcription | Audio and video to text |
 | Self-improvement | Auto-fixes after execution failures |
 
----
-
-## Demo
-
-| Auto tool generation | Skill-based scheduler |
-| :-: | :-: |
-| [![](https://i.ytimg.com/vi/Fj0ooIij8TM/maxresdefault.jpg)](https://youtu.be/Fj0ooIij8TM) | [![](https://i.ytimg.com/vi/bO9AMrW3L9c/maxresdefault.jpg)](https://www.youtube.com/watch?v=bO9AMrW3L9c) |
-| **Sub-agent collaboration** | **Install tools from market** |
-| [![](https://i.ytimg.com/vi/wM3NU4ARz4w/maxresdefault.jpg)](https://www.youtube.com/watch?v=wM3NU4ARz4w) | [![](https://i.ytimg.com/vi/UrR5i7YAHRc/maxresdefault.jpg)](https://www.youtube.com/watch?v=UrR5i7YAHRc) |
-
----
+***
 
 ## How it compares
 
@@ -186,7 +211,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | Cross-session push | ✅ | ❌ | ⚠️ Limited |
 | File search | Semantic + keyword | Chat memory only | Chat memory only |
 
----
+***
 
 ## Docs
 

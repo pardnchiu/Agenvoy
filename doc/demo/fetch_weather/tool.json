@@ -1,0 +1,19 @@
+{
+  "name": "fetch_weather",
+  "description": "Fetch current weather conditions for a location. Use when user asks about weather, temperature, humidity, wind, or precipitation for any city or coordinates.",
+  "always_allow": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "latitude": {
+        "type": "number",
+        "description": "Latitude in decimal degrees, e.g. 25.033 for Taipei"
+      },
+      "longitude": {
+        "type": "number",
+        "description": "Longitude in decimal degrees, e.g. 121.565 for Taipei"
+      }
+    },
+    "required": ["latitude", "longitude"]
+  }
+}

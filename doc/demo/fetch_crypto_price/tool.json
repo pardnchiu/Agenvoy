@@ -1,0 +1,20 @@
+{
+  "name": "fetch_crypto_price",
+  "description": "Look up current cryptocurrency price data by symbol, name, slug, or CoinLore coin ID using public market data.",
+  "always_allow": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Cryptocurrency symbol, name, URL slug, or CoinLore numeric coin ID to look up, for example BTC, bitcoin, Ethereum, or 90."
+      },
+      "include_matches": {
+        "type": "boolean",
+        "description": "When true, include alternate asset matches considered during lookup; useful for ambiguous symbols like PAY or META.",
+        "default": false
+      }
+    },
+    "required": ["query"]
+  }
+}

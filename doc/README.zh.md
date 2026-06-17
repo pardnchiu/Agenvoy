@@ -24,7 +24,7 @@
   <a href="../README.md">English</a> · <strong>繁體中文</strong>
 </p>
 
----
+***
 
 ## 你可以這樣用它
 
@@ -35,6 +35,8 @@
 Agent 找資料、呼叫工具、整理結果後回答你。
 
 如果沒有工具，它會自己建立。
+
+[![](https://i.ytimg.com/vi/floMBsAfziY/maxresdefault.jpg)](https://youtu.be/floMBsAfziY)
 
 ***
 
@@ -50,22 +52,54 @@ Agent 會確認：
 
 確認後自動建立排程。
 
+[![](https://i.ytimg.com/vi/5To3joKlFpU/maxresdefault.jpg)](https://youtu.be/5To3joKlFpU)
+
 ***
 
 ### 搜尋你的文件
 
 > 找出去年所有報價單<br>
-> 哪份文件提到 OAuth？
+> 哪份文件提到 Prompt 指南？
 
 Agent 直接從你的文件搜尋答案。
+
+[![](https://i.ytimg.com/vi/vqoQ6Qvl8qU/maxresdefault.jpg)](https://youtu.be/vqoQ6Qvl8qU)
 
 ***
 
 ### 完成長流程工作
 
-> 幫我整理這週 GitHub Issue 並產生進度摘要
+> 幫我整理今天 GitHub Commit 並產生進度摘要
 
 Agent 可以拆解任務、呼叫工具、整合結果，再回覆給你。
+
+[![](https://i.ytimg.com/vi/nIV1xz_HIJg/maxresdefault.jpg)](https://youtu.be/nIV1xz_HIJg)
+
+***
+
+### 讓別人的 AI 也能用你的工具
+
+> Agenvoy 同時是 MCP server。
+> 
+> Claude Code、Codex、OpenCode 等 AI Agent 直接連上，就能：
+> - 使用你所有的沙箱工具
+> - 找不到工具時自動建立新的
+> - 建好的工具所有 Agent 共用
+> 
+> 一行設定，工具庫即時共享。
+> 影片中建立的範例：[`fetch_weather`](demo/fetch_weather/)、[`fetch_crypto_price`](demo/fetch_crypto_price/)
+
+#### Claude Code 創建天氣查找工具 (1)
+
+[![](https://i.ytimg.com/vi/on5IaoxBO1E/maxresdefault.jpg)](https://youtu.be/on5IaoxBO1E)
+
+#### Codex 使用 Claude 創建的天氣工具，並創建加密貨幣查找工具 (2)
+
+[![](https://i.ytimg.com/vi/2DDFCIcbnso/maxresdefault.jpg)](https://youtu.be/2DDFCIcbnso)
+
+#### Agenvoy 測試天氣與加密貨幣工具 (3)
+
+[![](https://i.ytimg.com/vi/KPs4o9xDFjM/maxresdefault.jpg)](https://youtu.be/KPs4o9xDFjM)
 
 ***
 
@@ -136,7 +170,7 @@ Agent 不只記得目前對話。
 * Discord
 * Terminal
 
----
+***
 
 ## 一鍵安裝
 
@@ -146,7 +180,7 @@ Agent 不只記得目前對話。
 curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 ```
 
----
+***
 
 ## 核心能力
 
@@ -157,12 +191,13 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | 長期記憶 | 保留重要資訊與上下文 |
 | 文件搜尋 | 從本機文件回答問題 |
 | Sub-Agent | 多 Agent 協作 |
-| MCP | 連接外部服務 |
+| MCP client | 連接外部 MCP 服務 |
+| MCP server | 讓任何 AI Agent 使用你的沙箱工具 |
 | Tool Market | 分享與安裝工具 |
 | 語音轉錄 | 音訊與影片轉文字 |
 | 自我改進 | 執行失敗後自動修正 |
 
----
+***
 
 ## Demo
 
@@ -172,7 +207,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | **呼叫 sub-agent 協作** | **從 market 安裝工具** |
 | [![](https://i.ytimg.com/vi/wM3NU4ARz4w/maxresdefault.jpg)](https://www.youtube.com/watch?v=wM3NU4ARz4w) | [![](https://i.ytimg.com/vi/UrR5i7YAHRc/maxresdefault.jpg)](https://www.youtube.com/watch?v=UrR5i7YAHRc) |
 
----
+***
 
 ## 跟其他工具比
 
@@ -186,7 +221,7 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | 跨 session 推送 | ✅ | ❌ | ⚠️ 有限 |
 | 文件搜尋 | 語意＋關鍵字 | 僅對話記憶 | 僅對話記憶 |
 
----
+***
 
 ## 文件
 
