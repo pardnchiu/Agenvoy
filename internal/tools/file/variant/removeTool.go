@@ -48,13 +48,13 @@ Use when a tool is obsolete or must be rebuilt; recoverable via git_rollback.`,
 				return "", fmt.Errorf("tool %q does not exist", name)
 			}
 
-			dst, err := filesystem.TrashDir(dir, filesystem.ScriptToolTrashDir, name)
+			_, err := filesystem.TrashDir(dir, filesystem.ScriptToolTrashDir, name)
 			if err != nil {
 				return "", err
 			}
 
 			filesystem.GitAutoCommit(ctx, filesystem.GitTools, "trash", name)
-			return fmt.Sprintf("trashed: %s → %s", dir, dst), nil
+			return fmt.Sprintf("trashed: %s", dir), nil
 		},
 	})
 }

@@ -251,7 +251,7 @@ scheduler 觸發後，runtime 會把 subagent 產出的最終文字自動送回 
   - api_tool：`auth.env: "<KEY_NAME>"`（schema 只記 key 名，無 `agenvoy.` 前綴）
   - script_tool：`GET http://localhost:17989/v1/key?key=<KEY_NAME>`（同樣不帶前綴）
   - skill body 純文字：直接引用 tool，**不**在 SKILL.md 寫明文 token、**不**寫 `export ENV=value` 之類指令
-- **缺 key 處置**：若觸發時 keychain 無對應 key，subagent 會在 tool 端拿到 401／空值錯誤；skill body 不負責「補登」，請使用者預先用 `store_secret` 或 `/api-tool-add`／`/script-tool-add` 流程落地
+- **缺 key 處置**：若觸發時 keychain 無對應 key，subagent 會在 tool 端拿到 401／空值錯誤；skill body 不負責「補登」，請使用者預先用 `store_secret` 落地
 
 **禁止**在 scheduler skill 的 SKILL.md frontmatter／body 任何位置寫死 token 值或要求使用者在 cron 觸發時互動輸入 — subagent 無對話環境，不可能收 plaintext。
 

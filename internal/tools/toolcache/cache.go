@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
-	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 )
 
 const (
@@ -23,32 +22,14 @@ type toolHistory struct {
 	CreatedAt int64  `json:"created_at"`
 }
 
-var exclude = map[string]bool{
-	"ask_user":                          true,
-	"search_tools":                      true,
-	"list_tools":                        true,
-	"run_skill":                         true,
-	"remember_error":                    true,
-	"read_error":                        true,
-	"search_error_history":              true,
-	"list_recent_tool_call":             true,
-	"read_tool_call":                    true,
-	"list_schedule":                     true,
-	"generate_plan":                     true,
-	"invoke_subagent":                   true,
-	"cross_review_with_external_agents": true,
-	"review_result":                     true,
-	"read_file":                         true,
-	"list_files":                        true,
-	"glob_files":                        true,
-	"search_files":                      true,
-	"git_log":                           true,
-	"calculate":                         true,
-	"search_chat_history":               true,
+var cacheable = map[string]bool{
+	"fetch_page":         true,
+	"search_google_news": true,
+	"search_web":         true,
 }
 
 func IsCacheable(name string) bool {
-	return toolRegister.IsReadOnly(name) && !exclude[name]
+	return cacheable[name]
 }
 
 func keyPrefix(sessionID string) string {

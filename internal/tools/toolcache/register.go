@@ -16,7 +16,7 @@ func Register() {
 		AlwaysAllow: true,
 		AlwaysLoad:  true,
 		Concurrent:  true,
-		Description: "List recent remote/expensive tool calls (last 30 min) in this session — covers search_web, search_google_news, fetch_page, script_*, ext_*, api_* tools. Returns call_id, tool name, args, and age without the result body. Call BEFORE re-invoking these tools to check whether a usable prior result already exists. If a match is found, use read_tool_call(id) instead of re-running the tool. Local tools (read_file, list_files, glob_files, search_files, git_log, calculate) are NOT cached — call them directly.",
+		Description: `List cached tool calls (last 30 min) in this session. Only search_web, search_google_news, and fetch_page are cached. Call BEFORE re-invoking these three tools to check for a usable prior result. If a match exists, use read_tool_call(id) instead of re-running. All other tools are not cached — call them directly.`,
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},

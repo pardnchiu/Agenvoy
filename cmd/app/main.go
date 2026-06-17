@@ -66,6 +66,11 @@ func main() {
 		}
 	}
 
+	if fi, err := os.Stdin.Stat(); err == nil && fi.Mode()&os.ModeCharDevice == 0 {
+		cmdMCPServer()
+		return
+	}
+
 	newTUI("", false, false)
 }
 

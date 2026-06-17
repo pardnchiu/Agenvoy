@@ -35,7 +35,7 @@ Branch by candidate count:
 
 | Count | Action |
 |---|---|
-| 0 | Abort. With keyword: "No directory matching `<keyword>` under `SCRIPT_ROOT`". Without keyword: "`SCRIPT_ROOT` is empty — run `script-tool-add` first to create a script tool" |
+| 0 | Abort. With keyword: "No directory matching `<keyword>` under `SCRIPT_ROOT`". Without keyword: "`SCRIPT_ROOT` is empty — create a script tool first using `write_tool`" |
 | 1 | Use that directory as `extension_dir` directly; report "auto-selected `<basename>`" |
 | ≥ 2 | `ask_user` singleSelect listing all candidates; user picks one as `extension_dir` |
 

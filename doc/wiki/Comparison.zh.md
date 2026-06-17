@@ -128,7 +128,7 @@
 | | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code** | **Codex CLI** | **Gemini CLI** |
 |--|--|--|--|--|--|--|
 | MCP 支援 | ✅ client | ✅ client | ✅ client + server | ✅ client | ❌ | ✅ client |
-| 自訂工具（script-tool-add） | ✅ AI 生成 | ❌ | ✅ 自動建立 skill | ❌ | ❌ | ❌ |
+| 自訂工具（auto-discovery） | ✅ AI 生成 | ❌ | ✅ 自動建立 skill | ❌ | ❌ | ❌ |
 | API 工具自動探索（search-api → add） | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | 工具 registry（跨機器發布／安裝） | ✅ pkg.agenvoy.com（Cloudflare Worker + R2 + D1，email 驗證碼 + 降版本封鎖） | ⚠️ ClawHub（skills + plugins） | ⚠️ agentskills.io（僅 skill） | ❌ | ❌ | ❌ |
 | Skill 系統 | ✅ SKILL.md lazy-load | ✅ SKILL.md 5400+ 社群 | ✅ SKILL.md agentskills.io | ✅ CLAUDE.md | ❌ | ❌ |
