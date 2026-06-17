@@ -77,7 +77,7 @@
 
 ***
 
-### Let other AI agents use your tools
+### Give the Agent you already use the power to build its own tools
 
 > Agenvoy is also an MCP server.
 >
