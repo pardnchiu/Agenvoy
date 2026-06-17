@@ -15,14 +15,16 @@ func (t TUI) commandMcp(parts []string) (TUI, tea.Cmd, bool) {
 			return t.commandMcpAdd()
 		case "remove", "rm":
 			return t.commandMcpRemove()
+		case "install":
+			return t.commandMcpInstall()
 		}
 	}
 
 	t.popup = &Popup{
 		kind:    popupSingleSelect,
 		title:   "MCP",
-		options: []string{"add", "remove"},
-		values:  []string{"add", "remove"},
+		options: []string{"add", "remove", "install (external agent)"},
+		values:  []string{"add", "remove", "install"},
 		onConfirm: func(chosen string) any {
 			return McpAction{action: chosen}
 		},
