@@ -31,10 +31,10 @@
 ### 查資料
 
 > 台北天氣如何？
-
-Agent 找資料、呼叫工具、整理結果後回答你。
-
-如果沒有工具，它會自己建立。
+> 
+> Agent 找資料、呼叫工具、整理結果後回答你。
+> 
+> 如果沒有工具，它會自己建立。
 
 [![](https://i.ytimg.com/vi/floMBsAfziY/maxresdefault.jpg)](https://youtu.be/floMBsAfziY)
 
@@ -43,14 +43,13 @@ Agent 找資料、呼叫工具、整理結果後回答你。
 ### 建立自動化
 
 > 每天早上 8 點報台積電股價
-
-Agent 會確認：
-
-- 要推送到哪裡
-- 要什麼格式
-- 什麼時間執行
-
-確認後自動建立排程。
+>
+> Agent 會確認：
+> - 要推送到哪裡
+> - 要什麼格式
+> - 什麼時間執行
+> 
+> 確認後自動建立排程。
 
 [![](https://i.ytimg.com/vi/5To3joKlFpU/maxresdefault.jpg)](https://youtu.be/5To3joKlFpU)
 
@@ -58,10 +57,11 @@ Agent 會確認：
 
 ### 搜尋你的文件
 
-> 找出去年所有報價單<br>
+> 找出去年所有報價單
+>
 > 哪份文件提到 Prompt 指南？
-
-Agent 直接從你的文件搜尋答案。
+>
+> Agent 直接從你的文件搜尋答案。
 
 [![](https://i.ytimg.com/vi/vqoQ6Qvl8qU/maxresdefault.jpg)](https://youtu.be/vqoQ6Qvl8qU)
 
@@ -70,8 +70,8 @@ Agent 直接從你的文件搜尋答案。
 ### 完成長流程工作
 
 > 幫我整理今天 GitHub Commit 並產生進度摘要
-
-Agent 可以拆解任務、呼叫工具、整合結果，再回覆給你。
+>
+> Agent 可以拆解任務、呼叫工具、整合結果，再回覆給你。
 
 [![](https://i.ytimg.com/vi/nIV1xz_HIJg/maxresdefault.jpg)](https://youtu.be/nIV1xz_HIJg)
 
@@ -196,16 +196,6 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 | Tool Market | 分享與安裝工具 |
 | 語音轉錄 | 音訊與影片轉文字 |
 | 自我改進 | 執行失敗後自動修正 |
-
-***
-
-## Demo
-
-| 自動工具生成 | 以 SKILL 為核心的排程 |
-| :-: | :-: |
-| [![](https://i.ytimg.com/vi/Fj0ooIij8TM/maxresdefault.jpg)](https://youtu.be/Fj0ooIij8TM) | [![](https://i.ytimg.com/vi/bO9AMrW3L9c/maxresdefault.jpg)](https://www.youtube.com/watch?v=bO9AMrW3L9c) |
-| **呼叫 sub-agent 協作** | **從 market 安裝工具** |
-| [![](https://i.ytimg.com/vi/wM3NU4ARz4w/maxresdefault.jpg)](https://www.youtube.com/watch?v=wM3NU4ARz4w) | [![](https://i.ytimg.com/vi/UrR5i7YAHRc/maxresdefault.jpg)](https://www.youtube.com/watch?v=UrR5i7YAHRc) |
 
 ***
 
