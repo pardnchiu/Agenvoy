@@ -127,6 +127,15 @@ func IsFireAndForget(name string) bool {
 	return fireAndForgetSet[name]
 }
 
+func GetTool(name string) *toolTypes.Tool {
+	for i := range defList {
+		if defList[i].Function.Name == name {
+			return &defList[i]
+		}
+	}
+	return nil
+}
+
 func BuiltinNames() []string {
 	dst := make([]string, len(builtinNames))
 	copy(dst, builtinNames)

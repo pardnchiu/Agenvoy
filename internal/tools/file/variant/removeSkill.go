@@ -48,13 +48,13 @@ Use when a skill is obsolete or must be rebuilt; recoverable via git_rollback.`,
 				return "", fmt.Errorf("skill %q does not exist", name)
 			}
 
-			dst, err := filesystem.TrashDir(dir, filesystem.SkillTrashDir, name)
+			_, err := filesystem.TrashDir(dir, filesystem.SkillTrashDir, name)
 			if err != nil {
 				return "", err
 			}
 
 			filesystem.GitAutoCommit(ctx, filesystem.GitSkills, "trash", name)
-			return fmt.Sprintf("trashed: %s → %s", dir, dst), nil
+			return fmt.Sprintf("trashed: %s", dir), nil
 		},
 	})
 }

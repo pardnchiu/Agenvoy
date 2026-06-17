@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -20,24 +21,52 @@ type Tool struct {
 	SystemDefault bool   `json:"system_default,omitempty"`
 }
 
+func isMCPExposed(name string) bool {
+	switch {
+	case strings.HasPrefix(name, "script_"),
+		strings.HasPrefix(name, "api_"),
+		strings.HasPrefix(name, "ext_"):
+		return true
+	}
+	return slices.Contains(toolRegister.BuiltinNames(), name)
+}
+
 func registListTools() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "list_tools",
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `
-List all currently available tools by name + one-line description.
+List available tools by name + one-line description.
 Read-only; does not load schemas.
+Pass mcp=true to show only MCP-exposed tools (builtin + script_/api_/ext_).
 Use search_tools to also activate matching schemas.`,
 		Parameters: map[string]any{
-			"type":       "object",
-			"properties": map[string]any{},
+			"type": "object",
+			"properties": map[string]any{
+				"mcp": map[string]any{
+					"type":        "boolean",
+					"description": "When true, only list MCP-exposed tools: builtin + script_/api_/ext_ prefixed. Default false (list all).",
+					"default":     false,
+				},
+			},
 		},
-		Handler: func(_ context.Context, e *toolTypes.Executor, _ json.RawMessage) (string, error) {
+		Handler: func(_ context.Context, e *toolTypes.Executor, args json.RawMessage) (string, error) {
+			var params struct {
+				MCP bool `json:"mcp"`
+			}
+			if len(args) > 0 {
+				_ = json.Unmarshal(args, &params)
+			}
+
 			list := make([]Tool, 0, len(e.AllTools))
 			for _, tool := range e.AllTools {
+				name := tool.Function.Name
+				if params.MCP && !isMCPExposed(name) {
+					continue
+				}
 				list = append(list, Tool{
-					Name:          tool.Function.Name,
+					Name:          name,
 					Description:   tool.Function.Description,
 					SystemDefault: strings.HasPrefix(strings.TrimSpace(tool.Function.Description), systemDefaultMarker),
 				})
@@ -50,5 +79,4 @@ Use search_tools to also activate matching schemas.`,
 			return string(raw), nil
 		},
 	})
-
 }

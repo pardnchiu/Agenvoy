@@ -51,7 +51,6 @@ var PermissionSingleConfirm string
 //go:embed prompts/script_tool_guide.md
 var ScriptToolGuide string
 
-
 // * Configs
 
 //go:embed jsons/denied_map.json

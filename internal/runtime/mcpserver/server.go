@@ -15,6 +15,8 @@ const (
 	protocolVersion = "2024-11-05"
 )
 
+var emptySchema = json.RawMessage(`{"type":"object","properties":{}}`)
+
 type request struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      *int64          `json:"id,omitempty"`
@@ -54,6 +56,8 @@ func New() *Server {
 }
 
 func (s *Server) Run(ctx context.Context) error {
+	s.watch()
+
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 0, 4<<20), 4<<20)
 
@@ -107,12 +111,19 @@ func (s *Server) handleInit(req *request) {
 	raw, _ := json.Marshal(map[string]any{
 		"protocolVersion": protocolVersion,
 		"capabilities": map[string]any{
-			"tools": map[string]any{},
+			"tools": map[string]any{"listChanged": true},
 		},
 		"serverInfo": map[string]any{
 			"name":    "agenvoy",
 			"version": "0.1.0",
 		},
+		"instructions": `This server provides tools for live data, computation, and API access.
+
+MANDATORY: When the user asks for anything requiring live external data (weather, prices, currency, geocoding, etc.),
+you MUST use tools from this server — do NOT fall back to web search, browsing, or any other data source.
+Search existing tools first (script_*, api_*, ext_*). If no tool matches, call script_tool_generate_guide to get the build contract,
+then: write_tool (tag=json + tag=script) → test_tool → call the new script_<name> tool to answer.
+Never answer with data not obtained through these tools.`,
 	})
 	s.send(req.ID, raw)
 }
