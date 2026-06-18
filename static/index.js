@@ -13,51 +13,50 @@ document.addEventListener("DOMContentLoaded", (_) => {
     i18n: {
       zh: {
         title: "讓 AI 真正為你工作的個人 AI 助理",
-        // 區塊1
-        one_command_title: "一鍵部署好簡單",
+        tagline_1: "一句話建工具，自動測試，直接呼叫。",
+        tagline_2: "讓你現有的 Agent 也能自己造工具。",
+        tagline_3: "你只需要說一句話，剩下的交給 Agent。",
+        one_command_title: "一鍵安裝",
         one_command: "複製、貼上、不到 30 秒",
         one_command_footer: "還要 Discord / Telegram? 再加十秒",
-        // 區塊2
-        scheduler_title: "以 SKILL 為基底的排程",
-        scheduler_content: "與 SKILL 相同邏輯文檔撰寫，輕鬆設計自己的排程工作流。",
-        // 區塊3
-        co_work_title: "多 Session 協同工作",
-        co_work_content: "多個 Sessions 之間可互相調用對方分配任務，協同完成複雜任務。",
-        // 區塊4
-        tool_generator_title: "工具自動生成",
-        tool_generator_content: "只需提出需求，並依據問題回答，即可自動生成工具，無需編碼。",
-        // 區塊5
-        plan_mode_title: "預規劃模式",
-        plan_mode_content: "只需提出需求，並依據問題回答，Agent 會依據需求自動規劃任務流程後再開始執行。",
-        // 區塊6
-        extension_market_title: "工具擴充市集",
-        extension_market_content: "社群開發的工具擴充，經過驗證後即可上架，讓你一鍵安裝使用。",
+        lookup_title: "查資料，沒工具就自己建",
+        lookup_content: "問一句話，Agent 找資料、呼叫工具、給你答案。工具不存在？它自己建一個。",
+        scheduler_title: "排程自動化",
+        scheduler_content:
+          "「每天早上八點報告台積電股價」——Agent 問你推送到哪、要什麼格式、何時執行，然後自動建立排程。",
+        search_title: "搜尋你的檔案",
+        search_content:
+          "「找出去年所有發票」「哪份文件提到 Prompt guide？」——Agent 搜尋本地檔案，直接回答。",
+        multistep_title: "多步驟任務",
+        multistep_content:
+          "「總結今天的 GitHub Commit 並生成進度報告」——Agent 拆解任務、呼叫工具、整合結果、回覆你。",
+        mcp_title: "讓其他 Agent 也能造工具",
+        mcp_content:
+          "Agenvoy 也是 MCP server。Claude Code、Codex、OpenCode 連上後即可使用所有沙箱工具、自動建立新工具、跨 Agent 共享。一行設定，即時共享工具庫。",
       },
       en: {
         title: "Your Personal AI Assistant That Actually Works",
-        // 區塊1
-        one_command_title: "One-Command Deployment Made Easy",
-        one_command: "Copy, paste, and you're done in under 30 seconds",
+        tagline_1: "Build tools, test it, and call it.",
+        tagline_2: "Give the Agent you already use the power to build its own tools.",
+        tagline_3: "You say one sentence. The agent does the rest.",
+        one_command_title: "One-Line Install",
+        one_command: "Copy, paste, done in under 30 seconds",
         one_command_footer: "Need Discord / Telegram? Just add ten more seconds",
-        // 區塊2
-        scheduler_title: "SKILL-based Scheduler",
-        scheduler_content: "Same logic document writing as SKILL, easily design your own scheduling workflow.",
-        // 區塊3
-        co_work_title: "Multi-Session Co-Working",
-        co_work_content:
-          "Multiple sessions can call each other to assign tasks and work together to complete complex tasks.",
-        // 區塊4
-        tool_generator_title: "Automatic Tool Generation",
-        tool_generator_content:
-          "Just ask for what you need, and the tool will be automatically generated based on the answer, no coding required.",
-        // 區塊5
-        plan_mode_title: "Pre-Planning Mode",
-        plan_mode_content:
-          "Just ask for what you need, and the Agent will automatically plan the task flow based on the requirements before starting execution.",
-        // 區塊6
-        extension_market_title: "Tool Extension Marketplace",
-        extension_market_content:
-          "Community-developed tool extensions, verified and listed for you to install and use with one click.",
+        lookup_title: "Look Things Up — No Tool? It Builds One",
+        lookup_content:
+          "Ask a question. The agent finds data, calls tools, and gives you the answer. If a tool doesn't exist, it builds one.",
+        scheduler_title: "Set Up Automation",
+        scheduler_content:
+          '"Report TSMC stock price every morning at 8am" — The agent asks where to push, what format, when to run, then creates the schedule.',
+        search_title: "Search Your Files",
+        search_content:
+          '"Find all invoices from last year" "Which document mentions Prompt guide?" — The agent searches your local files and answers directly.',
+        multistep_title: "Handle Multi-Step Work",
+        multistep_content:
+          '"Summarize today\'s GitHub Commit and generate a progress report" — The agent breaks down the task, calls tools, combines results, and replies.',
+        mcp_title: "Let Other Agents Build Tools Too",
+        mcp_content:
+          "Agenvoy is also an MCP server. Claude Code, Codex, OpenCode and other AI agents can connect to use all sandboxed tools, auto-build new tools, and share across agents. One line of config. Instant shared tool library.",
       },
     },
     i18nLang: isZh ? "zh" : "en",
@@ -69,11 +68,11 @@ document.addEventListener("DOMContentLoaded", (_) => {
       rendered: (_) => {
         record = {
           "header-video": "7M6y5BO0kzo",
-          "demo-scheduler": "bO9AMrW3L9c",
-          "demo-co-work": "wM3NU4ARz4w",
-          "demo-tool-generator": "wF3_q-iqsgg",
-          "demo-plan-mode": "05rri8gNuTM",
-          "demo-extension-market": "UrR5i7YAHRc",
+          "demo-lookup": "floMBsAfziY",
+          "demo-scheduler": "5To3joKlFpU",
+          "demo-search": "vqoQ6Qvl8qU",
+          "demo-multistep": "nIV1xz_HIJg",
+          "demo-mcp": "on5IaoxBO1E",
         };
         i = 0;
         for (const e of Object.keys(record)) {

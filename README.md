@@ -9,7 +9,8 @@
 </p>
 
 <p align="center">
-  Look things up, build tools, organize files, set up schedules.<br>
+  Build tools, test it, and call it.<br>
+  Give the Agent you already use the power to build its own tools.<br>
   You say one sentence. The agent does the rest.
 </p>
 
