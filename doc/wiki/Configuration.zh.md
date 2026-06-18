@@ -131,7 +131,7 @@ URL 慣例對齊 Zed：使用者填到 `/v1` 為止（例：`http://localhost:11
 
 ## KuraDB
 
-啟用狀態為 config.json 的 `kuradb_enabled: bool`。透過 TUI 的 `/kuradb` 切換（**無** CLI 子命令 —— install.sh + sudo 需要真正的 TTY）。生命週期詳見 [KuraDB RAG](KuraDB-RAG.zh.md)。
+啟用狀態為 config.json 的 `kuradb_enabled: bool`。透過 TUI 的 `/feature kuradb` 切換（**無** CLI 子命令 —— install.sh + sudo 需要真正的 TTY）。生命週期詳見 [KuraDB RAG](KuraDB-RAG.zh.md)。
 
 | Key | 位置 |
 |---|---|

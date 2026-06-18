@@ -112,6 +112,16 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
+		case tea.KeyShiftTab:
+			if t.selector != nil || t.running {
+				return t, nil
+			}
+			t.allowAll = !t.allowAll
+			if t.allowAll {
+				return t, tea.Println(warnStyle.Render("⎯ auto mode: on (always allow)") + "\n")
+			}
+			return t, tea.Println(hintStyle.Render("⎯ auto mode: off") + "\n")
+
 		case tea.KeyTab:
 			if t.selector != nil {
 				t = t.selectCommand()
@@ -166,7 +176,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.runStartedAt = time.Now()
 			t.runTarget = targetSession(content, t.currentSessionID)
 
-			go runExec(t.ctx, content, false, t.cwd, t.currentSessionID, "")
+			go runExec(t.ctx, content, t.allowAll, t.cwd, t.currentSessionID, "")
 
 			cmds = append(cmds,
 				tea.Println(messageBlock(content)),
@@ -1093,7 +1103,7 @@ func (t TUI) startResume(msg ResumeExec) (tea.Model, tea.Cmd) {
 	t.running = true
 	t.runStartedAt = time.Now()
 	t.runTarget = ""
-	go runExec(t.ctx, msg.Content, false, t.cwd, sid, msg.PendingTask)
+	go runExec(t.ctx, msg.Content, t.allowAll, t.cwd, sid, msg.PendingTask)
 	return t, t.spinner.Tick
 }
 

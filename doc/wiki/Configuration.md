@@ -131,7 +131,7 @@ URL convention follows Zed: the user enters the URL up to `/v1` (e.g. `http://lo
 
 ## KuraDB
 
-Enabled state is `kuradb_enabled: bool` in config.json. Toggle via `/kuradb` in the TUI (no CLI subcommand — install.sh + sudo need a real TTY). See [KuraDB RAG](KuraDB-RAG.md) for full lifecycle.
+Enabled state is `kuradb_enabled: bool` in config.json. Toggle via `/feature kuradb` in the TUI (no CLI subcommand — install.sh + sudo need a real TTY). See [KuraDB RAG](KuraDB-RAG.md) for full lifecycle.
 
 | Key | Location |
 |---|---|

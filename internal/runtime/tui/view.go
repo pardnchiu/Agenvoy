@@ -39,7 +39,12 @@ func (t TUI) viewIdle() string {
 		return ""
 	}
 
-	left := hintStyle.Render(" " + t.shortCwd())
+	var confirmMode string
+	if t.allowAll {
+		confirmMode = warnStyle.Render(" [auto]") + hintStyle.Render(" "+t.shortCwd())
+	} else {
+		confirmMode = hintStyle.Render(" [safe] " + t.shortCwd())
+	}
 	right := t.sessionTag()
 
 	prefix := "\n"
@@ -55,9 +60,9 @@ func (t TUI) viewIdle() string {
 
 	box := textAreaStyle.Width(width - 2).Render(t.textarea.View())
 
-	pad := width - lipgloss.Width(left) - lipgloss.Width(right)
+	pad := width - lipgloss.Width(confirmMode) - lipgloss.Width(right)
 	pad = max(pad, 1)
-	return prefix + top + box + "\n" + left + strings.Repeat(" ", pad) + right
+	return prefix + top + box + "\n" + confirmMode + strings.Repeat(" ", pad) + right
 }
 
 func (t TUI) viewThinking() string {

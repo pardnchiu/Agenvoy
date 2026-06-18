@@ -58,12 +58,12 @@ The result: the LLM **never sees** `list_rag` / `search_rag` tools when the endp
 
 **Why this matters:** without dynamic exclusion, the LLM would see RAG tool stubs at startup race (before KuraDB child spawns), call them, and get errors — confusing both LLM and user.
 
-## `/kuradb` TUI wizard
+## `/feature kuradb` TUI wizard
 
 Enable / disable is exposed only through the TUI (no CLI subcommand by design — install.sh + sudo prompts need a real TTY):
 
 ```
-/kuradb         → popup: enable | disable
+/feature kuradb   → popup: enable | disable
 ```
 
 ### Enable flow
@@ -102,7 +102,7 @@ This is enforced in `configs/prompts/system_prompt.md`; the rule self-deactivate
 
 - [Tools](Tools.md#rag) — `list_rag` / `search_rag` tool definitions
 - [Memory System](Memory-System.md) — how KuraDB complements ToriiDB-backed conversation memory
-- [CLI Reference](CLI-Reference.md) — `/kuradb` TUI command
+- [CLI Reference](CLI-Reference.md) — `/feature kuradb` TUI command
 - [Configuration](Configuration.md#kuradb) — config keys and paths
 
 ***
