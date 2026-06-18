@@ -305,6 +305,15 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "session":
 			next, cmd, _ := t.commandSessionModel()
 			return next, cmd
+		case "dispatch":
+			next, cmd, _ := t.commandDispatcher()
+			return next, cmd
+		case "summary":
+			next, cmd, _ := t.commandSummaryModel()
+			return next, cmd
+		case "reasoning":
+			next, cmd, _ := t.commandReasoning(nil)
+			return next, cmd
 		}
 		return t, nil
 
@@ -743,6 +752,37 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			seq = append(seq, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ telegram %sd · daemon reloading", msg.action))+"\n"))
 		}
 		return t, tea.Sequence(seq...)
+
+	case DangerousSelect:
+		switch msg.action {
+		case "remove-session":
+			next, cmd, _ := t.commandRemoveSession()
+			return next, cmd
+		case "allow-skill":
+			next, cmd, _ := t.commandAllowSkill(nil)
+			return next, cmd
+		case "allow-cmd":
+			next, cmd, _ := t.commandAllowCmd(nil)
+			return next, cmd
+		case "allow-report":
+			next, cmd, _ := t.commandAllowReport(nil)
+			return next, cmd
+		}
+		return t, nil
+
+	case FeatureSelect:
+		switch msg.feature {
+		case "voice":
+			next, cmd, _ := t.commandVoice(nil)
+			return next, cmd
+		case "image2":
+			next, cmd, _ := t.commandImage2(nil)
+			return next, cmd
+		case "kuradb":
+			next, cmd, _ := t.commandKuradb(nil)
+			return next, cmd
+		}
+		return t, nil
 
 	case VoiceAction:
 		if msg.action == "enable" && voiceNeedsGeminiKey() {
