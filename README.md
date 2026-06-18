@@ -29,6 +29,10 @@
 
 ## What you can do with it
 
+<table>
+<tr>
+<td width="50%" valign="top">
+
 ### Look things up
 
 > What's the weather in Taipei?
@@ -37,9 +41,8 @@
 >
 > If a tool doesn't exist, it builds one.
 
-[![](https://i.ytimg.com/vi/floMBsAfziY/maxresdefault.jpg)](https://youtu.be/floMBsAfziY)
-
-***
+</td>
+<td width="50%" valign="top">
 
 ### Set up automation
 
@@ -52,9 +55,22 @@
 >
 > Then creates the schedule automatically.
 
+</td>
+</tr>
+<tr>
+<td>
+
+[![](https://i.ytimg.com/vi/floMBsAfziY/maxresdefault.jpg)](https://youtu.be/floMBsAfziY)
+
+</td>
+<td>
+
 [![](https://i.ytimg.com/vi/5To3joKlFpU/maxresdefault.jpg)](https://youtu.be/5To3joKlFpU)
 
-***
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
 ### Search your files
 
@@ -64,19 +80,30 @@
 >
 > The agent searches your local files and answers directly.
 
-[![](https://i.ytimg.com/vi/vqoQ6Qvl8qU/maxresdefault.jpg)](https://youtu.be/vqoQ6Qvl8qU)
-
-***
+</td>
+<td width="50%" valign="top">
 
 ### Handle multi-step work
 
-> Summarize this today's GitHub Commit and generate a progress report
+> Summarize today's GitHub Commit and generate a progress report
 >
 > The agent breaks down the task, calls tools, combines results, and replies.
 
+</td>
+</tr>
+<tr>
+<td>
+
+[![](https://i.ytimg.com/vi/vqoQ6Qvl8qU/maxresdefault.jpg)](https://youtu.be/vqoQ6Qvl8qU)
+
+</td>
+<td>
+
 [![](https://i.ytimg.com/vi/nIV1xz_HIJg/maxresdefault.jpg)](https://youtu.be/nIV1xz_HIJg)
 
-***
+</td>
+</tr>
+</table>
 
 ### Give the Agent you already use the power to build its own tools
 
@@ -90,17 +117,42 @@
 > One line of config. Instant shared tool library.
 > Tools created in the demo: [`fetch_weather`](doc/demo/fetch_weather/) · [`fetch_crypto_price`](doc/demo/fetch_crypto_price/)
 
-#### Claude Code creates a weather lookup tool (1)
+<table>
+<tr>
+<td width="33%" valign="top">
+
+#### Claude Code creates a weather tool (1)
+
+</td>
+<td width="33%" valign="top">
+
+#### Codex reuses it and creates a crypto tool (2)
+
+</td>
+<td width="33%" valign="top">
+
+#### Agenvoy tests both tools (3)
+
+</td>
+</tr>
+<tr>
+<td>
 
 [![](https://i.ytimg.com/vi/on5IaoxBO1E/maxresdefault.jpg)](https://youtu.be/on5IaoxBO1E)
 
-#### Codex uses the weather tool created by Claude, and creates a crypto price tool (2)
+</td>
+<td>
 
 [![](https://i.ytimg.com/vi/2DDFCIcbnso/maxresdefault.jpg)](https://youtu.be/2DDFCIcbnso)
 
-#### Agenvoy tests both the weather and cryptocurrency tools (3)
+</td>
+<td>
 
 [![](https://i.ytimg.com/vi/KPs4o9xDFjM/maxresdefault.jpg)](https://youtu.be/KPs4o9xDFjM)
+
+</td>
+</tr>
+</table>
 
 ***
 

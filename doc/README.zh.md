@@ -29,6 +29,10 @@
 
 ## 你可以這樣用它
 
+<table>
+<tr>
+<td width="50%" valign="top">
+
 ### 查資料
 
 > 台北天氣如何？
@@ -37,9 +41,8 @@
 > 
 > 如果沒有工具，它會自己建立。
 
-[![](https://i.ytimg.com/vi/floMBsAfziY/maxresdefault.jpg)](https://youtu.be/floMBsAfziY)
-
-***
+</td>
+<td width="50%" valign="top">
 
 ### 建立自動化
 
@@ -52,9 +55,22 @@
 > 
 > 確認後自動建立排程。
 
+</td>
+</tr>
+<tr>
+<td>
+
+[![](https://i.ytimg.com/vi/floMBsAfziY/maxresdefault.jpg)](https://youtu.be/floMBsAfziY)
+
+</td>
+<td>
+
 [![](https://i.ytimg.com/vi/5To3joKlFpU/maxresdefault.jpg)](https://youtu.be/5To3joKlFpU)
 
-***
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
 ### 搜尋你的文件
 
@@ -64,9 +80,8 @@
 >
 > Agent 直接從你的文件搜尋答案。
 
-[![](https://i.ytimg.com/vi/vqoQ6Qvl8qU/maxresdefault.jpg)](https://youtu.be/vqoQ6Qvl8qU)
-
-***
+</td>
+<td width="50%" valign="top">
 
 ### 完成長流程工作
 
@@ -74,9 +89,21 @@
 >
 > Agent 可以拆解任務、呼叫工具、整合結果，再回覆給你。
 
+</td>
+</tr>
+<tr>
+<td>
+
+[![](https://i.ytimg.com/vi/vqoQ6Qvl8qU/maxresdefault.jpg)](https://youtu.be/vqoQ6Qvl8qU)
+
+</td>
+<td>
+
 [![](https://i.ytimg.com/vi/nIV1xz_HIJg/maxresdefault.jpg)](https://youtu.be/nIV1xz_HIJg)
 
-***
+</td>
+</tr>
+</table>
 
 ### 讓你正在用的 AI Agent 擁有自建工具的能力
 
@@ -90,17 +117,42 @@
 > 一行設定，工具庫即時共享。
 > 影片中建立的範例：[`fetch_weather`](demo/fetch_weather/)、[`fetch_crypto_price`](demo/fetch_crypto_price/)
 
-#### Claude Code 創建天氣查找工具 (1)
+<table>
+<tr>
+<td width="33%" valign="top">
+
+#### Claude Code 建立天氣工具 (1)
+
+</td>
+<td width="33%" valign="top">
+
+#### Codex 複用天氣工具，再建加密貨幣工具 (2)
+
+</td>
+<td width="33%" valign="top">
+
+#### Agenvoy 測試兩個工具 (3)
+
+</td>
+</tr>
+<tr>
+<td>
 
 [![](https://i.ytimg.com/vi/on5IaoxBO1E/maxresdefault.jpg)](https://youtu.be/on5IaoxBO1E)
 
-#### Codex 使用 Claude 創建的天氣工具，並創建加密貨幣查找工具 (2)
+</td>
+<td>
 
 [![](https://i.ytimg.com/vi/2DDFCIcbnso/maxresdefault.jpg)](https://youtu.be/2DDFCIcbnso)
 
-#### Agenvoy 測試天氣與加密貨幣工具 (3)
+</td>
+<td>
 
 [![](https://i.ytimg.com/vi/KPs4o9xDFjM/maxresdefault.jpg)](https://youtu.be/KPs4o9xDFjM)
+
+</td>
+</tr>
+</table>
 
 ***
 
