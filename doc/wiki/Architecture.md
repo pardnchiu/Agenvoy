@@ -139,7 +139,7 @@ Switch to per-domain widget packages when **any one** of:
 | Memory tiers and semantic search | [Memory System](Memory-System.md) |
 | Sandbox policy, permission modes | [Security and Sandbox](Security-and-Sandbox.md) |
 | MCP transports, lifecycle | [MCP Integration](MCP-Integration.md) |
-| KuraDB RAG lifecycle, healthcheck, `/kuradb` wizard | [KuraDB RAG](KuraDB-RAG.md) |
+| KuraDB RAG lifecycle, healthcheck, `/feature kuradb` wizard | [KuraDB RAG](KuraDB-RAG.md) |
 | Source of truth for architecture rules | [CLAUDE.md](https://github.com/pardnchiu/Agenvoy/blob/master/CLAUDE.md) |
 
 ***

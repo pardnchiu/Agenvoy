@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
+	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 )
 
 type modelAddItem struct {
@@ -34,6 +36,10 @@ type ModelAddCompatURLSubmit struct{ url string }
 type ModelAddCompatKeySubmit struct{ key string }
 type ModelAddModelMultiPick struct{ chosen string }
 type ModelAddDone struct{ err error }
+type CompatModelsResult struct{ ids []string }
+type NvidiaModelsResult struct{ ids []string }
+type OpenAIMethodPick struct{ method string }
+type GrokMethodPick struct{ method string }
 
 type OAuthInfo struct {
 	url      string
@@ -47,16 +53,14 @@ var modelAddProviders = []struct {
 	name  string
 	label string
 }{
-	{"codex", "Codex (OpenAI Subscription)"},
-	{"openai", "OpenAI"},
-	{"grok-oauth", "Grok (xAI Subscription)"},
-	{"grok", "Grok"},
+	{"openai", "OpenAI (API Key & Subscription)"},
 	{"claude", "Claude"},
 	{"gemini", "Gemini"},
-	{"copilot", "Github Copilot (Github Subscription)"},
+	{"grok", "Grok (API Key & Subscription)"},
+	{"copilot", "Github Copilot (Subscription)"},
 	{"deepseek", "DeepSeek"},
 	{"nvidia", "NVIDIA NIM"},
-	{"compat", "(custom endpoint)"},
+	{"compat", "(custom endpoint) [include scan local]"},
 }
 
 func (t TUI) commandModelAdd() (TUI, tea.Cmd, bool) {
@@ -85,10 +89,32 @@ func (t TUI) runModelAddProviderPick(name string) (TUI, tea.Cmd) {
 	}
 	t.modelAdd.provider = name
 	switch name {
+	case "openai":
+		t.popup = &Popup{
+			kind:    popupSingleSelect,
+			title:   "OpenAI · method",
+			options: []string{"API Key", "Codex (Subscription)"},
+			values:  []string{"api-key", "codex"},
+			onConfirm: func(chosen string) any {
+				return OpenAIMethodPick{method: chosen}
+			},
+		}
+		return t, nil
+	case "grok":
+		t.popup = &Popup{
+			kind:    popupSingleSelect,
+			title:   "Grok · method",
+			options: []string{"API Key", "xAI (Subscription)"},
+			values:  []string{"api-key", "grok-oauth"},
+			onConfirm: func(chosen string) any {
+				return GrokMethodPick{method: chosen}
+			},
+		}
+		return t, nil
 	case "copilot", "codex", "grok-oauth":
 		return t.modelAddViaOAuth()
 	case "compat":
-		return t.openModelAddCompatName()
+		return t.openModelAddCompatURL()
 	default:
 		return t.openModelAddAPIKey()
 	}
@@ -331,13 +357,13 @@ func (t TUI) runModelAddCompatNameSubmit(name string) (TUI, tea.Cmd) {
 		return t, tea.Println(errorStyle.Render("[!] invalid provider name (no spaces, brackets, or @)") + "\n")
 	}
 	t.modelAdd.compatProvider = strings.ToUpper(name)
-	return t.openModelAddCompatURL()
+	return t.openModelAddCompatKey()
 }
 
 func (t TUI) openModelAddCompatURL() (TUI, tea.Cmd) {
 	t.popup = &Popup{
 		kind:  popupText,
-		title: "URL (blank = http://localhost:11434/v1)",
+		title: "URL (blank = scan local)",
 		onConfirm: func(value string) any {
 			return ModelAddCompatURLSubmit{url: strings.TrimSpace(value)}
 		},
@@ -350,15 +376,15 @@ func (t TUI) runModelAddCompatURLSubmit(url string) (TUI, tea.Cmd) {
 		return t, tea.Println(errorStyle.Render("[!] model add state lost") + "\n")
 	}
 	if url == "" {
-		url = "http://localhost:11434/v1"
+		go scanLocalModels(t.ctx, "")
+		return t, nil
 	}
 	url = strings.TrimRight(url, "/")
-	if err := config.UpsertCompat(t.modelAdd.compatProvider, url); err != nil {
-		t.modelAdd = nil
-		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] UpsertCompat: %v", err)) + "\n")
+	if !strings.Contains(url, "://") {
+		url = "http://" + url
 	}
 	t.modelAdd.compatURL = url
-	return t.openModelAddCompatKey()
+	return t.openModelAddCompatName()
 }
 
 func (t TUI) openModelAddCompatKey() (TUI, tea.Cmd) {
@@ -387,6 +413,10 @@ func (t TUI) runModelAddCompatKeySubmit(key string) (TUI, tea.Cmd) {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.SaveKey: %v", err)) + "\n")
 		}
 	}
+	if err := config.UpsertCompat(t.modelAdd.compatProvider, t.modelAdd.compatURL); err != nil {
+		t.modelAdd = nil
+		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] UpsertCompat: %v", err)) + "\n")
+	}
 	return t.openModelAddModelPick()
 }
 
@@ -406,17 +436,24 @@ func (t TUI) openModelAddModelPick() (TUI, tea.Cmd) {
 	}
 
 	if t.modelAdd.provider == "compat" {
-		t.popup = &Popup{
-			kind:  popupText,
-			title: fmt.Sprintf("Model name (prefix: %s)", prefix),
-			onConfirm: func(value string) any {
-				name := strings.TrimSpace(value)
-				if name == "" {
-					return ModelAddModelMultiPick{chosen: ""}
-				}
-				return ModelAddModelMultiPick{chosen: name + "\x00"}
-			},
-		}
+		url := t.modelAdd.compatURL
+		prov := t.modelAdd.compatProvider
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			ids := fetchModelIDs(ctx, url, prov)
+			send(CompatModelsResult{ids: ids})
+		}()
+		return t, nil
+	}
+
+	if t.modelAdd.provider == "nvidia" {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+			defer cancel()
+			ids := fetchNvidiaModelIDs(ctx)
+			send(NvidiaModelsResult{ids: ids})
+		}()
 		return t, nil
 	}
 
@@ -570,4 +607,129 @@ func (t TUI) runModelAddModelMultiPick(chosen string) (TUI, tea.Cmd) {
 		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ %s models unchanged", providerName)) + "\n")
 	}
 	return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ %s · registry reloaded", strings.Join(summary, " · "))) + "\n")
+}
+
+func (t TUI) runCompatModelsResult(msg CompatModelsResult) (TUI, tea.Cmd) {
+	if t.modelAdd == nil {
+		return t, tea.Println(errorStyle.Render("[!] model add state lost") + "\n")
+	}
+
+	prefix := fmt.Sprintf("compat[%s]@", t.modelAdd.compatProvider)
+
+	if len(msg.ids) == 0 {
+		t.modelAdd = nil
+		return t, tea.Println(warnStyle.Render(fmt.Sprintf("⎯ %s · no models found at endpoint", prefix)) + "\n")
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] config.Load: %v", err)) + "\n")
+	}
+	existing := make(map[string]bool, len(cfg.Models))
+	for _, m := range cfg.Models {
+		existing[m.Name] = true
+	}
+
+	sort.Strings(msg.ids)
+
+	options := make([]string, len(msg.ids))
+	values := make([]string, len(msg.ids))
+	preSelected := make(map[int]bool)
+
+	for i, id := range msg.ids {
+		fullName := prefix + id
+		label := id
+		if existing[fullName] {
+			label += " · (added)"
+			preSelected[i] = true
+		}
+		options[i] = label
+		values[i] = id + "\x00"
+	}
+
+	t.popup = &Popup{
+		kind:    popupMultiSelect,
+		title:   fmt.Sprintf("Select %s models (space toggle · enter confirm)", t.modelAdd.compatProvider),
+		options: options,
+		values:  values,
+		multi:   preSelected,
+		onConfirm: func(chosen string) any {
+			return ModelAddModelMultiPick{chosen: chosen}
+		},
+	}
+	return t, nil
+}
+
+func fetchNvidiaModelIDs(ctx context.Context) []string {
+	apiKey := keychain.Get("NVIDIA_API_KEY")
+	if apiKey == "" {
+		return nil
+	}
+
+	client := &http.Client{Timeout: 8 * time.Second}
+	data, status, err := go_pkg_http.GET[modelsResponse](ctx, client, "https://integrate.api.nvidia.com/v1/models", map[string]string{
+		"Authorization": "Bearer " + apiKey,
+	})
+	if err != nil || status != http.StatusOK {
+		return nil
+	}
+
+	ids := make([]string, 0, len(data.Data))
+	for _, m := range data.Data {
+		if id := strings.TrimSpace(m.ID); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+func (t TUI) runNvidiaModelsResult(msg NvidiaModelsResult) (TUI, tea.Cmd) {
+	if t.modelAdd == nil {
+		return t, tea.Println(errorStyle.Render("[!] model add state lost") + "\n")
+	}
+
+	prefix := "nvidia@"
+
+	if len(msg.ids) == 0 {
+		t.modelAdd = nil
+		return t, tea.Println(warnStyle.Render("⎯ nvidia · no models found at endpoint") + "\n")
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] config.Load: %v", err)) + "\n")
+	}
+	existing := make(map[string]bool, len(cfg.Models))
+	for _, m := range cfg.Models {
+		existing[m.Name] = true
+	}
+
+	sort.Strings(msg.ids)
+
+	options := make([]string, len(msg.ids))
+	values := make([]string, len(msg.ids))
+	preSelected := make(map[int]bool)
+
+	for i, id := range msg.ids {
+		fullName := prefix + id
+		label := id
+		if existing[fullName] {
+			label += " · (added)"
+			preSelected[i] = true
+		}
+		options[i] = label
+		values[i] = id + "\x00"
+	}
+
+	t.popup = &Popup{
+		kind:    popupMultiSelect,
+		title:   "Select nvidia models (space toggle · enter confirm)",
+		options: options,
+		values:  values,
+		multi:   preSelected,
+		onConfirm: func(chosen string) any {
+			return ModelAddModelMultiPick{chosen: chosen}
+		},
+	}
+	return t, nil
 }

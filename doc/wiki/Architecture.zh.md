@@ -139,7 +139,7 @@ TUI 全部放在單一 package（`internal/runtime/tui`），**不拆 subpackage
 | 記憶層級與語意搜尋 | [記憶系統](Memory-System.zh.md) |
 | 沙箱 policy、permission mode | [安全與沙箱](Security-and-Sandbox.zh.md) |
 | MCP transport、生命週期 | [MCP 整合](MCP-Integration.zh.md) |
-| KuraDB RAG 生命週期、healthcheck、`/kuradb` wizard | [KuraDB RAG](KuraDB-RAG.zh.md) |
+| KuraDB RAG 生命週期、healthcheck、`/feature kuradb` wizard | [KuraDB RAG](KuraDB-RAG.zh.md) |
 | 架構規則與限制的真理來源 | [CLAUDE.md](https://github.com/pardnchiu/Agenvoy/blob/master/CLAUDE.md) |
 
 ***

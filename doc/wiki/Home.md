@@ -13,7 +13,7 @@
 - **Dispatcher-based routing** — a dispatcher LLM routes each task to the best-fit worker (Claude for coding, Gemini for video, GPT for research)
 - **Three-pass concurrent tool dispatch** — read tools fan out concurrently; write tools stay serial for safety
 - **Multi-layer memory** — rolling summary (incremental, timestamp-cursored) + 16-message recent history + keyword/semantic dual search + cross-session error memory with 90-day TTL
-- **Native document RAG** — KuraDB in-process child process (`list_rag` / `search_rag`), enabled via `/kuradb` in the TUI
+- **Native document RAG** — KuraDB in-process child process (`list_rag` / `search_rag`), enabled via `/feature kuradb` in the TUI
 - **Skill system** — loadable markdown skill packs triggered by `/skill-name` or `run_skill`; scheduler skills isolated under `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/`
 - **OS sandbox** — Linux bubblewrap / macOS sandbox-exec; tools execute in isolation
 - **MCP client** — stdio + HTTP/SSE; tools auto-inject as `mcp__<server>__<tool>`

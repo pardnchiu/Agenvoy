@@ -88,7 +88,7 @@ The three tiers above all serve conversation memory — past chats, summaries, e
 
 KuraDB exposes two tools to the agent (`list_rag` / `search_rag`), per-turn dynamically excluded when the endpoint file is missing. When loaded, the system prompt forces them to fire **first** for any information query (external web tools become gap-filling secondary).
 
-This split is deliberate: ToriiDB + SQLite are integrated runtime memory (you can't disable them); KuraDB is an opt-in indexed knowledge base (enable via `/kuradb` TUI command).
+This split is deliberate: ToriiDB + SQLite are integrated runtime memory (you can't disable them); KuraDB is an opt-in indexed knowledge base (enable via `/feature kuradb` TUI command).
 
 ## Migration note
 

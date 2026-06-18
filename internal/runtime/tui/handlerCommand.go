@@ -39,8 +39,8 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 	case "/new":
 		return t.commandNew(parts)
 
-	case "/remove-session":
-		return t.commandRemoveSession()
+	case "/dangerous":
+		return t.commandDangerous(parts)
 
 	case "/reset":
 		return t.commandReset()
@@ -57,29 +57,14 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 	case "/mcp":
 		return t.commandMcp(parts)
 
-	case "/dispatcher-model":
-		return t.commandDispatcher()
-
-	case "/summary-model":
-		return t.commandSummaryModel()
-
-	case "/reasoning":
-		return t.commandReasoning(parts)
-
 	case "/discord":
 		return t.commandDiscord(parts)
 
 	case "/telegram":
 		return t.commandTelegram(parts)
 
-	case "/enable-voice":
-		return t.commandVoice(parts)
-
-	case "/enable-image2":
-		return t.commandImage2(parts)
-
-	case "/kuradb":
-		return t.commandKuradb(parts)
+	case "/feature":
+		return t.commandFeature(parts)
 
 	case "/admin-channel":
 		return t.commandAdminChannel(parts)
@@ -101,15 +86,6 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 
 	case "/cmd":
 		return t.commandCmd(cmd)
-
-	case "/allow-skill":
-		return t.commandAllowSkill(parts)
-
-	case "/allow-cmd":
-		return t.commandAllowCmd(parts)
-
-	case "/allow-report":
-		return t.commandAllowReport(parts)
 
 	case "/key":
 		return t.commandKey(parts)

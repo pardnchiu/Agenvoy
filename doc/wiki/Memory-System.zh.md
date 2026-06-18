@@ -88,7 +88,7 @@ ToriiDB entries 在 `history.json` compact 時清理——早於裁剪點的 ent
 
 KuraDB 對 agent 暴露兩個工具（`list_rag` / `search_rag`），endpoint 不存在時 per-turn 動態排除。載入時 system prompt 強制 information query 第一波先呼這兩者（外部 web 工具退為補足角色）。
 
-這個切割是刻意的：ToriiDB + SQLite 是整合在 runtime 的記憶層（不能停用）；KuraDB 是 opt-in 的索引知識庫（透過 `/kuradb` TUI 啟用）。
+這個切割是刻意的：ToriiDB + SQLite 是整合在 runtime 的記憶層（不能停用）；KuraDB 是 opt-in 的索引知識庫（透過 `/feature kuradb` TUI 啟用）。
 
 ## 遷移備註
 

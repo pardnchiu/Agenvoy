@@ -58,12 +58,12 @@ Tool gate 為單一條件 `cfg.KuradbEnabled`——per-handler 內的 `ReadEndpo
 
 **為何重要：** 沒有動態排除的話，LLM 在 startup race（KuraDB child 還沒 spawn 之前）會看到 RAG tool stub、呼叫它、拿到 error——LLM 與使用者都被搞糊。
 
-## `/kuradb` TUI wizard
+## `/feature kuradb` TUI wizard
 
 enable／disable 只透過 TUI（**無** CLI 子命令——install.sh + sudo prompt 需要真正的 TTY）：
 
 ```
-/kuradb         → popup: enable | disable
+/feature kuradb   → popup: enable | disable
 ```
 
 ### Enable 流程
@@ -102,7 +102,7 @@ enable／disable 只透過 TUI（**無** CLI 子命令——install.sh + sudo pr
 
 - [工具系統](Tools.zh.md#rag) —— `list_rag` / `search_rag` 工具定義
 - [記憶系統](Memory-System.zh.md) —— KuraDB 如何補足 ToriiDB-backed 對話記憶
-- [命令列參考](CLI-Reference.zh.md) —— `/kuradb` TUI 指令
+- [命令列參考](CLI-Reference.zh.md) —— `/feature kuradb` TUI 指令
 - [設定檔](Configuration.zh.md#kuradb) —— config 鍵與路徑
 
 ***

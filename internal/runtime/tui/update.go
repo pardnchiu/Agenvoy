@@ -12,6 +12,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
@@ -111,6 +112,16 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
+		case tea.KeyShiftTab:
+			if t.selector != nil || t.running {
+				return t, nil
+			}
+			t.allowAll = !t.allowAll
+			if t.allowAll {
+				return t, tea.Println(warnStyle.Render("⎯ auto mode: on (always allow)") + "\n")
+			}
+			return t, tea.Println(hintStyle.Render("⎯ auto mode: off") + "\n")
+
 		case tea.KeyTab:
 			if t.selector != nil {
 				t = t.selectCommand()
@@ -152,6 +163,9 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if next, cmd, handled := t.handleCommand(content); handled {
 					return next, cmd
 				}
+				if !noMatches(content) {
+					return t, tea.Println(warnStyle.Render(fmt.Sprintf("⎯ unknown command: %s", strings.Fields(content)[0])) + "\n")
+				}
 			}
 
 			if len(agents.Registry().Entries) == 0 {
@@ -162,7 +176,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.runStartedAt = time.Now()
 			t.runTarget = targetSession(content, t.currentSessionID)
 
-			go runExec(t.ctx, content, false, t.cwd, t.currentSessionID, "")
+			go runExec(t.ctx, content, t.allowAll, t.cwd, t.currentSessionID, "")
 
 			cmds = append(cmds,
 				tea.Println(messageBlock(content)),
@@ -211,6 +225,9 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if strings.HasPrefix(content, "/") {
 			if next, cmd, handled := t.handleCommand(content); handled {
 				return next, cmd
+			}
+			if !noMatches(content) {
+				return t, tea.Println(warnStyle.Render(fmt.Sprintf("⎯ unknown command: %s", strings.Fields(content)[0])) + "\n")
 			}
 		}
 		if len(agents.Registry().Entries) == 0 {
@@ -297,6 +314,15 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return next, cmd
 		case "session":
 			next, cmd, _ := t.commandSessionModel()
+			return next, cmd
+		case "dispatch":
+			next, cmd, _ := t.commandDispatcher()
+			return next, cmd
+		case "summary":
+			next, cmd, _ := t.commandSummaryModel()
+			return next, cmd
+		case "reasoning":
+			next, cmd, _ := t.commandReasoning(nil)
 			return next, cmd
 		}
 		return t, nil
@@ -478,6 +504,32 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ModelAddProviderPick:
 		return t.runModelAddProviderPick(msg.provider)
 
+	case GrokMethodPick:
+		if t.modelAdd == nil {
+			return t, tea.Println(errorStyle.Render("[!] model add state lost") + "\n")
+		}
+		switch msg.method {
+		case "grok-oauth":
+			t.modelAdd.provider = "grok-oauth"
+			return t.modelAddViaOAuth()
+		default:
+			t.modelAdd.provider = "grok"
+			return t.openModelAddAPIKey()
+		}
+
+	case OpenAIMethodPick:
+		if t.modelAdd == nil {
+			return t, tea.Println(errorStyle.Render("[!] model add state lost") + "\n")
+		}
+		switch msg.method {
+		case "codex":
+			t.modelAdd.provider = "codex"
+			return t.modelAddViaOAuth()
+		default:
+			t.modelAdd.provider = "openai"
+			return t.openModelAddAPIKey()
+		}
+
 	case ModelAddAPIKeyReplace:
 		return t.runModelAddAPIKeyReplace(msg.replace)
 
@@ -495,6 +547,18 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ModelAddModelMultiPick:
 		return t.runModelAddModelMultiPick(msg.chosen)
+
+	case CompatModelsResult:
+		return t.runCompatModelsResult(msg)
+
+	case NvidiaModelsResult:
+		return t.runNvidiaModelsResult(msg)
+
+	case ModelScanLocalResult:
+		return t.runModelScanLocalResult(msg)
+
+	case ModelScanLocalPick:
+		return t.runModelScanLocalPick(msg.chosen)
 
 	case OAuthInfo:
 		return t.runOAuthInfo(msg)
@@ -698,6 +762,37 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			seq = append(seq, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ telegram %sd · daemon reloading", msg.action))+"\n"))
 		}
 		return t, tea.Sequence(seq...)
+
+	case DangerousSelect:
+		switch msg.action {
+		case "remove-session":
+			next, cmd, _ := t.commandRemoveSession()
+			return next, cmd
+		case "allow-skill":
+			next, cmd, _ := t.commandAllowSkill(nil)
+			return next, cmd
+		case "allow-cmd":
+			next, cmd, _ := t.commandAllowCmd(nil)
+			return next, cmd
+		case "allow-report":
+			next, cmd, _ := t.commandAllowReport(nil)
+			return next, cmd
+		}
+		return t, nil
+
+	case FeatureSelect:
+		switch msg.feature {
+		case "voice":
+			next, cmd, _ := t.commandVoice(nil)
+			return next, cmd
+		case "image2":
+			next, cmd, _ := t.commandImage2(nil)
+			return next, cmd
+		case "kuradb":
+			next, cmd, _ := t.commandKuradb(nil)
+			return next, cmd
+		}
+		return t, nil
 
 	case VoiceAction:
 		if msg.action == "enable" && voiceNeedsGeminiKey() {
@@ -1008,6 +1103,18 @@ func (t TUI) startResume(msg ResumeExec) (tea.Model, tea.Cmd) {
 	t.running = true
 	t.runStartedAt = time.Now()
 	t.runTarget = ""
-	go runExec(t.ctx, msg.Content, false, t.cwd, sid, msg.PendingTask)
+	go runExec(t.ctx, msg.Content, t.allowAll, t.cwd, sid, msg.PendingTask)
 	return t, t.spinner.Tick
+}
+
+func noMatches(input string) bool {
+	if scanner := agents.Scanner(); scanner != nil {
+		if m, _ := runtime.MatchSkill(scanner, input); m != nil {
+			return true
+		}
+	}
+	if agent, _, _ := external.MatchExternal(input); agent != "" {
+		return true
+	}
+	return false
 }
