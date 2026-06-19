@@ -2,7 +2,7 @@
 
 > [中文](Providers.zh.md)
 
-Agenvoy supports nine LLM providers behind a unified `Agent.Send()` interface.
+Agenvoy supports ten LLM providers behind a unified `Agent.Send()` interface.
 
 ## Supported list
 
@@ -16,9 +16,10 @@ Agenvoy supports nine LLM providers behind a unified `Agent.Send()` interface.
 | Nvidia NIM | `nvidia` | Llama, Mistral, and other open-weight hosted models |
 | xAI Grok | `grok` | grok-4 / grok-3 families incl. `grok-code-fast-1`; non-streaming HTTP client |
 | DeepSeek | `deepseek` | `deepseek-chat` (tool use) and `deepseek-reasoner` (CoT, temperature disabled); non-streaming HTTP client |
+| OpenRouter | `openrouter` | Aggregator — routes to 200+ models from multiple providers via a single API key |
 | Compat | `compat` | Any custom OpenAI-compatible endpoint |
 
-> **On the `providors/` spelling** — intentional convention; do not "fix" it. Provider JSON catalogs live under `configs/jsons/providors/`. Eight static files ship today (`claude.json`, `openai.json`, `codex.json`, `gemini.json`, `copilot.json`, `nvidia.json`, `grok.json`, `deepseek.json`); `compat` is constructed at runtime from user-supplied endpoints.
+> **Model discovery** — since v0.27.3 model lists are fetched live from each provider's API during `agen model add` / TUI `/model global`. The static JSON catalogs under `configs/jsons/providors/` have been removed.
 
 ## Provider configuration
 
@@ -91,19 +92,19 @@ Send-side timeout has three independent layers, each catching a different failur
 
 | Layer | Value | Catches | Where |
 |---|---|---|---|
-| **Transport** `ResponseHeaderTimeout` | `10s` | Backend stuck before returning headers (healthy SSE returns <1s; high load ≤ 5s; 10s = 10× margin) | `provider.NewHTTPClient()` (cloud non-SSE) + `openaiCodex/new.go::newHTTPClient()` (SSE) |
-| **`http.Client.Timeout`** | `5m` non-SSE / `10m` SSE | Full request (headers + body) | per-provider client |
+| **Transport** `ResponseHeaderTimeout` | `15s` (SSE only) | Backend stuck before returning headers (healthy SSE returns <1s; high load ≤ 5s; 15s aligns with `ProbeTimeout`) | `openaiCodex/new.go::newHTTPClient()` |
+| **`http.Client.Timeout`** | `10m` | Full request (headers + body) | per-provider client |
 | **`execute.go::AgentSendTimeout`** | env `AGENT_SEND_TIMEOUT_SECONDS`, default `600s` | Exec-layer ceiling via `context.WithTimeout` | `internal/agents/exec/execute.go` |
 
-For non-SSE providers, `Client.Timeout=5m` always fires before the exec wrap (which is 10m). The exec wrap exists primarily for codex SSE (10m client) and long-reasoning models.
+All providers use `10m` client timeout. Only the codex SSE transport adds a `ResponseHeaderTimeout` layer; non-SSE providers and compat omit it.
 
 ### HTTP client factory split
 
 | Provider category | Factory | Config |
 |---|---|---|
-| Cloud non-SSE (claude / copilot / gemini / nvidia / openai) | `provider.NewHTTPClient()` | `Timeout=5m` + `ResponseHeaderTimeout=10s` |
-| Cloud SSE (openaiCodex) | `openaiCodex/new.go::newHTTPClient()` | `Timeout=10m` + `ResponseHeaderTimeout=10s` |
-| Local / self-hosted (compat) | inline `&http.Client{Timeout: 5 * time.Minute}` | **no** `ResponseHeaderTimeout` — Ollama / vLLM / llama.cpp cold-start may hold 30-90s before headers; 10s would 100% false-positive |
+| Cloud non-SSE (claude / copilot / gemini / nvidia / openai / openrouter) | `provider.NewHTTPClient()` | `Timeout=10m` |
+| Cloud SSE (openaiCodex) | `openaiCodex/new.go::newHTTPClient()` | `Timeout=10m` + `ResponseHeaderTimeout=15s` |
+| Local / self-hosted (compat) | inline `&http.Client{Timeout: 10 * time.Minute}` | **no** `ResponseHeaderTimeout` — Ollama / vLLM / llama.cpp cold-start may hold 30-90s before headers; 15s would 100% false-positive |
 
 Local compat is **not** routed through the factory by design. Cold-start tolerance is non-negotiable for self-hosted backends.
 

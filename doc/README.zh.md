@@ -25,6 +25,14 @@
   <a href="../README.md">English</a> · <strong>繁體中文</strong>
 </p>
 
+## 一鍵安裝
+
+> MacBook 建議額外執行 `sudo pmset -c sleep 0`，避免休眠影響排程。
+
+```bash
+curl -fsSL https://cloud.agenvoy.com/install.sh | bash
+```
+
 ***
 
 ## 你可以這樣用它
@@ -153,85 +161,6 @@
 </td>
 </tr>
 </table>
-
-***
-
-## 為什麼是 Agenvoy
-
-### 不用選模型
-
-寫程式、查資料、分析文件、觀看影片。
-
-Agent 自己選擇最適合的模型完成工作。
-
-***
-
-### 沒有工具？自己做
-
-Agent 可以：
-
-- 找 API
-- 生成工具
-- 測試工具
-- 修正錯誤
-- 保存工具
-
-第一次建立。
-
-之後永久使用。
-
-***
-
-### 長期記憶
-
-Agent 不只記得目前對話。
-
-也會記住：
-
-- 重要資訊
-- 工作進度
-- 長期偏好
-
-不需要每次重新說明背景。
-
-***
-
-### 文件就是知識庫
-
-支援：
-
-- PDF
-- Markdown
-- TXT
-- 程式碼
-
-直接用自然語言詢問你的文件。
-
-***
-
-### 到哪都能用
-
-同一個 Agent。
-
-同一份記憶。
-
-同一套工具。
-
-支援：
-
-* Telegram
-* Discord
-* Terminal
-
-***
-
-## 一鍵安裝
-
-> MacBook 建議額外執行 `sudo pmset -c sleep 0`，避免休眠影響排程。
-
-```bash
-curl -fsSL https://cloud.agenvoy.com/install.sh | bash
-```
 
 ***
 

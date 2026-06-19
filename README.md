@@ -25,6 +25,14 @@
   <strong>English</strong> · <a href="./doc/README.zh.md">繁體中文</a>
 </p>
 
+## One-line install
+
+> On MacBook, also run `sudo pmset -c sleep 0` to prevent sleep from interrupting schedules.
+
+```bash
+curl -fsSL https://cloud.agenvoy.com/install.sh | bash
+```
+
 ***
 
 ## What you can do with it
@@ -153,85 +161,6 @@
 </td>
 </tr>
 </table>
-
-***
-
-## Why Agenvoy
-
-### You don't pick the model
-
-Coding, research, document analysis, video processing.
-
-The agent picks the best model for the job.
-
-***
-
-### No tool? It builds one
-
-The agent can:
-
-- Find an API
-- Generate a tool
-- Test it
-- Fix errors
-- Save it
-
-Built once.
-
-Used forever.
-
-***
-
-### Long-term memory
-
-The agent remembers more than the current conversation.
-
-It also remembers:
-
-- Key information
-- Work progress
-- Long-term preferences
-
-No need to re-explain context every time.
-
-***
-
-### Your files are a knowledge base
-
-Supported:
-
-- PDF
-- Markdown
-- TXT
-- Source code
-
-Ask questions about your files in natural language.
-
-***
-
-### Use it anywhere
-
-Same agent.
-
-Same memory.
-
-Same tools.
-
-Works on:
-
-* Telegram
-* Discord
-* Terminal
-
-***
-
-## One-line install
-
-> On MacBook, also run `sudo pmset -c sleep 0` to prevent sleep from interrupting schedules.
-
-```bash
-curl -fsSL https://cloud.agenvoy.com/install.sh | bash
-```
 
 ***
 

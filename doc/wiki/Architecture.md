@@ -91,7 +91,7 @@ graph TB
 - **Prompt as policy** — permission mode, sensitive operations, and system-prompt protection live in `configs/prompts/`; adding a category means editing the prompt, not the engine
 - **In-process over HTTP for subagents** — `invoke_subagent` calls `exec.Execute` directly, sharing the same provider clients, sandbox, pending registry, and memory layer; `AllowAll` and `WorkDir` flow through ctx
 - **Read tools fan out, write tools serialize** — concurrency is opt-in and requires both "no side effects" and "upstream allows parallelism"
-- **One config layer per concern** — providers in `configs/jsons/providors/`, MCP in `mcp.json`, persona in `bot.md`; each tool author / user touches at most one file
+- **One config layer per concern** — provider credentials in OS keychain, registered models in `config.json`, MCP in `mcp.json`, persona in `bot.md`; each tool author / user touches at most one file
 - **Single source of truth per artifact** — `~/.claude/CLAUDE.md` mirrors to the global Obsidian vault; skills mirror between `~/.claude/skills/` and `extensions/skills/`
 
 ## TUI design choices

@@ -2,7 +2,7 @@
 
 > [English](Providers.md)
 
-Agenvoy 透過統一的 `Agent.Send()` 介面支援 9 家 LLM provider。
+Agenvoy 透過統一的 `Agent.Send()` 介面支援 10 家 LLM provider。
 
 ## 支援清單
 
@@ -16,9 +16,10 @@ Agenvoy 透過統一的 `Agent.Send()` 介面支援 9 家 LLM provider。
 | Nvidia NIM | `nvidia` | Llama、Mistral 等 hosted 開源模型 |
 | xAI Grok | `grok` | grok-4／grok-3 系列含 `grok-code-fast-1`；非串流 HTTP client |
 | DeepSeek | `deepseek` | `deepseek-chat`（tool use）與 `deepseek-reasoner`（CoT，停用 temperature）；非串流 HTTP client |
+| OpenRouter | `openrouter` | 聚合平台 —— 透過單一 API key 路由至 200+ 模型 |
 | Compat | `compat` | 任何 OpenAI 相容格式的自訂 endpoint |
 
-> **`providors/` 拼寫** —— 是慣例非錯字，請勿「修正」。Provider JSON 目錄在 `configs/jsons/providors/`，現有 8 份靜態 catalog（`claude.json`、`openai.json`、`codex.json`、`gemini.json`、`copilot.json`、`nvidia.json`、`grok.json`、`deepseek.json`）；`compat` 由使用者輸入動態建構。
+> **Model 探查** —— 自 v0.27.3 起，`agen model add`／TUI `/model global` 時直接從各 provider API 即時取得 model 清單。`configs/jsons/providors/` 下的靜態 JSON catalog 已移除。
 
 ## Provider 配置
 
@@ -91,19 +92,19 @@ Send 端 timeout 有三層獨立的層級，各自捕捉不同失敗模式：
 
 | 層 | 值 | 捕捉 | 位置 |
 |---|---|---|---|
-| **Transport** `ResponseHeaderTimeout` | `10s` | Backend 卡在 headers 階段（健康 SSE 應 <1s 回 headers；高負載 ≤ 5s；10s = 10× margin） | `provider.NewHTTPClient()`（雲端非 SSE）+ `openaiCodex/new.go::newHTTPClient()`（SSE） |
-| **`http.Client.Timeout`** | `5m` 非 SSE / `10m` SSE | 完整請求（headers + body） | per-provider client |
+| **Transport** `ResponseHeaderTimeout` | `15s`（僅 SSE） | Backend 卡在 headers 階段（健康 SSE 應 <1s 回 headers；高負載 ≤ 5s；15s 對齊 `ProbeTimeout`） | `openaiCodex/new.go::newHTTPClient()` |
+| **`http.Client.Timeout`** | `10m` | 完整請求（headers + body） | per-provider client |
 | **`execute.go::AgentSendTimeout`** | env `AGENT_SEND_TIMEOUT_SECONDS`，default `600s` | Exec 層 ceiling，用 `context.WithTimeout` 包 ctx | `internal/agents/exec/execute.go` |
 
-對非 SSE provider，`Client.Timeout=5m` 永遠先 fire（exec wrap 是 10m）。Exec wrap 主要為 codex SSE（10m client）與長 reasoning model 提供統一上限。
+所有 provider 統一 `10m` client timeout。僅 codex SSE transport 額外加 `ResponseHeaderTimeout`；非 SSE provider 與 compat 均省略。
 
 ### HTTP client factory 分軌
 
 | Provider 類別 | Factory | 設定 |
 |---|---|---|
-| 雲端非 SSE（claude / copilot / gemini / nvidia / openai） | `provider.NewHTTPClient()` | `Timeout=5m` + `ResponseHeaderTimeout=10s` |
-| 雲端 SSE（openaiCodex） | `openaiCodex/new.go::newHTTPClient()` | `Timeout=10m` + `ResponseHeaderTimeout=10s` |
-| 本地 / 自架（compat） | inline `&http.Client{Timeout: 5 * time.Minute}` | **無** `ResponseHeaderTimeout` —— Ollama／vLLM／llama.cpp 冷啟動可能 hold 30-90s 才回 headers，10s 必 100% 誤殺 |
+| 雲端非 SSE（claude / copilot / gemini / nvidia / openai / openrouter） | `provider.NewHTTPClient()` | `Timeout=10m` |
+| 雲端 SSE（openaiCodex） | `openaiCodex/new.go::newHTTPClient()` | `Timeout=10m` + `ResponseHeaderTimeout=15s` |
+| 本地 / 自架（compat） | inline `&http.Client{Timeout: 10 * time.Minute}` | **無** `ResponseHeaderTimeout` —— Ollama／vLLM／llama.cpp 冷啟動可能 hold 30-90s 才回 headers，15s 必 100% 誤殺 |
 
 本地 compat **不**走 factory 是設計。自架 backend 的冷啟動容忍是不可妥協的。
 
