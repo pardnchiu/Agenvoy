@@ -734,9 +734,14 @@ func fetchRemoteModelIDs(ctx context.Context, endpoint string, headers map[strin
 	}
 	ids := make([]string, 0, len(data.Data))
 	for _, m := range data.Data {
-		if id := strings.TrimSpace(m.ID); id != "" {
-			ids = append(ids, id)
+		id := strings.TrimSpace(m.ID)
+		if id == "" {
+			continue
 		}
+		if prov == "copilot" && (!m.ModelPickerEnabled || m.Policy.State == "disabled") {
+			continue
+		}
+		ids = append(ids, id)
 	}
 	return ids
 }

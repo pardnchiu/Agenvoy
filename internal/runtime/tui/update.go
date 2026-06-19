@@ -14,13 +14,11 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/external"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
-	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 )
 
 func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -86,6 +84,20 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return t, tea.Println(hintStyle.Render("⎯ cancelling…") + "\n")
 			}
 
+		case tea.KeyRunes:
+			if !t.running && t.selector == nil && strings.TrimSpace(t.textarea.Value()) == "" {
+				switch string(msg.Runes) {
+				case "W":
+					return t.cycleDispatcher(false)
+				case "S":
+					return t.cycleDispatcher(true)
+				case "A":
+					return t.cycleReasoning(false)
+				case "D":
+					return t.cycleReasoning(true)
+				}
+			}
+
 		case tea.KeyUp:
 			if t.selector != nil {
 				n := len(t.selector.items)
@@ -117,10 +129,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return t, nil
 			}
 			t.allowAll = !t.allowAll
-			if t.allowAll {
-				return t, tea.Println(warnStyle.Render("⎯ auto mode: on (always allow)") + "\n")
-			}
-			return t, tea.Println(hintStyle.Render("⎯ auto mode: off") + "\n")
+			return t, nil
 
 		case tea.KeyTab:
 			if t.selector != nil {
@@ -309,8 +318,11 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ModelScopeSelect:
 		switch msg.scope {
-		case "add/remove":
-			next, cmd := t.openModelGlobalPopup()
+		case "add":
+			next, cmd, _ := t.commandModelAdd()
+			return next, cmd
+		case "remove":
+			next, cmd, _ := t.commandModelRemove()
 			return next, cmd
 		case "session":
 			next, cmd, _ := t.commandSessionModel()
@@ -323,17 +335,6 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return next, cmd
 		case "reasoning":
 			next, cmd, _ := t.commandReasoning(nil)
-			return next, cmd
-		}
-		return t, nil
-
-	case ModelAction:
-		switch msg.action {
-		case "add":
-			next, cmd, _ := t.commandModelAdd()
-			return next, cmd
-		case "remove":
-			next, cmd, _ := t.commandModelRemove()
 			return next, cmd
 		}
 		return t, nil
@@ -693,19 +694,11 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd := t.runTaskRemove(msg.skill)
 		return next, cmd
 
-	case RemoveSessionConfirm1:
-		if !msg.yes {
-			return t, tea.Println(hintStyle.Render("⎯ remove-session cancelled") + "\n")
-		}
-		next, cmd := t.openRemoveSessionConfirm2(msg.id)
-		return next, cmd
+	case RemoveSessionPick:
+		return t.runRemoveSessionPick(msg.chosen)
 
-	case RemoveSessionConfirm2:
-		if !msg.yes {
-			return t, tea.Println(hintStyle.Render("⎯ remove-session cancelled") + "\n")
-		}
-		next, cmd := t.runRemoveSession(msg.id)
-		return next, cmd
+	case RemoveSessionConfirm:
+		return t.runRemoveSessionConfirm(msg)
 
 	case ResetSessionConfirm1:
 		if !msg.yes {
@@ -1024,31 +1017,8 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			tea.ClearScreen,
 			tea.Println(headerBlock(t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus)),
 		}
-		path := filesystem.ActionLogPath(msg.id)
-		if go_pkg_filesystem_reader.Exists(path) && fileSize(path) > 0 {
-			seq = append(seq, func() tea.Msg { return LoadHistoryCheck{id: msg.id} })
-		}
+		seq = append(seq, loadSessionTail(msg.id)...)
 		return t, tea.Sequence(seq...)
-
-	case LoadHistoryCheck:
-		sid := msg.id
-		t.popup = &Popup{
-			kind:    popupSingleSelect,
-			title:   "Load previous session history?",
-			options: []string{"Yes", "No"},
-			values:  []string{"yes", "no"},
-			cursor:  1,
-			onConfirm: func(chosen string) any {
-				return LoadHistorySelect{id: sid, load: chosen == "yes"}
-			},
-		}
-		return t, nil
-
-	case LoadHistorySelect:
-		if !msg.load {
-			return t, nil
-		}
-		return t, tea.Sequence(loadSessionTail(msg.id)...)
 
 	case tailLine:
 		if t.onceCall {

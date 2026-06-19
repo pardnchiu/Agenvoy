@@ -31,7 +31,11 @@ type localModelEntry struct {
 
 type modelsResponse struct {
 	Data []struct {
-		ID string `json:"id"`
+		ID                 string `json:"id"`
+		ModelPickerEnabled bool   `json:"model_picker_enabled"`
+		Policy             struct {
+			State string `json:"state"`
+		} `json:"policy"`
 	} `json:"data"`
 }
 

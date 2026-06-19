@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/pardnchiu/agenvoy/internal/session/config"
+	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 )
 
 type DispatcherSelect struct {
@@ -47,6 +49,45 @@ func (t TUI) commandDispatcher() (TUI, tea.Cmd, bool) {
 		},
 	}
 	return t, nil, true
+}
+
+func (t TUI) cycleDispatcher(forward bool) (TUI, tea.Cmd) {
+	sid := t.currentSessionID
+	if sid == "" {
+		return t, nil
+	}
+
+	cfg, err := config.Load()
+	if err != nil || len(cfg.Models) == 0 {
+		return t, nil
+	}
+
+	candidates := make([]string, 0, len(cfg.Models)+1)
+	candidates = append(candidates, configBot.DefaultModel)
+	for _, m := range cfg.Models {
+		candidates = append(candidates, m.Name)
+	}
+
+	currentModel, _ := configBot.GetModel(sid)
+	current := 0
+	for i, c := range candidates {
+		if c == currentModel {
+			current = i
+			break
+		}
+	}
+
+	n := len(candidates)
+	var next int
+	if forward {
+		next = (current + 1) % n
+	} else {
+		next = (current - 1 + n) % n
+	}
+
+	picked := candidates[next]
+	configBot.SetModel(sid, picked, "")
+	return t, nil
 }
 
 func (t TUI) runDispatcherSelect(name string) (TUI, tea.Cmd) {

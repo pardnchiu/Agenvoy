@@ -23,7 +23,7 @@ func (t TUI) commandMcp(parts []string) (TUI, tea.Cmd, bool) {
 	t.popup = &Popup{
 		kind:    popupSingleSelect,
 		title:   "MCP",
-		options: []string{"add", "remove", "install (external agent)"},
+		options: []string{"add", "remove", "install  external agent config"},
 		values:  []string{"add", "remove", "install"},
 		onConfirm: func(chosen string) any {
 			return McpAction{action: chosen}

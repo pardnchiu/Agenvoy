@@ -83,7 +83,7 @@ func (t TUI) openMcpAddTransport() (TUI, tea.Cmd) {
 	t.popup = &Popup{
 		kind:    popupSingleSelect,
 		title:   "Transport",
-		options: []string{"stdio (local)", "http (remote)"},
+		options: []string{"stdio  local command", "http   remote server"},
 		values:  []string{"stdio", "http"},
 		onConfirm: func(chosen string) any {
 			return McpAddTransport{transport: chosen}
@@ -156,7 +156,7 @@ func (t TUI) openMcpAddScope() (TUI, tea.Cmd) {
 	t.popup = &Popup{
 		kind:    popupSingleSelect,
 		title:   "Scope",
-		options: []string{"global (all sessions)", "session (pick one)"},
+		options: []string{"global   all sessions", "session  pick one"},
 		values:  []string{"global", "session"},
 		onConfirm: func(chosen string) any {
 			return McpAddScope{scope: chosen}

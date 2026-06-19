@@ -35,7 +35,7 @@ func (t TUI) commandAllowSkill(parts []string) (TUI, tea.Cmd, bool) {
 	t.popup = &Popup{
 		kind:    popupSingleSelect,
 		title:   "Allow skill · scope",
-		options: []string{"global  " + hintStyle.Render("(~/.config/agenvoy/allow_skill)"), "project  " + hintStyle.Render("(.agenvoy/allow_skill)")},
+		options: []string{"global   " + hintStyle.Render("~/.config/agenvoy/allow_skill"), "project  " + hintStyle.Render(".agenvoy/allow_skill")},
 		values:  []string{"global", "project"},
 		onConfirm: func(chosen string) any {
 			return AllowSkillScopeSelect{scope: chosen}

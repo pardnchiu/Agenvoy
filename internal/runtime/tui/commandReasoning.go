@@ -101,6 +101,31 @@ func (t TUI) openReasoningSessionPopup() (TUI, tea.Cmd) {
 	return t, nil
 }
 
+func (t TUI) cycleReasoning(forward bool) (TUI, tea.Cmd) {
+	sid := t.currentSessionID
+	if sid == "" {
+		return t, nil
+	}
+
+	_, current := configBot.GetModel(sid)
+	idx := 1
+	for i, lvl := range reasoningLevels {
+		if lvl == current {
+			idx = i
+			break
+		}
+	}
+	n := len(reasoningLevels)
+	if forward {
+		idx = (idx + 1) % n
+	} else {
+		idx = (idx - 1 + n) % n
+	}
+	level := reasoningLevels[idx]
+	configBot.SetModel(sid, "", level)
+	return t, nil
+}
+
 func (t TUI) runReasoningSelect(level string) (TUI, tea.Cmd) {
 	cfg, err := config.Load()
 	if err != nil {
