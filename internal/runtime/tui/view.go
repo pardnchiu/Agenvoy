@@ -41,9 +41,9 @@ func (t TUI) viewIdle() string {
 
 	var confirmMode string
 	if t.allowAll {
-		confirmMode = warnStyle.Render(" [auto]") + hintStyle.Render(" "+t.shortCwd())
+		confirmMode = errorStyle.Render(" [auto]") + hintStyle.Render(" "+t.shortCwd())
 	} else {
-		confirmMode = hintStyle.Render(" [safe] " + t.shortCwd())
+		confirmMode = okayStyle.Render(" [safe]") + hintStyle.Render(" "+t.shortCwd())
 	}
 	right := t.sessionTag()
 
@@ -264,5 +264,18 @@ func (t TUI) sessionName() string {
 	}
 
 	model, reasoning := configBot.GetModel(sid)
-	return fmt.Sprintf("%s (%s/%s)", base, model, reasoning)
+	modelPart := hintStyle.Render(model)
+	if model != configBot.DefaultModel {
+		modelPart = warnStyle.Render(model)
+	}
+	var reasonPart string
+	switch reasoning {
+	case "low":
+		reasonPart = okayStyle.Render(reasoning)
+	case "high":
+		reasonPart = errorStyle.Render(reasoning)
+	default:
+		reasonPart = hintStyle.Render(reasoning)
+	}
+	return base + hintStyle.Render(" (") + modelPart + hintStyle.Render("/") + reasonPart + hintStyle.Render(")")
 }

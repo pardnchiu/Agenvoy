@@ -307,7 +307,8 @@ func (t TUI) selectCommand() TUI {
 	return t
 }
 
-const cmdSelectorMaxVisible = 8
+
+const cmdSelectorMaxVisible = 12
 
 func renderCmdSelector(p *CmdSelector) string {
 	if p == nil || len(p.items) == 0 {

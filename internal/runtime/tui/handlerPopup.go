@@ -372,10 +372,10 @@ func newPopup(id string, req runtime.Request) *Popup {
 			subtitle:  go_pkg_utils.TruncateString(display, 256),
 			options: []string{
 				"Yes",
-				"Yes, don't ask again",
-				"Yes, allow this turn",
+				"Yes  don't ask again",
+				"Yes  allow this turn",
 				"No",
-				"No, with reason",
+				"No   with reason",
 				"Stop",
 			},
 		}

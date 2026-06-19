@@ -68,31 +68,3 @@ var NetWhiteList []byte
 //go:embed jsons/tui_tools.json
 var TUITools []byte
 
-// * Providers
-
-//go:embed jsons/providors/claude.json
-var ClaudeModels []byte
-
-//go:embed jsons/providors/openai.json
-var OpenaiModels []byte
-
-//go:embed jsons/providors/codex.json
-var CodexModels []byte
-
-//go:embed jsons/providors/gemini.json
-var GeminiModels []byte
-
-//go:embed jsons/providors/grok.json
-var GrokModels []byte
-
-//go:embed jsons/providors/grok-oauth.json
-var GrokOauthModels []byte
-
-//go:embed jsons/providors/copilot.json
-var CopilotModels []byte
-
-//go:embed jsons/providors/nvidia.json
-var NvidiaModels []byte
-
-//go:embed jsons/providors/deepseek.json
-var DeepseekModels []byte

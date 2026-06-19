@@ -14,6 +14,7 @@ import (
 	grokoauth "github.com/pardnchiu/agenvoy/internal/agents/provider/grokOauth"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/nvidia"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/openai"
+	openrouter "github.com/pardnchiu/agenvoy/internal/agents/provider/openRouter"
 	openaicodex "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
@@ -29,7 +30,8 @@ func buildAgentRegistry() agentTypes.AgentRegistry {
 		"grok-oauth": func(m string) (agentTypes.Agent, error) { return grokoauth.New(m) },
 		"copilot":    func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
 		"nvidia":     func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
-		"deepseek":   func(m string) (agentTypes.Agent, error) { return deepseek.New(m) },
+		"deepseek":    func(m string) (agentTypes.Agent, error) { return deepseek.New(m) },
+		"openrouter": func(m string) (agentTypes.Agent, error) { return openrouter.New(m) },
 		"compat":     func(m string) (agentTypes.Agent, error) { return compat.New(m) },
 	}
 

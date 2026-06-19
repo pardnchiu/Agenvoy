@@ -1,21 +1,10 @@
 package provider
 
 import (
-	_ "embed"
-	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
-
-	"github.com/pardnchiu/agenvoy/configs"
 )
-
-type ModelItem struct {
-	Description     string `json:"description"`
-	NoTemperature   bool   `json:"no_temperature,omitempty"`
-	ReasoningEffort bool   `json:"reasoning_effort,omitempty"` // OpenAI: supports reasoning_effort param
-	ThinkingType    string `json:"thinking_type,omitempty"`    // Claude: "adaptive" | "enabled"
-	ThinkingConfig  string `json:"thinking_config,omitempty"`  // Gemini: "budget" | "level"
-}
 
 var reasoningLevel = "medium"
 
@@ -32,16 +21,63 @@ func GetReasoningLevel() string {
 	return reasoningLevel
 }
 
+func SupportTemperature(providerName, model string) bool {
+	switch providerName {
+	case "openai", "copilot", "codex":
+		if strings.HasPrefix(model, "gpt-5") {
+			return false
+		}
+	case "deepseek":
+		if model == "deepseek-reasoner" {
+			return false
+		}
+	case "claude":
+		return false
+	case "gemini":
+		if strings.Contains(model, "-preview") {
+			return false
+		}
+	}
+	return true
+}
+
 func SupportReasoningEffort(providerName, model string) bool {
-	return Get(providerName, model).ReasoningEffort
+	switch providerName {
+	case "openai", "copilot":
+		if !strings.HasPrefix(model, "gpt-5") {
+			return false
+		}
+		if strings.Contains(model, "-codex") || strings.HasSuffix(model, "-pro") {
+			return false
+		}
+		return true
+	case "grok", "grok-oauth":
+		return strings.Contains(model, "-mini")
+	}
+	return false
 }
 
 func GetThinkingType(providerName, model string) string {
-	return Get(providerName, model).ThinkingType
+	if providerName != "claude" {
+		return ""
+	}
+	if strings.Contains(model, "-20") {
+		return "enabled"
+	}
+	return "adaptive"
 }
 
 func GetThinkingConfig(providerName, model string) string {
-	return Get(providerName, model).ThinkingConfig
+	if providerName != "gemini" {
+		return ""
+	}
+	if strings.HasPrefix(model, "gemini-2.5-") {
+		return "budget"
+	}
+	if strings.HasPrefix(model, "gemini-3") {
+		return "level"
+	}
+	return ""
 }
 
 func ThinkingBudget(level string) int {
@@ -53,45 +89,6 @@ func ThinkingBudget(level string) int {
 	default:
 		return 8192
 	}
-}
-
-func parse(data []byte) map[string]ModelItem {
-	var dic map[string]ModelItem
-	json.Unmarshal(data, &dic)
-	return dic
-}
-
-func providers() map[string]map[string]ModelItem {
-	return map[string]map[string]ModelItem{
-		"claude":     parse(configs.ClaudeModels),
-		"openai":     parse(configs.OpenaiModels),
-		"codex":      parse(configs.CodexModels),
-		"gemini":     parse(configs.GeminiModels),
-		"grok":       parse(configs.GrokModels),
-		"grok-oauth": parse(configs.GrokOauthModels),
-		"copilot":    parse(configs.CopilotModels),
-		"nvidia":     parse(configs.NvidiaModels),
-		"deepseek":   parse(configs.DeepseekModels),
-	}
-}
-
-func Get(provider, model string) ModelItem {
-	models, exist := providers()[provider]
-	if !exist {
-		return ModelItem{}
-	}
-	if info, exist := models[model]; exist {
-		return info
-	}
-	return ModelItem{}
-}
-
-func Models(provider string) map[string]ModelItem {
-	return providers()[provider]
-}
-
-func SupportTemperature(providerName, model string) bool {
-	return !Get(providerName, model).NoTemperature
 }
 
 func NewHTTPClient() *http.Client {

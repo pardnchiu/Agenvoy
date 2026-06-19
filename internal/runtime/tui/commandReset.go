@@ -48,7 +48,7 @@ func (t TUI) openResetConfirm2(sid string) (TUI, tea.Cmd) {
 		kind:     popupSingleSelect,
 		title:    "Are you sure? Raw history will be permanently dropped.",
 		subtitle: fmt.Sprintf("%s — summary refresh runs first; abort if refresh fails.", utils.ShortenSessionID(sid)),
-		options:  []string{"No", "Yes, reset it"},
+		options:  []string{"No", "Yes  reset it"},
 		values:   []string{"no", "yes"},
 		cursor:   0,
 		onConfirm: func(chosen string) any {

@@ -82,15 +82,6 @@ type TUI struct {
 func (t TUI) Init() tea.Cmd {
 	var seq []tea.Cmd
 	if t.onceCall {
-		// agen cli/run: keep the user's terminal scrollback intact, skip the
-		// header block (daemon/http/discord/telegram status), skip the
-		// action.log tailer, and skip the textarea.Blink (no visible
-		// textarea). Session selection mirrors `agen`: if currentSID is
-		// already set (1 existing session), auto-submit straight away; else
-		// fire StartupSelectSession popup and let the SessionSelect /
-		// SessionNewSubmit handlers chain the autoSubmit after the user
-		// picks. Skip LoadHistoryCheck (we don't render history tail in
-		// single-shot output).
 		if sid := strings.TrimSpace(t.currentSessionID); sid != "" {
 			if input := strings.TrimSpace(t.userInput); input != "" {
 				seq = append(seq, func() tea.Msg { return autoSubmit{input: input} })
@@ -109,10 +100,7 @@ func (t TUI) Init() tea.Cmd {
 	}
 	seq = append(seq, func() tea.Msg { return initTailer{} })
 	if sid := strings.TrimSpace(t.currentSessionID); sid != "" {
-		path := filesystem.ActionLogPath(sid)
-		if go_pkg_filesystem_reader.Exists(path) && fileSize(path) > 0 {
-			seq = append(seq, func() tea.Msg { return LoadHistoryCheck{id: sid} })
-		}
+		seq = append(seq, loadSessionTail(sid)...)
 		if n := len(interactive.ListPendingTasks(sid)); n > 0 {
 			hint := fmt.Sprintf("  %d pending task(s) — /pending to resume", n)
 			seq = append(seq, tea.Println(hintStyle.Render(hint)+"\n"))
@@ -143,15 +131,6 @@ type StartupSelectSession struct{}
 
 type StartupSessionSelect struct {
 	id string
-}
-
-type LoadHistoryCheck struct {
-	id string
-}
-
-type LoadHistorySelect struct {
-	id   string
-	load bool
 }
 
 func newModel(ctx context.Context, userInput string, onceCall, allowAll bool) TUI {

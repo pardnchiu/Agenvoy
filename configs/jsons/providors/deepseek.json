@@ -1,9 +1,0 @@
-{
-  "deepseek-chat": {
-    "description": "General-purpose chat with tool use"
-  },
-  "deepseek-reasoner": {
-    "description": "Reasoning model with chain-of-thought output",
-    "no_temperature": true
-  }
-}
