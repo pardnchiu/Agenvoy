@@ -50,8 +50,7 @@ func Record(sessionID string, event agentTypes.Event) {
 }
 
 func appendAssistant(sessionID string, event agentTypes.Event) {
-	str := strings.TrimSpace(event.Text)
-	if str == "" || sessionID == "" {
+	if sessionID == "" {
 		return
 	}
 
@@ -64,10 +63,8 @@ func appendAssistant(sessionID string, event agentTypes.Event) {
 		sb = &strings.Builder{}
 		assistantBody[key] = sb
 	}
-	if sb.Len() > 0 {
-		sb.WriteByte('\n')
-	}
-	sb.WriteString(str)
+	sb.WriteString(event.Text)
+	sb.WriteByte('\n')
 }
 
 func flushAssistant(sessionID string, event agentTypes.Event) {
@@ -82,9 +79,13 @@ func flushAssistant(sessionID string, event agentTypes.Event) {
 		assistantBodyMu.Unlock()
 		return
 	}
-	full := sb.String()
+	full := strings.TrimSpace(sb.String())
 	delete(assistantBody, key)
 	assistantBodyMu.Unlock()
+
+	if full == "" {
+		return
+	}
 
 	line := withTimestamp("assistant", flatten(full))
 	appendAction(sessionID, line)

@@ -95,25 +95,34 @@ func (t TUI) handleAgentEvent(ev agentTypes.Event) (tea.Model, tea.Cmd) {
 
 	case agentTypes.EventText:
 		if ev.Source == "" {
-			line := toPureText(ev.Text)
-			var rendered string
-			if !t.streaming {
-				t.streaming = true
-				t.activity = "responding"
-				prefix := systemStyle.Render("⏺ ")
-				if strings.TrimSpace(t.runTarget) != "" {
-					prefix = warnStyle.Render("⏺ [" + t.runTarget + "] ")
+			raw := ev.Text
+
+			if len(t.tableBuf) > 0 {
+				if strings.Contains(raw, "|") {
+					t.tableBuf = append(t.tableBuf, raw)
+					return t, nil
 				}
-				rendered = prefix + line
-			} else {
-				rendered = "  " + line
+				cmds := t.flushTableBuf()
+				cmds = append(cmds, t.printStreamLine(renderMarkdown(raw)))
+				return t, tea.Batch(cmds...)
 			}
-			return t, tea.Println(rendered)
+
+			if strings.Contains(raw, "|") {
+				t.tableBuf = append(t.tableBuf, raw)
+				return t, nil
+			}
+
+			return t, t.printStreamLine(renderMarkdown(raw))
 		}
 
 	case agentTypes.EventTextDone:
 		if ev.Source == "" {
+			var cmd tea.Cmd
+			if len(t.tableBuf) > 0 {
+				cmd = tea.Batch(t.flushTableBuf()...)
+			}
 			t.streaming = false
+			return t, cmd
 		}
 		return t, nil
 
@@ -130,4 +139,48 @@ func (t TUI) handleAgentEvent(ev agentTypes.Event) (tea.Model, tea.Cmd) {
 		return t, nil
 	}
 	return t, tea.Println(line)
+}
+
+func (t *TUI) printStreamLine(line string) tea.Cmd {
+	var rendered string
+	if !t.streaming {
+		t.streaming = true
+		t.activity = "responding"
+		prefix := systemStyle.Render("⏺ ")
+		if strings.TrimSpace(t.runTarget) != "" {
+			prefix = warnStyle.Render("⏺ [" + t.runTarget + "] ")
+		}
+		rendered = prefix + line
+	} else {
+		rendered = "  " + line
+	}
+	return tea.Println(rendered)
+}
+
+func (t *TUI) flushTableBuf() []tea.Cmd {
+	block := strings.Join(t.tableBuf, "\n")
+	t.tableBuf = nil
+
+	rendered := renderTables(block)
+	rendered = renderMarkdown(rendered)
+
+	var sb strings.Builder
+	for i, line := range strings.Split(rendered, "\n") {
+		if i > 0 {
+			sb.WriteByte('\n')
+		}
+		if i == 0 && !t.streaming {
+			t.streaming = true
+			t.activity = "responding"
+			if strings.TrimSpace(t.runTarget) != "" {
+				sb.WriteString(warnStyle.Render("⏺ [" + t.runTarget + "] "))
+			} else {
+				sb.WriteString(systemStyle.Render("⏺ "))
+			}
+		} else {
+			sb.WriteString("  ")
+		}
+		sb.WriteString(line)
+	}
+	return []tea.Cmd{tea.Println(sb.String() + "\n")}
 }
