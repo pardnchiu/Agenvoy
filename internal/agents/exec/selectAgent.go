@@ -100,9 +100,11 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 			cancel()
 			if sendErr != nil {
 				dead[bot.Name()] = true
-				slog.Warn("dispatcher routing failed, falling back to registry order",
-					slog.String("name", bot.Name()),
-					slog.String("error", sendErr.Error()))
+				if ctx.Err() == nil {
+					slog.Warn("dispatcher routing failed, falling back to registry order",
+						slog.String("name", bot.Name()),
+						slog.String("error", sendErr.Error()))
+				}
 			} else if resp != nil && len(resp.Choices) > 0 {
 				if content, ok := resp.Choices[0].Message.Content.(string); ok {
 					raw := strings.Trim(strings.TrimSpace(content), "\"'` \n")
@@ -159,6 +161,9 @@ func nextAgent(ctx context.Context, fallbacks *[]agentTypes.Agent, allAgents []a
 		if *round >= maxFallbackRounds {
 			return nil, ""
 		}
+		if ctx.Err() != nil {
+			return nil, ""
+		}
 		slog.Warn("all agents failed, starting retry round",
 			slog.Int("round", *round+1),
 			slog.Int("max", maxFallbackRounds))
@@ -178,9 +183,11 @@ func pickHealthyFallback(ctx context.Context, fallbacks *[]agentTypes.Agent) (ag
 		if utils.CheckAgentEndpointAlive(ctx, cand, HealthCheckTimeout) {
 			return cand, cand.Name()
 		}
-		slog.Warn("fallback health check failed",
-			slog.String("name", cand.Name()),
-			slog.Duration("timeout", HealthCheckTimeout))
+		if ctx.Err() == nil {
+			slog.Warn("fallback health check failed",
+				slog.String("name", cand.Name()),
+				slog.Duration("timeout", HealthCheckTimeout))
+		}
 	}
 	return nil, ""
 }
@@ -218,9 +225,11 @@ func ResolveAgent(ctx context.Context, bot agentTypes.Agent, registry agentTypes
 			return a, rest, nil
 		}
 		dead[a.Name()] = true
-		slog.Warn("agent probe failed",
-			slog.String("name", a.Name()),
-			slog.Duration("timeout", ProbeTimeout))
+		if ctx.Err() == nil {
+			slog.Warn("agent probe failed",
+				slog.String("name", a.Name()),
+				slog.Duration("timeout", ProbeTimeout))
+		}
 	}
 	return nil, nil, fmt.Errorf("all %d candidates failed probe", len(candidates))
 }

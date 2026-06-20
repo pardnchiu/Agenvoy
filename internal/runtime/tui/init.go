@@ -67,6 +67,7 @@ type TUI struct {
 	telegramStatus string
 	runTarget      string
 	streaming      bool
+	tableBuf       []string
 
 	inputHistory    []string
 	inputHistoryIdx int
