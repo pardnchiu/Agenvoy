@@ -3,9 +3,12 @@ package exec
 import (
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	goRuntime "runtime"
 	"strings"
 
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
@@ -75,8 +78,27 @@ func getSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.
 		"{{.ScriptToolGuide}}", configs.ScriptToolGuide,
 		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
 		"{{.CrossChannelSending}}", buildCrossChannelPrompt(),
+		"{{.ProjectInstructions}}", loadProjectInstructions(workDir),
 		"{{.ExtraSystemPrompt}}", extraSection,
 	).Replace(template)
+}
+
+func loadProjectInstructions(workDir string) string {
+	if workDir == "" {
+		return ""
+	}
+	for _, name := range []string{"CLAUDE.md", "agent.md"} {
+		p := filepath.Join(workDir, name)
+		if !go_pkg_filesystem_reader.IsFile(p) {
+			continue
+		}
+		content, err := go_pkg_filesystem.ReadText(p)
+		if err != nil || strings.TrimSpace(content) == "" {
+			continue
+		}
+		return fmt.Sprintf("## Project Instructions (from %s)\n\n%s\n\n---\n\n", name, strings.TrimSpace(content))
+	}
+	return ""
 }
 
 func buildPermissionModeSection(allowAll bool) string {
