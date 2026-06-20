@@ -643,14 +643,10 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return next, cmd
 
 	case CronRemoveSelect:
-		next, cmd := t.openCronRemoveConfirm(msg.skill)
-		return next, cmd
-
-	case CronRemoveConfirm:
-		if !msg.yes {
-			return t, tea.Println(hintStyle.Render("⎯ cron remove cancelled") + "\n")
+		if len(msg.skills) == 0 {
+			return t, tea.Println(hintStyle.Render("⎯ no crons selected") + "\n")
 		}
-		next, cmd := t.runCronRemove(msg.skill)
+		next, cmd := t.runCronRemove(msg.skills)
 		return next, cmd
 
 	case CronEditSelect:

@@ -27,7 +27,7 @@ func (t TUI) commandSummaryModel() (TUI, tea.Cmd, bool) {
 	options = append(options, hintStyle.Render("(use dispatcher)"))
 	values = append(values, "")
 	if cfg.SummaryModel == "" {
-		options[0] += "  " + hintStyle.Render("[current]")
+		options[0] += "  " + systemStyle.Render("[current]")
 	}
 
 	for i, m := range cfg.Models {
@@ -36,7 +36,7 @@ func (t TUI) commandSummaryModel() (TUI, tea.Cmd, bool) {
 			label = fmt.Sprintf("%s  %s", m.Name, hintStyle.Render(m.Description))
 		}
 		if cfg.SummaryModel != "" && m.Name == cfg.SummaryModel {
-			label += "  " + hintStyle.Render("[current]")
+			label += "  " + systemStyle.Render("[current]")
 			cursor = i + 1
 		}
 		options = append(options, label)

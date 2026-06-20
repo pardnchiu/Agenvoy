@@ -274,6 +274,33 @@ func FormatToolArgs(name, raw, cwd string) string {
 	return raw
 }
 
+const maxDiffLines = 8
+
+func FormatPatchDiff(raw string) (oldLines, newLines []string) {
+	var p struct {
+		Old string `json:"old_string"`
+		New string `json:"new_string"`
+	}
+	if json.Unmarshal([]byte(raw), &p) != nil {
+		return nil, nil
+	}
+	split := func(s string) []string {
+		if s == "" {
+			return nil
+		}
+		return strings.Split(s, "\n")
+	}
+	oldLines = split(p.Old)
+	newLines = split(p.New)
+	if len(oldLines) > maxDiffLines {
+		oldLines = append(oldLines[:maxDiffLines], fmt.Sprintf("… +%d lines", len(oldLines)-maxDiffLines))
+	}
+	if len(newLines) > maxDiffLines {
+		newLines = append(newLines[:maxDiffLines], fmt.Sprintf("… +%d lines", len(newLines)-maxDiffLines))
+	}
+	return
+}
+
 var fileMarkerRegex = regexp.MustCompile(`\[SEND_FILE:([^\]]+)\]`)
 
 func ExtractFileMarkers(str string) (cleanText string, paths []string) {

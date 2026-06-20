@@ -2,12 +2,14 @@ package tui
 
 import (
 	"sort"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 type CronAction struct {
@@ -53,11 +55,34 @@ func listCronEntries() []runtime.CronEntry {
 	return crons
 }
 
-func cronOptions(crons []runtime.CronEntry) (labels, values []string) {
+func (t TUI) cronOptions(crons []runtime.CronEntry) (labels, values []string) {
+	const exprWidth = 22
+	sids := make([]string, len(crons))
+	sidMax := 0
+	for i, c := range crons {
+		sids[i] = utils.ShortenSessionID(c.SessionID)
+		if n := len(sids[i]); n > sidMax {
+			sidMax = n
+		}
+	}
+	sidColWidth := sidMax + 3
+
 	labels = make([]string, len(crons))
 	values = make([]string, len(crons))
 	for i, c := range crons {
-		labels[i] = c.Expression + "  " + c.Skill
+		expr := c.Expression
+		if len(expr) < exprWidth {
+			expr += strings.Repeat(" ", exprWidth-len(expr))
+		}
+		sidCol := "[" + sids[i] + "]"
+		if len(sidCol) < sidColWidth {
+			sidCol += strings.Repeat(" ", sidColWidth-len(sidCol))
+		}
+		suffix := ""
+		if c.SessionID == t.currentSessionID {
+			suffix = " (current)"
+		}
+		labels[i] = expr + sidCol + " " + c.Skill + suffix
 		values[i] = c.Skill
 	}
 	return labels, values

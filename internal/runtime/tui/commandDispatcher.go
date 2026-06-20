@@ -31,7 +31,7 @@ func (t TUI) commandDispatcher() (TUI, tea.Cmd, bool) {
 			label = fmt.Sprintf("%s  %s", m.Name, hintStyle.Render(m.Description))
 		}
 		if cfg.DispatcherModel != "" && m.Name == cfg.DispatcherModel {
-			label += "  " + hintStyle.Render("[current]")
+			label += "  " + systemStyle.Render("[current]")
 			cursor = i
 		}
 		options[i] = label

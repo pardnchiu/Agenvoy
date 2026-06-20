@@ -187,6 +187,11 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 	return "", false
 }
 
+var (
+	diffOldStyle = lipgloss.NewStyle().Foreground(colError)
+	diffNewStyle = lipgloss.NewStyle().Foreground(colOk)
+)
+
 func buildToolLine(bullet, source, name, args, cwd string) string {
 	src := strings.TrimSpace(source)
 	srcPrefix := ""
@@ -201,7 +206,28 @@ func buildToolLine(bullet, source, name, args, cwd string) string {
 	if name == "invoke_subagent" {
 		style = lipgloss.NewStyle().Foreground(colOk)
 	}
-	return style.Render(line)
+	header := style.Render(line)
+
+	switch name {
+	case "patch_file", "patch_tool", "patch_skill":
+		oldLines, newLines := utils.FormatPatchDiff(args)
+		if len(oldLines) == 0 && len(newLines) == 0 {
+			return header
+		}
+		var sb strings.Builder
+		sb.WriteString(header)
+		for _, l := range oldLines {
+			sb.WriteByte('\n')
+			sb.WriteString(diffOldStyle.Render("  - " + go_pkg_utils.TruncateString(l, 120)))
+		}
+		for _, l := range newLines {
+			sb.WriteByte('\n')
+			sb.WriteString(diffNewStyle.Render("  + " + go_pkg_utils.TruncateString(l, 120)))
+		}
+		return sb.String()
+	}
+
+	return header
 }
 
 func oneLine(s string) string {

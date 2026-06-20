@@ -50,7 +50,7 @@ func (t TUI) openReasoningGlobalPopup() (TUI, tea.Cmd) {
 	for i, lvl := range reasoningLevels {
 		label := lvl
 		if lvl == current {
-			label += "  " + hintStyle.Render("[current]")
+			label += "  " + systemStyle.Render("[current]")
 			cursor = i
 		}
 		options[i] = label
@@ -82,7 +82,7 @@ func (t TUI) openReasoningSessionPopup() (TUI, tea.Cmd) {
 	for i, lvl := range reasoningLevels {
 		label := lvl
 		if lvl == current {
-			label += "  " + hintStyle.Render("[current]")
+			label += "  " + systemStyle.Render("[current]")
 			cursor = i
 		}
 		options[i] = label
