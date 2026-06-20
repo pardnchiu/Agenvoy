@@ -113,10 +113,15 @@ func (t TUI) viewPopup() string {
 	body := []string{whiteStyle.Render("⏺ " + p.title)}
 	if p.subtitle != "" {
 		body = append(body, textStyle.Render(p.subtitle))
-		body = append(body, "")
-	} else {
-		body = append(body, "")
 	}
+	for _, dl := range p.diffLines {
+		if strings.HasPrefix(dl, "- ") {
+			body = append(body, diffOldStyle.Render("  "+dl))
+		} else {
+			body = append(body, diffNewStyle.Render("  "+dl))
+		}
+	}
+	body = append(body, "")
 
 	switch p.kind {
 	case popupConfirm, popupSingleSelect:

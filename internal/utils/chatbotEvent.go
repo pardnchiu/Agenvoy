@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -61,17 +60,14 @@ func FormatChatbotEvent(events <-chan agentTypes.Event, tag, sessionID string, s
 }
 
 func formatChatbotToolEvent(count int, event agentTypes.Event) string {
-	body := event.ToolName + "(" + go_pkg_utils.TruncateString(event.ToolArgs, 256) + ")"
-	switch event.ToolName {
-	case "fetch_page":
-		var p struct {
-			Link string `json:"link"`
-			Type string `json:"type"`
-		}
-		if err := json.Unmarshal([]byte(event.ToolArgs), &p); err != nil {
-			return "Fetch(" + go_pkg_utils.TruncateString(event.ToolArgs, 256) + ")"
-		}
-		body = "Fetch(" + p.Link + " " + p.Type + ")"
+	name := ToolName(event.ToolName)
+	arg := FormatToolArgs(event.ToolName, event.ToolArgs, "")
+	if arg == "" || arg == event.ToolArgs {
+		arg = go_pkg_utils.TruncateString(event.ToolArgs, 256)
+	}
+	body := name
+	if arg != "" {
+		body += "(" + arg + ")"
 	}
 	return fmt.Sprintf("[tool #%d] %s", count, body)
 }

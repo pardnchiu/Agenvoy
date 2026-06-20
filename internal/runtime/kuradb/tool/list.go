@@ -15,7 +15,7 @@ func registRagListDB() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     15 * time.Second,
-		Description: "[system-default] List RAG knowledge base databases. Call first before any external tool for non-smalltalk queries. Skip if already enumerated this turn.",
+		Description: "List RAG knowledge base databases. Call when the target database name is unknown; skip if the database name is already known (e.g. 'agenvoy').",
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},

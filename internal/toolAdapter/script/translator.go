@@ -114,9 +114,7 @@ func (t *Translator) AlwaysAllowNames() []string {
 func (t *Translator) ConcurrentNames() []string {
 	names := make([]string, 0, len(t.scripts))
 	for _, script := range t.scripts {
-		if script.Doc.Concurrent {
-			names = append(names, t.prefix+script.Doc.Name)
-		}
+		names = append(names, t.prefix+script.Doc.Name)
 	}
 	return names
 }

@@ -70,6 +70,7 @@ const (
 	slotSkipped        = 2
 	slotStubActivated  = 3
 	slotValidateFailed = 4
+	slotDispatched     = 5
 )
 
 type toolSlot struct {
@@ -281,6 +282,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		if toolRegister.IsFireAndForget(s.name) {
 			go runToolExec(ctx, exec, s, events)
 			s.result = "ok"
+			s.state = slotDispatched
 			continue
 		}
 		if toolRegister.IsConcurrent(s.name) {
@@ -289,6 +291,13 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 				defer wg.Done()
 				runToolExec(ctx, exec, s, events)
 			}(s)
+			s.state = slotDispatched
+			continue
+		}
+	}
+	for i := range slots {
+		s := &slots[i]
+		if s.state != slotReady {
 			continue
 		}
 		runToolExec(ctx, exec, s, events)

@@ -26,7 +26,7 @@ func (t TUI) commandCronEdit() (TUI, tea.Cmd, bool) {
 		return t, tea.Println(hintStyle.Render("no crons scheduled") + "\n"), true
 	}
 
-	labels, _ := cronOptions(crons)
+	labels, _ := t.cronOptions(crons)
 	entries := make([]runtime.CronEntry, len(crons))
 	copy(entries, crons)
 

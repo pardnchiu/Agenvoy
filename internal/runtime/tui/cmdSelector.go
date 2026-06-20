@@ -317,7 +317,8 @@ func renderCmdSelector(p *CmdSelector) string {
 	total := len(p.items)
 	start, end := windowRange(p.cursor, total, cmdSelectorMaxVisible)
 
-	maxLabel := 0
+	const minLabelWidth = 16
+	maxLabel := minLabelWidth
 	for _, it := range p.items[start:end] {
 		if w := lipgloss.Width(it.label); w > maxLabel {
 			maxLabel = w

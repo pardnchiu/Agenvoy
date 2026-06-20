@@ -38,7 +38,7 @@ func (t TUI) commandSessionModel() (TUI, tea.Cmd, bool) {
 	values = append(values, configBot.DefaultModel)
 	autoLabel := configBot.DefaultModel + "  " + hintStyle.Render("(dispatcher picks)")
 	if currentModel == configBot.DefaultModel {
-		autoLabel += "  " + hintStyle.Render("[current]")
+		autoLabel += "  " + systemStyle.Render("[current]")
 	}
 
 	options = append(options, autoLabel)
@@ -49,7 +49,7 @@ func (t TUI) commandSessionModel() (TUI, tea.Cmd, bool) {
 			label = fmt.Sprintf("%s  %s", m.Name, hintStyle.Render(m.Description))
 		}
 		if m.Name == currentModel {
-			label += "  " + hintStyle.Render("[current]")
+			label += "  " + systemStyle.Render("[current]")
 			cursor = len(values)
 		}
 		values = append(values, m.Name)

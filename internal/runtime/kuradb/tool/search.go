@@ -30,7 +30,8 @@ func registSearchRag() {
 				},
 				"db": map[string]any{
 					"type":        "string",
-					"description": "Target RAG database name. Call list_rag to discover available databases at runtime.",
+					"description": "Target RAG database name (default: agenvoy).",
+					"default":     "agenvoy",
 				},
 				"q": map[string]any{
 					"type":        "string",
@@ -55,10 +56,10 @@ func registSearchRag() {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
 			db := strings.TrimSpace(params.DB)
-			q := strings.TrimSpace(params.Q)
 			if db == "" {
-				return "", fmt.Errorf("db is required")
+				db = "agenvoy"
 			}
+			q := strings.TrimSpace(params.Q)
 			if q == "" {
 				return "", fmt.Errorf("q is required")
 			}

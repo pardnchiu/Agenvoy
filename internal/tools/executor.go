@@ -58,6 +58,9 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 		for _, name := range tb.AlwaysAllowNames() {
 			toolRegister.MarkAlwaysAllow(name)
 		}
+		for _, name := range tb.ConcurrentNames() {
+			toolRegister.MarkConcurrent(name)
+		}
 	}
 
 	scriptToolbox := scriptAdapter.New("script_")

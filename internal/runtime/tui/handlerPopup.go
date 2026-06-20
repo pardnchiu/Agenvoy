@@ -29,9 +29,10 @@ const (
 type Popup struct {
 	pendingId string
 
-	kind     popupType
-	title    string
-	subtitle string
+	kind      popupType
+	title     string
+	subtitle  string
+	diffLines []string
 
 	options    []string
 	values     []string
@@ -147,10 +148,10 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		t = t.closePopup()
 
 	case tea.KeyEnter:
-		if p.cursor == 4 {
+		if p.cursor == 3 {
 			p.kind = popupText
 			p.skipWithReason = true
-			p.title = "Reason (Enter to skip without reason):"
+			p.title = "Reason (enter to skip):"
 			p.input = ""
 			return t, nil
 		}
@@ -173,13 +174,7 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				AllowTurn: true,
 			}
 
-		case 3:
-			reply = runtime.Reply{
-				Approve: false,
-				Skip:    true,
-			}
-
-		case 5:
+		case 4:
 			reply = runtime.Reply{
 				Approve: false,
 				Error:   fmt.Errorf("user stopped"),
@@ -365,20 +360,34 @@ func newPopup(id string, req runtime.Request) *Popup {
 		if display == "" {
 			display = req.ToolArgs
 		}
-		return &Popup{
+		p := &Popup{
 			pendingId: id,
 			kind:      popupConfirm,
-			title:     fmt.Sprintf("Run %s?", req.ToolName),
+			title:     fmt.Sprintf("Run %s?", utils.ToolName(req.ToolName)),
 			subtitle:  go_pkg_utils.TruncateString(display, 256),
 			options: []string{
 				"Yes",
 				"Yes  don't ask again",
 				"Yes  allow this turn",
 				"No",
-				"No   with reason",
-				"Stop",
+				"Abort task",
 			},
 		}
+		switch req.ToolName {
+		case "patch_file", "patch_tool", "patch_skill":
+			oldLines, newLines := utils.FormatPatchDiff(req.ToolArgs)
+			for _, l := range oldLines {
+				p.diffLines = append(p.diffLines, "- "+go_pkg_utils.TruncateString(l, 120))
+			}
+			for _, l := range newLines {
+				p.diffLines = append(p.diffLines, "+ "+go_pkg_utils.TruncateString(l, 120))
+			}
+		case "write_file":
+			for _, l := range utils.FormatWriteDiff(req.ToolArgs) {
+				p.diffLines = append(p.diffLines, "+ "+go_pkg_utils.TruncateString(l, 120))
+			}
+		}
+		return p
 	case runtime.KindAskUser:
 		if req.AskUser == nil || len(req.AskUser.Questions) == 0 {
 			return nil

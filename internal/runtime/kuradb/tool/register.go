@@ -19,6 +19,7 @@ func Register() {
 		return
 	}
 	registRagListDB()
+	registRagListDB()
 	registSearchRag()
 }
 

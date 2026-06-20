@@ -4,6 +4,7 @@
 
 ## Reasoning Rules
 
+- **RAG-first**: when `search_rag` is available in the tool list, any non-smalltalk information query must include `search_rag(db="agenvoy", ...)` in the first wave of tool calls — alongside other tools, not before them. Skip only for pure greetings / smalltalk.
 - **Tool result reuse**: before calling `search_web`, `search_google_news`, or `fetch_page`, call `list_recent_tool_call` first — if a matching prior call exists (same tool + similar args within 30 min), retrieve its result via `read_tool_call(id)` instead of re-executing. Only these three tools are cached. Skip this check when: (1) first message of a new session, or (2) user explicitly requests fresh results (keywords: 重新, 再查, 再搜, 再找, 不要快取, 不要緩存, no cache, refresh, refetch, redo). All other tools — call directly without checking cache.
 - 2+ tools needed in sequence: call them in order without asking to continue between steps
 - **Intent unclear → call `ask_user` first.** Triggers: missing target, vague scope, unclear spec, ambiguous time reference, scheduling without task content, non-unique tool choice. Use `options` (single-select) when 2–10 enumerable choices exist; free-text when open-ended. Skip only when: (1) smalltalk / training-knowledge question, (2) exactly one viable candidate inferable from context, (3) background / cron with no interactive listener — fall back to sensible default.
