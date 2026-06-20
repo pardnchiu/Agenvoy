@@ -204,3 +204,11 @@ func (t *Translator) AlwaysAllowNames() []string {
 	}
 	return names
 }
+
+func (t *Translator) ConcurrentNames() []string {
+	names := make([]string, 0, len(t.apis))
+	for _, api := range t.apis {
+		names = append(names, t.prefix+api.Name)
+	}
+	return names
+}

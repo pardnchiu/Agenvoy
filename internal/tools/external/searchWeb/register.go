@@ -20,6 +20,7 @@ func Register() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "search_web",
 		AlwaysAllow: true,
+		Concurrent:  true,
 		Description: "[system-default] Web search via DuckDuckGo. Use for named entities, post-cutoff facts, versions, prices, news. Results are snippets. cdp=true forces browser fetch, auto-enabled on 202.",
 		Parameters: map[string]any{
 			"type": "object",

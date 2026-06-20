@@ -25,6 +25,7 @@ func registLog() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "git_log",
 		AlwaysAllow: true,
+		Concurrent:  true,
 		Description: `
 Show git commit history for skills or tools directory.
 Use to find a commit hash before git_rollback, or to verify auto-commits landed.`,
