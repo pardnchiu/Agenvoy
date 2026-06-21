@@ -310,7 +310,15 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return next, cmd
 
 	case SessionNewSubmit:
-		next, cmd := t.runCreateSession(msg.name)
+		next, cmd := t.showNewPromptPicker(msg.name)
+		return next, cmd
+
+	case SessionNewCustomSubmit:
+		next, cmd := t.showNewCustomPopup(msg.name)
+		return next, cmd
+
+	case SessionNewPromptSubmit:
+		next, cmd := t.runCreateSession(msg.name, msg.body)
 		if next.onceCall {
 			return next, chainSingleShotSubmit(cmd, next.userInput)
 		}
@@ -483,10 +491,14 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.botBodyDraft = ""
 			return t, cmd
 		}
-		next, cmd := t.openBotBodyPopup(msg.name)
+		next, cmd := t.showBotPromptPicker(msg.name)
 		return next, cmd
 
-	case BotBodySubmit:
+	case BotCustomSubmit:
+		next, cmd := t.showBotCustomPopup(msg.name)
+		return next, cmd
+
+	case BotPromptSubmit:
 		sid := strings.TrimSpace(t.currentSessionID)
 		if sid == "" {
 			return t, tea.Println(errorStyle.Render("[!] no current session") + "\n")
