@@ -19,7 +19,7 @@ help:
 	@echo "  make app                Attach TUI; spawn server daemon (HTTP + Discord + Telegram) if not running"
 	@echo "  make stop               Stop the running server daemon"
 	@echo "  make update             Update agen to the latest release (always overwrite)"
-	@echo "  make test               Run provider integration tests (skips when API keys missing)"
+	@echo "  make test               Run all unit tests"
 	@echo "  make setup              Cross-compile setup binaries to dist/"
 	@echo "  make cli <input...>     Run agent (requires tool confirmation)"
 	@echo "  make run <input...>     Run agent (allow all tools, no confirmation)"
@@ -45,7 +45,7 @@ update:
 	@go run ./cmd/app/ update
 
 test:
-	@go test -v ./test/...
+	@go test -v -count=1 ./...
 
 setup:
 	@rm -rf dist && mkdir -p dist
