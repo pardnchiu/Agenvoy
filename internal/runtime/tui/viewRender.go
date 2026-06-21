@@ -243,7 +243,7 @@ func headerBlock(daemon, http, discord, telegram, line string) string {
 		"",
 		padLeft(daemon) + gap + discord,
 		padLeft(http) + gap + telegram,
-		line,
+		padLeft(line),
 	}, "\n")
 	return headerStyle.Render(body)
 }

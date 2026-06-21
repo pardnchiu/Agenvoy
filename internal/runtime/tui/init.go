@@ -224,13 +224,13 @@ func getTelegramStatus() string {
 func getLineStatus() string {
 	cfg, err := config.Load()
 	if err != nil || cfg == nil || !cfg.LineEnabled || keychain.Get(line.SecretKey) == "" || keychain.Get(line.TokenKey) == "" {
-		return textStyle.Render("line:     ") + hintStyle.Render("disable")
+		return textStyle.Render("line: ") + hintStyle.Render("disable")
 	}
 	name := cfg.LineUsername
 	if name == "" {
 		name = "enabled"
 	}
-	return textStyle.Render("line:     ") + okayStyle.Render(name)
+	return textStyle.Render("line: ") + okayStyle.Render(name)
 }
 
 func getDaemonStatus() string {
