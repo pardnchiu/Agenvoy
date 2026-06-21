@@ -14,9 +14,13 @@ type BotNameSubmit struct {
 	name string
 }
 
-type BotBodySubmit struct {
+type BotPromptSubmit struct {
 	name string
 	body string
+}
+
+type BotCustomSubmit struct {
+	name string
 }
 
 type BotSaved struct {
@@ -63,14 +67,39 @@ func (t TUI) botCheckConflict(sid, name string) (tea.Cmd, bool) {
 	return nil, true
 }
 
-func (t TUI) openBotBodyPopup(name string) (TUI, tea.Cmd) {
+func (t TUI) showBotPromptPicker(name string) (TUI, tea.Cmd) {
+	options, values := listPromptTemplates()
+	if len(options) == 0 {
+		return t.showBotCustomPopup(name)
+	}
+
+	displayOptions := append(options, "Custom")
+	displayValues := append(values, "")
+
+	t.popup = &Popup{
+		kind:    popupSingleSelect,
+		title:   fmt.Sprintf("Bot description (%s)", name),
+		options: displayOptions,
+		values:  displayValues,
+		cursor:  0,
+		onConfirm: func(chosen string) any {
+			if chosen == "" {
+				return BotCustomSubmit{name: name}
+			}
+			return BotPromptSubmit{name: name, body: readPromptTemplate(chosen)}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) showBotCustomPopup(name string) (TUI, tea.Cmd) {
 	t.popup = &Popup{
 		kind:      popupText,
 		title:     fmt.Sprintf("Bot description (%s)", name),
 		multiline: true,
 		input:     t.botBodyDraft,
 		onConfirm: func(value string) any {
-			return BotBodySubmit{name: name, body: value}
+			return BotPromptSubmit{name: name, body: value}
 		},
 	}
 	t.botBodyDraft = ""
