@@ -41,9 +41,9 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 	}
 
 	extAPIToolbox := apiAdapter.New("ext_")
-	extAPIToolbox.LoadDirs(filesystem.ExtensionAPIToolsDir)
+	extAPIToolbox.Load(filesystem.ExtensionAPIToolsDir)
 
-	for _, tb := range []*apiAdapter.Translator{apiToolbox, extAPIToolbox} {
+	for _, tb := range []*apiAdapter.Adapter{apiToolbox, extAPIToolbox} {
 		for _, tool := range tb.GetTools() {
 			raw, err := json.Marshal(tool)
 			if err != nil {

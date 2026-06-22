@@ -3,9 +3,6 @@
 package apiAdapter
 
 import (
-	"io"
-	"net/http"
-	"strings"
 	"testing"
 )
 
@@ -45,11 +42,25 @@ func TestReplaceParams(t *testing.T) {
 			wantURL:  "https://api.example.com/data",
 			wantLeft: map[string]any{"key": "val"},
 		},
+		{
+			name:     "unused placeholder trimmed",
+			url:      "https://api.com/{unused}/data",
+			params:   map[string]any{},
+			wantURL:  "https://api.com/data",
+			wantLeft: map[string]any{},
+		},
+		{
+			name:     "multiple unused placeholders trimmed",
+			url:      "https://api.com/a/{b}/{c}",
+			params:   map[string]any{},
+			wantURL:  "https://api.com/a",
+			wantLeft: map[string]any{},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			doc := &APIDocumentData{}
+			doc := &Document{}
 			doc.Endpoint.URL = tt.url
 			params := make(map[string]any)
 			for k, v := range tt.params {
@@ -63,112 +74,5 @@ func TestReplaceParams(t *testing.T) {
 				t.Errorf("remaining params = %v, want %v", params, tt.wantLeft)
 			}
 		})
-	}
-}
-
-func TestTrimUnused(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"https://api.com/data", "https://api.com/data"},
-		{"https://api.com/{unused}/data", "https://api.com/data"},
-		{"https://api.com/a/{b}/{c}", "https://api.com/a"},
-		{"https://api.com/{a}", "https://api.com"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got := trimUnused(tt.input)
-			if got != tt.want {
-				t.Errorf("trimUnused(%q) = %q, want %q", tt.input, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestJSONRequest_GET(t *testing.T) {
-	tr := New("api_")
-	doc := &APIDocumentData{}
-	doc.Endpoint.URL = "https://api.example.com/data"
-	doc.Endpoint.Method = "GET"
-	doc.Endpoint.Query = map[string]string{"format": "json"}
-
-	req, err := tr.JSONRequest(doc, map[string]any{"q": "test"})
-	if err != nil {
-		t.Fatalf("JSONRequest: %v", err)
-	}
-	if req.Method != "GET" {
-		t.Errorf("method = %s", req.Method)
-	}
-	if req.Body != nil {
-		t.Error("GET request should have nil body")
-	}
-	q := req.URL.Query()
-	if q.Get("format") != "json" {
-		t.Errorf("query format = %q", q.Get("format"))
-	}
-	if q.Get("q") != "test" {
-		t.Errorf("query q = %q", q.Get("q"))
-	}
-}
-
-func TestJSONRequest_POST(t *testing.T) {
-	tr := New("api_")
-	doc := &APIDocumentData{}
-	doc.Endpoint.URL = "https://api.example.com/data"
-	doc.Endpoint.Method = "POST"
-
-	req, err := tr.JSONRequest(doc, map[string]any{"key": "value"})
-	if err != nil {
-		t.Fatalf("JSONRequest: %v", err)
-	}
-	if req.Method != "POST" {
-		t.Errorf("method = %s", req.Method)
-	}
-	if req.Header.Get("Content-Type") != "application/json" {
-		t.Errorf("content-type = %s", req.Header.Get("Content-Type"))
-	}
-	body, _ := io.ReadAll(req.Body)
-	if !strings.Contains(string(body), `"key":"value"`) {
-		t.Errorf("body = %s", body)
-	}
-}
-
-func TestJSONRequest_POST_EmptyParams(t *testing.T) {
-	tr := New("api_")
-	doc := &APIDocumentData{}
-	doc.Endpoint.URL = "https://api.example.com/data"
-	doc.Endpoint.Method = "POST"
-
-	req, err := tr.JSONRequest(doc, map[string]any{})
-	if err != nil {
-		t.Fatalf("JSONRequest: %v", err)
-	}
-	if req.Body != http.NoBody && req.Body != nil {
-		body, _ := io.ReadAll(req.Body)
-		if len(body) > 0 {
-			t.Errorf("expected no body for empty params, got %s", body)
-		}
-	}
-}
-
-func TestFormDataRequest(t *testing.T) {
-	tr := New("api_")
-	doc := &APIDocumentData{}
-	doc.Endpoint.URL = "https://api.example.com/submit"
-	doc.Endpoint.Method = "POST"
-
-	req, err := tr.FormDataRequest(doc, map[string]any{"field": "value", "num": 42})
-	if err != nil {
-		t.Fatalf("FormDataRequest: %v", err)
-	}
-	if req.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
-		t.Errorf("content-type = %s", req.Header.Get("Content-Type"))
-	}
-	body, _ := io.ReadAll(req.Body)
-	s := string(body)
-	if !strings.Contains(s, "field=value") {
-		t.Errorf("body missing field=value: %s", s)
 	}
 }

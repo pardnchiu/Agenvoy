@@ -8,7 +8,7 @@ import (
 )
 
 func TestTranslate_Basic(t *testing.T) {
-	doc := &APIDocumentData{
+	doc := &Document{
 		Name:        "get_weather",
 		Description: "Fetch weather data",
 	}
@@ -52,7 +52,7 @@ func TestTranslate_Basic(t *testing.T) {
 }
 
 func TestTranslate_NoRequired(t *testing.T) {
-	doc := &APIDocumentData{
+	doc := &Document{
 		Name:        "test",
 		Description: "desc",
 	}
@@ -79,7 +79,7 @@ func TestTranslate_NoRequired(t *testing.T) {
 }
 
 func TestTranslate_EnumAndDefault(t *testing.T) {
-	doc := &APIDocumentData{
+	doc := &Document{
 		Name:        "test",
 		Description: "desc",
 	}
@@ -110,7 +110,7 @@ func TestTranslate_EnumAndDefault(t *testing.T) {
 }
 
 func TestTranslate_EmptyParams(t *testing.T) {
-	doc := &APIDocumentData{
+	doc := &Document{
 		Name:        "test",
 		Description: "desc",
 	}

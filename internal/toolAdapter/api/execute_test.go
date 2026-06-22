@@ -7,62 +7,9 @@ import (
 	"testing"
 )
 
-func TestNormalizeAliasParams(t *testing.T) {
-	doc := &APIDocumentData{}
-	doc.Parameters = map[string]struct {
-		Type        string `json:"type"`
-		Description string `json:"description"`
-		Required    bool   `json:"required"`
-		Default     any    `json:"default,omitempty"`
-		Enum        []any  `json:"enum,omitempty"`
-	}{
-		"currency": {Type: "string", Description: "Currency code"},
-	}
-
-	tests := []struct {
-		name   string
-		params map[string]any
-		want   string
-	}{
-		{"from alias", map[string]any{"from": "USD"}, "USD"},
-		{"base alias", map[string]any{"base": "EUR"}, "EUR"},
-		{"canonical present", map[string]any{"currency": "GBP", "from": "USD"}, "GBP"},
-		{"no alias", map[string]any{"other": "val"}, ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			normalizeAliasParams(doc, tt.params)
-			got, _ := tt.params["currency"].(string)
-			if got != tt.want {
-				t.Errorf("currency = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestNormalizeAliasParams_NoCurrencyParam(t *testing.T) {
-	doc := &APIDocumentData{}
-	doc.Parameters = map[string]struct {
-		Type        string `json:"type"`
-		Description string `json:"description"`
-		Required    bool   `json:"required"`
-		Default     any    `json:"default,omitempty"`
-		Enum        []any  `json:"enum,omitempty"`
-	}{
-		"symbol": {Type: "string", Description: "Stock symbol"},
-	}
-
-	params := map[string]any{"from": "USD"}
-	normalizeAliasParams(doc, params)
-	if _, ok := params["currency"]; ok {
-		t.Error("should not set currency when doc has no currency param")
-	}
-}
-
 func TestCheckRequireds(t *testing.T) {
 	tr := New("api_")
-	doc := &APIDocumentData{}
+	doc := &Document{}
 	doc.Parameters = map[string]struct {
 		Type        string `json:"type"`
 		Description string `json:"description"`
@@ -76,7 +23,7 @@ func TestCheckRequireds(t *testing.T) {
 	}
 
 	params := map[string]any{"city": "Tokyo"}
-	if err := tr.checkRequireds(doc, params); err != nil {
+	if err := tr.checkParams(doc, params); err != nil {
 		t.Fatalf("checkRequireds: %v", err)
 	}
 	if params["unit"] != "celsius" {
@@ -89,7 +36,7 @@ func TestCheckRequireds(t *testing.T) {
 
 func TestCheckRequireds_MissingRequired(t *testing.T) {
 	tr := New("api_")
-	doc := &APIDocumentData{}
+	doc := &Document{}
 	doc.Parameters = map[string]struct {
 		Type        string `json:"type"`
 		Description string `json:"description"`
@@ -100,31 +47,8 @@ func TestCheckRequireds_MissingRequired(t *testing.T) {
 		"city": {Type: "string", Required: true},
 	}
 
-	if err := tr.checkRequireds(doc, map[string]any{}); err == nil {
+	if err := tr.checkParams(doc, map[string]any{}); err == nil {
 		t.Error("expected error for missing required param")
-	}
-}
-
-func TestReserveAPISlot(t *testing.T) {
-	ctx := context.Background()
-	if err := reserveAPISlot(ctx, "test_reserve_1"); err != nil {
-		t.Fatalf("first call: %v", err)
-	}
-	if err := reserveAPISlot(ctx, "test_reserve_1"); err != nil {
-		t.Fatalf("second call: %v", err)
-	}
-}
-
-func TestReserveAPISlot_CancelledContext(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	if err := reserveAPISlot(ctx, "test_cancel_1"); err != nil {
-		t.Fatalf("first call: %v", err)
-	}
-
-	cancel()
-	if err := reserveAPISlot(ctx, "test_cancel_1"); err == nil {
-		t.Error("expected error with cancelled context")
 	}
 }
 

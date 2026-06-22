@@ -13,7 +13,7 @@ import (
 
 func TestCheck_Valid(t *testing.T) {
 	tr := New("api_")
-	doc := &APIDocumentData{
+	doc := &Document{
 		Name:        "test_api",
 		Description: "A test API",
 	}
@@ -29,19 +29,16 @@ func TestCheck_Valid(t *testing.T) {
 	if doc.Endpoint.ContentType != "json" {
 		t.Errorf("content_type default = %s, want json", doc.Endpoint.ContentType)
 	}
-	if doc.Response.Format != "json" {
-		t.Errorf("response.format default = %s, want json", doc.Response.Format)
-	}
 }
 
 func TestCheck_MissingFields(t *testing.T) {
 	tr := New("api_")
 	tests := []struct {
 		name string
-		doc  APIDocumentData
+		doc  Document
 	}{
-		{"no name", APIDocumentData{Description: "d"}},
-		{"no description", APIDocumentData{Name: "n"}},
+		{"no name", Document{Description: "d"}},
+		{"no description", Document{Name: "n"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -57,7 +54,7 @@ func TestCheck_MissingFields(t *testing.T) {
 
 func TestCheck_MissingEndpoint(t *testing.T) {
 	tr := New("api_")
-	doc := &APIDocumentData{Name: "n", Description: "d"}
+	doc := &Document{Name: "n", Description: "d"}
 
 	doc.Endpoint.Method = "GET"
 	if err := tr.check(doc); err == nil {
@@ -73,7 +70,7 @@ func TestCheck_MissingEndpoint(t *testing.T) {
 
 func TestCheck_UnsupportedMethod(t *testing.T) {
 	tr := New("api_")
-	doc := &APIDocumentData{Name: "n", Description: "d"}
+	doc := &Document{Name: "n", Description: "d"}
 	doc.Endpoint.URL = "https://x.com"
 	doc.Endpoint.Method = "OPTIONS"
 
@@ -115,32 +112,6 @@ func TestLoad_NonexistentDir(t *testing.T) {
 	}
 }
 
-func TestLoadDirs(t *testing.T) {
-	root := t.TempDir()
-
-	toolDir := filepath.Join(root, "my_tool")
-	os.MkdirAll(toolDir, 0755)
-	doc := map[string]any{
-		"name":        "my_tool",
-		"description": "My tool",
-		"endpoint":    map[string]any{"url": "https://api.example.com", "method": "POST"},
-	}
-	raw, _ := json.Marshal(doc)
-	os.WriteFile(filepath.Join(toolDir, "tool.json"), raw, 0644)
-
-	skippedDir := filepath.Join(root, "_hidden")
-	os.MkdirAll(skippedDir, 0755)
-
-	tr := New("ext_")
-	if err := tr.LoadDirs(root); err != nil {
-		t.Fatalf("LoadDirs: %v", err)
-	}
-
-	if !tr.IsExist("ext_my_tool") {
-		t.Error("expected my_tool to exist")
-	}
-}
-
 func TestLoadFS(t *testing.T) {
 	fsys := fstest.MapFS{
 		"tools/weather.json": &fstest.MapFile{
@@ -163,7 +134,7 @@ func TestLoadFS(t *testing.T) {
 
 func TestGetTools(t *testing.T) {
 	tr := New("api_")
-	tr.apis["test"] = &APIDocumentData{Name: "test", Description: "d"}
+	tr.apis["test"] = &Document{Name: "test", Description: "d"}
 
 	tools := tr.GetTools()
 	if len(tools) != 1 {
@@ -177,9 +148,9 @@ func TestGetTools(t *testing.T) {
 
 func TestAlwaysAllowNames(t *testing.T) {
 	tr := New("api_")
-	tr.apis["a"] = &APIDocumentData{Name: "a", AlwaysAllow: true}
-	tr.apis["b"] = &APIDocumentData{Name: "b", AlwaysAllow: false}
-	tr.apis["c"] = &APIDocumentData{Name: "c", AlwaysAllow: true}
+	tr.apis["a"] = &Document{Name: "a", AlwaysAllow: true}
+	tr.apis["b"] = &Document{Name: "b", AlwaysAllow: false}
+	tr.apis["c"] = &Document{Name: "c", AlwaysAllow: true}
 
 	names := tr.AlwaysAllowNames()
 	if len(names) != 2 {
@@ -192,11 +163,15 @@ func TestAlwaysAllowNames(t *testing.T) {
 
 func TestConcurrentNames(t *testing.T) {
 	tr := New("api_")
-	tr.apis["x"] = &APIDocumentData{Name: "x"}
-	tr.apis["y"] = &APIDocumentData{Name: "y"}
+	tr.apis["x"] = &Document{Name: "x", Concurrent: true}
+	tr.apis["y"] = &Document{Name: "y"}
+	tr.apis["z"] = &Document{Name: "z", Concurrent: true}
 
 	names := tr.ConcurrentNames()
 	if len(names) != 2 {
 		t.Fatalf("len = %d, want 2", len(names))
+	}
+	if !slices.Contains(names, "api_x") || !slices.Contains(names, "api_z") {
+		t.Errorf("names = %v", names)
 	}
 }

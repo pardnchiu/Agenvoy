@@ -19,9 +19,9 @@ type builtinHandler func(ctx context.Context, args json.RawMessage) (string, err
 
 type toolbox struct {
 	scriptBox *scriptAdapter.Translator
-	apiBox    *apiAdapter.Translator
+	apiBox    *apiAdapter.Adapter
 	extScript *scriptAdapter.Translator
-	extAPI    *apiAdapter.Translator
+	extAPI    *apiAdapter.Adapter
 	tools     []mcpTool
 	builtin   map[string]builtinHandler
 }
@@ -62,7 +62,7 @@ func scanTools() *toolbox {
 	}
 
 	box.extAPI = apiAdapter.New("ext_")
-	_ = box.extAPI.LoadDirs(filesystem.ExtensionAPIToolsDir)
+	_ = box.extAPI.Load(filesystem.ExtensionAPIToolsDir)
 
 	var tools []mcpTool
 	tools = append(tools, convertTools(box.scriptBox.GetTools())...)

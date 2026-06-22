@@ -24,6 +24,7 @@ Avoid vague verbs: process_*, handle_*.
   "name": "<tool_name>",
   "description": "<when to call this tool — trigger signals and use-case differentiation only, 60-200 chars, no filler>",
   "always_allow": false,
+  "concurrent": false,
   "parameters": {
     "type": "object",
     "properties": {
@@ -41,6 +42,7 @@ Avoid vague verbs: process_*, handle_*.
 - description: trigger signals only (when to call, vs similar tools). No implementation details, no filler.
 - parameter descriptions: complete contracts. Non-trivial types (object/array/enum) shorter than 20 chars = incomplete.
 - always_allow: true for read-only/computation; false for writes/sends/payments.
+- concurrent: true when the API is read-only data retrieval with a relaxed rate limit; false (default) for write operations or strict rate-limited endpoints.
 
 ## Template
 ```python
