@@ -417,7 +417,14 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		watchdog.Stop()
 		if switched {
 			cancelSend()
+			session.ToolHistories = nil
+			alreadyCall = make(map[string]string)
 			sendFailCount = 0
+			emptyCount = 0
+			trimmedToolCalls = false
+			compactedToolCalls = false
+			compactFailed = false
+			lastInputTokens = 0
 			continue
 		}
 		sendElapsed := time.Since(sendStart).Round(time.Second)
@@ -470,6 +477,14 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 					Model: nextName,
 				}
 				data.Agent = next
+				session.ToolHistories = nil
+				alreadyCall = make(map[string]string)
+				sendFailCount = 0
+				emptyCount = 0
+				trimmedToolCalls = false
+				compactedToolCalls = false
+				compactFailed = false
+				lastInputTokens = 0
 				continue
 			}
 

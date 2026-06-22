@@ -75,7 +75,7 @@ func getSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.
 		"{{.BotPersona}}", personaSection,
 		"{{.PermissionMode}}", buildPermissionModeSection(allowAll),
 		"{{.AvailableSkills}}", skillsSection,
-		"{{.ScriptToolGuide}}", configs.ScriptToolGuide,
+		"{{.ToolGuide}}", configs.ToolGuide,
 		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
 		"{{.CrossChannelSending}}", buildCrossChannelPrompt(),
 		"{{.ProjectInstructions}}", loadProjectInstructions(workDir),
@@ -87,7 +87,7 @@ func loadProjectInstructions(workDir string) string {
 	if workDir == "" {
 		return ""
 	}
-	for _, name := range []string{"CLAUDE.md", "agent.md"} {
+	for _, name := range []string{"CLAUDE.md", "AGENTS.md"} {
 		p := filepath.Join(workDir, name)
 		if !go_pkg_filesystem_reader.IsFile(p) {
 			continue

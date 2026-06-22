@@ -111,7 +111,5 @@
   "openssl",
   "base64",
   "md5",
-  "shasum",
-  "htop",
-  "top"
+  "shasum"
 ]

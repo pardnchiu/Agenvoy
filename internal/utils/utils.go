@@ -85,9 +85,36 @@ var toolDisplayName = map[string]string{
 	"remove_schedule":       "Remove Schedule",
 }
 
+func IsPlugTool(name string) bool {
+	return strings.HasPrefix(name, "script_") ||
+		strings.HasPrefix(name, "api_") ||
+		strings.HasPrefix(name, "ext_")
+}
+
+func PlugToolBaseName(name string) string {
+	for _, prefix := range []string{"script_", "api_", "ext_"} {
+		if base, ok := strings.CutPrefix(name, prefix); ok {
+			return base
+		}
+	}
+	return name
+}
+
 func ToolName(name string) string {
 	if d, ok := toolDisplayName[name]; ok {
 		return d
+	}
+	if IsPlugTool(name) {
+		var tag string
+		switch {
+		case strings.HasPrefix(name, "script_"):
+			tag = "Script"
+		case strings.HasPrefix(name, "api_"):
+			tag = "API"
+		case strings.HasPrefix(name, "ext_"):
+			tag = "Extension"
+		}
+		return fmt.Sprintf("Plug Tool(%s %s)", tag, PlugToolBaseName(name))
 	}
 	return name
 }
@@ -124,6 +151,9 @@ func FormatToolArgs(name, raw, cwd string) string {
 		}
 		c := strings.TrimRight(strings.TrimSpace(cwd), "/")
 		return c != "" && d == c
+	}
+	if IsPlugTool(name) {
+		return PlugToolBaseName(name) + " " + raw
 	}
 	switch name {
 	case "invoke_subagent":

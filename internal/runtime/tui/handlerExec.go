@@ -86,7 +86,8 @@ func (t TUI) handleAgentEvent(ev agentTypes.Event) (tea.Model, tea.Cmd) {
 		}
 
 	case agentTypes.EventToolCall:
-		if ev.ToolName != "" && ev.ToolName != "ask_user" && ev.ToolName != "store_secret" {
+		if ev.ToolName != "" && ev.ToolName != "ask_user" && ev.ToolName != "store_secret" &&
+			ev.ToolName != "list_recent_tool_call" && ev.ToolName != "read_tool_call" {
 			t.activity = "tool: " + ev.ToolName
 		}
 

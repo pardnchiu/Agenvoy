@@ -19,9 +19,9 @@ type builtinHandler func(ctx context.Context, args json.RawMessage) (string, err
 
 type toolbox struct {
 	scriptBox *scriptAdapter.Translator
-	apiBox    *apiAdapter.Translator
+	apiBox    *apiAdapter.Adapter
 	extScript *scriptAdapter.Translator
-	extAPI    *apiAdapter.Translator
+	extAPI    *apiAdapter.Adapter
 	tools     []mcpTool
 	builtin   map[string]builtinHandler
 }
@@ -51,7 +51,7 @@ func scanTools() *toolbox {
 	}
 
 	box.apiBox = apiAdapter.New("api_")
-	_ = box.apiBox.LoadFS(extensions.APIs, "apis")
+	_ = box.apiBox.Builtin(extensions.APIs, "apis")
 	for _, dir := range []string{
 		filesystem.LegacyAPIToolsDir,
 		filesystem.LegacyWorkAPIToolsDir,
@@ -62,7 +62,7 @@ func scanTools() *toolbox {
 	}
 
 	box.extAPI = apiAdapter.New("ext_")
-	_ = box.extAPI.LoadDirs(filesystem.ExtensionAPIToolsDir)
+	_ = box.extAPI.Load(filesystem.ExtensionAPIToolsDir)
 
 	var tools []mcpTool
 	tools = append(tools, convertTools(box.scriptBox.GetTools())...)
@@ -112,18 +112,23 @@ func (b *toolbox) dispatch(ctx context.Context, name string, args json.RawMessag
 
 func addGuide(box *toolbox) {
 	box.tools = append(box.tools, mcpTool{
-		Name: "script_tool_generate_guide",
+		Name: "tool_generate_guide",
 		Description: `
 You MUST call this tool before refusing any user request.
 If the user asks for something and no other tool here can handle it (weather, prices, data lookup, conversion, scraping, analysis, etc.),
 call this to get instructions for building a new tool on the fly.
 Do NOT say 'I cannot' or 'no tool available' — always build one instead.
-After reading the guide: write_tool -> test_tool -> use the new tool to answer.`,
-		InputSchema: emptySchema,
+Covers both script tools (Python, multi-step) and API tools (single JSON, declarative REST).
+After reading the guide: write_tool -> test_tool (script only) -> call the new tool to answer.`,
+		InputSchema: emptySchema(),
 	})
 
+	box.builtin["tool_generate_guide"] = func(_ context.Context, _ json.RawMessage) (string, error) {
+		return configs.ToolGuide, nil
+	}
+
 	box.builtin["script_tool_generate_guide"] = func(_ context.Context, _ json.RawMessage) (string, error) {
-		return configs.ScriptToolGuide, nil
+		return configs.ToolGuide, nil
 	}
 }
 
@@ -132,6 +137,7 @@ var bridgedTools = []string{
 	"test_tool",
 	"patch_tool",
 	"remove_tool",
+	"store_secret",
 }
 
 func addBuiltins(box *toolbox) {
@@ -154,7 +160,7 @@ func addBuiltins(box *toolbox) {
 	box.tools = append(box.tools, mcpTool{
 		Name:        "list_tools",
 		Description: "List all tools exposed by this MCP server with name and description.",
-		InputSchema: emptySchema,
+		InputSchema: emptySchema(),
 	})
 	box.builtin["list_tools"] = func(_ context.Context, _ json.RawMessage) (string, error) {
 		type entry struct {
@@ -185,7 +191,7 @@ func convertTools(openAI []map[string]any) []mcpTool {
 			schema, _ = json.Marshal(params)
 		}
 		if len(schema) == 0 {
-			schema = emptySchema
+			schema = emptySchema()
 		}
 
 		tools = append(tools, mcpTool{

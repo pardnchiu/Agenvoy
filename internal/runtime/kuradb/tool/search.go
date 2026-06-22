@@ -17,6 +17,7 @@ func registSearchRag() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "search_rag",
 		AlwaysAllow: true,
+		AlwaysLoad:  true,
 		Concurrent:  true,
 		Timeout:     15 * time.Second,
 		Description: "[system-default] Search RAG knowledge base by keyword or semantic mode. Use mode=keyword for precise strings (filenames, terms, names, symbols); use mode=semantic for natural-language queries. If results are sufficient, answer directly without external tools.",

@@ -23,9 +23,9 @@ type Executor struct {
 	AllTools         []Tool
 	StubTools        map[string]bool
 	ExcludeTools     map[string]bool
-	APIToolbox       *apiAdapter.Translator
+	APIToolbox       *apiAdapter.Adapter
 	ScriptToolbox    ScriptToolExecutor
-	ExtAPIToolbox    *apiAdapter.Translator
+	ExtAPIToolbox    *apiAdapter.Adapter
 	ExtScriptToolbox ScriptToolExecutor
 
 	SkillScanner    *runtime.SkillScanner

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	apiAdapter "github.com/pardnchiu/agenvoy/internal/toolAdapter/api"
 	"github.com/pardnchiu/agenvoy/internal/tools/external/googleRSS"
 	"github.com/pardnchiu/agenvoy/internal/tools/external/searchWeb"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -69,7 +68,7 @@ func Register() {
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", fmt.Errorf("json.Unmarshal: %w", err)
 			}
-			return apiAdapter.Send(ctx, params.URL, params.Method, params.Headers, params.Body, params.ContentType, params.Timeout)
+			return sendHTTPRequest(ctx, params.URL, params.Method, params.Headers, params.Body, params.ContentType, params.Timeout)
 		},
 	})
 }

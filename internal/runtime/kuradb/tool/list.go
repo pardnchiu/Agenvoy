@@ -13,6 +13,7 @@ func registRagListDB() {
 	toolRegister.Regist(toolRegister.Def{
 		Name:        "list_rag",
 		AlwaysAllow: true,
+		AlwaysLoad:  true,
 		Concurrent:  true,
 		Timeout:     15 * time.Second,
 		Description: "List RAG knowledge base databases. Call when the target database name is unknown; skip if the database name is already known (e.g. 'agenvoy').",

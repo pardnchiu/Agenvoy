@@ -2,10 +2,11 @@ package apiAdapter
 
 import "encoding/json"
 
-type APIDocumentData struct {
+type Document struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	AlwaysAllow bool   `json:"always_allow,omitempty"`
+	Concurrent  bool   `json:"concurrent,omitempty"`
 	Endpoint    struct {
 		URL         string            `json:"url"`
 		Method      string            `json:"method"`
@@ -14,7 +15,7 @@ type APIDocumentData struct {
 		Query       map[string]string `json:"query,omitempty"`
 		Timeout     int               `json:"timeout,omitempty"`
 	} `json:"endpoint"`
-	Auth       *APIDocumentAuthData `json:"auth,omitempty"`
+	Auth       *DocumentAuth `json:"auth,omitempty"`
 	Parameters map[string]struct {
 		Type        string `json:"type"`
 		Description string `json:"description"`
@@ -22,18 +23,15 @@ type APIDocumentData struct {
 		Default     any    `json:"default,omitempty"`
 		Enum        []any  `json:"enum,omitempty"`
 	} `json:"parameters"`
-	Response struct {
-		Format string `json:"format"`
-	} `json:"response"`
 }
 
-type APIDocumentAuthData struct {
+type DocumentAuth struct {
 	Type   string `json:"type"`
 	Header string `json:"header"`
 	Env    string `json:"env"`
 }
 
-func (d *APIDocumentData) translate(prefix string) map[string]any {
+func (d *Document) translate(prefix string) map[string]any {
 	props := make(map[string]any, len(d.Parameters))
 	required := []string{}
 
