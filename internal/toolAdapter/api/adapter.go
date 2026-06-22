@@ -28,6 +28,42 @@ func New(prefix string) *Adapter {
 	}
 }
 
+func (a *Adapter) Builtin(fsys fs.FS, dir string) error {
+	entries, err := fs.ReadDir(fsys, dir)
+	if err != nil {
+		return fmt.Errorf("fs: ReadDir: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		data, err := fs.ReadFile(fsys, fmt.Sprintf("%s/%s", dir, entry.Name()))
+		if err != nil {
+			slog.Warn("fs: ReadFile",
+				slog.String("error", err.Error()))
+			continue
+		}
+
+		var doc Document
+		if err := json.Unmarshal(data, &doc); err != nil {
+			slog.Warn("json: Unmarshal",
+				slog.String("error", err.Error()))
+			continue
+		}
+
+		if err := a.check(&doc); err != nil {
+			slog.Warn("Adapter: check",
+				slog.String("error", err.Error()))
+			continue
+		}
+
+		a.apis[doc.Name] = &doc
+	}
+	return nil
+}
+
 func (a *Adapter) Load(path string) error {
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -101,42 +137,6 @@ func (a *Adapter) check(doc *Document) error {
 
 	if doc.Endpoint.ContentType == "" {
 		doc.Endpoint.ContentType = "json"
-	}
-	return nil
-}
-
-func (a *Adapter) LoadFS(fsys fs.FS, dir string) error {
-	entries, err := fs.ReadDir(fsys, dir)
-	if err != nil {
-		return fmt.Errorf("fs: ReadDir: %w", err)
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-
-		data, err := fs.ReadFile(fsys, fmt.Sprintf("%s/%s", dir, entry.Name()))
-		if err != nil {
-			slog.Warn("fs: ReadFile",
-				slog.String("error", err.Error()))
-			continue
-		}
-
-		var doc Document
-		if err := json.Unmarshal(data, &doc); err != nil {
-			slog.Warn("json: Unmarshal",
-				slog.String("error", err.Error()))
-			continue
-		}
-
-		if err := a.check(&doc); err != nil {
-			slog.Warn("Adapter: check",
-				slog.String("error", err.Error()))
-			continue
-		}
-
-		a.apis[doc.Name] = &doc
 	}
 	return nil
 }

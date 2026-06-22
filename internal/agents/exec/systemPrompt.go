@@ -75,7 +75,7 @@ func getSystemPrompt(workDir string, extraSystemPrompt string, scanner *runtime.
 		"{{.BotPersona}}", personaSection,
 		"{{.PermissionMode}}", buildPermissionModeSection(allowAll),
 		"{{.AvailableSkills}}", skillsSection,
-		"{{.ScriptToolGuide}}", configs.ScriptToolGuide,
+		"{{.ToolGuide}}", configs.ToolGuide,
 		"{{.ExternalAgents}}", buildExternalAgentsPrompt(),
 		"{{.CrossChannelSending}}", buildCrossChannelPrompt(),
 		"{{.ProjectInstructions}}", loadProjectInstructions(workDir),

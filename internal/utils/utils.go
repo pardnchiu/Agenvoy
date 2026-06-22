@@ -105,7 +105,16 @@ func ToolName(name string) string {
 		return d
 	}
 	if IsPlugTool(name) {
-		return "Plug Tool"
+		var tag string
+		switch {
+		case strings.HasPrefix(name, "script_"):
+			tag = "Script"
+		case strings.HasPrefix(name, "api_"):
+			tag = "API"
+		case strings.HasPrefix(name, "ext_"):
+			tag = "Extension"
+		}
+		return fmt.Sprintf("Plug Tool(%s %s)", tag, PlugToolBaseName(name))
 	}
 	return name
 }

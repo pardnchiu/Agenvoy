@@ -19,7 +19,7 @@ func registPatchTool() {
 		Name:        "patch_tool",
 		AlwaysAllow: true,
 		Description: `
-Replace an exact string match inside a script tool file (tool.json or script.py).
+Replace an exact string match inside a tool file (tool.json, script.py, or API tool JSON).
 Use to fix a broken tool after test_tool failure; write_tool for full rewrite.`,
 		Parameters: map[string]any{
 			"type": "object",
@@ -30,8 +30,8 @@ Use to fix a broken tool after test_tool failure; write_tool for full rewrite.`,
 				},
 				"tag": map[string]any{
 					"type":        "string",
-					"enum":        []string{"json", "script"},
-					"description": "Target file. 'json' = tool.json (schema fix), 'script' = script.py (runtime fix).",
+					"enum":        []string{"json", "script", "api"},
+					"description": "Target file. 'json' = tool.json (schema fix), 'script' = script.py (runtime fix), 'api' = <name>.json (API tool fix).",
 				},
 				"old_string": map[string]any{
 					"type":        "string",
@@ -72,22 +72,28 @@ Use to fix a broken tool after test_tool failure; write_tool for full rewrite.`,
 				return "", fmt.Errorf("no edit needed")
 			}
 
-			var filename string
+			var target string
 			switch params.Tag {
 			case "json":
-				filename = "tool.json"
+				dir := filepath.Join(filesystem.ScriptToolsDir, name)
+				if !go_pkg_filesystem_reader.IsDir(dir) {
+					return "", fmt.Errorf("tool %q does not exist", name)
+				}
+				target = filepath.Join(dir, "tool.json")
 			case "script":
-				filename = "script.py"
+				dir := filepath.Join(filesystem.ScriptToolsDir, name)
+				if !go_pkg_filesystem_reader.IsDir(dir) {
+					return "", fmt.Errorf("tool %q does not exist", name)
+				}
+				target = filepath.Join(dir, "script.py")
+			case "api":
+				target = filepath.Join(filesystem.APIToolsDir, name+".json")
+				if !go_pkg_filesystem_reader.Exists(target) {
+					return "", fmt.Errorf("api tool %q does not exist", name)
+				}
 			default:
-				return "", fmt.Errorf("tag must be 'json' or 'script', got %q", params.Tag)
+				return "", fmt.Errorf("tag must be 'json', 'script', or 'api', got %q", params.Tag)
 			}
-
-			dir := filepath.Join(filesystem.ScriptToolsDir, name)
-			if !go_pkg_filesystem_reader.IsDir(dir) {
-				return "", fmt.Errorf("tool %q does not exist", name)
-			}
-
-			target := filepath.Join(dir, filename)
 			if err := patch(target, params.OldString, params.NewString, params.ReplaceAll); err != nil {
 				return "", err
 			}

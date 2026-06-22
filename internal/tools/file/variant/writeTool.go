@@ -20,7 +20,7 @@ func registWriteTool() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `
-Create or overwrite a single file (tool.json or script.py) under a script tool directory.
+Create or overwrite a tool file. tag=json|script writes under script tool directory; tag=api writes a single JSON to the API tool directory.
 Use in Capability Gap flow; patch_tool for string replacement, test_tool to verify.`,
 		Parameters: map[string]any{
 			"type": "object",
@@ -31,8 +31,8 @@ Use in Capability Gap flow; patch_tool for string replacement, test_tool to veri
 				},
 				"tag": map[string]any{
 					"type":        "string",
-					"enum":        []string{"json", "script"},
-					"description": "Target file. 'json' = tool.json (schema), 'script' = script.py (runtime).",
+					"enum":        []string{"json", "script", "api"},
+					"description": "Target file. 'json' = tool.json (schema), 'script' = script.py (runtime), 'api' = <name>.json (API tool definition).",
 				},
 				"content": map[string]any{
 					"type":        "string",
@@ -59,17 +59,17 @@ Use in Capability Gap flow; patch_tool for string replacement, test_tool to veri
 				return "", fmt.Errorf("content is required")
 			}
 
-			var filename string
+			var target string
 			switch params.Tag {
 			case "json":
-				filename = "tool.json"
+				target = filepath.Join(filesystem.ScriptToolsDir, name, "tool.json")
 			case "script":
-				filename = "script.py"
+				target = filepath.Join(filesystem.ScriptToolsDir, name, "script.py")
+			case "api":
+				target = filepath.Join(filesystem.APIToolsDir, name+".json")
 			default:
-				return "", fmt.Errorf("tag must be 'json' or 'script', got %q", params.Tag)
+				return "", fmt.Errorf("tag must be 'json', 'script', or 'api', got %q", params.Tag)
 			}
-
-			target := filepath.Join(filesystem.ScriptToolsDir, name, filename)
 			if err := go_pkg_filesystem.WriteFile(target, params.Content, 0644); err != nil {
 				return "", fmt.Errorf("github.com/pardnchiu/agenvoy/internal/filesystem: WriteFile [%s]: %w", target, err)
 			}

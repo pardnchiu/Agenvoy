@@ -112,7 +112,7 @@ func TestLoad_NonexistentDir(t *testing.T) {
 	}
 }
 
-func TestLoadFS(t *testing.T) {
+func TestLoadBuiltin(t *testing.T) {
 	fsys := fstest.MapFS{
 		"tools/weather.json": &fstest.MapFile{
 			Data: []byte(`{"name":"weather","description":"Weather API","endpoint":{"url":"https://api.weather.com","method":"GET"}}`),
@@ -123,8 +123,8 @@ func TestLoadFS(t *testing.T) {
 	}
 
 	tr := New("api_")
-	if err := tr.LoadFS(fsys, "tools"); err != nil {
-		t.Fatalf("LoadFS: %v", err)
+	if err := tr.Builtin(fsys, "tools"); err != nil {
+		t.Fatalf("LoadBuiltin: %v", err)
 	}
 
 	if !tr.IsExist("api_weather") {

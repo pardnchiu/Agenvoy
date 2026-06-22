@@ -29,7 +29,7 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 	}
 
 	apiToolbox := apiAdapter.New("api_")
-	apiToolbox.LoadFS(extensions.APIs, "apis")
+	apiToolbox.Builtin(extensions.APIs, "apis")
 
 	for _, dir := range []string{
 		filesystem.LegacyAPIToolsDir,
