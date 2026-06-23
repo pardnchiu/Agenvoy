@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 
@@ -14,15 +15,16 @@ import (
 )
 
 type mcpAddDraft struct {
-	name      string
-	transport string
-	command   string
-	args      []string
-	env       map[string]string
-	url       string
-	headers   map[string]string
-	scope     string
-	sessionID string
+	name           string
+	transport      string
+	command        string
+	args           []string
+	env            map[string]string
+	url            string
+	headers        map[string]string
+	authHeaderName string
+	scope          string
+	sessionID      string
 }
 
 type McpAddName struct {
@@ -47,6 +49,26 @@ type McpAddEnv struct {
 
 type McpAddURL struct {
 	url string
+}
+
+type McpAddAuthMethod struct {
+	method string
+}
+
+type McpAddBearerToken struct {
+	token string
+}
+
+type McpAddAPIKeyHeader struct {
+	header string
+}
+
+type McpAddAPIKeyValue struct {
+	value string
+}
+
+type McpAddBasicToken struct {
+	token string
 }
 
 type McpAddHeaders struct {
@@ -143,10 +165,76 @@ func (t TUI) openMcpAddHeaders() (TUI, tea.Cmd) {
 	t.popup = &Popup{
 		kind:      popupText,
 		multiline: true,
-		title:     "Headers (KEY=VALUE per line · ctrl+s submit · blank to skip)",
-		subtitle:  "example:\nAuthorization=Bearer ${TOKEN}\nX-Trace=1",
+		title:     "Extra headers (KEY=VALUE per line · ctrl+s submit · blank to skip)",
+		subtitle:  "example:\nX-Trace=1\nX-Client=agenvoy",
 		onConfirm: func(value string) any {
 			return McpAddHeaders{raw: value}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) openMcpAddAuthMethod() (TUI, tea.Cmd) {
+	t.popup = &Popup{
+		kind:  popupSingleSelect,
+		title: "Authentication",
+		options: []string{
+			"none    no auth",
+			"bearer  Authorization: Bearer token",
+			"api key custom header token",
+			"basic   Authorization: Basic token",
+		},
+		values: []string{"none", "bearer", "apikey", "basic"},
+		onConfirm: func(chosen string) any {
+			return McpAddAuthMethod{method: chosen}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) openMcpAddBearerToken() (TUI, tea.Cmd) {
+	t.popup = &Popup{
+		kind:     popupText,
+		title:    "Bearer token",
+		subtitle: "raw token or ${TOKEN}; Bearer is added automatically",
+		onConfirm: func(value string) any {
+			return McpAddBearerToken{token: strings.TrimSpace(value)}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) openMcpAddAPIKeyHeader() (TUI, tea.Cmd) {
+	t.popup = &Popup{
+		kind:     popupText,
+		title:    "API key header name",
+		subtitle: "blank uses X-API-Key",
+		onConfirm: func(value string) any {
+			return McpAddAPIKeyHeader{header: strings.TrimSpace(value)}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) openMcpAddAPIKeyValue(header string) (TUI, tea.Cmd) {
+	t.popup = &Popup{
+		kind:     popupText,
+		title:    fmt.Sprintf("%s value", header),
+		subtitle: "raw key or ${TOKEN}",
+		onConfirm: func(value string) any {
+			return McpAddAPIKeyValue{value: strings.TrimSpace(value)}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) openMcpAddBasicToken() (TUI, tea.Cmd) {
+	t.popup = &Popup{
+		kind:     popupText,
+		title:    "Basic auth token",
+		subtitle: "base64 user:pass or ${BASIC_TOKEN}; Basic is added automatically",
+		onConfirm: func(value string) any {
+			return McpAddBasicToken{token: strings.TrimSpace(value)}
 		},
 	}
 	return t, nil
@@ -239,6 +327,50 @@ func parseKV(raw string) map[string]string {
 		return nil
 	}
 	return out
+}
+
+func mergeMcpHeaders(base, extra map[string]string) map[string]string {
+	if len(base) == 0 && len(extra) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(base)+len(extra))
+	maps.Copy(out, base)
+	maps.Copy(out, extra)
+	return out
+}
+
+func bearerAuthorizationHeader(token string) map[string]string {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil
+	}
+	if strings.Contains(token, " ") {
+		return map[string]string{"Authorization": token}
+	}
+	return map[string]string{"Authorization": "Bearer " + token}
+}
+
+func apiKeyHeader(header, value string) map[string]string {
+	header = strings.TrimSpace(header)
+	value = strings.TrimSpace(value)
+	if header == "" {
+		header = "X-API-Key"
+	}
+	if value == "" {
+		return nil
+	}
+	return map[string]string{header: value}
+}
+
+func basicAuthorizationHeader(token string) map[string]string {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil
+	}
+	if strings.Contains(token, " ") {
+		return map[string]string{"Authorization": token}
+	}
+	return map[string]string{"Authorization": "Basic " + token}
 }
 
 func parseArgsCSV(raw string) []string {

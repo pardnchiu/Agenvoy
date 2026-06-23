@@ -101,10 +101,21 @@ func (c ServerConfig) Expand() ServerConfig {
 	if len(c.Headers) > 0 {
 		out.Headers = make(map[string]string, len(c.Headers))
 		for k, v := range c.Headers {
-			out.Headers[k] = os.ExpandEnv(v)
+			out.Headers[k] = normalizeHeaderValue(k, os.ExpandEnv(v))
 		}
 	}
 	return out
+}
+
+func normalizeHeaderValue(key, value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || !strings.EqualFold(strings.TrimSpace(key), "Authorization") {
+		return value
+	}
+	if len(strings.Fields(value)) > 1 {
+		return value
+	}
+	return "Bearer " + value
 }
 
 func (c ServerConfig) IsHTTP() bool {

@@ -424,11 +424,52 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, tea.Println(errorStyle.Render("[!] url required") + "\n")
 		}
 		t.mcpAdd.url = msg.url
+		next, cmd := t.openMcpAddAuthMethod()
+		return next, cmd
+
+	case McpAddAuthMethod:
+		switch msg.method {
+		case "none":
+			next, cmd := t.openMcpAddHeaders()
+			return next, cmd
+		case "bearer":
+			next, cmd := t.openMcpAddBearerToken()
+			return next, cmd
+		case "apikey":
+			next, cmd := t.openMcpAddAPIKeyHeader()
+			return next, cmd
+		case "basic":
+			next, cmd := t.openMcpAddBasicToken()
+			return next, cmd
+		}
+		t.mcpAdd = nil
+		return t, nil
+
+	case McpAddBearerToken:
+		t.mcpAdd.headers = bearerAuthorizationHeader(msg.token)
+		next, cmd := t.openMcpAddHeaders()
+		return next, cmd
+
+	case McpAddAPIKeyHeader:
+		t.mcpAdd.authHeaderName = msg.header
+		if t.mcpAdd.authHeaderName == "" {
+			t.mcpAdd.authHeaderName = "X-API-Key"
+		}
+		next, cmd := t.openMcpAddAPIKeyValue(t.mcpAdd.authHeaderName)
+		return next, cmd
+
+	case McpAddAPIKeyValue:
+		t.mcpAdd.headers = apiKeyHeader(t.mcpAdd.authHeaderName, msg.value)
+		next, cmd := t.openMcpAddHeaders()
+		return next, cmd
+
+	case McpAddBasicToken:
+		t.mcpAdd.headers = basicAuthorizationHeader(msg.token)
 		next, cmd := t.openMcpAddHeaders()
 		return next, cmd
 
 	case McpAddHeaders:
-		t.mcpAdd.headers = parseKV(msg.raw)
+		t.mcpAdd.headers = mergeMcpHeaders(t.mcpAdd.headers, parseKV(msg.raw))
 		next, cmd := t.openMcpAddScope()
 		return next, cmd
 

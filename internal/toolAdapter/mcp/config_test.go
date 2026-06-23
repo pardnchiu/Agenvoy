@@ -49,7 +49,10 @@ func TestServerConfig_Expand(t *testing.T) {
 		Command: "npx",
 		Args:    []string{"--token", "$TEST_MCP_TOKEN"},
 		Env:     map[string]string{"API_KEY": "$TEST_MCP_TOKEN"},
-		Headers: map[string]string{"Authorization": "Bearer $TEST_MCP_TOKEN"},
+		Headers: map[string]string{
+			"Authorization": "Bearer $TEST_MCP_TOKEN",
+			"X-Token":       "$TEST_MCP_TOKEN",
+		},
 	}
 
 	expanded := cfg.Expand()
@@ -65,6 +68,42 @@ func TestServerConfig_Expand(t *testing.T) {
 	}
 	if expanded.Headers["Authorization"] != "Bearer secret123" {
 		t.Errorf("headers Authorization = %q", expanded.Headers["Authorization"])
+	}
+	if expanded.Headers["X-Token"] != "secret123" {
+		t.Errorf("headers X-Token = %q", expanded.Headers["X-Token"])
+	}
+}
+
+func TestServerConfig_Expand_NormalizesBearerAuthorization(t *testing.T) {
+	os.Setenv("TEST_MCP_TOKEN", "secret123")
+	defer os.Unsetenv("TEST_MCP_TOKEN")
+
+	cfg := ServerConfig{
+		Headers: map[string]string{"Authorization": "$TEST_MCP_TOKEN"},
+	}
+
+	expanded := cfg.Expand()
+	if expanded.Headers["Authorization"] != "Bearer secret123" {
+		t.Errorf("headers Authorization = %q", expanded.Headers["Authorization"])
+	}
+}
+
+func TestServerConfig_Expand_KeepsExplicitAuthorizationScheme(t *testing.T) {
+	tests := []string{
+		"Bearer secret123",
+		"Basic c2VjcmV0",
+		"token ghp_secret123",
+	}
+
+	for _, auth := range tests {
+		cfg := ServerConfig{
+			Headers: map[string]string{"Authorization": auth},
+		}
+
+		expanded := cfg.Expand()
+		if expanded.Headers["Authorization"] != auth {
+			t.Errorf("headers Authorization = %q, want %q", expanded.Headers["Authorization"], auth)
+		}
 	}
 }
 
