@@ -20,11 +20,11 @@ var (
 	cooldownMap      sync.Map
 	providerPriority = map[string]int{
 		"codex":      0,
-		"grok-oauth": 1,
-		"grok":       2,
-		"openrouter": 3,
-		"deepseek":   4,
-		"copilot":    5,
+		"copilot":    1,
+		"grok-oauth": 2,
+		"grok":       3,
+		"openrouter": 4,
+		"deepseek":   5,
 		"claude":     6,
 		"gemini":     7,
 		"nvidia":     8,

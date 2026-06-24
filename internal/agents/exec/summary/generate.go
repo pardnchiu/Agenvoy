@@ -12,6 +12,7 @@ import (
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/agents/provider"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/session/summary"
 )
@@ -110,7 +111,10 @@ func generate(ctx context.Context, agent agentTypes.Agent, oldSummary string, hi
 }
 
 func exec(ctx context.Context, agent agentTypes.Agent, messages []agentTypes.Message) map[string]any {
+	prev := provider.GetReasoningLevel()
+	provider.SetReasoningLevel("medium")
 	resp, err := agent.Send(ctx, messages, nil)
+	provider.SetReasoningLevel(prev)
 	if err != nil {
 		slog.Warn("agentTypes.Agent Send",
 			slog.String("error", err.Error()))

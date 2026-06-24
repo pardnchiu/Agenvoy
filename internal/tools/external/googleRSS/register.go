@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
+
 	"slices"
 	"strings"
 
@@ -72,8 +72,6 @@ func Register() {
 			// avoid small agent like 4.1 be stupid to call with not support value
 			timeRange := strings.TrimSpace(params.TimeRange)
 			if timeRange != "" && !slices.Contains(timeRanges, timeRange) {
-				slog.Warn("invalid time_range, fallback to '7d'",
-					slog.String("session", e.SessionID))
 				timeRange = "7d"
 			}
 
@@ -81,8 +79,6 @@ func Register() {
 			ceid := strings.TrimSpace(params.CEID)
 			parts := strings.SplitN(ceid, ":", 2)
 			if params.CEID == "" || len(parts) != 2 {
-				slog.Warn("invalid CEID, fallback to 'TW:zh-Hant'",
-					slog.String("session", e.SessionID))
 				params.CEID = "TW:zh-Hant"
 				geo, lang = "TW", "zh-Hant"
 			} else {

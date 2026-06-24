@@ -149,7 +149,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		trace := make([]execStep, len(execTrace))
 		copy(trace, execTrace)
 		for _, s := range usedSkills {
-			postSkillImprove(s, trace)
+			go postSkillImprove(s, trace)
 		}
 	}()
 

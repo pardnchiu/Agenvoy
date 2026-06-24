@@ -21,7 +21,7 @@ import (
 
 const (
 	ProbeTimeout              = 15 * time.Second
-	DispatcherCallTimeout     = 10 * time.Second
+	DispatcherCallTimeout     = 30 * time.Second
 	UnresponsiveProbeInterval = 3 * time.Minute
 	HealthCheckTimeout        = 10 * time.Second
 )
@@ -97,6 +97,8 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 				{Role: "system", Content: strings.TrimSpace(configs.AgentSelector)},
 				{Role: "user", Content: fmt.Sprintf("Available agents:\n%s\nUser request: %s", string(agentJson), userContent)},
 			}
+			prev := provider.GetReasoningLevel()
+			provider.SetReasoningLevel("low")
 			for range len(registry.Entries) {
 				if ctx.Err() != nil {
 					break
@@ -150,6 +152,7 @@ func SelectAgentNames(ctx context.Context, bot agentTypes.Agent, registry agentT
 				}
 				bot = next
 			}
+			provider.SetReasoningLevel(prev)
 		}
 	}
 
