@@ -46,6 +46,14 @@ func IsReady() bool {
 	return conn != nil
 }
 
+func DeleteMessages(sessionID string) error {
+	if conn == nil {
+		return nil
+	}
+	_, err := conn.Write.Raw().Exec(`DELETE FROM messages WHERE session_id = ?`, sessionID)
+	return err
+}
+
 func IsExist(sessionID string) bool {
 	if conn == nil {
 		return false

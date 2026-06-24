@@ -777,6 +777,15 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd := t.finishSummary(msg)
 		return next, cmd
 
+	case CompactConfirm:
+		if !msg.yes {
+			return t, tea.Println(hintStyle.Render("⎯ compact cancelled") + "\n")
+		}
+		return t.runCompact(msg.id)
+
+	case CompactDone:
+		return t.finishCompact(msg)
+
 	case TaskEditSelect:
 		next, cmd := t.openTaskEditRequirement(msg.skill, msg.at)
 		return next, cmd

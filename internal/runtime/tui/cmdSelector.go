@@ -40,6 +40,7 @@ var commands = []Command{
 	{"dangerous", "remove-session / allow-skill / allow-cmd / allow-report"},
 	{"reset", "reset / refresh current session · double-confirm · summary regen first then drop history + task history + action.log"},
 	{"summary", "force / regenerate summary now · no confirm · runs the hourly cron pass on demand"},
+	{"compact", "remove redundant / meaningless exchanges from history via LLM analysis · confirm required"},
 	{"bot", "edit / rename current session · name / description (persona)"},
 	{"discord", "enable / disable Discord bot · gateway validated on enable"},
 	{"telegram", "enable / disable Telegram bot · getMe validated on enable"},
