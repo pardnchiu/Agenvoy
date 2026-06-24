@@ -20,6 +20,7 @@ import (
 	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime/tui"
+	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
 	tuiHash "github.com/pardnchiu/agenvoy/internal/session/tui"
@@ -84,6 +85,7 @@ func newTUI(initialInput string, onceCall, allowAll bool) {
 
 	mcpManager := initMCP(context.Background(), "")
 	defer mcpManager.Close()
+	mcp.SetManager(mcpManager)
 
 	registry := buildAgentRegistry()
 	scanner := runtime.NewSkillScanner()

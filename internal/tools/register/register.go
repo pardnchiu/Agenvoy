@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -77,6 +78,25 @@ func Regist(d Def) {
 	}
 	if d.Timeout > 0 {
 		timeoutMap[d.Name] = d.Timeout
+	}
+}
+
+func RemoveByPrefix(prefix string) {
+	defList = slices.DeleteFunc(defList, func(t toolTypes.Tool) bool {
+		return strings.HasPrefix(t.Function.Name, prefix)
+	})
+	builtinNames = slices.DeleteFunc(builtinNames, func(n string) bool {
+		return strings.HasPrefix(n, prefix)
+	})
+	for name := range handlerMap {
+		if strings.HasPrefix(name, prefix) {
+			delete(handlerMap, name)
+			delete(readOnlySet, name)
+			delete(alwaysLoadSet, name)
+			delete(concurrentSet, name)
+			delete(fireAndForgetSet, name)
+			delete(timeoutMap, name)
+		}
 	}
 }
 

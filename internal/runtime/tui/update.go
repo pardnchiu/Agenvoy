@@ -361,11 +361,20 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "remove":
 			next, cmd, _ := t.commandMcpRemove()
 			return next, cmd
+		case "reconnect":
+			next, cmd, _ := t.commandMcpReconnect()
+			return next, cmd
 		case "install":
 			next, cmd, _ := t.commandMcpInstall()
 			return next, cmd
 		}
 		return t, nil
+
+	case McpReconnectDone:
+		if msg.err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] mcp reconnect: %v", msg.err)) + "\n")
+		}
+		return t, tea.Println(hintStyle.Render("⎯ mcp reconnected") + "\n")
 
 	case McpInstallPick:
 		if msg.index < 0 || msg.index >= len(mcpInstallClients) {
@@ -398,7 +407,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "stdio":
 			next, cmd := t.openMcpAddCommand()
 			return next, cmd
-		case "http":
+		case "streamable-http":
 			next, cmd := t.openMcpAddURL()
 			return next, cmd
 		}

@@ -35,6 +35,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
+	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	configStatus "github.com/pardnchiu/agenvoy/internal/session/config/status"
 	historyStore "github.com/pardnchiu/agenvoy/internal/session/history/store"
@@ -241,6 +242,7 @@ func cmdDaemon() {
 
 	mcpManager := initMCP(context.Background(), "")
 	defer mcpManager.Close()
+	mcp.SetManager(mcpManager)
 
 	registry := buildAgentRegistry()
 	scanner := runtime.NewSkillScanner()
