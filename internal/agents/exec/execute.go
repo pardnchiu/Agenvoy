@@ -300,6 +300,10 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		data.ExcludeTools = append(data.ExcludeTools,
 			"format_chatbot", "list_chatbot", "send_to_chatbot")
 	}
+	if strings.HasPrefix(session.ID, "ln-") {
+		data.ExcludeTools = append(data.ExcludeTools,
+			"generate_image", "ask_user", "store_secret", "transcribe_media")
+	}
 
 	if len(data.ExcludeTools) > 0 {
 		excluded := make(map[string]bool, len(data.ExcludeTools))
