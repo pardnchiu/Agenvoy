@@ -3,14 +3,10 @@ package tui
 import (
 	"fmt"
 	"maps"
-	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/agenvoy/internal/toolAdapter/mcp"
 )
 
@@ -23,8 +19,6 @@ type mcpAddDraft struct {
 	url            string
 	headers        map[string]string
 	authHeaderName string
-	scope          string
-	sessionID      string
 }
 
 type McpAddName struct {
@@ -71,22 +65,17 @@ type McpAddBasicToken struct {
 	token string
 }
 
+type McpAddExtraHeaders struct {
+	yes bool
+}
+
 type McpAddHeaders struct {
 	raw string
 }
 
-type McpAddScope struct {
-	scope string
-}
-
-type McpAddSessionPick struct {
-	id string
-}
-
 type McpAddSaved struct {
-	name  string
-	scope string
-	err   error
+	name string
+	err  error
 }
 
 func (t TUI) commandMcpAdd() (TUI, tea.Cmd, bool) {
@@ -156,6 +145,19 @@ func (t TUI) openMcpAddURL() (TUI, tea.Cmd) {
 		title: "URL",
 		onConfirm: func(value string) any {
 			return McpAddURL{url: strings.TrimSpace(value)}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) openMcpAddExtraHeaders() (TUI, tea.Cmd) {
+	t.popup = &Popup{
+		kind:    popupSingleSelect,
+		title:   "Extra headers?",
+		options: []string{"no", "yes"},
+		values:  []string{"no", "yes"},
+		onConfirm: func(chosen string) any {
+			return McpAddExtraHeaders{yes: chosen == "yes"}
 		},
 	}
 	return t, nil
@@ -240,70 +242,6 @@ func (t TUI) openMcpAddBasicToken() (TUI, tea.Cmd) {
 	return t, nil
 }
 
-func (t TUI) openMcpAddScope() (TUI, tea.Cmd) {
-	t.popup = &Popup{
-		kind:    popupSingleSelect,
-		title:   "Scope",
-		options: []string{"global   all sessions", "session  pick one"},
-		values:  []string{"global", "session"},
-		onConfirm: func(chosen string) any {
-			return McpAddScope{scope: chosen}
-		},
-	}
-	return t, nil
-}
-
-func (t TUI) openMcpAddSessionPick() (TUI, tea.Cmd) {
-	sessions := availableSessions()
-	if len(sessions) == 0 {
-		err := fmt.Errorf("no sessions available")
-		t.mcpAdd = nil
-		return t, func() tea.Msg { return McpAddSaved{err: err} }
-	}
-	options := make([]string, len(sessions))
-	values := make([]string, len(sessions))
-	for i, s := range sessions {
-		label := s.id
-		if s.name != "" && s.name != s.id {
-			label = fmt.Sprintf("%s (%s)", s.id, s.name)
-		}
-		options[i] = label
-		values[i] = s.id
-	}
-	t.popup = &Popup{
-		kind:    popupSingleSelect,
-		title:   "Session",
-		options: options,
-		values:  values,
-		onConfirm: func(chosen string) any {
-			return McpAddSessionPick{id: chosen}
-		},
-	}
-	return t, nil
-}
-
-type sessionRef struct {
-	id   string
-	name string
-}
-
-func availableSessions() []sessionRef {
-	dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir)
-	if err != nil {
-		return nil
-	}
-	out := make([]sessionRef, 0, len(dirs))
-	for _, d := range dirs {
-		sid := d.Name
-		if !strings.HasPrefix(sid, "cli-") && !strings.HasPrefix(sid, "http-") {
-			continue
-		}
-		name, _ := configBot.Get(sid)
-		out = append(out, sessionRef{id: sid, name: name})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].id < out[j].id })
-	return out
-}
 
 func parseKV(raw string) map[string]string {
 	out := map[string]string{}
@@ -410,32 +348,17 @@ func (t TUI) finalizeMcpAdd() (TUI, tea.Cmd) {
 		cfg.Headers = d.headers
 	}
 
-	var path, scopeLabel string
-	switch d.scope {
-	case "global":
-		path = filesystem.McpPath
-		scopeLabel = "global"
-	case "session":
-		path = filesystem.McpSessionPath(d.sessionID)
-		scopeLabel = d.sessionID
-	default:
-		return t, func() tea.Msg { return McpAddSaved{name: d.name, err: fmt.Errorf("invalid scope")} }
-	}
-
-	existing, err := mcp.Load(path)
+	existing, err := mcp.Load()
 	if err != nil {
 		return t, func() tea.Msg {
-			return McpAddSaved{name: d.name, scope: scopeLabel, err: fmt.Errorf("mcp.Load: %w", err)}
+			return McpAddSaved{name: d.name, err: fmt.Errorf("mcp.Load: %w", err)}
 		}
-	}
-	if existing.Servers == nil {
-		existing.Servers = map[string]mcp.ServerConfig{}
 	}
 	existing.Servers[d.name] = cfg
-	if err := mcp.Save(path, existing); err != nil {
+	if err := mcp.Save(existing); err != nil {
 		return t, func() tea.Msg {
-			return McpAddSaved{name: d.name, scope: scopeLabel, err: fmt.Errorf("mcp.Save: %w", err)}
+			return McpAddSaved{name: d.name, err: fmt.Errorf("mcp.Save: %w", err)}
 		}
 	}
-	return t, func() tea.Msg { return McpAddSaved{name: d.name, scope: scopeLabel} }
+	return t, func() tea.Msg { return McpAddSaved{name: d.name} }
 }

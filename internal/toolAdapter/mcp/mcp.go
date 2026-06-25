@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
-	"strings"
 	"sync"
 
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -40,7 +39,7 @@ type ServerInfo struct {
 }
 
 func New(ctx context.Context, sessionID string) (*MCP, error) {
-	cfg, err := Read(sessionID)
+	cfg, err := Load()
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +65,7 @@ func (m *MCP) Status(sessionID string) []ServerInfo {
 	if m == nil {
 		return nil
 	}
-	cfg, err := Read(sessionID)
+	cfg, err := Load()
 	if err != nil {
 		return nil
 	}
@@ -105,7 +104,7 @@ func (m *MCP) Reconnect(ctx context.Context, sessionID string) error {
 
 	toolRegister.RemoveByPrefix("mcp__")
 
-	cfg, err := Read(strings.TrimSpace(sessionID))
+	cfg, err := Load()
 	if err != nil {
 		return err
 	}

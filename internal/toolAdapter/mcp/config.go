@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,18 +24,11 @@ type Config struct {
 	Servers map[string]ServerConfig `json:"servers,omitempty"`
 }
 
-type Scope string
-
-const (
-	ScopeGlobal  Scope = "global"
-	ScopeSession Scope = "session"
-)
-
-func Load(path string) (Config, error) {
-	if path == "" || !go_pkg_filesystem_reader.Exists(path) {
+func Load() (Config, error) {
+	if !go_pkg_filesystem_reader.Exists(filesystem.McpPath) {
 		return Config{Servers: map[string]ServerConfig{}}, nil
 	}
-	cfg, err := go_pkg_filesystem.ReadJSON[Config](path)
+	cfg, err := go_pkg_filesystem.ReadJSON[Config](filesystem.McpPath)
 	if err != nil {
 		return Config{}, fmt.Errorf("go_pkg_filesystem.ReadJSON: %w", err)
 	}
@@ -46,39 +38,17 @@ func Load(path string) (Config, error) {
 	return cfg, nil
 }
 
-func Save(path string, cfg Config) error {
+func Save(cfg Config) error {
 	if cfg.Servers == nil {
 		cfg.Servers = map[string]ServerConfig{}
 	}
-	if err := go_pkg_filesystem.CheckDir(filepath.Dir(path), true); err != nil {
+	if err := go_pkg_filesystem.CheckDir(filepath.Dir(filesystem.McpPath), true); err != nil {
 		return fmt.Errorf("go_pkg_filesystem.CheckDir: %w", err)
 	}
-	if err := go_pkg_filesystem.WriteJSON(path, cfg, true); err != nil {
+	if err := go_pkg_filesystem.WriteJSON(filesystem.McpPath, cfg, true); err != nil {
 		return fmt.Errorf("go_pkg_filesystem.WriteJSON: %w", err)
 	}
 	return nil
-}
-
-func Read(sessionID string) (Config, error) {
-	root, err := Load(filesystem.McpPath)
-	if err != nil {
-		return Config{}, err
-	}
-
-	sessionID = strings.TrimSpace(sessionID)
-	if sessionID == "" {
-		return root, nil
-	}
-	session, err := Load(filesystem.McpSessionPath(sessionID))
-	if err != nil {
-		return Config{}, err
-	}
-
-	merged := Config{Servers: map[string]ServerConfig{}}
-	maps.Copy(merged.Servers, root.Servers)
-	maps.Copy(merged.Servers, session.Servers)
-
-	return merged, nil
 }
 
 func (c ServerConfig) Expand() ServerConfig {
