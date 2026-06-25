@@ -5,10 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
-	"os/exec"
-	"runtime"
 	"time"
 
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -31,21 +28,6 @@ type DeviceCode struct {
 	VerificationURI string `json:"verification_uri"`
 	ExpiresIn       int    `json:"expires_in"`
 	Interval        int    `json:"interval"`
-}
-
-func (c *Agent) Login(ctx context.Context) (*Token, error) {
-	return c.LoginWithCallback(ctx, func(code *DeviceCode) {
-		expires := time.Now().Add(time.Duration(code.ExpiresIn) * time.Second)
-		fmt.Printf("[*] url:      %-36s\n", code.VerificationURI)
-		fmt.Printf("[*] code:     %-36s\n", code.UserCode)
-		fmt.Printf("[*] expires:  %-36s\n", expires.Format("2006-01-02 15:04:05"))
-		fmt.Print("[*] press Enter to open browser")
-		go func() {
-			var input string
-			fmt.Scanln(&input)
-			OpenBrowser(code.VerificationURI)
-		}()
-	})
 }
 
 func (c *Agent) LoginWithCallback(ctx context.Context, onCode func(*DeviceCode)) (*Token, error) {
@@ -87,25 +69,6 @@ func (c *Agent) LoginWithCallback(ctx context.Context, onCode func(*DeviceCode))
 	return nil, fmt.Errorf("device code expired")
 }
 
-func OpenBrowser(url string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", url)
-	case "linux":
-		cmd = exec.Command("xdg-open", url)
-	default:
-		fmt.Printf("[!] can not open browser, please open: %-48s\n", url)
-		return
-	}
-	if cmd != nil {
-		if err := cmd.Start(); err != nil {
-			slog.Warn("openBrowser cmd.Start",
-				slog.String("url", url),
-				slog.String("error", err.Error()))
-		}
-	}
-}
 
 type GopilotAccessToken struct {
 	AccessToken string `json:"access_token"`

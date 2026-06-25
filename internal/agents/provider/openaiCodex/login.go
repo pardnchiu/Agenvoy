@@ -7,26 +7,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
-	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
-
-func (a *Agent) Login(ctx context.Context) (*StoredToken, error) {
-	return a.LoginWithCallback(ctx, func(url string) {
-		fmt.Print("[x] OpenAI Codex OAuth: for dev testing, need ChatGPT Plus/Pro")
-		fmt.Printf("[x] url browser: %s│\n", url)
-		fmt.Print("[*] press Enter to open browser")
-		openBrowser(url)
-	})
-}
 
 func (a *Agent) LoginWithCallback(ctx context.Context, onURL func(string)) (*StoredToken, error) {
 	b := make([]byte, 32)
@@ -209,19 +197,3 @@ func parseAccountID(idToken string) string {
 	return claims.Auth.ChatGPTAccountID
 }
 
-func openBrowser(link string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", link)
-	case "linux":
-		cmd = exec.Command("xdg-open", link)
-	default:
-		return
-	}
-	if err := cmd.Start(); err != nil {
-		slog.Warn("openBrowser cmd.Start",
-			slog.String("url", link),
-			slog.String("error", err.Error()))
-	}
-}
