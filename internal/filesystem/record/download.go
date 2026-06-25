@@ -20,7 +20,7 @@ func CleanDownload() {
 	expiredAt := time.Now().Add(-downloadMaxAge)
 	entries, err := os.ReadDir(filesystem.DownloadDir)
 	if err != nil {
-		slog.Warn("os: ReadDir",
+		slog.Warn("os.ReadDir",
 			slog.String("dir", filesystem.DownloadDir),
 			slog.String("error", err.Error()))
 		return
@@ -48,7 +48,7 @@ func CleanDownload() {
 		}
 
 		if err := os.Rename(srcPath, dstPath); err != nil {
-			slog.Warn("os: Rename",
+			slog.Warn("os.Rename",
 				slog.String("src", srcPath),
 				slog.String("error", err.Error()))
 		}
@@ -59,7 +59,7 @@ func CleanDownloadTrash() {
 	expiredAt := time.Now().Add(-trashMaxAge)
 	entries, err := os.ReadDir(filesystem.DownloadTrashDir)
 	if err != nil {
-		slog.Warn("os: ReadDir",
+		slog.Warn("os.ReadDir",
 			slog.String("dir", filesystem.DownloadDir),
 			slog.String("error", err.Error()))
 		return
@@ -73,7 +73,7 @@ func CleanDownloadTrash() {
 		}
 
 		if err := os.RemoveAll(path); err != nil {
-			slog.Warn("os: RemoveAll",
+			slog.Warn("os.RemoveAll",
 				slog.String("path", path),
 				slog.String("error", err.Error()))
 		}

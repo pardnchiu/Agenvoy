@@ -11,52 +11,50 @@ import (
 )
 
 const (
-	maxDaemonLogSize  = 1 << 20
-	trimDaemonLogSize = 768 << 10
+	maxSize    = 1 << 20
+	trimToSize = 768 << 10
 )
 
 func TrimLog() error {
-	path := filesystem.DaemonLogPath
-
-	stat, err := os.Stat(path)
+	stat, err := os.Stat(filesystem.DaemonLogPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return fmt.Errorf("os Stat [%s]: %w", path, err)
+		return fmt.Errorf("os.Stat [%s]: %w", filesystem.DaemonLogPath, err)
 	}
-	if stat.Size() <= maxDaemonLogSize {
+	if stat.Size() <= maxSize {
 		return nil
 	}
 
-	data, err := go_pkg_filesystem.ReadText(path)
+	content, err := go_pkg_filesystem.ReadText(filesystem.DaemonLogPath)
 	if err != nil {
-		return fmt.Errorf("go_pkg_filesystem ReadText [%s]: %w", path, err)
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem.ReadText [%s]: %w", filesystem.DaemonLogPath, err)
 	}
 
-	raw := []byte(data)
-	if int64(len(raw)) <= maxDaemonLogSize {
+	raw := []byte(content)
+	if int64(len(raw)) <= maxSize {
 		return nil
 	}
 
-	cut := max(len(raw)-trimDaemonLogSize, 0)
-	for cut < len(raw) && raw[cut] != '\n' {
-		cut++
+	result := max(len(raw)-trimToSize, 0)
+	for result < len(raw) && raw[result] != '\n' {
+		result++
 	}
-	if cut < len(raw) {
-		cut++
+	if result < len(raw) {
+		result++
 	}
 
-	return go_pkg_filesystem.WriteFile(path, string(raw[cut:]), 0644)
+	if err := go_pkg_filesystem.WriteText(filesystem.DaemonLogPath, string(raw[result:])); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem.WriteText [%s]: %w", filesystem.DaemonLogPath, err)
+	}
+	return nil
 }
 
-func GetLog(maxBytes int64, cutoff time.Time) ([]string, error) {
-	lines, err := tailLog(maxBytes)
+func GetLog(maxBytes int64, startFrom time.Time) ([]string, error) {
+	lines, err := tailLogs(maxBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	collected := make([]string, 0, len(lines))
+	newLines := make([]string, 0, len(lines))
 	var lastTime time.Time
 	var haveTime bool
 	for _, line := range lines {
@@ -67,33 +65,32 @@ func GetLog(maxBytes int64, cutoff time.Time) ([]string, error) {
 			lastTime = t
 			haveTime = true
 		}
-		if haveTime && lastTime.Before(cutoff) {
+		if haveTime && lastTime.Before(startFrom) {
 			continue
 		}
 		if !strings.Contains(line, "WARN") && !strings.Contains(line, "ERROR") {
 			continue
 		}
-		collected = append(collected, line)
+		newLines = append(newLines, line)
 	}
-	return collected, nil
+	return newLines, nil
 }
 
-func tailLog(maxBytes int64) ([]string, error) {
-	path := filesystem.DaemonLogPath
-	file, err := os.Open(path)
+func tailLogs(maxBytes int64) ([]string, error) {
+	file, err := os.Open(filesystem.DaemonLogPath)
 	if err != nil {
-		return nil, fmt.Errorf("os Open [%s]: %w", path, err)
+		return nil, fmt.Errorf("os.Open [%s]: %w", filesystem.DaemonLogPath, err)
 	}
 	defer file.Close()
 
 	stat, err := file.Stat()
 	if err != nil {
-		return nil, fmt.Errorf("os File.Stat [%s]: %w", path, err)
+		return nil, fmt.Errorf("os.File.Stat [%s]: %w", filesystem.DaemonLogPath, err)
 	}
-	size := stat.Size()
 
-	offset := int64(0)
+	size := stat.Size()
 	readSize := size
+	offset := int64(0)
 	if maxBytes > 0 && size > maxBytes {
 		offset = size - maxBytes
 		readSize = maxBytes
@@ -102,19 +99,19 @@ func tailLog(maxBytes int64) ([]string, error) {
 	raw := make([]byte, readSize)
 	if readSize > 0 {
 		if _, err := file.ReadAt(raw, offset); err != nil {
-			return nil, fmt.Errorf("os File.ReadAt [%s]: %w", path, err)
+			return nil, fmt.Errorf("os.File.ReadAt [%s]: %w", filesystem.DaemonLogPath, err)
 		}
 	}
 
-	str := string(raw)
+	content := string(raw)
 	if offset > 0 {
-		if i := strings.IndexByte(str, '\n'); i >= 0 {
-			str = str[i+1:]
+		if i := strings.IndexByte(content, '\n'); i >= 0 {
+			content = content[i+1:]
 		} else {
-			str = ""
+			content = ""
 		}
 	}
-	return strings.Split(str, "\n"), nil
+	return strings.Split(content, "\n"), nil
 }
 
 func parseLog(line string) (time.Time, bool) {
