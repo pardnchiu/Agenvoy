@@ -2,7 +2,6 @@ package skill
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -18,65 +17,56 @@ type Skill struct {
 	AbsPath     string
 	Path        string
 	Content     string
-	Body        string
-	Hash        string
 }
 
 var (
-	skillFrontmatterRegex = regexp.MustCompile(`(?s)^---\n(.*?)\n---\n?(.*)$`)
-	skillNameRegex        = regexp.MustCompile(`(?m)^name:\s*(.+)$`)
-	skillBodyStripRegex   = regexp.MustCompile(`(?s)^---\n.*?\n---\n?`)
+	frontRegex = regexp.MustCompile(`(?s)^---\n(.*?)\n---\n?(.*)$`)
+	nameRegex  = regexp.MustCompile(`(?m)^name:\s*(.+)$`)
+	bodyRegex  = regexp.MustCompile(`(?s)^---\n.*?\n---\n?`)
 )
 
 func Get(path string) (*Skill, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return nil, fmt.Errorf("filepath Abs: %w", err)
+		return nil, fmt.Errorf("filepath.Abs [%s]: %w", path, err)
 	}
 
-	str, err := go_pkg_filesystem.ReadText(absPath)
+	content, err := go_pkg_filesystem.ReadText(absPath)
 	if err != nil {
-		return nil, fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem ReadText [%s]: %w", path, err)
+		return nil, fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem.ReadText [%s]: %w", path, err)
 	}
 
-	return ParseBytes(absPath, filepath.Dir(path), []byte(str)), nil
-}
-
-func ParseBytes(absPath, folderPath string, data []byte) *Skill {
-	hash := fmt.Sprintf("%x", sha256.Sum256(data))
-	str := string(data)
+	raw := []byte(content)
 	skill := &Skill{
-		Name:    filepath.Base(folderPath),
+		Name:    filepath.Base(path),
 		AbsPath: absPath,
-		Path:    folderPath,
-		Content: str,
-		Body:    str,
-		Hash:    hash,
+		Path:    path,
+		Content: content,
 	}
-	header, body, err := getHeader(data)
+	header, _, err := getFront(raw)
 	if err != nil {
-		return skill
+		return skill, nil
 	}
 
-	skill.Body = body
-	if matches := skillNameRegex.FindSubmatch(header); matches != nil {
+	if matches := nameRegex.FindSubmatch(header); matches != nil {
 		skill.Name = strings.TrimSpace(string(matches[1]))
 	}
 	skill.Description = getDescription(header)
-	return skill
+	return skill, nil
 }
 
-func getHeader(content []byte) ([]byte, string, error) {
-	matches := skillFrontmatterRegex.FindSubmatch(content)
+func getFront(content []byte) ([]byte, string, error) {
+	matches := frontRegex.FindSubmatch(content)
 	if matches == nil {
 		return nil, "", fmt.Errorf("header not found")
 	}
-	result := bytes.TrimSpace(matches[1])
+
+	front := bytes.TrimSpace(matches[1])
 	body := strings.TrimSpace(string(matches[2]))
-	return result, body, nil
+	return front, body, nil
 }
 
-func (s *Skill) ResolvedContent() string {
+func (s *Skill) Resolved() string {
 	content := s.Content
 	for _, prefix := range []string{"scripts/", "templates/", "assets/"} {
 		resolved := filepath.Join(s.Path, prefix)

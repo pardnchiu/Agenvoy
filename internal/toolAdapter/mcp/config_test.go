@@ -121,23 +121,10 @@ func TestServerConfig_Expand_Empty(t *testing.T) {
 	}
 }
 
-func TestLoad_MissingFile(t *testing.T) {
-	cfg, err := Load("/nonexistent/mcp.json")
+func TestLoad_NoFile(t *testing.T) {
+	cfg, err := Load()
 	if err != nil {
-		t.Fatalf("Load missing: %v", err)
-	}
-	if cfg.Servers == nil {
-		t.Error("Servers should be initialized")
-	}
-	if len(cfg.Servers) != 0 {
-		t.Errorf("Servers len = %d, want 0", len(cfg.Servers))
-	}
-}
-
-func TestLoad_EmptyPath(t *testing.T) {
-	cfg, err := Load("")
-	if err != nil {
-		t.Fatalf("Load empty: %v", err)
+		t.Fatalf("Load: %v", err)
 	}
 	if cfg.Servers == nil {
 		t.Error("Servers should be initialized")

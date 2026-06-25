@@ -20,7 +20,7 @@ func GetSchedule(name string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem/reader ReadText [%s]: %w", path, err)
 	}
-	return strings.TrimSpace(skillBodyStripRegex.ReplaceAllString(result, "")), nil
+	return strings.TrimSpace(bodyRegex.ReplaceAllString(result, "")), nil
 }
 
 func TrashSchedule(ctx context.Context, name string) error {

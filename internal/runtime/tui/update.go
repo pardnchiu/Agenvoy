@@ -430,8 +430,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case McpAddEnv:
 		t.mcpAdd.env = parseKV(msg.raw)
-		next, cmd := t.openMcpAddScope()
-		return next, cmd
+		return t.finalizeMcpAdd()
 
 	case McpAddURL:
 		if msg.url == "" {
@@ -445,70 +444,52 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case McpAddAuthMethod:
 		switch msg.method {
 		case "none":
-			next, cmd := t.openMcpAddHeaders()
-			return next, cmd
+			return t.openMcpAddExtraHeaders()
 		case "bearer":
-			next, cmd := t.openMcpAddBearerToken()
-			return next, cmd
+			return t.openMcpAddBearerToken()
 		case "apikey":
-			next, cmd := t.openMcpAddAPIKeyHeader()
-			return next, cmd
+			return t.openMcpAddAPIKeyHeader()
 		case "basic":
-			next, cmd := t.openMcpAddBasicToken()
-			return next, cmd
+			return t.openMcpAddBasicToken()
 		}
 		t.mcpAdd = nil
 		return t, nil
 
 	case McpAddBearerToken:
 		t.mcpAdd.headers = bearerAuthorizationHeader(msg.token)
-		next, cmd := t.openMcpAddHeaders()
-		return next, cmd
+		return t.openMcpAddExtraHeaders()
 
 	case McpAddAPIKeyHeader:
 		t.mcpAdd.authHeaderName = msg.header
 		if t.mcpAdd.authHeaderName == "" {
 			t.mcpAdd.authHeaderName = "X-API-Key"
 		}
-		next, cmd := t.openMcpAddAPIKeyValue(t.mcpAdd.authHeaderName)
-		return next, cmd
+		return t.openMcpAddAPIKeyValue(t.mcpAdd.authHeaderName)
 
 	case McpAddAPIKeyValue:
 		t.mcpAdd.headers = apiKeyHeader(t.mcpAdd.authHeaderName, msg.value)
-		next, cmd := t.openMcpAddHeaders()
-		return next, cmd
+		return t.openMcpAddExtraHeaders()
 
 	case McpAddBasicToken:
 		t.mcpAdd.headers = basicAuthorizationHeader(msg.token)
-		next, cmd := t.openMcpAddHeaders()
-		return next, cmd
+		return t.openMcpAddExtraHeaders()
+
+	case McpAddExtraHeaders:
+		if !msg.yes {
+			return t.finalizeMcpAdd()
+		}
+		return t.openMcpAddHeaders()
 
 	case McpAddHeaders:
 		t.mcpAdd.headers = mergeMcpHeaders(t.mcpAdd.headers, parseKV(msg.raw))
-		next, cmd := t.openMcpAddScope()
-		return next, cmd
-
-	case McpAddScope:
-		t.mcpAdd.scope = msg.scope
-		switch msg.scope {
-		case "global":
-			return t.finalizeMcpAdd()
-		case "session":
-			next, cmd := t.openMcpAddSessionPick()
-			return next, cmd
-		}
-		t.mcpAdd = nil
-		return t, nil
-
-	case McpAddSessionPick:
-		t.mcpAdd.sessionID = msg.id
 		return t.finalizeMcpAdd()
 
 	case McpAddSaved:
 		if msg.err != nil {
 			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] mcp add: %v", msg.err)) + "\n")
 		}
-		return t, tea.Println(hintStyle.Render(fmt.Sprintf("⎯ mcp added: %s (%s) · restart daemon to apply", msg.name, msg.scope)) + "\n")
+		next, cmd, _ := t.commandMcpReconnect()
+		return next, tea.Batch(tea.Println(hintStyle.Render(fmt.Sprintf("⎯ mcp added: %s", msg.name))), cmd)
 
 	case ReasoningScopeSelect:
 		switch msg.scope {

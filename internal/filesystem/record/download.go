@@ -12,20 +12,16 @@ import (
 )
 
 const (
-	downloadMaxAge = 30 * 24 * time.Hour
+	downloadMaxAge = 7 * 24 * time.Hour
 	trashMaxAge    = 30 * 24 * time.Hour
 )
 
 func CleanDownload() {
-	src := filepath.Join(filesystem.AgenvoyDir, "download")
-	if !go_pkg_filesystem_reader.IsDir(src) {
-		return
-	}
-
-	cutoff := time.Now().Add(-downloadMaxAge)
-	entries, err := os.ReadDir(src)
+	expiredAt := time.Now().Add(-downloadMaxAge)
+	entries, err := os.ReadDir(filesystem.DownloadDir)
 	if err != nil {
-		slog.Warn("record CleanDownload ReadDir",
+		slog.Warn("os.ReadDir",
+			slog.String("dir", filesystem.DownloadDir),
 			slog.String("error", err.Error()))
 		return
 	}
@@ -34,62 +30,52 @@ func CleanDownload() {
 		if entry.Name() == ".Trash" {
 			continue
 		}
-		path := filepath.Join(src, entry.Name())
+
 		info, err := entry.Info()
-		if err != nil {
-			continue
-		}
-		if info.ModTime().After(cutoff) {
+		if err != nil || info.ModTime().After(expiredAt) {
 			continue
 		}
 
-		dst := filepath.Join(filesystem.DownloadTrashDir, entry.Name())
-		if go_pkg_filesystem_reader.Exists(dst) {
-			dst = filepath.Join(filesystem.DownloadTrashDir, fmt.Sprintf("%s-%d%s",
-				nameWithoutExt(entry.Name()),
+		srcPath := filepath.Join(filesystem.DownloadDir, entry.Name())
+		dstPath := filepath.Join(filesystem.DownloadTrashDir, entry.Name())
+		if go_pkg_filesystem_reader.Exists(dstPath) {
+			ext := filepath.Ext(entry.Name())
+			dstName := fmt.Sprintf("%s-%d%s",
+				entry.Name()[:len(entry.Name())-len(ext)],
 				time.Now().Unix(),
-				filepath.Ext(entry.Name())))
+				ext)
+			dstPath = filepath.Join(filesystem.DownloadTrashDir, dstName)
 		}
-		if err := os.Rename(path, dst); err != nil {
-			slog.Warn("record CleanDownload Rename",
-				slog.String("src", path),
+
+		if err := os.Rename(srcPath, dstPath); err != nil {
+			slog.Warn("os.Rename",
+				slog.String("src", srcPath),
 				slog.String("error", err.Error()))
 		}
 	}
 }
 
 func CleanDownloadTrash() {
-	dir := filesystem.DownloadTrashDir
-	if !go_pkg_filesystem_reader.IsDir(dir) {
-		return
-	}
-
-	cutoff := time.Now().Add(-trashMaxAge)
-	entries, err := os.ReadDir(dir)
+	expiredAt := time.Now().Add(-trashMaxAge)
+	entries, err := os.ReadDir(filesystem.DownloadTrashDir)
 	if err != nil {
-		slog.Warn("record CleanDownloadTrash ReadDir",
+		slog.Warn("os.ReadDir",
+			slog.String("dir", filesystem.DownloadDir),
 			slog.String("error", err.Error()))
 		return
 	}
 
 	for _, entry := range entries {
-		path := filepath.Join(dir, entry.Name())
+		path := filepath.Join(filesystem.DownloadTrashDir, entry.Name())
 		info, err := entry.Info()
-		if err != nil {
+		if err != nil || info.ModTime().After(expiredAt) {
 			continue
 		}
-		if info.ModTime().After(cutoff) {
-			continue
-		}
+
 		if err := os.RemoveAll(path); err != nil {
-			slog.Warn("record CleanDownloadTrash RemoveAll",
+			slog.Warn("os.RemoveAll",
 				slog.String("path", path),
 				slog.String("error", err.Error()))
 		}
 	}
-}
-
-func nameWithoutExt(name string) string {
-	ext := filepath.Ext(name)
-	return name[:len(name)-len(ext)]
 }

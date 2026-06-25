@@ -232,6 +232,7 @@ func CleanupPending(sessionID, taskHash string) {
 			slog.String("dst", dst),
 			slog.String("error", err.Error()))
 		os.Remove(src)
+		return
 	}
 }
 

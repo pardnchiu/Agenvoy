@@ -6,14 +6,12 @@ import (
 	"html"
 	"log/slog"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime/chatbot"
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
-	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 )
 
@@ -129,14 +127,7 @@ func saveAttachments(ctx context.Context, b *Bot, in go_bot_telegram.Input) []ch
 		return nil
 	}
 
-	dir := filepath.Join(filesystem.AgenvoyDir, "download")
-	if err := go_pkg_filesystem.CheckDir(dir, true); err != nil {
-		slog.Warn("github.com/pardnchiu/go-pkg/filesystem CheckDir",
-			slog.String("dir", dir),
-			slog.String("error", err.Error()))
-		return nil
-	}
-
+	dir := filesystem.DownloadDir
 	var saved []chatbot.SavedAttachment
 	for _, item := range items {
 		path, err := b.client.Save(ctx, item.fileID, dir)

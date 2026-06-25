@@ -22,22 +22,21 @@ func UpdateUsage(model string, input, output, cacheCreate, cacheRead int) error 
 		return nil
 	}
 
-	path := filesystem.UsagePath
-	lockPath := path + ".lock"
-	lock, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0600)
+	lockPath := filesystem.UsagePath + ".lock"
+	file, err := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		return fmt.Errorf("os OpenFile [%x]: %w", lockPath, err)
+		return fmt.Errorf("os.OpenFile [%s]: %w", lockPath, err)
 	}
-	defer lock.Close()
+	defer file.Close()
 
-	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX); err != nil {
-		return fmt.Errorf("syscall Flock: %w", err)
+	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
+		return fmt.Errorf("syscall.Flock [%s]: %w", lockPath, err)
 	}
-	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
+	defer syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
 
 	usage := make(map[string]Usage)
-	if go_pkg_filesystem_reader.Exists(path) {
-		if loaded, err := go_pkg_filesystem.ReadJSON[map[string]Usage](path); err == nil && loaded != nil {
+	if go_pkg_filesystem_reader.Exists(filesystem.UsagePath) {
+		if loaded, err := go_pkg_filesystem.ReadJSON[map[string]Usage](filesystem.UsagePath); err == nil && loaded != nil {
 			usage = loaded
 		}
 	}
@@ -50,8 +49,8 @@ func UpdateUsage(model string, input, output, cacheCreate, cacheRead int) error 
 		CacheRead:   prev.CacheRead + cacheRead,
 	}
 
-	if err := go_pkg_filesystem.WriteJSON(path, usage, false); err != nil {
-		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem WriteJSON [%s]: %w", path, err)
+	if err := go_pkg_filesystem.WriteJSON(filesystem.UsagePath, usage, false); err != nil {
+		return fmt.Errorf("github.com/pardnchiu/go-pkg/filesystem.WriteJSON [%s]: %w", filesystem.UsagePath, err)
 	}
 	return nil
 }

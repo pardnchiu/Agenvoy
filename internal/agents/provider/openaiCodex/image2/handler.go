@@ -90,10 +90,7 @@ func handler(ctx context.Context, _ *toolTypes.Executor, args json.RawMessage) (
 		return fmt.Sprintf("base64 decode: %s", err.Error()), nil
 	}
 
-	downloadDir := filepath.Join(filesystem.AgenvoyDir, "download")
-	if err := go_pkg_filesystem.CheckDir(downloadDir, true); err != nil {
-		return fmt.Sprintf("ensure download dir: %s", err.Error()), nil
-	}
+	downloadDir := filesystem.DownloadDir
 
 	outPath := filepath.Join(downloadDir, fmt.Sprintf("agenvoy-img-%s.png", go_pkg_utils.UUID()))
 	// * os.WriteFile retained: binary PNG bytes; go-pkg/filesystem.WriteFile only takes string content

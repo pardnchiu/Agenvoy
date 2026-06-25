@@ -143,6 +143,7 @@ func (t TUI) handleAgentEvent(ev agentTypes.Event) (tea.Model, tea.Cmd) {
 			t.lastIn = ev.Usage.Input
 			t.lastOut = ev.Usage.Output
 		}
+
 	}
 
 	line, ok := renderAgentEvent(ev, t.runTarget, t.cwd)

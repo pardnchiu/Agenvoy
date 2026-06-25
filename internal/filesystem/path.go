@@ -113,13 +113,8 @@ func Init() error {
 		LegacyAPIToolsDir = filepath.Join(AgenvoyDir, "api_tools")
 		LegacyScriptToolsDir = filepath.Join(AgenvoyDir, "script_tools")
 
-		systemDownloads := filepath.Join(homeDir, "Downloads")
-		if go_pkg_filesystem_reader.IsDir(systemDownloads) {
-			DownloadDir = systemDownloads
-		} else {
-			DownloadDir = filepath.Join(AgenvoyDir, "download")
-		}
-		DownloadTrashDir = filepath.Join(AgenvoyDir, "download", ".Trash")
+		DownloadDir = filepath.Join(AgenvoyDir, "download")
+		DownloadTrashDir = filepath.Join(DownloadDir, ".Trash")
 		SessionsTrashDir = filepath.Join(SessionsDir, ".Trash")
 		AllowSkillGlobalPath = filepath.Join(AgenvoyDir, "allow_skill")
 		PromptsDir = filepath.Join(AgenvoyDir, "prompts")
@@ -190,9 +185,7 @@ func InputHistoryPath(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), ".history")
 }
 
-func McpSessionPath(sessionID string) string {
-	return filepath.Join(SessionDir(sessionID), "mcp.json")
-}
+
 
 func PendingDir(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), "pending")

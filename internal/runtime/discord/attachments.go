@@ -10,7 +10,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime/chatbot"
 	go_bot_discord "github.com/pardnchiu/go-bot/discord"
-	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 )
 
 func sendAttachments(ctx context.Context, client *go_bot_discord.Bot, channelID, channelName, replyTo string, paths []string) {
@@ -50,14 +49,7 @@ func saveAttachments(ctx context.Context, b *Bot, in go_bot_discord.Input) []cha
 		return nil
 	}
 
-	dir := filepath.Join(filesystem.AgenvoyDir, "download")
-	if err := go_pkg_filesystem.CheckDir(dir, true); err != nil {
-		slog.Warn("github.com/pardnchiu/go-pkg/filesystem CheckDir",
-			slog.String("dir", dir),
-			slog.String("error", err.Error()))
-		return nil
-	}
-
+	dir := filesystem.DownloadDir
 	var saved []chatbot.SavedAttachment
 	for _, att := range in.Attachments {
 		if att == nil {

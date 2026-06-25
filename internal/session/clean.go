@@ -24,17 +24,40 @@ func Clean() {
 		if !entry.IsDir() {
 			continue
 		}
-		name := entry.Name()
-		if !strings.HasPrefix(name, "temp-") {
+		sessionDir := filesystem.SessionDir(entry.Name())
+
+		if strings.HasPrefix(entry.Name(), "temp-") {
+			if now.Sub(latestModTime(sessionDir)) > time.Hour {
+				if err := os.RemoveAll(sessionDir); err != nil {
+					slog.Warn("os RemoveAll",
+						slog.String("dir", entry.Name()),
+						slog.String("error", err.Error()))
+				}
+			}
 			continue
 		}
-		sessionDir := filesystem.SessionDir(entry.Name())
-		if now.Sub(latestModTime(sessionDir)) > time.Hour {
-			if err := os.RemoveAll(sessionDir); err != nil {
-				slog.Warn("os RemoveAll",
-					slog.String("dir", entry.Name()),
-					slog.String("error", err.Error()))
-			}
+
+		cleanTaskHistory(sessionDir, now)
+	}
+}
+
+
+func cleanTaskHistory(sessionDir string, now time.Time) {
+	histDir := filepath.Join(sessionDir, "history")
+	files, err := os.ReadDir(histDir)
+	if err != nil {
+		return
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+		info, err := f.Info()
+		if err != nil {
+			continue
+		}
+		if now.Sub(info.ModTime()) > 3*24*time.Hour {
+			os.Remove(filepath.Join(histDir, f.Name()))
 		}
 	}
 }

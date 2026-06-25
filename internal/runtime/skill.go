@@ -1,8 +1,6 @@
 package runtime
 
 import (
-	"fmt"
-	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -106,42 +104,6 @@ func (s *SkillScanner) scan(root string, list *SkillList) error {
 	}
 
 	return nil
-}
-
-func (s *SkillScanner) LoadFS(fsys fs.FS, dir string) {
-	entries, err := fs.ReadDir(fsys, dir)
-	if err != nil {
-		slog.Warn("fs.ReadDir", slog.String("error", err.Error()))
-		return
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		skillPath := fmt.Sprintf("%s/%s/SKILL.md", dir, entry.Name())
-		raw, err := fs.ReadFile(fsys, skillPath)
-		if err != nil {
-			continue
-		}
-
-		folderPath := fmt.Sprintf("%s/%s", dir, entry.Name())
-		skill := skill.ParseBytes(skillPath, folderPath, raw)
-		if skill.Name == "" {
-			skill.Name = entry.Name()
-		}
-
-		if _, exists := s.Skills.ByName[skill.Name]; exists {
-			continue
-		}
-
-		s.Skills.ByName[skill.Name] = skill
-		s.Skills.ByPath[skill.AbsPath] = skill
-	}
 }
 
 func (s *SkillScanner) List() []string {
