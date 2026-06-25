@@ -60,7 +60,7 @@ Result is advisory — integrate what fits.`,
 
 			var sb strings.Builder
 			fmt.Fprintf(&sb, "skill: %s\nskill directory: %s\n\n---\n\n", skill.Name, skill.Path)
-			sb.WriteString(skill.ResolvedContent())
+			sb.WriteString(skill.Resolved())
 			return sb.String(), nil
 		},
 	})
