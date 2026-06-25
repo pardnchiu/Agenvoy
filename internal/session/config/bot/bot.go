@@ -118,28 +118,6 @@ func FormatName(raw string) string {
 	return sb.String()
 }
 
-func UpdateName(prefix, name string) {
-	if prefix == "" || name == "" {
-		return
-	}
-	dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir)
-	if err != nil {
-		return
-	}
-	for _, d := range dirs {
-		sid := d.Name
-		if !strings.HasPrefix(sid, prefix) {
-			continue
-		}
-		bot := read(sid)
-		if bot.Name != "" && !strings.HasPrefix(bot.Name, "tg-") && !strings.HasPrefix(bot.Name, "dc-") {
-			continue
-		}
-		bot.Name = name
-		writeBotFile(sid, bot)
-	}
-}
-
 func ReplaceDefault(sessionID, name string) {
 	if sessionID == "" || name == "" {
 		return
