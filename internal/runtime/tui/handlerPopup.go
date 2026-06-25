@@ -31,8 +31,9 @@ type Popup struct {
 
 	kind      popupType
 	title     string
-	subtitle  string
-	diffLines []string
+	subtitle    string
+	styledLines []string
+	diffLines   []string
 
 	options    []string
 	values     []string

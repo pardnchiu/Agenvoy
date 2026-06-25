@@ -89,6 +89,14 @@ func (t TUI) handleAgentEvent(ev agentTypes.Event) (tea.Model, tea.Cmd) {
 		if ev.ToolName != "" && ev.ToolName != "ask_user" && ev.ToolName != "store_secret" &&
 			ev.ToolName != "list_recent_tool_call" && ev.ToolName != "read_tool_call" {
 			t.activity = "tool: " + ev.ToolName
+			line, ok := renderAgentEvent(ev, t.runTarget, t.cwd)
+			if ok {
+				t.toolBuf = append(t.toolBuf, line)
+				if len(t.toolBuf) > 5 {
+					t.toolBuf = t.toolBuf[len(t.toolBuf)-5:]
+				}
+			}
+			return t, nil
 		}
 
 	case agentTypes.EventSummaryGenerate:
@@ -96,6 +104,7 @@ func (t TUI) handleAgentEvent(ev agentTypes.Event) (tea.Model, tea.Cmd) {
 
 	case agentTypes.EventText:
 		if ev.Source == "" {
+			t.toolBuf = nil
 			raw := ev.Text
 
 			if len(t.tableBuf) > 0 {
@@ -128,6 +137,7 @@ func (t TUI) handleAgentEvent(ev agentTypes.Event) (tea.Model, tea.Cmd) {
 		return t, nil
 
 	case agentTypes.EventDone:
+		t.toolBuf = nil
 		if ev.Usage != nil {
 			t.tokens = ev.Usage.Input + ev.Usage.Output
 			t.lastIn = ev.Usage.Input

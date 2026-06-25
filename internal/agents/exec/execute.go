@@ -149,7 +149,7 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 		trace := make([]execStep, len(execTrace))
 		copy(trace, execTrace)
 		for _, s := range usedSkills {
-			postSkillImprove(s, trace)
+			go postSkillImprove(s, trace)
 		}
 	}()
 
@@ -437,6 +437,14 @@ func Execute(ctx context.Context, data ExecData, session *agentTypes.AgentSessio
 			}
 			isTimeout := isSendTimeoutError(err, sendCtxErr)
 			modelName := data.Agent.Name()
+
+			if rateLimit := isRateLimit(err); rateLimit != nil {
+				cooldownMap.Store(rateLimit.Agent, rateLimit.ResetsAt)
+				slog.Warn("data.Agent.Send rate limited, model cooldown registered",
+					slog.String("session", session.ID),
+					slog.String("name", rateLimit.Agent),
+					slog.Int64("resets_at", rateLimit.ResetsAt))
+			}
 
 			if isContextLengthError(err) {
 				sendFailCount++

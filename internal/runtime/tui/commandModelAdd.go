@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
@@ -730,6 +731,11 @@ func fetchRemoteModelIDs(ctx context.Context, endpoint string, headers map[strin
 
 	data, status, err := go_pkg_http.GET[modelsResponse](ctx, client, endpoint, headers)
 	if err != nil || status != http.StatusOK {
+		slog.Warn("fetchRemoteModelIDs",
+			slog.String("provider", prov),
+			slog.String("endpoint", endpoint),
+			slog.Int("status", status),
+			slog.Any("error", err))
 		return nil
 	}
 	ids := make([]string, 0, len(data.Data))

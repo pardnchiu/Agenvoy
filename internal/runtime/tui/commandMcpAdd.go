@@ -105,8 +105,8 @@ func (t TUI) openMcpAddTransport() (TUI, tea.Cmd) {
 	t.popup = &Popup{
 		kind:    popupSingleSelect,
 		title:   "Transport",
-		options: []string{"stdio  local command", "http   remote server"},
-		values:  []string{"stdio", "http"},
+		options: []string{"stdio            local command", "streamable-http  remote server"},
+		values:  []string{"stdio", "streamable-http"},
 		onConfirm: func(chosen string) any {
 			return McpAddTransport{transport: chosen}
 		},
@@ -405,7 +405,7 @@ func (t TUI) finalizeMcpAdd() (TUI, tea.Cmd) {
 		cfg.Command = d.command
 		cfg.Args = d.args
 		cfg.Env = d.env
-	case "http":
+	case "streamable-http":
 		cfg.URL = d.url
 		cfg.Headers = d.headers
 	}

@@ -13,9 +13,9 @@ import (
 
 func summaryRouter() agentTypes.Agent {
 	if a := agents.SummaryBot(); a != nil {
-		return a
+		return checkCooldown(a, agents.Registry())
 	}
-	return agents.DispatcherBot()
+	return checkCooldown(agents.DispatcherBot(), agents.Registry())
 }
 
 func ForceSummary(ctx context.Context, sessionID string) (int, error) {

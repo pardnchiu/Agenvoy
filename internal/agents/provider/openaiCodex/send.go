@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -93,9 +94,18 @@ func (a *Agent) Send(ctx context.Context, messages []agentTypes.Message, tools [
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		var buf bytes.Buffer
-		buf.ReadFrom(resp.Body)
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, buf.String())
+		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<10))
+		body := strings.TrimSpace(string(raw))
+		if resp.StatusCode == http.StatusTooManyRequests {
+			if resetsAt := parseResetsAt(body); resetsAt > 0 {
+				return nil, &exec.RateLimit{
+					Agent:    a.Name(),
+					ResetsAt: resetsAt,
+					Body:     body,
+				}
+			}
+		}
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, body)
 	}
 
 	return parseSSEStream(resp)
@@ -287,4 +297,16 @@ func parseSSEStream(resp *http.Response) (*agentTypes.Output, error) {
 		},
 		Usage: usage,
 	}, nil
+}
+
+func parseResetsAt(body string) int64 {
+	var envelope struct {
+		Error struct {
+			ResetsAt int64 `json:"resets_at"`
+		} `json:"error"`
+	}
+	if json.Unmarshal([]byte(body), &envelope) == nil && envelope.Error.ResetsAt > 0 {
+		return envelope.Error.ResetsAt
+	}
+	return 0
 }

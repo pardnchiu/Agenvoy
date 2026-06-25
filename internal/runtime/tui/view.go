@@ -66,6 +66,12 @@ func (t TUI) viewIdle() string {
 }
 
 func (t TUI) viewThinking() string {
+	var sb strings.Builder
+	for _, line := range t.toolBuf {
+		sb.WriteString(line)
+		sb.WriteByte('\n')
+	}
+
 	verb := activityVerb(t.activity)
 	elapsed := formatTime(int(time.Since(t.runStartedAt).Seconds()))
 
@@ -75,9 +81,12 @@ func (t TUI) viewThinking() string {
 	}
 	detail = append(detail, "esc to interrupt")
 
-	return systemStyle.Render(t.spinner.View()) + " " +
-		systemStyle.Render(verb+"…") + " " +
-		hintStyle.Render("("+strings.Join(detail, " · ")+")")
+	sb.WriteString(systemStyle.Render(t.spinner.View()))
+	sb.WriteString(" ")
+	sb.WriteString(systemStyle.Render(verb + "…"))
+	sb.WriteString(" ")
+	sb.WriteString(hintStyle.Render("(" + strings.Join(detail, " · ") + ")"))
+	return sb.String()
 }
 
 func (t TUI) shortCwd() string {
@@ -114,6 +123,7 @@ func (t TUI) viewPopup() string {
 	if p.subtitle != "" {
 		body = append(body, textStyle.Render(p.subtitle))
 	}
+	body = append(body, p.styledLines...)
 	for _, dl := range p.diffLines {
 		if strings.HasPrefix(dl, "- ") {
 			body = append(body, diffOldStyle.Render("  "+dl))

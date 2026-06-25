@@ -39,6 +39,7 @@ type TUI struct {
 	cancelExec    context.CancelFunc
 	runStartedAt  time.Time
 	pendingResume *ResumeExec
+	lastInput     string
 
 	popup                  *Popup
 	popupQueue             []Pending
@@ -71,6 +72,7 @@ type TUI struct {
 	streaming      bool
 	tableBuf       []string
 
+	toolBuf         []string
 	inputHistory    []string
 	inputHistoryIdx int
 

@@ -81,7 +81,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if t.running && t.cancelExec != nil {
 				t.cancelExec()
-				return t, tea.Println(hintStyle.Render("⎯ cancelling…") + "\n")
+				return t, tea.Println(warnStyle.Render("⎯ cancelled") + "\n")
 			}
 
 		case tea.KeyRunes:
@@ -165,6 +165,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return t, nil
 			}
 			t = t.recordInputHistory(content)
+			t.lastInput = content
 			t.textarea.Reset()
 			t.textarea.SetHeight(1)
 
@@ -204,6 +205,11 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.activity = ""
 		t.runTarget = ""
 		t.streaming = false
+		if errors.Is(msg.err, context.Canceled) && t.lastInput != "" {
+			t.textarea.SetValue(t.lastInput)
+			t.textarea.SetHeight(max(1, min(t.textarea.LineCount(), 5)))
+			t.lastInput = ""
+		}
 		if t.currentSessionID != "" {
 			t.currentSessionName, _ = configBot.Get(t.currentSessionID)
 		}
@@ -355,11 +361,20 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "remove":
 			next, cmd, _ := t.commandMcpRemove()
 			return next, cmd
+		case "reconnect":
+			next, cmd, _ := t.commandMcpReconnect()
+			return next, cmd
 		case "install":
 			next, cmd, _ := t.commandMcpInstall()
 			return next, cmd
 		}
 		return t, nil
+
+	case McpReconnectDone:
+		if msg.err != nil {
+			return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] mcp reconnect: %v", msg.err)) + "\n")
+		}
+		return t, tea.Println(hintStyle.Render("⎯ mcp reconnected") + "\n")
 
 	case McpInstallPick:
 		if msg.index < 0 || msg.index >= len(mcpInstallClients) {
@@ -392,7 +407,7 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "stdio":
 			next, cmd := t.openMcpAddCommand()
 			return next, cmd
-		case "http":
+		case "streamable-http":
 			next, cmd := t.openMcpAddURL()
 			return next, cmd
 		}
@@ -793,6 +808,15 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case SummaryDone:
 		next, cmd := t.finishSummary(msg)
 		return next, cmd
+
+	case CompactConfirm:
+		if !msg.yes {
+			return t, tea.Println(hintStyle.Render("⎯ compact cancelled") + "\n")
+		}
+		return t.runCompact(msg.id)
+
+	case CompactDone:
+		return t.finishCompact(msg)
 
 	case TaskEditSelect:
 		next, cmd := t.openTaskEditRequirement(msg.skill, msg.at)
