@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	downloadMaxAge = 30 * 24 * time.Hour
+	downloadMaxAge = 7 * 24 * time.Hour
 	trashMaxAge    = 30 * 24 * time.Hour
 )
 

@@ -67,7 +67,7 @@ func New(model ...string) (*Agent, error) {
 }
 
 func (a *Agent) Name() string {
-	return a.model
+	return prefix + a.model
 }
 
 func HasToken() bool {

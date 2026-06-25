@@ -19,7 +19,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
-	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
@@ -48,8 +47,6 @@ func Send() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "content is required"})
 			return
 		}
-
-		go sessionManager.Clean()
 
 		sessionID := req.SessionID
 		if sessionID == "" {

@@ -90,6 +90,20 @@ func addDefaultCrons() {
 	}
 }
 
+func AddSystemCron(spec string, fn func()) error {
+	st := get()
+	if st == nil {
+		return fmt.Errorf("scheduler not initialized")
+	}
+	fn()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if _, err := st.cron.Add(spec, fn); err != nil {
+		return fmt.Errorf("cron.Add: %w", err)
+	}
+	return nil
+}
+
 func StopScheduler() {
 	smu.RLock()
 	cur := s

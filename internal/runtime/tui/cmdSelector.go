@@ -308,7 +308,6 @@ func (t TUI) selectCommand() TUI {
 	return t
 }
 
-
 const cmdSelectorMaxVisible = 12
 
 func renderCmdSelector(p *CmdSelector) string {
