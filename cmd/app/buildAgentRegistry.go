@@ -6,6 +6,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/claude"
+	"github.com/pardnchiu/agenvoy/internal/agents/provider/cloudflare"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/compat"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/copilot"
 	"github.com/pardnchiu/agenvoy/internal/agents/provider/deepseek"
@@ -30,6 +31,7 @@ func buildAgentRegistry() agentTypes.AgentRegistry {
 		"grok-oauth": func(m string) (agentTypes.Agent, error) { return grokoauth.New(m) },
 		"copilot":    func(m string) (agentTypes.Agent, error) { return copilot.New(m) },
 		"nvidia":     func(m string) (agentTypes.Agent, error) { return nvidia.New(m) },
+		"cloudflare":  func(m string) (agentTypes.Agent, error) { return cloudflare.New(m) },
 		"deepseek":    func(m string) (agentTypes.Agent, error) { return deepseek.New(m) },
 		"openrouter": func(m string) (agentTypes.Agent, error) { return openrouter.New(m) },
 		"compat":     func(m string) (agentTypes.Agent, error) { return compat.New(m) },

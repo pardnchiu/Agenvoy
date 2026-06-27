@@ -37,6 +37,10 @@ type ModelAddCompatURLSubmit struct{ url string }
 type ModelAddCompatKeySubmit struct{ key string }
 type ModelAddModelMultiPick struct{ chosen string }
 type ModelAddDone struct{ err error }
+type ModelAddAccountIDReplace struct{ replace string }
+type ModelAddAccountIDSubmit struct{ id string }
+type ModelAddGatewayIDPick struct{ chosen string }
+type ModelAddGatewayIDSubmit struct{ id string }
 type CompatModelsResult struct{ ids []string }
 type RemoteModelsResult struct{ ids []string }
 type OpenAIMethodPick struct{ method string }
@@ -62,6 +66,7 @@ var modelAddProviders = []struct {
 	{"deepseek", "DeepSeek        API key"},
 	{"nvidia", "NVIDIA NIM      API key"},
 	{"openrouter", "OpenRouter      API key"},
+	{"cloudflare", "Cloudflare      Workers AI · API token + account ID"},
 	{"compat", "Local/Custom    Ollama, LM Studio, or custom URL"},
 }
 
@@ -113,6 +118,8 @@ func (t TUI) runModelAddProviderPick(name string) (TUI, tea.Cmd) {
 			},
 		}
 		return t, nil
+	case "cloudflare":
+		return t.openModelAddAccountID()
 	case "copilot", "codex", "grok-oauth":
 		return t.modelAddViaOAuth()
 	case "compat":
@@ -335,6 +342,113 @@ func (t TUI) runModelAddAPIKeySubmit(key string) (TUI, tea.Cmd) {
 	if err := config.SaveKey(envKey); err != nil {
 		t.modelAdd = nil
 		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] session.SaveKey: %v", err)) + "\n")
+	}
+	if t.modelAdd.provider == "cloudflare" {
+		return t.openModelAddGatewayID()
+	}
+	return t.openModelAddModelPick()
+}
+
+func (t TUI) openModelAddAccountID() (TUI, tea.Cmd) {
+	if keychain.Get("CLOUDFLARE_ACCOUNT_ID") != "" {
+		t.popup = &Popup{
+			kind:    popupSingleSelect,
+			title:   "Cloudflare account ID exists · replace?",
+			options: []string{"No   keep existing", "Yes  overwrite"},
+			values:  []string{"no", "yes"},
+			onConfirm: func(chosen string) any {
+				return ModelAddAccountIDReplace{replace: chosen}
+			},
+		}
+		return t, nil
+	}
+	t.popup = &Popup{
+		kind:  popupText,
+		title: "Cloudflare account ID",
+		onConfirm: func(value string) any {
+			return ModelAddAccountIDSubmit{id: strings.TrimSpace(value)}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) runModelAddAccountIDReplace(replace string) (TUI, tea.Cmd) {
+	if t.modelAdd == nil {
+		return t, tea.Println(errorStyle.Render("[!] model add state lost") + "\n")
+	}
+	if replace == "yes" {
+		t.popup = &Popup{
+			kind:  popupText,
+			title: "Cloudflare account ID (new)",
+			onConfirm: func(value string) any {
+				return ModelAddAccountIDSubmit{id: strings.TrimSpace(value)}
+			},
+		}
+		return t, nil
+	}
+	return t.openModelAddAPIKey()
+}
+
+func (t TUI) runModelAddAccountIDSubmit(id string) (TUI, tea.Cmd) {
+	if t.modelAdd == nil {
+		return t, tea.Println(errorStyle.Render("[!] model add state lost") + "\n")
+	}
+	if id == "" {
+		t.modelAdd = nil
+		return t, tea.Println(errorStyle.Render("[!] account ID required") + "\n")
+	}
+	if err := keychain.Set("CLOUDFLARE_ACCOUNT_ID", id); err != nil {
+		t.modelAdd = nil
+		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] keychain.Set: %v", err)) + "\n")
+	}
+	return t.openModelAddAPIKey()
+}
+
+func (t TUI) openModelAddGatewayID() (TUI, tea.Cmd) {
+	t.popup = &Popup{
+		kind:    popupSingleSelect,
+		title:   "Cloudflare AI Gateway ID",
+		options: []string{"default", "Custom   enter gateway ID"},
+		values:  []string{"default", "custom"},
+		onConfirm: func(chosen string) any {
+			return ModelAddGatewayIDPick{chosen: chosen}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) runModelAddGatewayIDPick(chosen string) (TUI, tea.Cmd) {
+	if t.modelAdd == nil {
+		return t, tea.Println(errorStyle.Render("[!] model add state lost") + "\n")
+	}
+	if chosen == "custom" {
+		t.popup = &Popup{
+			kind:  popupText,
+			title: "Cloudflare AI Gateway ID",
+			onConfirm: func(value string) any {
+				return ModelAddGatewayIDSubmit{id: strings.TrimSpace(value)}
+			},
+		}
+		return t, nil
+	}
+	if err := keychain.Set("CLOUDFLARE_GATEWAY_ID", "default"); err != nil {
+		t.modelAdd = nil
+		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] keychain.Set: %v", err)) + "\n")
+	}
+	return t.openModelAddModelPick()
+}
+
+func (t TUI) runModelAddGatewayIDSubmit(id string) (TUI, tea.Cmd) {
+	if t.modelAdd == nil {
+		return t, tea.Println(errorStyle.Render("[!] model add state lost") + "\n")
+	}
+	if id == "" {
+		t.modelAdd = nil
+		return t, tea.Println(errorStyle.Render("[!] gateway ID required") + "\n")
+	}
+	if err := keychain.Set("CLOUDFLARE_GATEWAY_ID", id); err != nil {
+		t.modelAdd = nil
+		return t, tea.Println(errorStyle.Render(fmt.Sprintf("[!] keychain.Set: %v", err)) + "\n")
 	}
 	return t.openModelAddModelPick()
 }
@@ -680,6 +794,17 @@ func remoteModelsEndpoint(prov string) (string, map[string]string) {
 		}
 	}
 
+	if prov == "cloudflare" {
+		apiKey := keychain.Get("CLOUDFLARE_API_KEY")
+		accountID := keychain.Get("CLOUDFLARE_ACCOUNT_ID")
+		if apiKey == "" || accountID == "" {
+			return "", nil
+		}
+		return "https://api.cloudflare.com/client/v4/accounts/" + accountID + "/ai/models/search", map[string]string{
+			"Authorization": "Bearer " + apiKey,
+		}
+	}
+
 	info, ok := remoteModelsProviders[prov]
 	if !ok {
 		return "", nil
@@ -711,8 +836,31 @@ type geminiModelsResponse struct {
 	} `json:"models"`
 }
 
+type cloudflareModelsResponse struct {
+	Result []struct {
+		Name string `json:"name"`
+		Task struct {
+			Name string `json:"name"`
+		} `json:"task"`
+	} `json:"result"`
+}
+
 func fetchRemoteModelIDs(ctx context.Context, endpoint string, headers map[string]string, prov string) []string {
 	client := &http.Client{Timeout: 10 * time.Second}
+
+	if prov == "cloudflare" {
+		data, status, err := go_pkg_http.GET[cloudflareModelsResponse](ctx, client, endpoint, headers)
+		if err != nil || status != http.StatusOK {
+			return nil
+		}
+		ids := make([]string, 0, len(data.Result))
+		for _, m := range data.Result {
+			if m.Name != "" && m.Task.Name == "Text Generation" {
+				ids = append(ids, m.Name)
+			}
+		}
+		return ids
+	}
 
 	if prov == "gemini" {
 		data, status, err := go_pkg_http.GET[geminiModelsResponse](ctx, client, endpoint, headers)
