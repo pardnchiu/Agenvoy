@@ -586,6 +586,18 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ModelAddAPIKeySubmit:
 		return t.runModelAddAPIKeySubmit(msg.key)
 
+	case ModelAddAccountIDReplace:
+		return t.runModelAddAccountIDReplace(msg.replace)
+
+	case ModelAddAccountIDSubmit:
+		return t.runModelAddAccountIDSubmit(msg.id)
+
+	case ModelAddGatewayIDPick:
+		return t.runModelAddGatewayIDPick(msg.chosen)
+
+	case ModelAddGatewayIDSubmit:
+		return t.runModelAddGatewayIDSubmit(msg.id)
+
 	case ModelAddCompatNameSubmit:
 		return t.runModelAddCompatNameSubmit(msg.name)
 

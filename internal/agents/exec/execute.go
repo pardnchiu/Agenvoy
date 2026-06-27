@@ -43,6 +43,7 @@ const (
 
 var (
 	timestampHeaderRegex   = regexp.MustCompile(`(?m)^-{3,}\n.*\n-{3,}\n`)
+	summaryBlockRegex      = regexp.MustCompile(`(?s)<summary>\s*[\s\S]*?\s*</summary>|\[summary\]\s*[\s\S]*?\s*\[/summary\]`)
 	summaryLeakMarkerRegex = regexp.MustCompile(`(?i)(?:Prior Conversation Context|Prior summary|background summary of prior discussion|Strict rules:|"key_decisions"\s*:\s*\[|"current_discussion"\s*:\s*\{)`)
 )
 
@@ -52,6 +53,7 @@ func isGuardrailRefusal(content string) bool {
 
 func StripModelResponse(str string) string {
 	str = timestampHeaderRegex.ReplaceAllString(str, "")
+	str = summaryBlockRegex.ReplaceAllString(str, "")
 	if loc := summaryLeakMarkerRegex.FindStringIndex(str); loc != nil {
 		dropped := strings.TrimSpace(str[loc[0]:])
 		head := dropped
