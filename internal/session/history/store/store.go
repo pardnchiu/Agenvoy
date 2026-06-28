@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	go_sqlite "github.com/pardnchiu/go-sqlite"
-	go_sqlite_core "github.com/pardnchiu/go-sqlite/core"
+	go_sqlkit "github.com/pardnchiu/go-sqlkit"
+	go_sqlkit_core "github.com/pardnchiu/go-sqlkit/core"
 )
 
 //go:embed migrate.sql
@@ -14,18 +14,18 @@ var migrateSQL string
 
 var (
 	once sync.Once
-	conn *go_sqlite_core.Connector
+	conn *go_sqlkit_core.Connector
 )
 
 func New(dbPath string) error {
 	var initErr error
 	once.Do(func() {
-		c, err := go_sqlite.New(go_sqlite_core.Config{Path: dbPath})
+		c, err := go_sqlkit.New(go_sqlkit_core.Config{Target: go_sqlkit_core.SQLite, Path: dbPath})
 		if err != nil {
-			initErr = fmt.Errorf("github.com/pardnchiu/go-sqlite New: %w", err)
+			initErr = fmt.Errorf("github.com/pardnchiu/go-sqlkit New: %w", err)
 			return
 		}
-		if _, err := c.Write.Raw().Exec(migrateSQL); err != nil {
+		if _, err := c.Exec(migrateSQL); err != nil {
 			c.Close()
 			initErr = fmt.Errorf("sql.DB Exec [migrate]: %w", err)
 			return
@@ -52,7 +52,7 @@ func IsExist(sessionID string) bool {
 	}
 
 	var exists bool
-	conn.Read.Raw().QueryRow(`
+	conn.Read.QueryRow(`
 	SELECT EXISTS(SELECT 1 FROM messages WHERE session_id = ?)
 	`, sessionID).Scan(&exists)
 	return exists
@@ -63,7 +63,7 @@ func SetStartAt(sessionID string, timestamp int64) error {
 		return nil
 	}
 
-	_, err := conn.Write.Raw().Exec(`
+	_, err := conn.Exec(`
 	INSERT INTO session_meta (session_id, start_at)
 	VALUES (?, ?)
 	ON CONFLICT(session_id)
@@ -78,7 +78,7 @@ func GetStartAt(sessionID string) int64 {
 	}
 
 	var ts int64
-	conn.Read.Raw().QueryRow(`
+	conn.Read.QueryRow(`
 	SELECT start_at
 	FROM session_meta
 	WHERE session_id = ?
