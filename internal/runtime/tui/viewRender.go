@@ -257,7 +257,6 @@ func messageBlock(str string) string {
 		}
 		sb.WriteString(userStyle.Render(line))
 	}
-	sb.WriteString("\n")
 	return sb.String()
 }
 
@@ -293,7 +292,7 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 
 	switch ev.Type {
 	case agentTypes.EventSkillResult:
-		return hintStyle.Render("⏵ " + srcPrefix + "Skill(" + ev.Text + ")"), true
+		return skillStyle.Render("⏵ " + srcPrefix + "Skill(" + ev.Text + ")"), true
 
 	case agentTypes.EventAgentSelect:
 		if ev.Source == "" {
