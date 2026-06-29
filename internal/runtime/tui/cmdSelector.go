@@ -53,6 +53,7 @@ var commands = []Command{
 	{"log", "open / view raw action.log via $PAGER (less)"},
 	{"cmd", "run / exec shell command directly in cwd · sh -c"},
 	{"pending", "list / resume interrupted tasks · error recovery · ask_user resume"},
+	{"sudo", "enable / disable elevated mode · bypass command allowlist · 1h auto-expire"},
 	{"key", "update / rotate keychain value · pick from recorded keys"},
 	{"clear", "clear visible transcript / history · memory untouched"},
 	{"exit", "exit / quit TUI · daemon keeps running"},

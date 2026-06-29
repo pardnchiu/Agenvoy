@@ -71,3 +71,6 @@ var NetWhiteList []byte
 //go:embed jsons/tui_tools.json
 var TUITools []byte
 
+//go:embed jsons/never_open.json
+var NeverOpen []byte
+

@@ -13,6 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/sudo"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -193,7 +194,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 				} else {
 					proceed = reply.Approve
 					reason = reply.Reason
-					if reply.Approve && reply.Remember {
+					if reply.Approve && reply.Remember && !sudo.IsActive() {
 						if err = allowTool.Append(exec.WorkDir, toolName, toolArg); err != nil {
 							slog.Warn("appendAllowListRule",
 								slog.String("session", sessionData.ID),
