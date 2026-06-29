@@ -281,7 +281,7 @@ func cmdDaemon() {
 
 	route := routes.New()
 	server := &http.Server{
-		Addr:    ":" + filesystem.Port,
+		Addr:    "127.0.0.1:" + filesystem.Port,
 		Handler: route,
 	}
 
