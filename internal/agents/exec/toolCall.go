@@ -410,11 +410,6 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 	return sessionData, alreadyCall, nil
 }
 
-func getAllowList(ctx context.Context) []allowTool.ToolRule {
-	rules, _ := ctx.Value(allowListRulesKey{}).([]allowTool.ToolRule)
-	return rules
-}
-
 func runToolExec(ctx context.Context, exec *toolTypes.Executor, s *toolSlot, events chan<- agentTypes.Event) {
 	events <- agentTypes.Event{
 		Type:     agentTypes.EventToolCall,
