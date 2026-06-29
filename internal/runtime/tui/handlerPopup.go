@@ -12,6 +12,7 @@ import (
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/sudo"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -44,6 +45,7 @@ type Popup struct {
 	input          string
 	multiline      bool
 	skipWithReason bool
+	sudoActive     bool
 
 	questions   []runtime.Question
 	questionIdx int
@@ -149,37 +151,23 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		t = t.closePopup()
 
 	case tea.KeyEnter:
-		if p.cursor == 3 {
+		chosen := p.options[p.cursor]
+		var reply runtime.Reply
+		switch {
+		case chosen == "Yes":
+			reply = runtime.Reply{Approve: true}
+		case strings.HasPrefix(chosen, "Yes  don't ask again"):
+			reply = runtime.Reply{Approve: true, Remember: true}
+		case strings.HasPrefix(chosen, "Yes  allow this turn"):
+			reply = runtime.Reply{Approve: true, AllowTurn: true}
+		case chosen == "No":
 			p.kind = popupText
 			p.skipWithReason = true
 			p.title = "Reason (enter to skip):"
 			p.input = ""
 			return t, nil
-		}
-		var reply runtime.Reply
-		switch p.cursor {
-		case 0:
-			reply = runtime.Reply{
-				Approve: true,
-			}
-
-		case 1:
-			reply = runtime.Reply{
-				Approve:  true,
-				Remember: true,
-			}
-
-		case 2:
-			reply = runtime.Reply{
-				Approve:   true,
-				AllowTurn: true,
-			}
-
-		case 4:
-			reply = runtime.Reply{
-				Approve: false,
-				Error:   fmt.Errorf("user stopped"),
-			}
+		case chosen == "Abort task":
+			reply = runtime.Reply{Approve: false, Error: fmt.Errorf("user stopped")}
 		}
 		runtime.Resolve(p.pendingId, reply)
 		t = t.closePopup()
@@ -361,18 +349,28 @@ func newPopup(id string, req runtime.Request) *Popup {
 		if display == "" {
 			display = req.ToolArgs
 		}
-		p := &Popup{
-			pendingId: id,
-			kind:      popupConfirm,
-			title:     fmt.Sprintf("Run %s?", utils.ToolName(req.ToolName)),
-			subtitle:  go_pkg_utils.TruncateString(display, 256),
-			options: []string{
+		options := []string{
+			"Yes",
+			"Yes  don't ask again",
+			"Yes  allow this turn",
+			"No",
+			"Abort task",
+		}
+		if sudo.IsActive() {
+			options = []string{
 				"Yes",
-				"Yes  don't ask again",
 				"Yes  allow this turn",
 				"No",
 				"Abort task",
-			},
+			}
+		}
+		p := &Popup{
+			pendingId:   id,
+			kind:        popupConfirm,
+			title:       fmt.Sprintf("Run %s?", utils.ToolName(req.ToolName)),
+			subtitle:    go_pkg_utils.TruncateString(display, 256),
+			options:     options,
+			sudoActive:  sudo.IsActive(),
 		}
 		switch req.ToolName {
 		case "patch_file", "patch_tool", "patch_skill":

@@ -11,6 +11,7 @@ import (
 
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
+	sessionLog "github.com/pardnchiu/agenvoy/internal/session/log"
 )
 
 const logHeartbeat = 25 * time.Second
@@ -40,6 +41,17 @@ func StreamSessionLog() gin.HandlerFunc {
 			}
 			c.Writer.Flush()
 		}
+
+		for _, ev := range sessionLog.RecentEvents(sid, 100) {
+			raw, err := json.Marshal(ev)
+			if err != nil {
+				continue
+			}
+			if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", raw); err != nil {
+				return
+			}
+		}
+		c.Writer.Flush()
 
 		ctx := c.Request.Context()
 		heartbeat := time.NewTicker(logHeartbeat)

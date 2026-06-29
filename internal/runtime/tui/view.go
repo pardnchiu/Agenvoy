@@ -10,6 +10,7 @@ import (
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/sudo"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -40,7 +41,10 @@ func (t TUI) viewIdle() string {
 	}
 
 	var confirmMode string
-	if t.allowAll {
+	if sudo.IsActive() {
+		remain := sudo.RemainingSeconds()
+		confirmMode = errorStyle.Render(fmt.Sprintf(" [SUDO/%dm]", remain/60)) + hintStyle.Render(" "+t.shortCwd())
+	} else if t.allowAll {
 		confirmMode = errorStyle.Render(" [auto]") + hintStyle.Render(" "+t.shortCwd())
 	} else {
 		confirmMode = okayStyle.Render(" [safe]") + hintStyle.Render(" "+t.shortCwd())

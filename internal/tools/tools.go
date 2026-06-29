@@ -13,6 +13,7 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/sudo"
 	toolTypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 
 	"github.com/pardnchiu/agenvoy/configs"
@@ -75,10 +76,16 @@ func changeWorkDir(e *toolTypes.Executor, args []string) (string, error) {
 	}
 	abs = filepath.Clean(abs)
 
-	for _, dir := range filesystem.DeniedMap.Dirs {
-		needle := "/" + dir
-		if strings.Contains(abs, needle+"/") || strings.HasSuffix(abs, needle) {
-			return "", fmt.Errorf("access denied: %s", dir)
+	if sudo.IsActive() {
+		if blocked, hit := sudo.HitFloor(abs); hit {
+			return "", fmt.Errorf("access denied (floor): %s", blocked)
+		}
+	} else {
+		for _, dir := range filesystem.DeniedMap.Dirs {
+			needle := "/" + dir
+			if strings.Contains(abs, needle+"/") || strings.HasSuffix(abs, needle) {
+				return "", fmt.Errorf("access denied: %s", dir)
+			}
 		}
 	}
 

@@ -12,7 +12,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 )
 
-const kuradbInstallURL = "https://cloud.agenvoy.com/KuraDB/install.sh"
+const kuradbInstallURL = "https://agenvoy.com/scripts/kuradb/install.sh"
 
 type KuradbAction struct {
 	action string

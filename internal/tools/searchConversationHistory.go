@@ -263,27 +263,6 @@ func semanticHits(ctx context.Context, db *toriidb.Session, sessionID, keyword s
 	return out
 }
 
-func mergeHits(primary, secondary []historyHit) []historyHit {
-	seen := make(map[string]struct{}, len(primary)+len(secondary))
-	out := make([]historyHit, 0, len(primary)+len(secondary))
-
-	for _, h := range primary {
-		if _, ok := seen[h.Key]; ok {
-			continue
-		}
-		seen[h.Key] = struct{}{}
-		out = append(out, h)
-	}
-	for _, h := range secondary {
-		if _, ok := seen[h.Key]; ok {
-			continue
-		}
-		seen[h.Key] = struct{}{}
-		out = append(out, h)
-	}
-	return out
-}
-
 func expandWindows(hits []historyHit, allKeys []string, keyIdx map[string]int, exclude map[string]struct{}) []int {
 	set := make(map[int]struct{}, len(hits)*(historyWindowBefore+historyWindowAfter+1))
 	for _, h := range hits {

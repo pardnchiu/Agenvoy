@@ -58,8 +58,8 @@ func Send() gin.HandlerFunc {
 		}
 
 		events := make(chan agentTypes.Event, 64)
-		ctx := c.Request.Context()
-		wrapped := pubsub.Wrap(ctx, sessionID, events, 64)
+		execCtx := context.WithoutCancel(c.Request.Context())
+		wrapped := pubsub.Wrap(execCtx, sessionID, events, 64)
 
 		go func() {
 			defer close(wrapped)
@@ -106,7 +106,7 @@ func Send() gin.HandlerFunc {
 					}
 				}
 				if agent == nil {
-					primary, rest, err := exec.ResolveAgent(ctx, agents.DispatcherBot(), registry, trimContent, false, sessionID)
+					primary, rest, err := exec.ResolveAgent(execCtx, agents.DispatcherBot(), registry, trimContent, false, sessionID)
 					if err != nil {
 						wrapped <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 						return
@@ -140,20 +140,20 @@ func Send() gin.HandlerFunc {
 					slog.String("error", err.Error()))
 			}
 
-			session, err := newSession(ctx, data, sessionID)
+			session, err := newSession(execCtx, data, sessionID)
 			if err != nil {
 				wrapped <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 				return
 			}
 
 			if externalAgent != "" {
-				if err := exec.CallExternal(ctx, session.ID, externalAgent, trimContent, externalReadOnly, wrapped); err != nil {
+				if err := exec.CallExternal(execCtx, session.ID, externalAgent, trimContent, externalReadOnly, wrapped); err != nil {
 					wrapped <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 				}
 				return
 			}
 
-			if err := exec.Execute(ctx, data, session, wrapped, true); err != nil {
+			if err := exec.Execute(execCtx, data, session, wrapped, true); err != nil {
 				wrapped <- agentTypes.Event{Type: agentTypes.EventError, Err: err}
 				return
 			}

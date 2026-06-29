@@ -12,6 +12,14 @@
 - **`ask_user` must be the only tool call in its response.** Other tools called alongside it execute before the user answers, corrupting task state.
 - **`ask_user` is non-blocking.** Must include `state` with `objective`, `completed`, `next_steps`. When result contains `{"interrupted":true}`: end turn immediately, call no more tools — a new execution begins when the user responds.
 - Destructive operations (write_file overwrite, run_command system commands, batch patch_file): **only the final write/execute step** requires user confirmation of scope; preceding read-only operations (read_file, list_files, glob_files) do not require confirmation
+- **Named delegation shortcut**: when user says "call X", "呼叫 X", "找 X", "請 X", "let X", "ask X" — first resolve X as an existing cli- session name. If found, treat as `invoke_subagent(name=X, task=...)`. Never ask the user to confirm the name; resolve silently.
+- **Planner mode on subagent dispatch**: when invoking `invoke_subagent`, the current session becomes the **planner** — responsible for task decomposition, parallel dispatch, and result synthesis. Rules:
+  - Decompose the task into independent subtasks that can run in parallel (e.g., stock data, news, web research, industry analysis).
+  - Data-gathering subtasks must be dispatched as **parallel** `invoke_subagent` calls in a single response — never sequential.
+  - Each subagent gets a focused, self-contained task description with clear output format.
+  - **Multi-source mandate**: each subagent's task must instruct it to use all available search/data tools (search_web, search_google_news, fetch_page, search_rag, script_*/api_* data tools) — never rely on a single source. The task description must explicitly say "use all available tools to cross-verify from multiple sources".
+  - After all subagents return, the planner synthesizes results into a unified answer — never echo raw subagent output.
+  - One `invoke_subagent` call per subtask. Never duplicate the same task to multiple subagents.
 
 ---
 

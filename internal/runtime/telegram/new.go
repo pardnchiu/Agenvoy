@@ -15,7 +15,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/agenvoy/internal/utils"
-	"github.com/pardnchiu/go-bot/telegram"
 	go_bot_telegram "github.com/pardnchiu/go-bot/telegram"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
@@ -24,7 +23,7 @@ import (
 const Key = "TELEGRAM_TOKEN"
 
 type Bot struct {
-	client    *telegram.Bot
+	client    *go_bot_telegram.Bot
 	cancel    context.CancelFunc
 	listener  *runtime.Listener[int64, int]
 	fileGroup *fileGroupBuffer
@@ -32,7 +31,7 @@ type Bot struct {
 
 var current atomic.Pointer[Bot]
 
-func (b *Bot) Client() *telegram.Bot {
+func (b *Bot) Client() *go_bot_telegram.Bot {
 	if b == nil {
 		return nil
 	}
@@ -49,8 +48,8 @@ func New() (*Bot, error) {
 		return nil, nil
 	}
 
-	client, err := telegram.New(token,
-		telegram.WithHTTPClient(&http.Client{Timeout: 5 * time.Minute}),
+	client, err := go_bot_telegram.New(token,
+		go_bot_telegram.WithHTTPClient(&http.Client{Timeout: 5 * time.Minute}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("github.com/pardnchiu/go-bot/telegram New: %w", err)
@@ -58,12 +57,12 @@ func New() (*Bot, error) {
 
 	bot := &Bot{client: client, fileGroup: newFileGroupBuffer()}
 
-	client.Reply(func(ctx context.Context, in telegram.Input) string {
+	client.Reply(func(ctx context.Context, in go_bot_telegram.Input) string {
 		if gid := fileGroupID(in); gid != "" {
 			bot.fileGroup.add(bot, gid, in)
 			return ""
 		}
-		if err := run(ctx, bot, in, []telegram.Input{in}); err != nil {
+		if err := run(ctx, bot, in, []go_bot_telegram.Input{in}); err != nil {
 			slog.Warn("run",
 				slog.String("chat", chatName(in)),
 				slog.String("error", err.Error()))

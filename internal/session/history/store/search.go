@@ -36,7 +36,7 @@ func Search(sessionID, keyword, timeRange string, limit int) ([]Result, error) {
 
 	before := max(jsonStart, 0)
 
-	rows, err := conn.Read.Raw().Query(`
+	rows, err := conn.Query(`
 	SELECT m.send_at, m.role, m.content
 	FROM messages m
 	WHERE m.session_id = ?

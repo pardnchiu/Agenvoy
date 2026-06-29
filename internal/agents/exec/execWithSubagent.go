@@ -13,6 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	sessionManager "github.com/pardnchiu/agenvoy/internal/session"
 	configBot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	sessionHistory "github.com/pardnchiu/agenvoy/internal/session/history"
@@ -111,8 +112,8 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 	if displayName == "" || displayName == sessionID {
 		var short, rest string
 		switch {
-		case strings.HasPrefix(sessionID, "temp-sub-"):
-			short, rest = "temp-sub-", sessionID[len("temp-sub-"):]
+		case strings.HasPrefix(sessionID, "temp-"):
+			short, rest = "temp-", sessionID[len("temp-"):]
 		case strings.HasPrefix(sessionID, "cli-"):
 			short, rest = "cli-", sessionID[len("cli-"):]
 		case strings.HasPrefix(sessionID, "http-"):
@@ -135,6 +136,7 @@ func ExecWithSubagent(ctx context.Context, task, sessionIDInput, model, systemPr
 
 	var sb strings.Builder
 	for ev := range events {
+		pubsub.Pub(sessionID, ev)
 		passSubagentEvent(parentEvents, displayName, ev)
 
 		switch ev.Type {
@@ -197,7 +199,10 @@ func passSubagentEvent(parent chan<- agentTypes.Event, name string, ev agentType
 func ensureSubagentSession(input string) (string, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
-		id, err := sessionManager.New("temp-sub-")
+		if idle := sessionManager.FindIdleTemp(); idle != "" {
+			return idle, nil
+		}
+		id, err := sessionManager.New("temp-")
 		if err != nil {
 			return "", fmt.Errorf("sessionManager.CreateSession: %w", err)
 		}

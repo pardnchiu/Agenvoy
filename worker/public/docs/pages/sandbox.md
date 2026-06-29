@@ -1,0 +1,63 @@
+# Sandbox
+
+Every `run_command`, script tool, and scheduler script execution is wrapped by `go-pkg/sandbox`:
+
+| Platform | Mechanism |
+|---|---|
+| Linux | bubblewrap (`bwrap`) |
+| macOS | `sandbox-exec` |
+
+Sandbox restrictions: no privileged execution, restricted filesystem write scope, configurable network access, configurable CPU/memory limits.
+
+## Three callers, one entry point
+
+The sandbox has exactly three callers, all calling `sandbox.Wrap(ctx, binary, args, workDir, opt)` directly:
+
+1. `run_command` tool — arbitrary user-issued shell commands
+2. `toolAdapter/script/execute` — script-tool extensions (`script_*`)
+3. `scheduler/script/script` — scheduler-driven scripts
+
+There is no wrapper layer between callers and `sandbox.Wrap`. Adding behavior (e.g., new resource limits) means contributing to `go-pkg/sandbox`, not adding shims in agenvoy.
+
+## Policy injection
+
+Three JSON files define the policy:
+
+| File | Purpose |
+|---|---|
+| `configs/jsons/denied_map.json` | Paths the sandbox refuses to expose |
+| `configs/jsons/exclude_list.json` | Paths excluded from listing/walking/searching |
+| `configs/jsons/white_list.json` | Allowed paths |
+
+`cmd/app/main.go init()` injects the policy once via:
+
+```go
+sandbox.New(configs.DeniedMap)
+filesystem.New(Policy{DeniedMap: ..., ExcludeList: ...})
+```
+
+Both `go-pkg/sandbox` and `go-pkg/filesystem` enforce `IsDenied` on the policy automatically — no caller-side checking needed.
+
+## Filesystem write guard
+
+`go-pkg/filesystem` write APIs (`WriteFile`, `WriteJSON`, `AppendText`, `CheckDir`) all enforce `IsDenied` internally. Any agenvoy code that bypasses `go-pkg/filesystem` and writes via `os.WriteFile` directly **escapes the policy** — this is forbidden.
+
+The `internal/filesystem` package retains only path computation and domain wrappers (e.g., `MCPPath`, `MCPSessionPath`). It does not duplicate read/write logic.
+
+## Subprocess argv-only schema
+
+`run_command` accepts only `argv: string[]` (minItems 1). It does **not** accept a `command: string` with auto-tokenization. This zero-parsing approach removes shell-injection surface in the agent layer.
+
+Shell features (pipes, redirects) require the LLM to issue `["sh", "-c", "cmd | pipe"]` explicitly. Allowlist checking inspects `argv[0]` basename and, for `sh -c`, also the inner first token via `strings.Fields(argv[2])[0]`. Denylist scanning runs over `strings.Join(argv, " ")`.
+
+## Subprocess timeout
+
+External CLI invocations (`invoke_external_agent`, `cross_review_with_external_agents`) have an env-controlled hard cap:
+
+- `MAX_EXTERNAL_AGENT_TIMEOUT_MIN` — default `10`, hard cap `60`
+
+Subagent invocations (`invoke_subagent`) including slot-wait time have:
+
+- `MAX_SUBAGENT_TIMEOUT_MIN` — default `10`, hard cap `60`
+
+These prevent runaway subprocess execution from blocking the parent indefinitely.

@@ -27,7 +27,7 @@ func Clean() {
 		sessionDir := filesystem.SessionDir(entry.Name())
 
 		if strings.HasPrefix(entry.Name(), "temp-") {
-			if now.Sub(latestModTime(sessionDir)) > time.Hour {
+			if now.Sub(latestModTime(sessionDir)) > 30*time.Minute {
 				if err := os.RemoveAll(sessionDir); err != nil {
 					slog.Warn("os RemoveAll",
 						slog.String("dir", entry.Name()),

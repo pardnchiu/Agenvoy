@@ -2,19 +2,14 @@ package fetchPage
 
 import (
 	"crypto/sha256"
-	_ "embed"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
-	"text/template"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 )
-
-//go:embed embed/skipped.md
-var skippedPrompt string
 
 func isSkipped(href string) (bool, int, string) {
 	db := torii.DB(torii.DBToolCache)
@@ -27,26 +22,6 @@ func isSkipped(href string) (bool, int, string) {
 		return true, status, title
 	}
 	return false, 0, ""
-}
-
-func skippedMessage(href string, status int, title string) string {
-	tmpl, err := template.New("skipped").Parse(skippedPrompt)
-	if err != nil {
-		return href
-	}
-	var statusText string
-	if status > 0 {
-		statusText = strconv.Itoa(status)
-	}
-	var sb strings.Builder
-	if err := tmpl.Execute(&sb, struct {
-		Href   string
-		Status string
-		Title  string
-	}{Href: href, Status: statusText, Title: strings.TrimSpace(title)}); err != nil {
-		return href
-	}
-	return sb.String()
 }
 
 func skipKey(prefix, href string) string {

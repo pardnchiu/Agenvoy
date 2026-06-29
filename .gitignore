@@ -18,3 +18,7 @@ _script_tools
 _discord
 dist/
 extensions/scripts/
+
+node_modules
+.wrangler
+worker/public/docs/*.html

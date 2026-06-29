@@ -1,7 +1,6 @@
 package agentSummary
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -146,23 +145,10 @@ func exec(ctx context.Context, agent agentTypes.Agent, messages []agentTypes.Mes
 		}
 	}
 
-	decoder := json.NewDecoder(bytes.NewReader([]byte(str)))
-	for {
-		token, err := decoder.Token()
-		if err != nil {
-			break
-		}
-
-		if delim, ok := token.(json.Delim); ok && delim == '{' {
-			start := strings.Index(str, "{")
-			if start == -1 {
-				break
-			}
-			var dic map[string]any
-			if json.Unmarshal([]byte(str[start:]), &dic) == nil && summary.IsValid(dic) {
-				return dic
-			}
-			break
+	if start := strings.Index(str, "{"); start >= 0 {
+		var dic map[string]any
+		if json.Unmarshal([]byte(str[start:]), &dic) == nil && summary.IsValid(dic) {
+			return dic
 		}
 	}
 
