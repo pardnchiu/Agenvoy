@@ -1,8 +1,6 @@
 # Architecture
 
-> [中文](Architecture.zh.md)
-
-A high-level view of how Agenvoy fits together. For per-module diagrams, sequence flows, and the tool-dispatch state machine, jump into the topic-specific pages linked at the bottom of this page.
+A high-level view of how Agenvoy fits together. For per-module diagrams, sequence flows, and the tool-dispatch state machine, jump into the topic-specific pages.
 
 ## Overview
 
@@ -82,7 +80,7 @@ graph TB
 | Pending | `internal/runtime/pending.go` | prefix-routed confirm/ask listener registry; per-runtime listener via `RegisterListener(prefix)`, claim via `PickNextFor(prefix)` |
 | Memory | ToriiDB (`DBSessionHist` / `DBSessionSummary` / `error_memory`) | semantic search + 90-day TTL |
 | Scheduler | `internal/runtime/scheduler.go` (+ `runtime.SchedulerWatcher` fsnotify) | cron / one-shot tasks bound to scheduler skills; hot-reload on `{tasks,crons}.json` change |
-| KuraDB | `internal/runtime/kuradb/` (`kuradb.go` / `run.go`) + `internal/runtime/kuradb/tool/` | RAG provider child process; daemon-managed spawn + 3-strike health check; per-turn dynamic tool exclusion when endpoint missing. See [KuraDB RAG](KuraDB-RAG.md) |
+| KuraDB | `internal/runtime/kuradb/` (`kuradb.go` / `run.go`) + `internal/runtime/kuradb/tool/` | RAG provider child process; daemon-managed spawn + 3-strike health check; per-turn dynamic tool exclusion when endpoint missing |
 | TUI | `internal/runtime/tui` | bubbletea inline-chat front-end; single-package by design |
 
 ## Cross-cutting principles
@@ -102,7 +100,7 @@ The TUI lives in a single package (`internal/runtime/tui`) and is **not** split 
 
 ### Why bubbletea (not tview / tcell)
 
-The previous TUI used `rivo/tview` ). It was replaced because:
+The previous TUI used `rivo/tview`. It was replaced because:
 
 - **Inline scrollback**: bubbletea's `tea.Println` writes lines that scroll into the terminal's native buffer above the input box. tview owns the entire screen and can't co-exist with shell scrollback.
 - **lipgloss styling primitives**: borders, padding, foreground/background composition compose cleanly. tview styles are tag-based and harder to reuse across components.
@@ -119,7 +117,7 @@ The cost is that bubbletea is a Go port of [The Elm Architecture](https://guide.
 - Currently `unexported` types like `popupState`, `commandPickerState`, `viewMode` would have to become exported, creating an "API" that no one outside `internal/runtime/tui` will ever consume
 - `send()` and `program atomic.Pointer[tea.Program]` either move into a sub-package (root sets via setter API) or stay in root and force handlers to import root, which creates a second cycle
 
-A real Go-style TUI would build per-domain widget packages (each owning its state struct, render method, and event handler) with bubbletea acting only as event loop. That refactor is a 600–800 LOC rewrite split into 4 phases. For the current ~1.1k LOC TUI maintained by one developer, the gain doesn't justify the cost.
+A real Go-style TUI would build per-domain widget packages (each owning its state struct, render method, and event handler) with bubbletea acting only as event loop. That refactor is a 600-800 LOC rewrite split into 4 phases. For the current ~1.1k LOC TUI maintained by one developer, the gain doesn't justify the cost.
 
 ### When to revisit
 
@@ -128,19 +126,6 @@ Switch to per-domain widget packages when **any one** of:
 - TUI exceeds ~3k LOC and code review keeps stalling on "where does this belong"
 - Multiple developers regularly touch the TUI and step on each other's state
 - Specific widgets need independent unit tests against frozen state — currently impossible without instantiating the whole `Model`
-
-## Where to read more
-
-| Topic | Page |
-|---|---|
-| Iteration loop, three-pass dispatch in detail | [Core Concepts](Core-Concepts.md) |
-| Provider routing and dispatcher | [Providers](Providers.md) |
-| Tool registry, extension paths | [Tools](Tools.md) |
-| Memory tiers and semantic search | [Memory System](Memory-System.md) |
-| Sandbox policy, permission modes | [Security and Sandbox](Security-and-Sandbox.md) |
-| MCP transports, lifecycle | [MCP Integration](MCP-Integration.md) |
-| KuraDB RAG lifecycle, healthcheck, `/feature kuradb` wizard | [KuraDB RAG](KuraDB-RAG.md) |
-| Source of truth for architecture rules | [CLAUDE.md](https://github.com/pardnchiu/Agenvoy/blob/master/CLAUDE.md) |
 
 ***
 

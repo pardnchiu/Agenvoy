@@ -21,3 +21,4 @@ extensions/scripts/
 
 node_modules
 .wrangler
+worker/public/docs/*.html

@@ -1,7 +1,5 @@
 # Providers
 
-> [中文](Providers.zh.md)
-
 Agenvoy supports ten LLM providers behind a unified `Agent.Send()` interface.
 
 ## Supported list
@@ -51,7 +49,7 @@ Only `openaiCodex` uses SSE for response streaming (`parseSSEStream` accumulates
 
 ## Prompt caching
 
-`openaiCodex/send.go` computes `sha256(instructions)` and sends it as `prompt_cache_key`. Anthropic and OpenAI both honor automatic prefix caching at ≥1024 tokens, so no explicit cache markers are needed.
+`openaiCodex/send.go` computes `sha256(instructions)` and sends it as `prompt_cache_key`. Anthropic and OpenAI both honor automatic prefix caching at >=1024 tokens, so no explicit cache markers are needed.
 
 ## Adding a custom OpenAI-compatible endpoint
 
@@ -77,14 +75,14 @@ Use the `compat` provider type and point at any endpoint that accepts the OpenAI
 
 | Target | Works | Notes |
 |---|---|---|
-| Ollama | ✅ | default `http://localhost:11434/v1` |
-| LM Studio | ✅ | |
-| vLLM | ✅ | `--enable-auto-tool-choice --tool-call-parser <name>` for tool use |
-| llama.cpp server | ✅ | |
-| LiteLLM proxy | ✅ | virtual key as Bearer token |
-| Groq / Together / DeepInfra / OpenRouter / Fireworks | ✅ | |
-| Azure OpenAI | ❌ | needs `api-key` header (not `Bearer`) + `?api-version=` query — not supported |
-| Reasoning-only models (o1, deepseek-r1, QwQ) | ⚠️ | compat sends `temperature: 0.2` hardcoded; some servers 422 |
+| Ollama | Yes | default `http://localhost:11434/v1` |
+| LM Studio | Yes | |
+| vLLM | Yes | `--enable-auto-tool-choice --tool-call-parser <name>` for tool use |
+| llama.cpp server | Yes | |
+| LiteLLM proxy | Yes | virtual key as Bearer token |
+| Groq / Together / DeepInfra / OpenRouter / Fireworks | Yes | |
+| Azure OpenAI | No | needs `api-key` header (not `Bearer`) + `?api-version=` query — not supported |
+| Reasoning-only models (o1, deepseek-r1, QwQ) | Partial | compat sends `temperature: 0.2` hardcoded; some servers 422 |
 
 ## Send timeout (3 layers)
 
@@ -92,7 +90,7 @@ Send-side timeout has three independent layers, each catching a different failur
 
 | Layer | Value | Catches | Where |
 |---|---|---|---|
-| **Transport** `ResponseHeaderTimeout` | `15s` (SSE only) | Backend stuck before returning headers (healthy SSE returns <1s; high load ≤ 5s; 15s aligns with `ProbeTimeout`) | `openaiCodex/new.go::newHTTPClient()` |
+| **Transport** `ResponseHeaderTimeout` | `15s` (SSE only) | Backend stuck before returning headers (healthy SSE returns <1s; high load <=5s; 15s aligns with `ProbeTimeout`) | `openaiCodex/new.go::newHTTPClient()` |
 | **`http.Client.Timeout`** | `10m` | Full request (headers + body) | per-provider client |
 | **`execute.go::AgentSendTimeout`** | env `AGENT_SEND_TIMEOUT_SECONDS`, default `600s` | Exec-layer ceiling via `context.WithTimeout` | `internal/agents/exec/execute.go` |
 
@@ -111,9 +109,9 @@ Local compat is **not** routed through the factory by design. Cold-start toleran
 ### Retry semantics
 
 - `sendFailCount` accumulates **unconditionally** for timeout/network errors (payload didn't reach the model; signature comparison is meaningless)
-- For content-level errors (parse failure, 4xx with body, garbage response), retry is sig-based — same payload signature → counter increments; different → reset
-- `sendFailCount >= MaxRetry` (default 3) → MaxRetry-exhausted path emits `sendText` + `EventDone` with a branch-specific message (timeout / context-length / generic)
-- During retries (`sendFailCount < MaxRetry`) → **only** `slog.Warn` is emitted; no chat event surfaces (avoids noisy "retrying 1/3, 2/3" spam — only the final outcome reaches the user)
+- For content-level errors (parse failure, 4xx with body, garbage response), retry is sig-based — same payload signature increments the counter; different signature resets it
+- `sendFailCount >= MaxRetry` (default 3) triggers the MaxRetry-exhausted path, which emits `sendText` + `EventDone` with a branch-specific message (timeout / context-length / generic)
+- During retries (`sendFailCount < MaxRetry`) only `slog.Warn` is emitted; no chat event surfaces (avoids noisy "retrying 1/3, 2/3" spam — only the final outcome reaches the user)
 
 OAuth device-code polling (`copilot/login.go`) uses a separate `http.Client{Timeout: 30s}` per poll — zero timeout would let GitHub OAuth backend hang and lock the entire login flow.
 

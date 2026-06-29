@@ -2,8 +2,12 @@
   "name": "agenvoy-site",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "build": "node build.js",
+    "dev": "node build.js && wrangler dev",
+    "deploy": "node build.js && wrangler deploy"
+  },
+  "dependencies": {
+    "marked": "^12.0.2"
   },
   "devDependencies": {
     "wrangler": "^3.99.0"

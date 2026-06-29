@@ -58,14 +58,14 @@
 | Telegram | ✅ native daemon | ✅ native daemon | ✅ native daemon | ⚠️ Channels MCP (requires active session) | ❌ | ❌ |
 | Discord | ✅ native daemon | ✅ native daemon | ✅ native daemon | ⚠️ Channels MCP (requires active session) | ❌ | ❌ |
 | iMessage | ❌ | ✅ BlueBubbles | ✅ BlueBubbles | ⚠️ Channels MCP (macOS only) | ❌ | ❌ |
-| LINE | ⚠️ alpha ([linebot branch](https://github.com/pardnchiu/Agenvoy/tree/linebot)) | ✅ | ✅ | ❌ | ❌ | ❌ |
+| LINE | ⚠️ alpha (linebot branch) | ✅ | ✅ | ❌ | ❌ | ❌ |
 | WhatsApp / Slack | ❌ | ✅ 24+ platforms | ✅ 24+ platforms | ❌ | ❌ | ❌ |
 | Always-on receiving (no session needed) | ✅ daemon | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Cross-session send (any session → chat) | ✅ `send_to_chatbot` | ❌ | ⚠️ `send_message` tool | ❌ | ❌ | ❌ |
+| Cross-session send (any session to chat) | ✅ `send_to_chatbot` | ❌ | ⚠️ `send_message` tool | ❌ | ❌ | ❌ |
 | First-contact verification | ✅ 6-digit OTP (crypto/rand) | ✅ pairing code (dmPolicy: pairing) | ✅ pairing code (`gateway/pairing.py`) | ❌ | ❌ | ❌ |
 | Native platform UI (buttons / menus / modals) | ✅ inline keyboard / select menu / modal | ⚠️ text-based options | ⚠️ text-based options | ❌ | ❌ | ❌ |
 
-> **Platform layer**: Agenvoy's Telegram and Discord integrations are built on [pardnchiu/go-bot](https://github.com/pardnchiu/go-bot), independently maintained and open source. go-bot encapsulates bot protocol details — Agenvoy only implements business logic.
+> **Platform layer**: Agenvoy's Telegram and Discord integrations are built on pardnchiu/go-bot, independently maintained and open source. go-bot encapsulates bot protocol details — Agenvoy only implements business logic.
 
 > **Key difference**: Claude Code Channels requires an active session. OpenClaw and Hermes have daemons but in-chat confirmations are text-based. Agenvoy uses native platform UI — Telegram inline keyboards and Discord select menus / modals. Agenvoy's cross-session send lets any session type (CLI/TUI/HTTP/scheduled script) push to a specific Telegram/Discord chat — competitors expose this only partially.
 
@@ -76,7 +76,7 @@
 | Feature | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code Channels** |
 |---------|-------------|-------------|------------------|--------------------------|
 | Text reply | ✅ | ✅ | ✅ | ✅ |
-| Voice reply (TTS) | ✅ Gemini TTS → OGG | ✅ ElevenLabs/Hume | ✅ Edge TTS/ElevenLabs | ❌ |
+| Voice reply (TTS) | ✅ Gemini TTS | ✅ ElevenLabs/Hume | ✅ Edge TTS/ElevenLabs | ❌ |
 | Send files | ✅ `[SEND_FILE:]` | ✅ | ✅ | ❌ |
 | Receive attachments | ✅ photo/doc/voice/video | ✅ | ✅ | ❌ |
 | Voice-to-text (STT) | ✅ Gemini, 14 formats | ✅ Whisper/Gemini | ✅ faster-whisper (local) | ❌ |
@@ -94,7 +94,7 @@
 | Feature | **Agenvoy** | **OpenClaw** | **Hermes Agent** | **Claude Code Channels** |
 |---------|-------------|-------------|------------------|--------------------------|
 | Text reply | ✅ | ✅ | ✅ | ✅ |
-| Voice reply (TTS) | ✅ Gemini TTS → OGG/OPUS | ✅ | ✅ | ❌ |
+| Voice reply (TTS) | ✅ Gemini TTS | ✅ | ✅ | ❌ |
 | Send files | ✅ batch 10/message | ✅ | ✅ | ❌ |
 | Receive attachments | ✅ photo/doc/voice/video | ✅ | ✅ | ❌ |
 | Tool confirm (interactive) | ✅ select menu button | ✅ `/model` picker | ⚠️ text options | ❌ |
@@ -119,7 +119,7 @@
 | AI tool management (add/list/remove) | ✅ | ❌ | ✅ `cronjob` tool | ❌ | ❌ | ❌ |
 | Local execution (no cloud required) | ✅ | ✅ | ✅ | ❌ cloud-dependent | ❌ | ❌ |
 
-> **Scheduler layer**: Built on [pardnchiu/go-scheduler](https://github.com/pardnchiu/go-scheduler), a self-maintained ecosystem package providing cron expression parsing, one-shot tasks, fsnotify hot-reload, and full output routing back to chat platforms.
+> **Scheduler layer**: Built on pardnchiu/go-scheduler, a self-maintained ecosystem package providing cron expression parsing, one-shot tasks, fsnotify hot-reload, and full output routing back to chat platforms.
 
 ***
 
@@ -129,17 +129,17 @@
 |--|--|--|--|--|--|--|
 | MCP support | ✅ client | ✅ client | ✅ client + server | ✅ client | ❌ | ✅ client |
 | Custom tools (auto-discovery) | ✅ AI-generated | ❌ | ✅ auto-creates skill | ❌ | ❌ | ❌ |
-| API tool discovery (search-api → add) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| API tool discovery (search-api then add) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Tool registry (publish + install across machines) | ✅ pkg.agenvoy.com (Cloudflare Worker + R2 + D1, email verification + downgrade guard) | ⚠️ ClawHub (skills + plugins) | ⚠️ agentskills.io (skills only) | ❌ | ❌ | ❌ |
 | Skill system | ✅ SKILL.md lazy-load | ✅ SKILL.md 5400+ community | ✅ SKILL.md agentskills.io | ✅ CLAUDE.md | ❌ | ❌ |
-| Skill self-improvement (auto-fix on failure) | ✅ trace → rewrite → auto-commit | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Skill self-improvement (auto-fix on failure) | ✅ trace then rewrite then auto-commit | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Format reference as lazy-load tool | ✅ `format_chatbot` | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Document RAG (external knowledge base) | ✅ KuraDB (in-process vector + semantic/keyword) | ❌ (conversation memory only) | ❌ (conversation memory only) | ❌ | ❌ | ❌ |
 | Media transcription STT | ✅ Gemini, 14 formats | ✅ Whisper/Gemini | ✅ faster-whisper (local) | ❌ | ❌ | ❌ |
 | TTS voice output | ✅ Gemini TTS | ✅ ElevenLabs/Hume/MS | ✅ Edge TTS/ElevenLabs/OpenAI | ❌ | ❌ | ❌ |
 | Computer use / browser | ✅ go-rod + Playwright MCP | ✅ Chrome CDP | ✅ browser CDP + computer-use (cua-driver) | ✅ beta | ❌ | ❌ |
 
-> **Tool sandbox architecture**: Built on [pardnchiu/go-faas](https://github.com/pardnchiu/go-faas) (Function as a Service). Each AI-generated tool runs as an isolated function unit with its own lifecycle and security boundary. The only FaaS-level sandbox design among all compared products.
+> **Tool sandbox architecture**: Built on pardnchiu/go-faas (Function as a Service). Each AI-generated tool runs as an isolated function unit with its own lifecycle and security boundary. The only FaaS-level sandbox design among all compared products.
 
 ***
 
@@ -155,7 +155,7 @@
 | Long-term persistent memory | ✅ SQLite full-text archive (dual-write, never loses data) | ✅ Wiki-style MEMORY.md | ✅ MEMORY.md + USER.md | ⚠️ CLAUDE.md manual | ❌ | ❌ |
 | Cross-session memory | ⚠️ session-isolated by default, extensible | ✅ built-in cross-session | ✅ built-in cross-session | ⚠️ session-isolated by default, extensible | ⚠️ session-isolated | ⚠️ session-isolated |
 
-> **Three-tier conversation memory**: (1) **Context** — latest 16 messages loaded into LLM context + periodic summary; (2) **ToriiDB** — self-developed embedded vector database ([pardnchiu/ToriiDB](https://github.com/pardnchiu/ToriiDB)) for semantic similarity search on recent conversations; (3) **SQLite FTS5** — full-text archive via [pardnchiu/go-sqlite](https://github.com/pardnchiu/go-sqlite), dual-written on every message, never loses data even after history compaction.
+> **Three-tier conversation memory**: (1) **Context** — latest 16 messages loaded into LLM context + periodic summary; (2) **ToriiDB** — self-developed embedded vector database (pardnchiu/ToriiDB) for semantic similarity search on recent conversations; (3) **SQLite FTS5** — full-text archive via pardnchiu/go-sqlite, dual-written on every message, never loses data even after history compaction.
 
 ***
 

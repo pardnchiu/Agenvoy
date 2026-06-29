@@ -1,7 +1,5 @@
 # KuraDB RAG
 
-> [中文](KuraDB-RAG.zh.md)
-
 KuraDB is the in-process RAG (Retrieval-Augmented Generation) provider for Agenvoy. It runs as a daemon-managed child process and exposes two search tools (`list_rag`, `search_rag`) to the agent.
 
 ## What it is
@@ -31,7 +29,7 @@ The daemon controls KuraDB via fsnotify on `~/.config/agenvoy/config.json`:
 1. On config change with `kuradb_enabled=true`, three gates check **before** spawning:
    - `kuradb.BinaryInstalled()` — `/usr/local/bin/kura` must exist
    - `kuradb.HasOpenAIKey()` — `OPENAI_API_KEY` must be in keychain (`agenvoy` service)
-2. Any gate failure → **silent return** (the user explicitly chose this behavior — "直接忽視比較實在": don't log, don't auto-disable, don't write config)
+2. Any gate failure → **silent return** (don't log, don't auto-disable, don't write config)
 3. Pass → spawn child via `RunChild`; KuraDB writes endpoint URL to `~/.config/kuradb/endpoint`
 4. Healthcheck goroutine starts; 3 consecutive failures → write `kuradb_enabled=false` + remove endpoint file + **explicit** `reloadKuradb()` call (not via fsnotify async, to avoid 200ms race window)
 
@@ -71,7 +69,7 @@ Enable / disable is exposed only through the TUI (no CLI subcommand by design �
 1. Wizard checks `HasOpenAIKey()`; if missing, opens a `popupText` to collect the key → `keychain.Set("OPENAI_API_KEY", value)` (service: `agenvoy`)
 2. `tea.ExecProcess` runs the install script:
    ```
-   curl -fsSL https://cloud.agenvoy.com/KuraDB/install.sh | bash
+   curl -fsSL https://agenvoy.com/scripts/kuradb/install.sh | bash
    ```
    The TTY is handed to the child so `sudo` prompts and package manager output work
 3. Verifies `kura` binary at `/usr/local/bin/kura`; writes `kuradb_enabled=true` to config.json
@@ -97,13 +95,6 @@ This is enforced in `configs/prompts/system_prompt.md`; the rule self-deactivate
 | `~/.config/kuradb/endpoint` | Plaintext URL, written by KuraDB on startup, removed on disable |
 | `~/.config/kuradb/` | KuraDB-side config / data dir (managed by KuraDB itself) |
 | Keychain `agenvoy/OPENAI_API_KEY` | Shared with Agenvoy's other OpenAI-using features |
-
-## Related pages
-
-- [Tools](Tools.md#rag) — `list_rag` / `search_rag` tool definitions
-- [Memory System](Memory-System.md) — how KuraDB complements ToriiDB-backed conversation memory
-- [CLI Reference](CLI-Reference.md) — `/feature kuradb` TUI command
-- [Configuration](Configuration.md#kuradb) — config keys and paths
 
 ***
 

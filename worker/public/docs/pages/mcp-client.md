@@ -1,0 +1,108 @@
+# MCP Client
+
+Agenvoy's MCP client lets agents call tools exposed by any MCP server.
+
+## Configuration layout
+
+Two layers — the session layer overrides the global layer:
+
+```
+~/.config/agenvoy/mcp.json                        <- global
+~/.config/agenvoy/sessions/<sid>/mcp.json         <- session-scoped
+```
+
+### JSON format
+
+```json
+{
+  "servers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_TOKEN": "${GITHUB_TOKEN}" }
+    },
+    "remote-api": {
+      "url": "https://api.example.com/mcp",
+      "headers": { "Authorization": "Bearer ${TOKEN}" }
+    }
+  }
+}
+```
+
+`command` and `url` are mutually exclusive. `${VAR}` / `$VAR` placeholders inside `env`, `headers`, and `args` are expanded with `os.Expand` at startup.
+
+## Transport types
+
+| Type | Config keys | Use case |
+|---|---|---|
+| stdio | `command` + `args` + `env` | Local CLIs (`npx`, native binaries) |
+| HTTP + SSE | `url` + `headers` | Remote services, long-running MCP servers |
+
+stdio uses line-delimited JSON-RPC over stdin/stdout. The HTTP transport auto-detects `Content-Type: text/event-stream` per response and falls back to plain JSON otherwise.
+
+## CLI management
+
+```bash
+agen mcp list             # List all configured MCP servers (global + per-session)
+agen mcp add              # Interactive add via promptui
+agen mcp remove           # Interactive remove (with scope label)
+```
+
+`agen mcp add` walks through:
+
+1. Server name
+2. Type — Local (stdio) / Remote (HTTP)
+3. Type-specific fields (command/args/env or url/headers)
+4. Scope — Global / pick a session
+
+Scope writes one file only — global writes `~/.config/agenvoy/mcp.json`, session writes the corresponding `~/.config/agenvoy/sessions/<sid>/mcp.json`. No cross-file shuffling.
+
+## Tool naming
+
+MCP-exposed tools are auto-registered with the format:
+
+```
+mcp__<server_name>__<tool_name>
+```
+
+Example: `mcp__github__create_issue`, `mcp__sqlite-notes__read_query`.
+
+## Result size cap
+
+Each MCP tool result is capped at **1 MiB**. When exceeded, the result is truncated with the marker:
+
+```
+[mcp output truncated: <total> bytes total, <kept> kept; consider LIMIT / filter / pagination]
+```
+
+This avoids OpenAI Responses API's 10 MB single-tool-output limit triggering a same-signature retry storm. SQLite `SELECT *` on a large table will hit this — add `LIMIT` / `WHERE`.
+
+## Confirm behavior
+
+MCP tools route through the most conservative defaults:
+
+- `agen cli` — confirms each MCP tool call individually
+- `agen run` — auto-approves
+- No per-server `read_only` toggle — Agenvoy does not extend trust to third-party servers because their behavior is unverifiable (a Slack MCP could silently send messages, a Filesystem MCP could silently write files)
+
+For batch operation, use `agen run`. For ad-hoc usage, accept the per-call confirm cost.
+
+## Lifecycle
+
+- **Startup**: `runApp` / `runAgent` calls `mcp.New(ctx, sid)` then `RegisterAll(ctx)` **before** `buildAgentRegistry()` and registers `defer Close()`
+- **Per-server failures**: server start failure or `ListTools` failure logs a warning and skips; never blocks core functionality
+- **Snapshot at start**: the session ID is locked at first resolve; switching sessions requires a restart to reload server lists
+
+## Recommended servers
+
+Zero-auth, locally executed (no API key required):
+
+| Server | Purpose |
+|---|---|
+| `mcp-server-sqlite` | Run SQL on local `.db` files |
+| `@modelcontextprotocol/server-memory` | Persistent knowledge graph |
+| `@playwright/mcp` | Browser automation (downloads chromium) |
+| `@modelcontextprotocol/server-postgres` | Local Postgres connection |
+| `mcp-server-time` | Timezone conversion / relative time |
+
+Avoid registering MCP servers whose capabilities overlap with built-in tools (e.g., `filesystem`, `git`, `fetch`, `shell`) — duplicates only inflate the LLM tool list.

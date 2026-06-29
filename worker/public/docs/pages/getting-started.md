@@ -1,7 +1,5 @@
 # Getting Started
 
-> [中文](Getting-Started.zh.md)
-
 ## Prerequisites
 
 - Go 1.25.1 or higher
@@ -55,10 +53,10 @@ make run "use playwright to open example.com and screenshot"
 
 ## Next steps
 
-- [Core Concepts](Core-Concepts.md) — sessions, agent routing, the iteration loop, and three-pass tool dispatch
-- [Providers](Providers.md) — supported LLM backends and the dispatcher model
-- [MCP Integration](MCP-Integration.md) — plug in external tool servers
-- [CLI Reference](CLI-Reference.md) — full command list
+- Core Concepts — sessions, agent routing, the iteration loop, and three-pass tool dispatch
+- Providers — supported LLM backends and the dispatcher model
+- MCP Integration — plug in external tool servers
+- CLI Reference — full command list
 
 ***
 
