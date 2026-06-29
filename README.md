@@ -29,7 +29,7 @@
 > On MacBook, also run `sudo pmset -c sleep 0` to prevent sleep from interrupting schedules.
 
 ```bash
-curl -fsSL https://cloud.agenvoy.com/install.sh | bash
+curl -fsSL https://agenvoy.com/scripts/install.sh | bash
 ```
 
 ***
@@ -196,18 +196,18 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 ## Docs
 
-- [Getting Started](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Getting-Started.md)
-- [Architecture](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Architecture.md)
-- [Core Concepts](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Core-Concepts.md)
-- [Providers](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Providers.md)
-- [Tools](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Tools.md)
-- [Memory System](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Memory-System.md)
-- [Skill System](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Skill-System.md)
-- [MCP Integration](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/MCP-Integration.md)
-- [Security and Sandbox](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Security-and-Sandbox.md)
-- [CLI Reference](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/CLI-Reference.md)
-- [Configuration](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Configuration.md)
-- [Comparison](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Comparison.md)
+Full documentation at **[agenvoy.com/docs](https://agenvoy.com/docs/)**
+
+- [Getting Started](https://agenvoy.com/docs/getting-started)
+- [Sessions & Agents](https://agenvoy.com/docs/sessions)
+- [Providers](https://agenvoy.com/docs/providers)
+- [Built-in Tools](https://agenvoy.com/docs/built-in-tools)
+- [MCP Server](https://agenvoy.com/docs/mcp-server)
+- [MCP Client](https://agenvoy.com/docs/mcp-client)
+- [Memory System](https://agenvoy.com/docs/memory-system)
+- [Skill System](https://agenvoy.com/docs/skill-basics)
+- [Sandbox](https://agenvoy.com/docs/sandbox)
+- [Architecture](https://agenvoy.com/docs/architecture)
 
 ## License
 

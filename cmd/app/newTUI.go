@@ -16,6 +16,7 @@ import (
 	codexImage2 "github.com/pardnchiu/agenvoy/internal/agents/provider/openaiCodex/image2"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/sudo"
 	chatbotTool "github.com/pardnchiu/agenvoy/internal/runtime/chatbot/tool"
 	kuradbTool "github.com/pardnchiu/agenvoy/internal/runtime/kuradb/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
@@ -41,6 +42,10 @@ func newTUI(initialInput string, onceCall, allowAll bool) {
 	}
 	if err := filesystem.LoadRuntime(); err != nil {
 		slog.Warn("filesystem.LoadRuntime",
+			slog.String("error", err.Error()))
+	}
+	if err := sudo.LoadFloor(); err != nil {
+		slog.Warn("sudo.LoadFloor",
 			slog.String("error", err.Error()))
 	}
 	if err := config.BackfillKeys(); err != nil {

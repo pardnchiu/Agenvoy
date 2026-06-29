@@ -29,7 +29,7 @@ func registInvokeSubagent() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     time.Duration(filesystem.MaxSubagentTimeoutMin) * time.Minute,
-		Description: "Spawn a subagent in its own session. Named delegation (呼叫/請/找 X 做 Y, ask/let X do Y) → pass name verbatim; anonymous → leave name empty. Never pre-judge existence, never fallback to self, never ask_user for a name.",
+		Description: "Spawn a subagent in its own session. Named delegation (呼叫/請/找/call/ask/let X do Y) → pass name verbatim to resolve existing session; anonymous → leave name empty. One call per distinct subtask — never duplicate the same task. Never pre-judge existence, never fallback to self, never ask_user for a name.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -44,7 +44,7 @@ func registInvokeSubagent() {
 				},
 				"session_id": map[string]any{
 					"type":        "string",
-					"description": "Persistent session id to thread multi-turn subagent calls (e.g. 'researcher', 'dispatcher-2'). Blank uses an ephemeral temp-sub session. Ignored when name resolves successfully.",
+					"description": "Persistent session id to thread multi-turn subagent calls (e.g. 'researcher', 'dispatcher-2'). Blank uses an ephemeral temp session. Ignored when name resolves successfully.",
 					"default":     "",
 				},
 				"model": map[string]any{
@@ -89,11 +89,9 @@ func registInvokeSubagent() {
 
 			sessionID := strings.TrimSpace(params.SessionID)
 			if name := strings.TrimSpace(params.Name); name != "" {
-				resolved := session.GetSessionID(name)
-				if resolved == "" {
-					return "", fmt.Errorf("no cli- session has bot.md name = %q", name)
+				if resolved := session.GetSessionID(name); resolved != "" {
+					sessionID = resolved
 				}
-				sessionID = resolved
 			}
 
 			model := strings.TrimSpace(params.Model)

@@ -13,7 +13,9 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
 	agentTypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/sudo"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/file"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
@@ -91,6 +93,9 @@ type toolSlot struct {
 }
 
 func toolNeedsConfirmation(exec *toolTypes.Executor, toolName, toolArgs string, turnAllowAll bool) bool {
+	if toolName == "read_file" && isSensitiveReadFile(toolArgs) {
+		return true
+	}
 	if turnAllowAll || toolRegister.IsReadOnly(toolName) {
 		return false
 	}
@@ -98,6 +103,16 @@ func toolNeedsConfirmation(exec *toolTypes.Executor, toolName, toolArgs string, 
 		return false
 	}
 	return !allowTool.Match(allowTool.List(exec.WorkDir), toolName, toolArgs)
+}
+
+func isSensitiveReadFile(argsJSON string) bool {
+	var p struct {
+		Path string `json:"path"`
+	}
+	if json.Unmarshal([]byte(argsJSON), &p) != nil || p.Path == "" {
+		return false
+	}
+	return file.IsSensitivePath(p.Path)
 }
 
 func isGet(argsJSON string) bool {
@@ -193,7 +208,7 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 				} else {
 					proceed = reply.Approve
 					reason = reply.Reason
-					if reply.Approve && reply.Remember {
+					if reply.Approve && reply.Remember && !sudo.IsActive() {
 						if err = allowTool.Append(exec.WorkDir, toolName, toolArg); err != nil {
 							slog.Warn("appendAllowListRule",
 								slog.String("session", sessionData.ID),
@@ -407,11 +422,6 @@ func toolCall(ctx context.Context, exec *toolTypes.Executor, choice agentTypes.O
 		}
 	}
 	return sessionData, alreadyCall, nil
-}
-
-func getAllowList(ctx context.Context) []allowTool.ToolRule {
-	rules, _ := ctx.Value(allowListRulesKey{}).([]allowTool.ToolRule)
-	return rules
 }
 
 func runToolExec(ctx context.Context, exec *toolTypes.Executor, s *toolSlot, events chan<- agentTypes.Event) {

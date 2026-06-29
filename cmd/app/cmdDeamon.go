@@ -25,6 +25,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem/record"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/sudo"
 	chatbotTool "github.com/pardnchiu/agenvoy/internal/runtime/chatbot/tool"
 	"github.com/pardnchiu/agenvoy/internal/runtime/discord"
 	"github.com/pardnchiu/agenvoy/internal/runtime/kuradb"
@@ -192,6 +193,10 @@ func cmdDaemon() {
 		slog.Warn("filesystem.LoadRuntime",
 			slog.String("error", err.Error()))
 	}
+	if err := sudo.LoadFloor(); err != nil {
+		slog.Warn("sudo.LoadFloor",
+			slog.String("error", err.Error()))
+	}
 	if err := record.TrimLog(); err != nil {
 		slog.Warn("record TrimLog",
 			slog.String("error", err.Error()))
@@ -258,7 +263,7 @@ func cmdDaemon() {
 	}
 	defer runtime.StopScheduler()
 
-	if err := runtime.AddSystemCron("0 0 * * *", session.Clean); err != nil {
+	if err := runtime.AddSystemCron("*/30 * * * *", session.Clean); err != nil {
 		slog.Warn("cron sessionClean",
 			slog.String("error", err.Error()))
 	}
@@ -276,7 +281,7 @@ func cmdDaemon() {
 
 	route := routes.New()
 	server := &http.Server{
-		Addr:    ":" + filesystem.Port,
+		Addr:    "127.0.0.1:" + filesystem.Port,
 		Handler: route,
 	}
 

@@ -65,7 +65,7 @@ func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 func (t TUI) resumePending(msg PendingSelect) (tea.Model, tea.Cmd) {
 	info, ok := interactive.LoadPendingInfo(msg.id, msg.taskHash)
 	if !ok {
-		return t, tea.Println(errorStyle.Render("[!] pending task not found") + "\n")
+		return t, tea.Println(hintStyle.Render("pending task already resolved in another session") + "\n")
 	}
 
 	if !info.HasQuestions {

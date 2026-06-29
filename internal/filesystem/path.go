@@ -185,8 +185,6 @@ func InputHistoryPath(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), ".history")
 }
 
-
-
 func PendingDir(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), "pending")
 }

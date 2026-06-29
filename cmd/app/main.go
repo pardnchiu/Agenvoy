@@ -151,7 +151,7 @@ func printUsage() {
 }
 
 func runUpdate() {
-	const remoteURL = "https://agenvoy.com/static/scripts/update.sh"
+	const remoteURL = "https://agenvoy.com/scripts/update.sh"
 
 	f, err := os.CreateTemp("", "agenvoy-update-*.sh")
 	if err != nil {

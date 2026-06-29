@@ -16,7 +16,7 @@ func Write(sessionID string, messages []agentTypes.Message) error {
 		return nil
 	}
 
-	tx, err := conn.Write.Raw().Begin()
+	tx, err := conn.Write.Begin()
 	if err != nil {
 		return fmt.Errorf("sql.Tx Begin: %w", err)
 	}
@@ -99,14 +99,14 @@ func Clear(sessionID string) error {
 		return nil
 	}
 
-	if _, err := conn.Write.Raw().Exec(`
+	if _, err := conn.Exec(`
 	DELETE FROM messages
 	WHERE session_id = ?
 	`, sessionID); err != nil {
 		return fmt.Errorf("sql.DB Exec [DELETE messages]: %w", err)
 	}
 
-	if _, err := conn.Write.Raw().Exec(`
+	if _, err := conn.Exec(`
 	DELETE FROM session_meta
 	WHERE session_id = ?
 	`, sessionID); err != nil {

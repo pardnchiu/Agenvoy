@@ -27,6 +27,23 @@ func New(prefix string) (string, error) {
 	return sessionID, nil
 }
 
+func FindIdleTemp() string {
+	dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir)
+	if err != nil {
+		return ""
+	}
+	for _, dir := range dirs {
+		sid := dir.Name
+		if !strings.HasPrefix(sid, "temp-") {
+			continue
+		}
+		if ClaimIdle(sid) {
+			return sid
+		}
+	}
+	return ""
+}
+
 func GetSessionID(name string) string {
 	if name == "" {
 		return ""

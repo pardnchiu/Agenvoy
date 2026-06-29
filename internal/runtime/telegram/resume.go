@@ -22,9 +22,9 @@ import (
 func (b *Bot) resumeFromPending(sessionID, taskHash string, answers []any) {
 	content, err := interactive.LoadResumeMessage(sessionID, taskHash, answers)
 	if err != nil {
-		slog.Warn("ask_user resume: pending already consumed",
-			slog.String("session", sessionID),
-			slog.String("task_hash", taskHash))
+		if chatID, chErr := lookupChatID(sessionID); chErr == nil {
+			b.client.Send(context.Background(), chatID, 0, "Pending task already resolved in another session.", nil)
+		}
 		return
 	}
 

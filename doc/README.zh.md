@@ -29,7 +29,7 @@
 > MacBook 建議額外執行 `sudo pmset -c sleep 0`，避免休眠影響排程。
 
 ```bash
-curl -fsSL https://cloud.agenvoy.com/install.sh | bash
+curl -fsSL https://agenvoy.com/scripts/install.sh | bash
 ```
 
 ***
@@ -196,18 +196,18 @@ curl -fsSL https://cloud.agenvoy.com/install.sh | bash
 
 ## 文件
 
-- [新手入門](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Getting-Started.zh.md)
-- [架構](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Architecture.zh.md)
-- [核心概念](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Core-Concepts.zh.md)
-- [Provider 設定](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Providers.zh.md)
-- [工具系統](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Tools.zh.md)
-- [記憶系統](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Memory-System.zh.md)
-- [Skill 系統](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Skill-System.zh.md)
-- [MCP 整合](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/MCP-Integration.zh.md)
-- [安全與沙箱](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Security-and-Sandbox.zh.md)
-- [命令列參考](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/CLI-Reference.zh.md)
-- [設定檔](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Configuration.zh.md)
-- [產品對照](https://github.com/pardnchiu/Agenvoy/blob/master/doc/wiki/Comparison.zh.md)
+完整文件請見 **[agenvoy.com/docs](https://agenvoy.com/docs/)**
+
+- [Getting Started](https://agenvoy.com/docs/getting-started)
+- [Sessions & Agents](https://agenvoy.com/docs/sessions)
+- [Providers](https://agenvoy.com/docs/providers)
+- [Built-in Tools](https://agenvoy.com/docs/built-in-tools)
+- [MCP Server](https://agenvoy.com/docs/mcp-server)
+- [MCP Client](https://agenvoy.com/docs/mcp-client)
+- [Memory System](https://agenvoy.com/docs/memory-system)
+- [Skill System](https://agenvoy.com/docs/skill-basics)
+- [Sandbox](https://agenvoy.com/docs/sandbox)
+- [Architecture](https://agenvoy.com/docs/architecture)
 
 ## License
 

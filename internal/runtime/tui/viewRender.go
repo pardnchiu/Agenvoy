@@ -66,12 +66,8 @@ func isTableSep(line string) bool {
 
 func parseTableCells(line string) []string {
 	line = strings.TrimSpace(line)
-	if strings.HasPrefix(line, "|") {
-		line = line[1:]
-	}
-	if strings.HasSuffix(line, "|") {
-		line = line[:len(line)-1]
-	}
+	line = strings.TrimPrefix(line, "|")
+	line = strings.TrimSuffix(line, "|")
 	cells := strings.Split(line, "|")
 	for i := range cells {
 		cells[i] = strings.TrimSpace(cells[i])
@@ -257,7 +253,6 @@ func messageBlock(str string) string {
 		}
 		sb.WriteString(userStyle.Render(line))
 	}
-	sb.WriteString("\n")
 	return sb.String()
 }
 
@@ -293,7 +288,7 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 
 	switch ev.Type {
 	case agentTypes.EventSkillResult:
-		return hintStyle.Render("⏵ " + srcPrefix + "Skill(" + ev.Text + ")"), true
+		return skillStyle.Render("⏵ " + srcPrefix + "Skill(" + ev.Text + ")"), true
 
 	case agentTypes.EventAgentSelect:
 		if ev.Source == "" {
