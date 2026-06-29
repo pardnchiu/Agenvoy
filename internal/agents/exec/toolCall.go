@@ -15,6 +15,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/sudo"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/file"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolRegister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
@@ -92,6 +93,9 @@ type toolSlot struct {
 }
 
 func toolNeedsConfirmation(exec *toolTypes.Executor, toolName, toolArgs string, turnAllowAll bool) bool {
+	if toolName == "read_file" && isSensitiveReadFile(toolArgs) {
+		return true
+	}
 	if turnAllowAll || toolRegister.IsReadOnly(toolName) {
 		return false
 	}
@@ -99,6 +103,16 @@ func toolNeedsConfirmation(exec *toolTypes.Executor, toolName, toolArgs string, 
 		return false
 	}
 	return !allowTool.Match(allowTool.List(exec.WorkDir), toolName, toolArgs)
+}
+
+func isSensitiveReadFile(argsJSON string) bool {
+	var p struct {
+		Path string `json:"path"`
+	}
+	if json.Unmarshal([]byte(argsJSON), &p) != nil || p.Path == "" {
+		return false
+	}
+	return file.IsSensitivePath(p.Path)
 }
 
 func isGet(argsJSON string) bool {
