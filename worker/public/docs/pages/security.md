@@ -1,5 +1,17 @@
 # Security Model
 
+## Localhost binding
+
+The HTTP server binds to `127.0.0.1` only — LAN clients cannot reach the daemon. Cross-origin access from `web.agenvoy.com` is gated by CORS middleware with an origin whitelist. Chrome Private Network Access (PNA) is satisfied via the `Access-Control-Allow-Private-Network` header.
+
+## Sudo mode
+
+TUI-only escalation via `/sudo`. Grants temporary bypass of the confirm gate for the current session. 1-hour TTL, stored in ToriiDB (not on disk — expires automatically, zero permanent residue). System-directory floor paths remain blocked even under sudo.
+
+## Sensitive file guard
+
+`read_file` always requires explicit confirmation for files matching sensitive patterns — SSH keys, `.pem`, `.key`, `.env`, and credential files — regardless of sudo mode or allowlist status. This guard is hardcoded in Go, not prompt-based.
+
 ## Permission mode
 
 Agenvoy supports two permission modes: `single-confirm` and `always-allow`. Seven categories of irreversible operations always require explicit `ask_user` regardless of mode:

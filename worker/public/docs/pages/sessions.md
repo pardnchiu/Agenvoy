@@ -23,10 +23,9 @@ History, summaries, and config flags live in ToriiDB (`DBSessionHist`, `DBSessio
 | `http-*` | Permanent (created by `POST /v1/send` with `persist=true`) |
 | `dc-*` | Permanent (Discord channels) |
 | `tg-*` | Permanent (Telegram chats — per-chat, shared across users in that chat) |
-| `temp-*` | Reaped after 1 h idle (default for `POST /v1/send`) |
-| `temp-sub-*` | Reaped after 1 h idle (subagent default) |
+| `temp-*` | Reaped after 30 min idle (default for `POST /v1/send` and subagent sessions) |
 
-`runApp` startup runs `CleanupSessions()` against the `temp-*` whitelist only — `cli-*`, `http-*`, `dc-*`, and `tg-*` are never auto-reaped.
+Cleanup runs every 30 minutes via cron (and once on startup) against the `temp-*` prefix only — `cli-*`, `http-*`, `dc-*`, and `tg-*` are never auto-reaped.
 
 ## bot.md — Agent Persona
 

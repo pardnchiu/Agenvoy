@@ -155,7 +155,7 @@
 | Long-term persistent memory | ✅ SQLite full-text archive (dual-write, never loses data) | ✅ Wiki-style MEMORY.md | ✅ MEMORY.md + USER.md | ⚠️ CLAUDE.md manual | ❌ | ❌ |
 | Cross-session memory | ⚠️ session-isolated by default, extensible | ✅ built-in cross-session | ✅ built-in cross-session | ⚠️ session-isolated by default, extensible | ⚠️ session-isolated | ⚠️ session-isolated |
 
-> **Three-tier conversation memory**: (1) **Context** — latest 16 messages loaded into LLM context + periodic summary; (2) **ToriiDB** — self-developed embedded vector database (pardnchiu/ToriiDB) for semantic similarity search on recent conversations; (3) **SQLite FTS5** — full-text archive via pardnchiu/go-sqlite, dual-written on every message, never loses data even after history compaction.
+> **Three-tier conversation memory**: (1) **Context** — latest 16 messages loaded into LLM context + periodic summary; (2) **ToriiDB** — self-developed embedded vector database (pardnchiu/ToriiDB) for semantic similarity search on recent conversations; (3) **SQLite FTS5** — full-text archive via pardnchiu/go-sqlkit, dual-written on every message, never loses data even after history compaction.
 
 ***
 
@@ -178,3 +178,78 @@
 | **On par** | Telegram/Discord daemon, TTS/STT, scheduler output push, Skill system, MCP, browser automation, attachment handling, provider coverage (compat layer covers any OpenAI-compatible endpoint) |
 | **Where competitors lead** | Hermes context compression engine (token-budget compaction), OpenClaw 24+ platforms, Hermes MCP server mode, Hermes local STT, OpenClaw/Hermes built-in cross-session memory, Claude Code Computer Use beta, Claude Code cloud cron/task |
 | **Codex CLI** | Fewest features — CLI + TUI + OpenAI OAuth only, no daemon, no chat platforms, no scheduler |
+
+***
+
+## Agenvoy vs Hermes vs Pi: Design Philosophy Comparison
+
+> Source: [Agenvoy, Hermes, Pi — An AI Agent Platform Comparison](https://dev.to/pardnchiu/agenvoy-hermes-pi-an-ai-agent-platform-comparison-3p7p)
+
+### Three Projects, Three Different Lanes
+
+| Project | Closest Analogy | Best For |
+|---------|-----------------|----------|
+| **Agenvoy** | A complete, security-focused AI agent platform with deep built-in capabilities | People who want a ready-to-use system that already does a lot out of the box |
+| **Hermes** | A broad-integration, feature-rich agent system geared toward large-scale deployment | People who need to connect many models, platforms, and channels |
+| **Pi** | A lightweight, highly flexible AI framework that's easy to customize | People who want to build their own workflows or embed AI into their products |
+
+***
+
+### Agenvoy: High Completeness, Strong Security, Deeper Automation & Sharing
+
+**Strengths**
+
+- **Dynamic tool creation during execution** — when the system discovers it's missing a capability, it can build a real, executable tool mid-workflow, then continue where it left off. Other systems say "I'll work with whatever tools I have"; Agenvoy says "if I'm missing a tool, I'll build it on the spot."
+- **Tool sharing across AI systems** — Agenvoy doesn't just build tools for itself — it can expose those tools for other AI frameworks to use. You could create a tool through Claude Code, use it through Codex, fix it through Hermes — all running in Agenvoy's sandbox, all shared across harnesses in real time.
+- **Default security isolation** — security was designed in from the beginning. Agenvoy "treats security as a core framework principle by default"; the other two are more like "you can add isolation yourself if you need it."
+- **Built-in memory and semantic retrieval** — not just keeping past conversations, but building "context retrieval" into the system itself. Among the three, it's the only one with built-in semantic retrieval as a default layer.
+- **Non-programmer friendly** — focus on letting users customize their AI through natural language rather than requiring code changes at every step.
+
+**Weaknesses**
+
+- Doesn't have the broadest coverage across models, platforms, and external services.
+- Smaller ecosystem — fewer resources, smaller community, less external documentation.
+- May not have the edge in large-scale integration scenarios compared to Hermes.
+
+***
+
+### Hermes: Broadest Integration, More Mature Governance
+
+**Strengths**
+
+- **Strong integration capabilities** — well-suited for connecting various models, platforms, and external services.
+- **Broad platform support** — works across multiple environments: messaging platforms, workflows, and services.
+- **Mature self-evolution and governance** — emphasis on how the system maintains, patches, organizes, and evolves over time.
+- **Complementary with Agenvoy** — because Hermes can plug into many capabilities, and Agenvoy can supply tools to other systems, the two work well together.
+
+**Weaknesses**
+
+- Higher complexity — broader integration means heavier system with higher learning and maintenance costs.
+- Not ideal for people who just want quick setup.
+- Security and compliance require more careful per-user evaluation.
+
+***
+
+### Pi: Lightest, Most Flexible
+
+**Strengths**
+
+- **High flexibility** — great for defining your own workflows and shaping the system yourself.
+- **Well-suited for product embedding** — lightweight design makes it easy to integrate as part of your own product.
+- **Broad model and provider support** — many model choices and provider options.
+
+**Weaknesses**
+
+- Not the most complete out of the box — strength is flexibility, not built-in readiness.
+- May not be the most friendly to general users — more of a framework than a product.
+- Core capabilities (memory, tool growth, security isolation) need to be built yourself.
+
+***
+
+### Selection Guide
+
+| Choose | When you want |
+|--------|---------------|
+| **Agenvoy** | Complete system, strong security, memory continuity, minimal assembly, natural language customization, tools that serve other AI systems, dynamic tool creation |
+| **Hermes** | Broadest integrations, multi-channel large-scale deployment, mature governance, willingness to accept higher complexity |
+| **Pi** | Lightweight core, high flexibility, product embedding, customization freedom, broad provider selection |

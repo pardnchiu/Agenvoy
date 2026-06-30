@@ -6,7 +6,7 @@ The memory layer in Agenvoy has three tiers for conversation memory plus a cross
 |---|---|---|
 | 1. Context window (16 messages + summary) | `history.json` + `summary.json` | session |
 | 2. Semantic search (recent) | ToriiDB `DBSessionHist` (vector) | session |
-| 3. Full-text archive (all history) | SQLite FTS5 via go-sqlite | session |
+| 3. Full-text archive (all history) | SQLite FTS5 via go-sqlkit | session |
 | Error memory | ToriiDB `error_memory` (90d TTL) | cross-session |
 
 ## Three-tier conversation memory
@@ -32,7 +32,7 @@ ToriiDB entries are cleaned during `history.json` compaction — entries older t
 
 ### 3. Full-text archive — SQLite FTS5 (all history)
 
-Every message written to `history.json` is **dual-written** to SQLite (`~/.config/agenvoy/.store/history.db`) via go-sqlite. SQLite always holds the complete conversation history, even after `history.json` is compacted.
+Every message written to `history.json` is **dual-written** to SQLite (`~/.config/agenvoy/.store/history.db`) via go-sqlkit. SQLite always holds the complete conversation history, even after `history.json` is compacted.
 
 The `search_chat_history` tool with `mode=keyword` runs FTS5 full-text search on the SQLite archive + ToriiDB substring match on recent entries, combining results.
 

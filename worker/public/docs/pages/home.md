@@ -21,4 +21,3 @@
 ## Source
 
 - Repository: [pardnchiu/Agenvoy](https://github.com/pardnchiu/Agenvoy)
-- Living spec: [CLAUDE.md](https://github.com/pardnchiu/Agenvoy/blob/master/CLAUDE.md)

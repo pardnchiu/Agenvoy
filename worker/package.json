@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "node build.js",
+    "sync-tags": "node sync-tags.js",
     "dev": "node build.js && wrangler dev",
     "deploy": "node build.js && wrangler deploy"
   },

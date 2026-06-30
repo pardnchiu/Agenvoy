@@ -1,9 +1,15 @@
 const fs = require("fs");
 const path = require("path");
+const { execSync } = require("child_process");
 const { marked } = require("marked");
 
 const PAGES_DIR = path.join(__dirname, "public/docs/pages");
 const OUT_DIR = path.join(__dirname, "public/docs");
+
+let LATEST_VERSION = "";
+try {
+  LATEST_VERSION = execSync("git tag --sort=-v:refname | head -1", { encoding: "utf-8", cwd: path.join(__dirname, ".."), shell: true }).trim();
+} catch {}
 
 const NAV = [
   { section: "Overview", items: [
@@ -46,29 +52,70 @@ const NAV = [
 ];
 
 const DESCRIPTIONS = {
-  "home": "Agenvoy documentation — a personal AI agent that runs on your machine.",
-  "getting-started": "Install Agenvoy and run your first agent session in under 60 seconds.",
-  "sessions": "Sessions, agent personas, routing, and per-session concurrency in Agenvoy.",
-  "execution-engine": "How the iteration loop, three-pass tool dispatch, and circuit breaker work.",
-  "providers": "Supported LLM providers — Claude, OpenAI, Gemini, Codex, and more.",
-  "cli-commands": "CLI commands, make shortcuts, input prefixes, and environment variables.",
-  "tui-guide": "TUI keyboard shortcuts and slash commands reference.",
-  "rest-api": "REST API endpoints for sending messages and managing sessions.",
-  "config-files": "Configuration file layout, bot.md format, and permission modes.",
-  "config-integrations": "MCP, provider, KuraDB, Telegram, and Discord configuration.",
-  "built-in-tools": "60+ built-in tools — file ops, web search, orchestration, memory, and more.",
-  "tool-extension": "Auto-generate tools from natural language, or add script/API/MCP tools.",
-  "tool-rules": "Tool design guidelines, concurrency markers, timeouts, and credential auto-heal.",
-  "memory-system": "Three-tier conversation memory — context window, semantic search, FTS5 archive.",
-  "skill-basics": "Loadable markdown skill packs with slash-command and natural-language triggers.",
-  "scheduler-skills": "Cron and one-shot scheduling with auto-fix on skill failure.",
-  "mcp-server": "Expose your sandboxed tools to Claude Code, Codex, and any MCP-compatible agent.",
-  "mcp-client": "Connect to external MCP servers via stdio or HTTP/SSE.",
-  "kuradb-rag": "KuraDB child process for keyword and semantic document search.",
-  "sandbox": "OS-native sandbox — bubblewrap on Linux, sandbox-exec on macOS.",
-  "security": "Permission modes, keychain, system prompt protection, and MCP isolation.",
-  "architecture": "System layers, cross-cutting principles, and TUI design choices.",
-  "comparison": "How Agenvoy compares to other AI agent platforms.",
+  "home": "Agenvoy documentation — a personal AI agent that runs on your machine. Guides for setup, tools, MCP, memory, scheduling, and security.",
+  "getting-started": "Install Agenvoy and run your first AI agent session in under 60 seconds. One command setup for macOS and Linux.",
+  "sessions": "Manage sessions, agent personas, routing rules, and per-session concurrency in Agenvoy.",
+  "execution-engine": "How the Agenvoy iteration loop, three-pass tool dispatch, and circuit breaker work under the hood.",
+  "providers": "Configure 10 LLM providers — Claude, OpenAI, Gemini, Codex, Copilot, xAI Grok, DeepSeek, Nvidia NIM, OpenRouter, and Compat.",
+  "cli-commands": "Agenvoy CLI commands, make shortcuts, input prefixes, and environment variables reference.",
+  "tui-guide": "Agenvoy TUI keyboard shortcuts, slash commands, and interactive session management.",
+  "rest-api": "OpenAI-compatible REST API endpoints for chat completions, sessions, and log replay.",
+  "config-files": "Agenvoy configuration file layout — config.json, bot.md, permission modes, and runtime limits.",
+  "config-integrations": "Configure MCP servers, LLM providers, KuraDB, Telegram bot, and Discord bot integrations.",
+  "built-in-tools": "60+ built-in AI agent tools — file operations, web search, orchestration, memory, RAG, and media.",
+  "tool-extension": "Auto-generate custom tools from natural language. Add script, API, or MCP tools to extend Agenvoy.",
+  "tool-rules": "Tool design guidelines — concurrency markers, timeouts, credential auto-heal, and naming conventions.",
+  "memory-system": "Three-tier conversation memory — rolling context window, semantic vector search, and FTS5 SQLite archive.",
+  "skill-basics": "Create loadable markdown skill packs with YAML frontmatter, slash-command and natural-language triggers.",
+  "scheduler-skills": "Cron and one-shot task scheduling with skill binding, hot-reload, and auto-fix on failure.",
+  "mcp-server": "Run Agenvoy as an MCP server — expose sandboxed tools to Claude Code, Codex, Cursor, and OpenCode.",
+  "mcp-client": "Connect Agenvoy to external MCP servers via stdio or HTTP/SSE with auto-discovery and hot-reload.",
+  "kuradb-rag": "Enable KuraDB for keyword and semantic document search (RAG) over your personal knowledge base.",
+  "sandbox": "OS-native command sandbox — bubblewrap on Linux, sandbox-exec on macOS. CPU, memory, and network limits.",
+  "security": "Agenvoy security model — permission modes, macOS Keychain, system prompt protection, and MCP isolation.",
+  "architecture": "Agenvoy architecture — system layers, daemon lifecycle, cross-cutting principles, and TUI design.",
+  "comparison": "Compare Agenvoy vs Claude Code, Codex CLI, Cursor, Aider, and other AI agent platforms.",
+};
+
+const KEYWORDS = {
+  "home": "agenvoy, ai agent, documentation, mcp server, tool builder, personal ai assistant",
+  "getting-started": "agenvoy install, setup, getting started, curl install, macos, linux, ai agent setup",
+  "sessions": "agenvoy sessions, agent personas, session routing, multi-session, concurrency",
+  "execution-engine": "execution engine, tool dispatch, iteration loop, circuit breaker, three-pass dispatch",
+  "providers": "llm providers, claude, openai, gemini, codex, copilot, grok, deepseek, nvidia nim, openrouter, multi-model",
+  "cli-commands": "agenvoy cli, agen command, cli reference, terminal commands, make shortcuts",
+  "tui-guide": "agenvoy tui, terminal ui, keyboard shortcuts, slash commands, interactive agent",
+  "rest-api": "agenvoy api, rest api, chat completions, openai compatible, session api",
+  "config-files": "agenvoy config, configuration, config.json, bot.md, permission modes, runtime limits",
+  "config-integrations": "agenvoy integrations, mcp config, telegram bot setup, discord bot setup, kuradb config",
+  "built-in-tools": "agenvoy tools, built-in tools, file tools, web search, orchestration, memory tools, ai tools",
+  "tool-extension": "custom tools, tool generation, auto tool builder, script tools, api tools, mcp tools",
+  "tool-rules": "tool design, tool naming, concurrency, timeouts, credential management, tool conventions",
+  "memory-system": "ai memory, conversation memory, semantic search, vector search, fts5, sqlite, context window",
+  "skill-basics": "agenvoy skills, skill system, markdown skills, yaml frontmatter, slash commands, skill triggers",
+  "scheduler-skills": "agenvoy scheduler, cron jobs, one-shot tasks, skill binding, auto-fix, self-improvement",
+  "mcp-server": "mcp server, model context protocol, claude code mcp, codex mcp, tool sharing, stdio server",
+  "mcp-client": "mcp client, external mcp, stdio client, http sse, mcp tools, auto-discovery",
+  "kuradb-rag": "kuradb, rag, retrieval augmented generation, document search, semantic search, knowledge base",
+  "sandbox": "sandbox, bubblewrap, bwrap, sandbox-exec, macos sandbox, linux sandbox, command isolation",
+  "security": "agenvoy security, permission modes, keychain, system prompt protection, mcp isolation, tool confirmation",
+  "architecture": "agenvoy architecture, system design, daemon, go binary, tui design, internal structure",
+  "comparison": "agenvoy vs, claude code, codex cli, cursor, aider, ai agent comparison, alternative",
+};
+
+const PRIORITIES = {
+  "home": 0.9,
+  "getting-started": 0.85,
+  "built-in-tools": 0.8,
+  "mcp-server": 0.8,
+  "providers": 0.75,
+  "tool-extension": 0.75,
+  "cli-commands": 0.7,
+  "sessions": 0.7,
+  "memory-system": 0.7,
+  "skill-basics": 0.7,
+  "mcp-client": 0.7,
+  "comparison": 0.7,
 };
 
 function slugify(text) {
@@ -86,6 +133,8 @@ function buildSidebar(activeSlug) {
       html += `<a class="nav-item${cls}" href="${href}">${item.label}</a>\n`;
     }
   }
+  html += `<div class="nav-divider"></div>\n`;
+  html += `<a class="nav-item" href="/docs/released/">Released</a>\n`;
   return html.replace(/^<div class="nav-divider"><\/div>\n/, "");
 }
 
@@ -112,87 +161,53 @@ function addHeadingIds(html) {
   });
 }
 
-function renderPage(slug, title, description, sidebar, content, toc) {
+function renderPage(slug, title, description, keywords, sidebar, content, toc) {
   const canonical = slug === "home" ? "https://agenvoy.com/docs/" : `https://agenvoy.com/docs/${slug}`;
+  const fullTitle = `${title} - Agenvoy Docs`;
+  const jsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": fullTitle,
+    "description": description,
+    "url": canonical,
+    "inLanguage": "en",
+    "isPartOf": { "@type": "WebSite", "name": "Agenvoy", "url": "https://agenvoy.com/" },
+    "publisher": { "@type": "Person", "name": "Pardn Chiu", "url": "https://pardn.io/" },
+    "image": "https://agenvoy.com/logo-min.svg",
+    "dateModified": new Date().toISOString().split("T")[0],
+  });
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${title} - Agenvoy Docs</title>
+    <meta name="robots" content="index, follow" />
+    <title>${fullTitle}</title>
+    <meta name="title" content="${fullTitle}" />
     <meta name="description" content="${description}" />
+    <meta name="keywords" content="${keywords}" />
+    <meta name="author" content="Pardn Chiu" />
+    <link rel="author" href="https://pardn.io/" />
     <link rel="icon" href="/logo-min.svg" type="image/svg+xml" />
     <link rel="canonical" href="${canonical}" />
-    <meta property="og:title" content="${title} - Agenvoy Docs" />
+    <meta property="og:title" content="${fullTitle}" />
     <meta property="og:description" content="${description}" />
+    <meta property="og:image" content="https://agenvoy.com/logo-min.svg" />
     <meta property="og:url" content="${canonical}" />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Agenvoy" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="${fullTitle}" />
+    <meta name="twitter:description" content="${description}" />
+    <meta name="twitter:image" content="https://agenvoy.com/logo-min.svg" />
+    <script type="application/ld+json">${jsonLd}</script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-L5VYEZPVXX"></script>
     <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date());gtag("config","G-L5VYEZPVXX");</script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <style>
-      :root {
-        --bg: #ffffff; --bg-alt: #f8fafc; --surface: #f1f5f9;
-        --border: #e2e8f0; --border-light: #cbd5e1;
-        --brand: #1461DC; --brand-light: #2563eb;
-        --brand-bg: rgba(20,97,220,0.06);
-        --text: #0f172a; --text-2: #334155; --muted: #64748b;
-        --sidebar-w: 260px; --toc-w: 220px; --header-h: 56px;
-      }
-      *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-      html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header-h)+16px)}
-      body{font-family:"Inter",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
-      a{color:var(--brand-light);text-decoration:none}a:hover{text-decoration:underline}
-      code,.mono{font-family:"JetBrains Mono",monospace}
-      .header{position:fixed;top:0;left:0;right:0;z-index:100;height:var(--header-h);background:rgba(255,255,255,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px}
-      .header-logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:var(--text);flex-shrink:0}.header-logo picture{display:flex;align-items:center}
-      .header-logo img{height:30px}
-      @media(max-width:480px){.header-logo img{height:24px}}
-      .header-sep{width:1px;height:24px;background:var(--border);flex-shrink:0}
-      .header-title{font-size:14px;font-weight:500;color:var(--muted)}
-      .header-links{margin-left:auto;display:flex;gap:12px}
-      .header-links a{font-size:13px;font-weight:500;color:var(--muted);padding:4px 10px;border-radius:5px;transition:color .15s,background .15s}
-      .header-links a:hover{color:var(--text);background:var(--surface);text-decoration:none}
-      .mobile-menu-btn{display:none;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text);padding:4px}
-      .layout{display:grid;grid-template-columns:var(--sidebar-w) 1fr var(--toc-w);margin-top:var(--header-h);min-height:calc(100vh - var(--header-h))}
-      .sidebar{position:sticky;top:var(--header-h);height:calc(100vh - var(--header-h));overflow-y:auto;padding:16px 0;border-right:1px solid var(--border);background:var(--bg)}
-      .sidebar::-webkit-scrollbar{width:4px}.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-      .nav-section{padding:10px 20px 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-      .nav-item{display:block;padding:6px 20px;font-size:13.5px;font-weight:450;color:var(--text-2);cursor:pointer;border-left:3px solid transparent;transition:background .1s,border-color .1s,color .1s}
-      .nav-item:hover{background:var(--brand-bg);color:var(--text);text-decoration:none}
-      .nav-item.active{color:var(--brand);border-left-color:var(--brand);background:var(--brand-bg);font-weight:600}
-      .nav-divider{height:1px;background:var(--border);margin:8px 16px}
-      .content{padding:32px 48px 80px;max-width:100%;min-width:0;overflow:hidden}
-      .content h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px;padding-bottom:12px;border-bottom:1px solid var(--border)}
-      .content h2{font-size:22px;font-weight:600;margin-top:36px;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border);letter-spacing:-.01em}
-      .content h3{font-size:17px;font-weight:600;margin-top:28px;margin-bottom:8px}
-      .content h4{font-size:15px;font-weight:600;margin-top:20px;margin-bottom:6px}
-      .content p{margin-bottom:12px;font-size:15px;color:var(--text-2)}
-      .content ul,.content ol{margin-bottom:12px;padding-left:24px;font-size:15px;color:var(--text-2)}
-      .content li{margin-bottom:4px}.content li>ul,.content li>ol{margin-top:4px;margin-bottom:4px}
-      .content blockquote{border-left:3px solid var(--brand);padding:8px 16px;margin-bottom:12px;background:var(--brand-bg);border-radius:0 6px 6px 0;font-size:14px;color:var(--text-2)}
-      .content blockquote p{margin-bottom:4px}
-      .content code{background:var(--surface);padding:2px 6px;border-radius:4px;font-size:13px;color:#c7254e}
-      .content pre{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:16px;overflow-x:auto;margin-bottom:16px}
-      .content pre code{background:none;padding:0;color:#e2e8f0;font-size:13px;line-height:1.6}
-      .content table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:14px}
-      .content th,.content td{padding:8px 12px;text-align:left;border:1px solid var(--border)}
-      .content th{background:var(--surface);font-weight:600;font-size:13px}
-      .content td{color:var(--text-2)}
-      .content hr{border:none;border-top:1px solid var(--border);margin:24px 0}
-      .content a{color:var(--brand-light)}.content img{max-width:100%;border-radius:6px}.content strong{color:var(--text)}
-      .toc{position:sticky;top:var(--header-h);height:calc(100vh - var(--header-h));overflow-y:auto;padding:20px 16px;border-left:1px solid var(--border);background:var(--bg)}
-      .toc::-webkit-scrollbar{width:4px}.toc::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-      .toc-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
-      .toc-link{display:block;padding:3px 0;font-size:12.5px;color:var(--muted);transition:color .15s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      .toc-link:hover{color:var(--text);text-decoration:none}
-      .toc-link.depth-3{padding-left:12px;font-size:12px}
-      @media(max-width:1100px){.layout{grid-template-columns:var(--sidebar-w) 1fr}.toc{display:none}}
-      @media(max-width:768px){.mobile-menu-btn{display:block}.header-links{display:none}.layout{grid-template-columns:1fr}.sidebar{display:none;position:fixed;top:var(--header-h);left:0;width:280px;z-index:50;box-shadow:4px 0 12px rgba(0,0,0,.08)}.sidebar.open{display:block}.toc{display:none}.content{padding:24px 20px 60px}}
-    </style>
+    <link rel="stylesheet" href="/docs.css" />
   </head>
   <body>
     <header class="header">
@@ -200,6 +215,7 @@ function renderPage(slug, title, description, sidebar, content, toc) {
       <a href="/" class="header-logo"><picture><source media="(max-width: 480px)" srcset="/logo-min.svg" /><img src="/logo-text.svg" alt="Agenvoy" /></picture></a>
       <span class="header-sep"></span>
       <span class="header-title">Documentation</span>
+      ${LATEST_VERSION ? `<a class="header-version" href="https://github.com/pardnchiu/agenvoy/releases/tag/${LATEST_VERSION}" target="_blank" rel="noopener">${LATEST_VERSION}</a>` : ""}
       <div class="header-links">
         <a href="/">Home</a>
         <a href="https://github.com/pardnchiu/agenvoy" target="_blank" rel="noopener">GitHub</a>
@@ -247,9 +263,10 @@ for (const slug of allSlugs) {
 
   const label = NAV.flatMap(g => g.items).find(i => i.slug === slug)?.label || slug;
   const desc = DESCRIPTIONS[slug] || `${label} — Agenvoy documentation.`;
+  const kw = KEYWORDS[slug] || "agenvoy, ai agent, documentation";
   const sidebar = buildSidebar(slug);
   const toc = buildTOC(html);
-  const page = renderPage(slug, label, desc, sidebar, html, toc);
+  const page = renderPage(slug, label, desc, kw, sidebar, html, toc);
 
   const outPath = slug === "home"
     ? path.join(OUT_DIR, "index.html")
@@ -258,6 +275,90 @@ for (const slug of allSlugs) {
   fs.writeFileSync(outPath, page);
   built++;
   console.log(`OK: ${outPath}`);
+}
+
+// === Release pages ===
+const TAGS_SRC = path.join(__dirname, "public/docs/tags");
+const RELEASED_DIR = path.join(OUT_DIR, "released");
+const releaseTags = [];
+
+function semverSort(a, b) {
+  const pa = a.replace(/^v/, "").split(".").map(Number);
+  const pb = b.replace(/^v/, "").split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pb[i] || 0) - (pa[i] || 0);
+  }
+  return 0;
+}
+
+function buildVersionSidebar(activeTag, tags, dates) {
+  let html = '<a class="nav-item" href="/docs/">Documentation</a>\n';
+  html += '<div class="nav-divider"></div>\n';
+  const groups = new Map();
+  for (const t of tags) {
+    const p = t.replace(/^v/, "").split(".");
+    const key = `v${p[0]}.${p[1]}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(t);
+  }
+  for (const [minor, versions] of groups) {
+    html += `<div class="nav-section">${minor}</div>\n`;
+    for (const v of versions) {
+      const cls = v === activeTag ? " active" : "";
+      const date = dates[v] ? `<span class="nav-date">${dates[v]}</span>` : "";
+      html += `<a class="nav-item${cls}" href="/docs/released/${v}">${v}${date}</a>\n`;
+    }
+  }
+  return html;
+}
+
+if (fs.existsSync(TAGS_SRC)) {
+  const tagFiles = fs.readdirSync(TAGS_SRC).filter(f => f.endsWith(".md"));
+  const tags = tagFiles.map(f => f.replace(".md", "")).sort(semverSort);
+  const manifestPath = path.join(TAGS_SRC, "manifest.json");
+  const dates = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, "utf-8")) : {};
+
+  if (tags.length) {
+    fs.mkdirSync(RELEASED_DIR, { recursive: true });
+
+    for (const tag of tags) {
+      const md = fs.readFileSync(path.join(TAGS_SRC, `${tag}.md`), "utf-8");
+      let html = marked.parse(md);
+      html = addHeadingIds(html);
+      const sidebar = buildVersionSidebar(tag, tags, dates);
+      const toc = buildTOC(html);
+      const desc = `Agenvoy ${tag} release notes — changelog, new features, and fixes.`;
+      const kw = `agenvoy, release notes, changelog, ${tag}`;
+      const page = renderPage(`released/${tag}`, `${tag} Release Notes`, desc, kw, sidebar, html, toc);
+      fs.writeFileSync(path.join(RELEASED_DIR, `${tag}.html`), page);
+      releaseTags.push(tag);
+    }
+
+    // Index page
+    let listHtml = '<h1>Release Notes</h1>\n<p>All Agenvoy releases.</p>\n';
+    const groups = new Map();
+    for (const t of tags) {
+      const p = t.replace(/^v/, "").split(".");
+      const key = `v${p[0]}.${p[1]}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(t);
+    }
+    for (const [minor, versions] of groups) {
+      listHtml += `<h2>${minor}</h2>\n<ul>\n`;
+      for (const v of versions) {
+        const date = dates[v] ? ` <span style="color:var(--muted);font-size:13px">${dates[v]}</span>` : "";
+        listHtml += `<li><a href="/docs/released/${v}">${v}</a>${date}</li>\n`;
+      }
+      listHtml += '</ul>\n';
+    }
+    listHtml = addHeadingIds(listHtml);
+    const indexSidebar = buildVersionSidebar("", tags, dates);
+    const indexToc = buildTOC(listHtml);
+    const indexPage = renderPage("released", "Release Notes", "All Agenvoy release notes — changelogs, features, and fixes by version.", "agenvoy, releases, changelog, version history", indexSidebar, listHtml, indexToc);
+    fs.writeFileSync(path.join(RELEASED_DIR, "index.html"), indexPage);
+
+    console.log(`OK: ${releaseTags.length} release pages + index`);
+  }
 }
 
 // Generate sitemap.xml
@@ -269,10 +370,28 @@ for (const slug of allSlugs) {
   if (slug === "home") continue;
   const mdPath = path.join(PAGES_DIR, `${slug}.md`);
   if (!fs.existsSync(mdPath)) continue;
-  sitemap += `  <url><loc>https://agenvoy.com/docs/${slug}</loc><changefreq>monthly</changefreq><priority>0.7</priority><lastmod>${today}</lastmod></url>\n`;
+  const pri = PRIORITIES[slug] || 0.6;
+  sitemap += `  <url><loc>https://agenvoy.com/docs/${slug}</loc><changefreq>monthly</changefreq><priority>${pri}</priority><lastmod>${today}</lastmod></url>\n`;
+}
+if (releaseTags.length) {
+  sitemap += `  <url><loc>https://agenvoy.com/docs/released/</loc><changefreq>weekly</changefreq><priority>0.6</priority><lastmod>${today}</lastmod></url>\n`;
+  for (let i = 0; i < releaseTags.length; i++) {
+    const pri = i < 5 ? 0.5 : 0.3;
+    sitemap += `  <url><loc>https://agenvoy.com/docs/released/${releaseTags[i]}</loc><changefreq>yearly</changefreq><priority>${pri}</priority><lastmod>${today}</lastmod></url>\n`;
+  }
 }
 sitemap += `</urlset>\n`;
+const sitemapCount = allSlugs.length + 1 + (releaseTags.length ? releaseTags.length + 1 : 0);
 fs.writeFileSync(path.join(__dirname, "public/sitemap.xml"), sitemap);
-console.log(`OK: sitemap.xml (${allSlugs.length + 1} URLs)`);
+console.log(`OK: sitemap.xml (${sitemapCount} URLs)`);
 
-console.log(`\nBuilt ${built} pages.`);
+// Generate robots.txt
+const robots = `User-agent: *
+Allow: /
+
+Sitemap: https://agenvoy.com/sitemap.xml
+`;
+fs.writeFileSync(path.join(__dirname, "public/robots.txt"), robots);
+console.log("OK: robots.txt");
+
+console.log(`\nBuilt ${built} doc pages, ${releaseTags.length} release pages.`);

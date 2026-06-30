@@ -47,22 +47,9 @@ func StreamMultiLog() gin.HandlerFunc {
 		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.Flush()
 
-		merged := make(chan taggedEvent, 128)
 		var subs []*pubsub.Subscriber
 
 		for _, sid := range sids {
-			sub := pubsub.Sub(sid, 64)
-			subs = append(subs, sub)
-
-			go func(id string, s *pubsub.Subscriber) {
-				for ev := range s.Events() {
-					select {
-					case merged <- taggedEvent{Session: id, Event: ev}:
-					default:
-					}
-				}
-			}(sid, sub)
-
 			connEv := taggedEvent{
 				Session: sid,
 				Event:   agentTypes.Event{Type: agentTypes.EventConnected, Text: sid},
@@ -79,6 +66,21 @@ func StreamMultiLog() gin.HandlerFunc {
 			}
 		}
 		c.Writer.Flush()
+
+		merged := make(chan taggedEvent, 128)
+		for _, sid := range sids {
+			sub := pubsub.Sub(sid, 64)
+			subs = append(subs, sub)
+
+			go func(id string, s *pubsub.Subscriber) {
+				for ev := range s.Events() {
+					select {
+					case merged <- taggedEvent{Session: id, Event: ev}:
+					default:
+					}
+				}
+			}(sid, sub)
+		}
 
 		defer func() {
 			for _, s := range subs {

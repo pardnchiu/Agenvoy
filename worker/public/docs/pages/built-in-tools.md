@@ -4,7 +4,7 @@
 
 | Tool | Description |
 |---|---|
-| `read_file` | Read a text, PDF, DOCX, PPTX, CSV/TSV, or image file. Must be called before `patch_file` |
+| `read_file` | Read a text, PDF, DOCX, PPTX, CSV/TSV, or image file. Must be called before `patch_file`. **Sensitive file guard**: SSH keys, `.pem`, `.key`, `.env` always require confirmation regardless of sudo or allowlist |
 | `write_file` | Create or fully overwrite a file |
 | `patch_file` | Precise string replacement (supports `replace_all`) |
 | `list_files` | List a directory's contents |

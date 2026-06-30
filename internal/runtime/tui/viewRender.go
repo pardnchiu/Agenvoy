@@ -297,14 +297,7 @@ func renderAgentEvent(ev agentTypes.Event, sessionLabel, cwd string) (string, bo
 		return hintStyle.Render("  ⎿ " + srcPrefix + "selecting agent…"), true
 
 	case agentTypes.EventAgentResult:
-		if ev.Source == "" {
-			return "", false
-		}
-		str := strings.TrimSpace(ev.Text)
-		if str == "" {
-			return "", false
-		}
-		return hintStyle.Render("  ⎿ " + srcPrefix + "agent: " + str), true
+		return "", false
 
 	case agentTypes.EventToolCall:
 		if ev.ToolName == "ask_user" || ev.ToolName == "store_secret" ||

@@ -78,7 +78,7 @@ graph TB
 | Filesystem | `go-pkg/filesystem` (+ `reader/`) + `internal/filesystem` | policy-aware writes; ToriiDB pathing |
 | Session | `internal/session` | bot.md / status.json / action.log / fsnotify observer |
 | Pending | `internal/runtime/pending.go` | prefix-routed confirm/ask listener registry; per-runtime listener via `RegisterListener(prefix)`, claim via `PickNextFor(prefix)` |
-| Memory | ToriiDB (`DBSessionHist` / `DBSessionSummary` / `error_memory`) | semantic search + 90-day TTL |
+| Memory | ToriiDB (`DBSessionHist` / `DBSessionSummary` / `error_memory`) + go-sqlkit (SQLite FTS5 archive) | semantic search + 90-day TTL + full-text persistent archive |
 | Scheduler | `internal/runtime/scheduler.go` (+ `runtime.SchedulerWatcher` fsnotify) | cron / one-shot tasks bound to scheduler skills; hot-reload on `{tasks,crons}.json` change |
 | KuraDB | `internal/runtime/kuradb/` (`kuradb.go` / `run.go`) + `internal/runtime/kuradb/tool/` | RAG provider child process; daemon-managed spawn + 3-strike health check; per-turn dynamic tool exclusion when endpoint missing |
 | TUI | `internal/runtime/tui` | bubbletea inline-chat front-end; single-package by design |
