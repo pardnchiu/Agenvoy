@@ -180,7 +180,7 @@ func (a *Agent) convertToTools(tools []toolTypes.Tool) []map[string]any {
 	for i, tool := range tools {
 		var params map[string]any
 		json.Unmarshal(tool.Function.Parameters, &params)
-		stringifyEnums(params)
+		sanitizeSchema(params)
 
 		newTools[i] = map[string]any{
 			"name":        tool.Function.Name,
@@ -191,24 +191,38 @@ func (a *Agent) convertToTools(tools []toolTypes.Tool) []map[string]any {
 	return newTools
 }
 
-func stringifyEnums(m map[string]any) {
-	if vals, ok := m["enum"]; ok {
-		if list, ok := vals.([]any); ok {
-			for i, v := range list {
-				if _, ok := v.(string); !ok {
-					list[i] = fmt.Sprintf("%v", v)
-				}
+var geminiUnsupportedKeys = map[string]struct{}{
+	"$schema":              {},
+	"$id":                  {},
+	"$ref":                 {},
+	"$defs":                {},
+	"$comment":             {},
+	"definitions":          {},
+	"additionalProperties": {},
+	"patternProperties":    {},
+}
+
+func sanitizeSchema(m map[string]any) {
+	for key := range geminiUnsupportedKeys {
+		delete(m, key)
+	}
+
+	if list, ok := m["enum"].([]any); ok {
+		for i, v := range list {
+			if _, ok := v.(string); !ok {
+				list[i] = fmt.Sprintf("%v", v)
 			}
 		}
 	}
+
 	for _, v := range m {
 		switch child := v.(type) {
 		case map[string]any:
-			stringifyEnums(child)
+			sanitizeSchema(child)
 		case []any:
 			for _, item := range child {
 				if obj, ok := item.(map[string]any); ok {
-					stringifyEnums(obj)
+					sanitizeSchema(obj)
 				}
 			}
 		}

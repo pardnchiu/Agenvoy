@@ -16,10 +16,14 @@ type Meta struct {
 }
 
 func GetMeta(sessionID string) Meta {
-	meta, err := go_pkg_filesystem.ReadJSON[Meta](filesystem.SummaryMetaPath(sessionID))
+	p := filesystem.SummaryMetaPath(sessionID)
+	if !go_pkg_filesystem_reader.Exists(p) {
+		return Meta{}
+	}
+	meta, err := go_pkg_filesystem.ReadJSON[Meta](p)
 	if err != nil {
 		slog.Warn("github.com/pardnchiu/go-pkg/filesystem ReadJSON",
-			slog.String("path", filesystem.SummaryMetaPath(sessionID)),
+			slog.String("path", p),
 			slog.String("error", err.Error()))
 		return Meta{}
 	}
