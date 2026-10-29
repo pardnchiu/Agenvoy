@@ -67,13 +67,25 @@ func (t TUI) viewIdle() string {
 		top += noticeBlock(t.notice, t.noticeOffset, width-4) + "\n"
 	}
 
-	box := textAreaStyle.Width(width - 1).Render(t.textarea.View())
+	boxStyle, lineStyle := textAreaStyle, thinkStyle
+	if strings.HasPrefix(t.textarea.Value(), "! ") {
+		boxStyle, lineStyle = textAreaStyle.BorderForeground(colSystem), systemStyle
+		t.textarea.FocusedStyle.Text = systemStyle
+		t.textarea.Focus()
+		t.textarea.SetPromptFunc(2, func(lineIdx int) string {
+			if lineIdx == 0 {
+				return systemStyle.Render("❯ ")
+			}
+			return "  "
+		})
+	}
+	box := boxStyle.Width(width - 1).Render(t.textarea.View())
 	boxWidth := lipgloss.Width(box)
-	bottom := thinkStyle.Render(strings.Repeat("─", boxWidth))
+	bottom := lineStyle.Render(strings.Repeat("─", boxWidth))
 	if model := t.modelTag(); model != "" {
 		tag := " " + model + " "
 		if fill := boxWidth - lipgloss.Width(tag) - 1; fill >= 1 {
-			bottom = thinkStyle.Render(strings.Repeat("─", fill)) + tag + thinkStyle.Render("─")
+			bottom = lineStyle.Render(strings.Repeat("─", fill)) + tag + lineStyle.Render("─")
 		}
 	}
 

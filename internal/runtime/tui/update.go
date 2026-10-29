@@ -295,6 +295,16 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.lastIn, t.lastOut, t.lastCacheRead, t.lastCacheCreate, t.lastContext = 0, 0, 0, 0, 0
 			t.runTarget = ""
 
+			if command, ok := strings.CutPrefix(content, "!"); ok {
+				command = strings.TrimSpace(command)
+				if command == "" {
+					t.running = false
+					return t, notice(msgWarn("empty command after !") + "\n")
+				}
+				go runShell(command, t.cwd)
+				return t, tea.Batch(tea.Println(messageBlock(raw)), t.spinner.Tick)
+			}
+
 			go runExec(ipc.Frame{Type: ipc.FrameRun, SessionID: t.currentSessionID, Rayload: &ipc.Payload{Input: raw, WorkDir: t.cwd, AllowAll: t.allowAll}})
 
 			cmds = append(cmds,
@@ -311,6 +321,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.subCount, t.subActive = 0, 0
 		t.subBuf, t.subOrder = nil, nil
 		return t, nil
+
+	case shellDone:
+		return t.handleShellDone(msg)
 
 	case agentExecDone:
 		t.running = false

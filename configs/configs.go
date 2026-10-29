@@ -191,6 +191,9 @@ var InjectToolSummary string
 //go:embed prompts/system_prompt/inject/schedule_run.md
 var InjectScheduleRun string
 
+//go:embed prompts/system_prompt/inject/shell_run.md
+var InjectShellRun string
+
 //go:embed prompts/system_prompt/inject/turn_context/work_dir.md
 var InjectWorkDir string
 
