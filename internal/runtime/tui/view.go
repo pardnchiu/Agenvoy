@@ -57,7 +57,7 @@ func (t TUI) viewIdle() string {
 	var top string
 	if t.running {
 		if block := t.viewThinking(); block != "" {
-			top = "\n" + block + "\n"
+			top = block + "\n"
 		}
 	}
 

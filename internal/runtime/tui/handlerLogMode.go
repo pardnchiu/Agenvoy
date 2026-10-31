@@ -153,6 +153,9 @@ func drainNew(path string, lastSize int64) int64 {
 		if line == "" {
 			continue
 		}
+		if parsed.kind == "user" {
+			line += "\n"
+		}
 		send(tailLine{
 			line:    foreignWrap(line),
 			foreign: true,

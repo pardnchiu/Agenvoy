@@ -285,11 +285,11 @@ func loadSessionTail(sid string, width int, all bool) []tea.Cmd {
 	cmds := make([]tea.Cmd, 0, len(lines)*2+2)
 	cmds = append(cmds, notice(msgLog(""+label+" ("+strconv.Itoa(len(lines))+")")+"\n"))
 	for i, l := range lines {
-		if i > 0 && l.kind != "done" && l.kind != "canceled" {
-			cmds = append(cmds, tea.Println(""))
-		}
 		cmds = append(cmds, tea.Println(l.line))
+		if i+1 < len(lines) && (lines[i+1].kind == "done" || lines[i+1].kind == "canceled") {
+			continue
+		}
+		cmds = append(cmds, tea.Println(""))
 	}
-	cmds = append(cmds, tea.Println(""))
 	return cmds
 }

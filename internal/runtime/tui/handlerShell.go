@@ -82,5 +82,5 @@ func (t TUI) handleShellDone(msg shellDone) (tea.Model, tea.Cmd) {
 	go runExec(ipc.Frame{Type: ipc.FrameRun, SessionID: t.currentSessionID, Rayload: &ipc.Payload{Input: input, WorkDir: msg.workDir, AllowAll: t.allowAll}})
 
 	header := hintStyle.Render(fmt.Sprintf("exit %d", msg.exitCode))
-	return t, tea.Println(header + "\n" + whiteStyle.Render(output))
+	return t, tea.Println(header + "\n" + whiteStyle.Render(output) + "\n")
 }

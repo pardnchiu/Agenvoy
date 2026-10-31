@@ -49,7 +49,7 @@ func (t *TUI) collapseToolBuf() tea.Cmd {
 		}
 		parts = append(parts, fmt.Sprintf("%d %s", subs, label))
 	}
-	return tea.Println("\n" + hintStyle.Render("  Ran "+strings.Join(parts, "  ")))
+	return tea.Println(hintStyle.Render("  Ran "+strings.Join(parts, "  ")) + "\n")
 }
 
 const subagentLogLines = 3
@@ -234,9 +234,9 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		}
 		collapse := t.collapseToolBuf()
 		if collapse != nil {
-			return t, tea.Sequence(collapse, tea.Println("\n"+line))
+			return t, tea.Sequence(collapse, tea.Println(line+"\n"))
 		}
-		return t, tea.Println("\n" + line)
+		return t, tea.Println(line + "\n")
 
 	case agenttypes.EventToolCall:
 		if utils.HideToolEvent(ev.ToolName, ev.ToolArgs) {
@@ -294,9 +294,9 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		t.emitted = true
 		collapse := t.collapseToolBuf()
 		if collapse != nil {
-			return t, tea.Sequence(collapse, tea.Println("\n"+line))
+			return t, tea.Sequence(collapse, tea.Println(line+"\n"))
 		}
-		return t, tea.Println("\n" + line)
+		return t, tea.Println(line + "\n")
 
 	case agenttypes.EventToolResult:
 		if ev.Source != "" {
@@ -472,7 +472,7 @@ func (t *TUI) printStreamLine(line string) tea.Cmd {
 		if strings.TrimSpace(t.runTarget) != "" {
 			prefix = warnStyle.Render("⏺ [" + t.runTarget + "] ")
 		}
-		rendered = "\n" + prefix + line
+		rendered = prefix + line
 	} else {
 		rendered = "  " + line
 	}
@@ -494,7 +494,6 @@ func (t *TUI) flushTableBuf() []tea.Cmd {
 		if i == 0 && !t.streaming {
 			t.streaming = true
 			t.activity = "responding"
-			sb.WriteByte('\n')
 			if strings.TrimSpace(t.runTarget) != "" {
 				sb.WriteString(warnStyle.Render("⏺ [" + t.runTarget + "] "))
 			} else {

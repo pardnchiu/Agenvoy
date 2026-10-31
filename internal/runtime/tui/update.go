@@ -304,13 +304,13 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return t, notice(msgWarn("empty command after !") + "\n")
 				}
 				go runShell(command, t.cwd)
-				return t, tea.Batch(tea.Println(messageBlock(raw)), t.spinner.Tick)
+				return t, tea.Batch(tea.Println(messageBlock(raw) + "\n"), t.spinner.Tick)
 			}
 
 			go runExec(ipc.Frame{Type: ipc.FrameRun, SessionID: t.currentSessionID, Rayload: &ipc.Payload{Input: raw, WorkDir: t.cwd, AllowAll: t.allowAll}})
 
 			cmds = append(cmds,
-				tea.Println(messageBlock(raw)),
+				tea.Println(messageBlock(raw) + "\n"),
 				t.spinner.Tick,
 			)
 			return t, tea.Batch(cmds...)
