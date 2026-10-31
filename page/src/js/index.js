@@ -336,8 +336,13 @@ document.addEventListener("DOMContentLoaded", async function () {
           document.body.dataset.rendered = "1";
         }, 0);
 
+        let lastWidth = document.documentElement.clientWidth;
         window.addEventListener("resize", function (e) {
           const vw = document.documentElement.clientWidth;
+          if (vw === lastWidth) {
+            return;
+          }
+          lastWidth = vw;
           const dom = $(".left-tab");
 
           let timer;

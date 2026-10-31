@@ -34,18 +34,30 @@ func AddConcurrent(ctx context.Context, sessionID string) error {
 		return nil
 	}
 	concurrentMu.Lock()
-	delete(concurrentMap, sessionID)
 	slot, ok := concurrentSlots[sessionID]
 	if !ok {
 		slot = make(chan struct{}, configs.MAX_SESSION_TASKS)
 		concurrentSlots[sessionID] = slot
 	}
+	select {
+	case slot <- struct{}{}:
+		delete(concurrentMap, sessionID)
+		concurrentMu.Unlock()
+		return nil
+	default:
+	}
 	concurrentMu.Unlock()
 
 	select {
 	case slot <- struct{}{}:
+		concurrentMu.Lock()
+		delete(concurrentMap, sessionID)
+		concurrentMu.Unlock()
 		return nil
 	case <-ctx.Done():
+		concurrentMu.Lock()
+		delete(concurrentMap, sessionID)
+		concurrentMu.Unlock()
 		return ctx.Err()
 	}
 }

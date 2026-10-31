@@ -33,19 +33,6 @@ type selectConfigMeta struct {
 	JEVEnabled      bool
 }
 
-func Select(ctx context.Context, meta SelectMeta) agenttypes.Agent {
-	models, deadMap, _ := selectModel(ctx, meta)
-	for _, e := range models {
-		if deadMap[e] {
-			continue
-		}
-		if model, ok := meta.ModelSet.Registry[e]; ok && model != nil {
-			return model
-		}
-	}
-	return meta.ModelSet.Fallback
-}
-
 func selectModel(ctx context.Context, meta SelectMeta) ([]string, map[string]bool, string) {
 	// * step 1: load model selection config
 	cfg := loadConfig()

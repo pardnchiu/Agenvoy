@@ -49,6 +49,13 @@ var providerVendor = map[string]string{
 	"deepseek":    "deepseek",
 }
 
+// * deepseek offical models not fit deepseek-v*-flash name, fix this by using hardcode
+var fixedLimit = map[string]map[string]modelLimit{
+	"deepseek": {
+		"deepseek-flash": {In: 1048576, Out: 393216},
+	},
+}
+
 var vendorInModel = map[string]bool{
 	"nvidia":     true,
 	"openrouter": true,
@@ -128,9 +135,7 @@ func Window(ctx context.Context, modelName string) (int, int, bool) {
 		return 0, 0, false
 	}
 
-	limitMu.RLock()
-	defer limitMu.RUnlock()
-	limit, ok := limitDic[vendor][model]
+	limit, ok := findLimit(vendor, model)
 	if !ok || (limit.In <= 0 && limit.Out <= 0) {
 		return 0, 0, false
 	}
@@ -143,11 +148,19 @@ func lookupLimit(modelName string) (int, bool) {
 		return 0, false
 	}
 
-	limitMu.RLock()
-	defer limitMu.RUnlock()
-	limit, ok := limitDic[vendor][model]
+	limit, ok := findLimit(vendor, model)
 	if !ok || limit.In <= 0 {
 		return 0, false
 	}
 	return limit.In, true
+}
+
+func findLimit(vendor, model string) (modelLimit, bool) {
+	if limit, ok := fixedLimit[vendor][model]; ok {
+		return limit, true
+	}
+	limitMu.RLock()
+	defer limitMu.RUnlock()
+	limit, ok := limitDic[vendor][model]
+	return limit, ok
 }
