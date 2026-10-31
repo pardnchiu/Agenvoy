@@ -269,6 +269,11 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 		}
 		defer func() {
 			if keepPending || data.KeepPending {
+				if err := interactive.WriteTodos(session.ID, exec.PendingTask, nil); err != nil {
+					slog.Debug("interactive.WriteTodos",
+						slog.String("session", session.ID),
+						slog.String("error", err.Error()))
+				}
 				return
 			}
 			interactive.CleanupPending(session.ID, exec.PendingTask)

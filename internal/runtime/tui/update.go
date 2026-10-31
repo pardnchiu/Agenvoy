@@ -322,6 +322,7 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.toolBuf, t.toolCount = nil, 0
 		t.subCount, t.subActive = 0, 0
 		t.subBuf, t.subOrder = nil, nil
+		t.todos = nil
 		return t, nil
 
 	case shellDone:
@@ -329,6 +330,7 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case agentExecDone:
 		t.running = false
+		t.todos = nil
 		t.cancelExec = nil
 		t.activity = ""
 		t.runTarget = ""

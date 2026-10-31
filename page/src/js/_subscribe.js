@@ -144,6 +144,10 @@ function parseEvent(event) {
   }
 
   if (event.type === "EventPending") {
+    const paused = streamOf(sessionId);
+    if (paused) {
+      renderTodo(paused, []);
+    }
     setPaused(sessionId, true);
     if (event.text) {
       loadPending(sessionId, event.text, event.pending_session);
@@ -216,6 +220,7 @@ function parseEvent(event) {
   renderEvent(view, event);
 
   if (event.type === "EventCanceled" || event.type === "EventError") {
+    renderTodo(view, []);
     setTask(sessionId, "");
     setInputTask(sessionId, "");
     setStream(sessionId, null);

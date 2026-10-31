@@ -728,7 +728,6 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 	pendingMu.Lock()
 	var allResults []ToolResult
 	var messageID, model, reasoning string
-	var todos []agenttypes.TodoItem
 	var allowAll bool
 	allFiles := files
 	if existing, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash)); err == nil {
@@ -736,7 +735,6 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 		messageID = existing.MessageID
 		model = existing.Model
 		reasoning = existing.Reasoning
-		todos = existing.Todos
 		allFiles = mergeFiles(existing.Files, files)
 		seen := make(map[string]bool, len(toolResults))
 		for _, r := range toolResults {
@@ -765,7 +763,6 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 		Questions:   questions,
 		Files:       allFiles,
 		ToolResults: allResults,
-		Todos:       todos,
 		AllowAll:    allowAll,
 	}); err != nil {
 		slog.Warn("SaveAndEnqueueAskUser: writePending", slog.String("error", err.Error()))
