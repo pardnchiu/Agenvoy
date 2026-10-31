@@ -438,7 +438,7 @@ function sendAt() {
 
 function appendInboundUser(text, sessionId) {
   text = (text || "").trim();
-  if (!text || text.startsWith("[Resumed Task")) {
+  if (!text || text.startsWith("[Resumed Task") || text.startsWith("[Shell command]")) {
     return;
   }
   if (takeEcho(sessionId, text)) {

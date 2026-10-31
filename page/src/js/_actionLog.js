@@ -47,7 +47,7 @@ function parseActionLog(content) {
     let item = null;
     switch (kind) {
       case "user":
-        if (body.startsWith("[Resumed Task") || body.startsWith("[Scheduled Task")) {
+        if (body.startsWith("[Resumed Task") || body.startsWith("[Scheduled Task") || body.startsWith("[Shell command]")) {
           break;
         }
 

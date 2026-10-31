@@ -66,7 +66,7 @@ func renderActionLine(p parsedAction, width int) string {
 	switch p.kind {
 	case "user", "steer":
 		body = configs.MESSAGE_PREFIX_REGEX.ReplaceAllString(body, "")
-		if strings.Contains(body, "[Resumed Task") {
+		if strings.Contains(body, "[Resumed Task") || strings.HasPrefix(body, "[Shell command]") {
 			return ""
 		}
 		body = strings.TrimSpace(body)

@@ -1,3 +1,4 @@
+[Shell command]
 I ran a shell command in {{.WorkDir}}.
 
 $ {{.Command}}
