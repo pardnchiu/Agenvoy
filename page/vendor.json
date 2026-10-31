@@ -21,11 +21,11 @@
   },
   {
     "path": "nanomd/parser.min.js",
-    "url": "https://cdn.jsdelivr.net/npm/@pardnchiu/nanomd@2.0.10/dist/parser.min.js"
+    "url": "https://cdn.jsdelivr.net/npm/@pardnchiu/nanomd@2.0.11/dist/parser.min.js"
   },
   {
     "path": "nanomd/parser.css",
-    "url": "https://cdn.jsdelivr.net/npm/@pardnchiu/nanomd@2.0.10/dist/parser.css"
+    "url": "https://cdn.jsdelivr.net/npm/@pardnchiu/nanomd@2.0.11/dist/parser.css"
   },
   {
     "path": "cloud.pardn.io/voice-realtime.js",

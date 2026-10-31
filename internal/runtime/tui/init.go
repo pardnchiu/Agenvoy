@@ -138,7 +138,7 @@ type StartupSessionSkip struct{}
 
 func newModel(ctx context.Context) TUI {
 	textArea := textarea.New()
-	textArea.Placeholder = `/ commands  enter send  esc cancel  shift+u usage  shift+f fast  shift+g guide`
+	textArea.Placeholder = `/ commands  shift+u usage  shift+f fast  shift+g guide  shift+p workdir`
 	textArea.CharLimit = 8000
 	textArea.SetHeight(1)
 	textArea.ShowLineNumbers = false

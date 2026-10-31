@@ -16,7 +16,6 @@ const (
 	FrameCancel  = "cancel"
 	FrameSteer   = "steer"
 	FrameVerify  = "verify"
-	FrameWorkDir = "workdir"
 	FrameMCP     = "mcp"
 )
 

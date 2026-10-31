@@ -1,1 +1,1 @@
-Work directory: `{{.WorkDir}}` is authoritative this turn; ignore earlier ones in history. `run_command` already starts there — `cd` only to reach another directory: `run_command argv=["cd", "<path>"]`.
+Work directory: `{{.WorkDir}}` is authoritative this turn; ignore earlier ones in history. `run_command` already starts there.

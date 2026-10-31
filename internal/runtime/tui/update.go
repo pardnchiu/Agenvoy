@@ -191,6 +191,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "U":
 					next, cmd, _ := t.commandProviderUsage()
 					return next, cmd
+				case "P":
+					return t.commandWorkDir(), nil
 				}
 			}
 
@@ -361,10 +363,6 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PendingSelect:
 		return t.resumePending(msg)
-
-	case WorkDir:
-		t.cwd = msg.dir
-		return t, nil
 
 	case agentEvent:
 		return t.handleAgentEvent(msg.event)
@@ -968,6 +966,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ReplyLanguageSelect:
 		return t.runReplyLanguageSelect(msg.code)
+
+	case WorkDirSubmit:
+		return t.runWorkDirSubmit(msg.value)
 
 	case OutputDirSubmit:
 		return t.runOutputDirSubmit(msg.value)

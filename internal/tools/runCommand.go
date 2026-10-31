@@ -42,7 +42,7 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 			"properties": map[string]any{
 				"argv": map[string]any{
 					"type":        "array",
-					"description": "The command as an argv array — ['git','status'], ['go','test','./...']. A single pipeline or redirect needs ['sh','-c','<full command>']; without a shell metacharacter (| && > * ~) it is called directly, never wrapped in sh -c. A multi-line script goes in a file you write first, then run that file. ['cd','<path>'] switches the work directory for later calls, and the path is verified first. When the request names a capability rather than an exact command, resolve which binary is installed before running one: a single ['sh','-c','command -v <every candidate>'] prints only those that exist. Guessing the most common name costs one round trip per guess and the failure reads as 'command not found', not as 'wrong binary'.",
+					"description": "The command as an argv array — ['git','status'], ['go','test','./...']. A single pipeline or redirect needs ['sh','-c','<full command>']; without a shell metacharacter (| && > * ~) it is called directly, never wrapped in sh -c. A multi-line script goes in a file you write first, then run that file. When the request names a capability rather than an exact command, resolve which binary is installed before running one: a single ['sh','-c','command -v <every candidate>'] prints only those that exist. Guessing the most common name costs one round trip per guess and the failure reads as 'command not found', not as 'wrong binary'.",
 					"items":       map[string]any{"type": "string"},
 					"minItems":    1,
 				},
@@ -112,7 +112,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 		}
 	} else {
 		if binary == "cd" {
-			return changeWorkDir(e, argv[1:])
+			return "", utilsmsg.New(utilsmsg.Invalid, "cd", "the work directory is set by the user and cannot be changed here; pass absolute paths, or ['sh','-c','cd <dir> && <command>'] for a single command")
 		}
 		if slices.Contains(denied, binary) {
 			return "", deniedCommandErr(binary)

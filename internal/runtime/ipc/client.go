@@ -18,9 +18,8 @@ import (
 var ErrOffline = errors.New("daemon offline")
 
 type Client struct {
-	onAsk     func(Frame)
-	onVerify  func(error)
-	onWorkDir func(dir string)
+	onAsk    func(Frame)
+	onVerify func(error)
 
 	mu   sync.Mutex
 	conn net.Conn
@@ -28,12 +27,11 @@ type Client struct {
 	runs map[string]chan Frame
 }
 
-func Connect(ctx context.Context, onAsk func(Frame), onVerify func(error), onWorkDir func(dir string), onState func(connected bool)) *Client {
+func Connect(ctx context.Context, onAsk func(Frame), onVerify func(error), onState func(connected bool)) *Client {
 	c := &Client{
-		onAsk:     onAsk,
-		onVerify:  onVerify,
-		onWorkDir: onWorkDir,
-		runs:      map[string]chan Frame{},
+		onAsk:    onAsk,
+		onVerify: onVerify,
+		runs:     map[string]chan Frame{},
 	}
 	go c.loop(ctx, onState)
 	return c
@@ -92,10 +90,6 @@ func (c *Client) read(conn net.Conn) {
 			ch <- f
 			if last {
 				close(ch)
-			}
-		case FrameWorkDir:
-			if f.Rayload != nil {
-				c.onWorkDir(f.Rayload.WorkDir)
 			}
 		case FrameVerify:
 			var err error

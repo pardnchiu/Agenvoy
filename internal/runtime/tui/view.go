@@ -69,12 +69,12 @@ func (t TUI) viewIdle() string {
 
 	boxStyle, lineStyle := textAreaStyle, thinkStyle
 	if strings.HasPrefix(t.textarea.Value(), "! ") {
-		boxStyle, lineStyle = textAreaStyle.BorderForeground(colSystem), systemStyle
-		t.textarea.FocusedStyle.Text = systemStyle
+		boxStyle, lineStyle = textAreaStyle.BorderForeground(colError), errorStyle
+		t.textarea.FocusedStyle.Text = errorStyle
 		t.textarea.Focus()
 		t.textarea.SetPromptFunc(2, func(lineIdx int) string {
 			if lineIdx == 0 {
-				return systemStyle.Render("❯ ")
+				return errorStyle.Render("$ ")
 			}
 			return "  "
 		})

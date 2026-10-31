@@ -34,7 +34,6 @@
   "sha256sum",
   "md5sum",
   "diff",
-  "cd",
   "git grep",
   "git show-ref",
   "git for-each-ref",

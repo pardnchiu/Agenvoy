@@ -16,7 +16,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/sudo"
-	"github.com/pardnchiu/agenvoy/internal/tools"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -33,8 +32,6 @@ func Listen(ctx context.Context) (func(), error) {
 		listener.Close()
 		return nil, utilsmsg.Wrap(utilsmsg.Internal, "os.Chmod", "", err)
 	}
-
-	tools.WorkDirChangeHook = notifyWorkDir
 
 	go func() {
 		for {
@@ -67,15 +64,6 @@ var (
 	runningMu   sync.Mutex
 	runningConn = map[string]*conn{}
 )
-
-func notifyWorkDir(sessionID, dir string) {
-	runningMu.Lock()
-	c := runningConn[sessionID]
-	runningMu.Unlock()
-	if c != nil {
-		c.write(Frame{Type: FrameWorkDir, SessionID: sessionID, Rayload: &Payload{WorkDir: dir}})
-	}
-}
 
 func serve(ctx context.Context, raw net.Conn) {
 	c := &conn{
