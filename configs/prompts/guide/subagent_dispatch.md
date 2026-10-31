@@ -28,6 +28,7 @@
   A leg that mixes jobs was split too coarsely: gathering and judging what was gathered are two legs (collect legs first, then an analyze or compare leg fed their output). `research` is never a leg's work kind — it is collect plus analyze, split. Merging every leg into one answer stays with the planner at synthesis.
 - **Open a `write_todo` plan** with dispatch / gather / synthesize as phases, so the user can follow progress.
 - **Send each batch of three in one response.** Three legs run concurrently; a fourth queues behind them while its own timeout keeps running, so a wider set goes out in successive batches of three. One call per leg.
+- **Background by work kind**: collect and analyze legs of a research fan-out run with `background: true`, so the user is not left waiting; a leg whose output decides this turn's next action stays foreground. Never mix the two in one fan-out, and keep a single short lookup foreground.
 - **Leave `self_id` empty** for fan-out legs: they run as temp sessions, and a descriptive label matches no session.
 - **Name each leg's report** with `report_name` (job + entity, e.g. `nvda-news`), so the returned paths say which leg wrote them.
 - **Legs return material; deliverables are rendered here.** Legs cannot write files or render pages / PDFs, so any page, document or report the user wants is produced by the planner after synthesis.

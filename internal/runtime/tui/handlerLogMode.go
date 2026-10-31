@@ -146,19 +146,23 @@ func drainNew(path string, lastSize int64) int64 {
 		if !ok {
 			continue
 		}
-		if parsed.hash == own {
+		foreign := parsed.hash != own
+		if !foreign && execActive() {
 			continue
 		}
 		line := renderActionLine(parsed, defaultWrapWidth)
 		if line == "" {
 			continue
 		}
+		if foreign {
+			line = foreignWrap(line)
+		}
 		if parsed.kind == "user" {
 			line += "\n"
 		}
 		send(tailLine{
-			line:    foreignWrap(line),
-			foreign: true,
+			line:    line,
+			foreign: foreign,
 		})
 	}
 	if err := scanner.Err(); err != nil {

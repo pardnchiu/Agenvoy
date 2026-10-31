@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,6 +21,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/ipc"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -126,7 +129,15 @@ type agentExecDone struct {
 
 const interruptWindow = 3 * time.Second
 
+var execUntil atomic.Int64
+
+func execActive() bool {
+	return time.Now().UnixNano() < execUntil.Load()
+}
+
 func runExec(f ipc.Frame) {
+	execUntil.Store(math.MaxInt64)
+	defer func() { execUntil.Store(time.Now().Add(time.Second).UnixNano()) }()
 	client := ipcClient.Load()
 	if client == nil {
 		send(agentExecDone{err: ipc.ErrOffline})
@@ -223,6 +234,14 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 			t.todos = ev.Todos
 		}
 		return t, nil
+
+	case agenttypes.EventPending:
+		if ev.Source != "" || ev.ToolName != interactive.BackgroundTool {
+			return t, nil
+		}
+		t.waitingBackground = t.currentSessionID
+		t.todos = nil
+		return t, t.collapseToolBuf()
 
 	case agenttypes.EventUserInjected:
 		if ev.Source == "" {

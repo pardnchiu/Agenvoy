@@ -25,7 +25,7 @@ func registSubagents() {
 		Timeout:     time.Duration(configs.MAX_SUBAGENT_TIMEOUT_MIN) * time.Minute,
 		Description: `Runs a subtask in its own session (invoke), or looks up a named agent's self id (list).
 Naming an agent is an order: 呼叫 X / 請 X / 找 X / call X / ask X → dispatch to X, never answer it yourself.
-Also fan out when one lookup repeats across 3+ entities or 2+ source classes.
+Also fan out when one lookup repeats across 3+ entities or 2+ source classes; research and data-gathering fan-out runs with background: true so the user is not left waiting (查資料 / 研究 / 整理報告 / 慢慢查 / 跑完告訴我).
 The leg's report is saved to ~/.config/agenvoy/download/temp-<report_name>.md and its path comes back — read_files it and relay it; "已呼叫" is not an answer.
 One job per leg, one call per leg, three at a time. Protocol and model tiers → reasoning_guide(topic=subagent_dispatch).`,
 		Parameters: map[string]any{
@@ -70,6 +70,11 @@ One job per leg, one call per leg, three at a time. Protocol and model tiers →
 					"type":        "string",
 					"description": "mode=invoke: extra role or constraints appended to the subagent's system prompt.",
 					"default":     "",
+				},
+				"background": map[string]any{
+					"type":        "boolean",
+					"default":     false,
+					"description": "mode=invoke. true: the call returns at once and this whole task pauses until every background leg finishes, then resumes with all reports in one go — use for research, data gathering and multi-source fan-out whose results are not needed to decide this turn's next step, or when the user says 慢慢查 / 跑完告訴我. false: wait in this turn — use when the result drives your next step, the user wants it now, or for a single short lookup. Set the same value on every leg of one fan-out; needs a session (stateless requests reject it).",
 				},
 				"exclude_tools": map[string]any{
 					"type":        "array",

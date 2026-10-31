@@ -127,6 +127,7 @@ func Daemon() {
 	}
 
 	subagent.Register()
+	subagent.SetDeliver(app.DeliverBackground)
 
 	defer func() {
 		if m := mcp.Manager(); m != nil {
@@ -148,6 +149,8 @@ func Daemon() {
 			slog.String("error", err.Error()))
 	}
 	defer runtime.StopScheduler()
+
+	app.RecoverBackground()
 
 	if err := runtime.AddSystemCron("*/15 * * * *", app.GenerateSummary); err != nil {
 		slog.Warn("cron summaryGenerate",

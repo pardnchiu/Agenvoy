@@ -80,6 +80,8 @@ type pendingMeta struct {
 	Files        []string              `json:"files,omitempty"`
 	Reply        string                `json:"reply,omitempty"`
 	AllowAll     bool                  `json:"allow_all,omitempty"`
+	Background   []BackgroundTask      `json:"background,omitempty"`
+	WindowHash   string                `json:"window_hash,omitempty"`
 }
 
 var pendingMu sync.Mutex
@@ -567,8 +569,11 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 
 	var msg strings.Builder
 
+	finished, running := backgroundToReport(meta.Background)
 	if len(meta.Questions) > 0 {
 		msg.WriteString("[Resumed Task — ask_user response received]\n\n")
+	} else if len(finished) > 0 {
+		msg.WriteString("[Resumed Task — background task finished]\n\n")
 	} else {
 		msg.WriteString("[Resumed Task — interrupted execution recovered]\n\n")
 	}
@@ -667,6 +672,16 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 		for _, s := range meta.NextSteps {
 			msg.WriteString(fmt.Sprintf("- %s\n", s))
 		}
+	}
+
+	if len(finished) > 0 {
+		section := formatBackgroundSection(finished, running)
+		msg.WriteString(section)
+		if sb.Len() == 0 {
+			sb.WriteString("[Resumed Task — background task finished]\n")
+			sb.WriteString(section)
+		}
+		markBackgroundReported(sessionID, taskHash, finished)
 	}
 
 	msg.WriteString("\nContinue from where this task was interrupted. Use the completed tool results as ground truth.")

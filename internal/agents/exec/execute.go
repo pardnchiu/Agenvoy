@@ -276,6 +276,10 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				}
 				return
 			}
+			if running, unreported := interactive.BackgroundState(session.ID, exec.PendingTask); running+unreported > 0 {
+				publishPending(session.ID, deliverFor(ctx, session.ID), exec.PendingTask)
+				return
+			}
 			interactive.CleanupPending(session.ID, exec.PendingTask)
 		}()
 		defer historystore.ClearTaskOrigin(exec.PendingTask)

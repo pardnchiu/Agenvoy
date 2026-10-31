@@ -65,6 +65,10 @@ func (t TUI) viewIdle() string {
 		top += renderCmdSelector(t.selector) + "\n"
 	}
 
+	if t.waitingBackground != "" && t.waitingBackground == t.currentSessionID {
+		top += warnStyle.Render(t.spinner.View()+" Waiting for background tasks") + " " + hintStyle.Render("(the reply continues here)") + "\n"
+	}
+
 	if t.notice != "" {
 		top += noticeBlock(t.notice, t.noticeOffset, width-4) + "\n"
 	}
@@ -92,7 +96,7 @@ func (t TUI) viewIdle() string {
 	}
 
 	if t.connecting {
-		return top + box + "\n" + bottom + "\n " + t.spinner.View() + systemStyle.Render(" Connecting")
+		return top + box + "\n" + bottom + "\n " + systemStyle.Render(t.spinner.View()+" Connecting")
 	}
 
 	status := " " + fastMode + confirmMode
@@ -146,7 +150,7 @@ func (t TUI) viewThinking() string {
 	sb.WriteString(" ")
 	sb.WriteString(hintStyle.Render("(" + strings.Join(detail, "  ") + ")"))
 
-	if block := renderTodoList(t.todos, t.spinner.View()); block != "" {
+	if block := renderTodoList(t.todos, systemStyle.Render(t.spinner.View())); block != "" {
 		sb.WriteString("\n\n")
 		sb.WriteString(block)
 	}

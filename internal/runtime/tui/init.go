@@ -87,16 +87,17 @@ type TUI struct {
 	streaming      bool
 	tableBuf       []string
 
-	toolBuf         []string
-	toolCount       int
-	subCount        int
-	subActive       int
-	subBuf          map[string]*subagentLive
-	subOrder        []string
-	todos           []agenttypes.TodoItem
-	pendingSteer    []string
-	inputHistory    []string
-	inputHistoryIdx int
+	toolBuf           []string
+	toolCount         int
+	subCount          int
+	subActive         int
+	subBuf            map[string]*subagentLive
+	subOrder          []string
+	todos             []agenttypes.TodoItem
+	pendingSteer      []string
+	waitingBackground string
+	inputHistory      []string
+	inputHistoryIdx   int
 
 	quitting bool
 
@@ -155,10 +156,10 @@ func newModel(ctx context.Context) TUI {
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Spinner{
-		Frames: []string{"✶", "✷", "✸", "✹", "✺", "✹", "✸", "✷"},
+		Frames: []string{"⠾", "⠷", "⠯", "⠟", "⠻", "⠽"},
 		FPS:    time.Second / 8,
 	}
-	sp.Style = systemStyle
+	sp.Style = lipgloss.NewStyle()
 
 	cwd, err := os.Getwd()
 	if err != nil {

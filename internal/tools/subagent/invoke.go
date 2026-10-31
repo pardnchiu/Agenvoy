@@ -43,6 +43,7 @@ type invokeParams struct {
 	SystemPrompt string   `json:"system_prompt,omitempty"`
 	New          *bool    `json:"new,omitempty"`
 	ExcludeTools []string `json:"exclude_tools,omitempty"`
+	Background   bool     `json:"background,omitempty"`
 }
 
 func invokeSubagent(ctx context.Context, e *tooltypes.Executor, params invokeParams) (string, error) {
@@ -84,6 +85,10 @@ func invokeSubagent(ctx context.Context, e *tooltypes.Executor, params invokePar
 	ignoreHistory := sessionID == ""
 	if params.New != nil {
 		ignoreHistory = *params.New
+	}
+
+	if params.Background {
+		return startBackground(ctx, e, params, task, sessionID, model, reasoning, excludeTools, ignoreHistory)
 	}
 
 	output, err := execsubagent.Exec(ctx, task, sessionID, model, reasoning,

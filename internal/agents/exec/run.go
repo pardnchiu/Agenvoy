@@ -51,7 +51,7 @@ func Run(ctx context.Context, data ExecuteMeta, events chan<- agentstypes.Event,
 	}
 
 	windowHash := agentstypes.WindowHash(ctx)
-	if data.PendingTask != "" && sessionlog.LastTaskHash(sessionID) != data.PendingTask {
+	if data.PendingTask != "" && !interactive.HasBackground(sessionID, data.PendingTask) && sessionlog.LastTaskHash(sessionID) != data.PendingTask {
 		renamed := go_pkg_utils.UUID()
 		if err := interactive.RenamePending(sessionID, data.PendingTask, renamed); err != nil {
 			return utilsmsg.Trace("interactive.RenamePending", data.PendingTask, err)

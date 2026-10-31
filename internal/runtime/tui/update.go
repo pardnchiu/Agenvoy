@@ -304,13 +304,13 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return t, notice(msgWarn("empty command after !") + "\n")
 				}
 				go runShell(command, t.cwd)
-				return t, tea.Batch(tea.Println(messageBlock(raw) + "\n"), t.spinner.Tick)
+				return t, tea.Batch(tea.Println(messageBlock(raw)+"\n"), t.spinner.Tick)
 			}
 
 			go runExec(ipc.Frame{Type: ipc.FrameRun, SessionID: t.currentSessionID, Rayload: &ipc.Payload{Input: raw, WorkDir: t.cwd, AllowAll: t.allowAll}})
 
 			cmds = append(cmds,
-				tea.Println(messageBlock(raw) + "\n"),
+				tea.Println(messageBlock(raw)+"\n"),
 				t.spinner.Tick,
 			)
 			return t, tea.Batch(cmds...)
@@ -1060,6 +1060,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 
 	case tailLine:
+		if !msg.foreign {
+			t.waitingBackground = ""
+		}
 		return t, tea.Println(msg.line)
 
 	case Log:
@@ -1074,7 +1077,7 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t.restartTailer(), nil
 
 	case spinner.TickMsg:
-		if t.running || t.connecting {
+		if t.running || t.connecting || t.waitingBackground != "" {
 			var cmd tea.Cmd
 			t.spinner, cmd = t.spinner.Update(msg)
 			cmds = append(cmds, cmd)
