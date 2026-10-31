@@ -41,6 +41,20 @@ func RecentEvents(sessionID string, limit int) []agenttypes.Event {
 	return events
 }
 
+func LastTaskHash(sessionID string) string {
+	text, err := go_pkg_filesystem.ReadText(filesystem.ActionLogPath(sessionID))
+	if err != nil {
+		return ""
+	}
+	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if m := lineRegex.FindStringSubmatch(lines[i]); len(m) >= 6 && m[4] != "" {
+			return m[4]
+		}
+	}
+	return ""
+}
+
 func ParseLine(line string) (agenttypes.Event, bool) {
 	m := lineRegex.FindStringSubmatch(line)
 	if len(m) < 6 {

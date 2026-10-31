@@ -38,6 +38,20 @@ func insert(ctx context.Context, c Change, meta Meta) error {
 	return nil
 }
 
+func RenameFileTask(ctx context.Context, sessionID, oldID, newID string) error {
+	if conn == nil || oldID == "" {
+		return nil
+	}
+
+	if _, err := conn.ExecContext(ctx, `
+	UPDATE file_history SET task_id = ?
+	WHERE session_id = ? AND task_id = ?`, newID, sessionID, oldID); err != nil {
+		return utilsmsg.Wrap(utilsmsg.Internal, "sql.DB ExecContext", "[UPDATE file_history]", err)
+	}
+	renameTaskOrigin(oldID, newID)
+	return nil
+}
+
 func PruneFile(ctx context.Context) error {
 	if conn == nil {
 		return nil

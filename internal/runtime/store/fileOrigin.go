@@ -25,6 +25,17 @@ func rememberOrigin(taskID string, c Change) Change {
 	return c
 }
 
+func renameTaskOrigin(oldID, newID string) {
+	prefix := oldID + "\x00"
+	taskOrigin.Range(func(key, value any) bool {
+		if k, ok := key.(string); ok && strings.HasPrefix(k, prefix) {
+			taskOrigin.Store(newID+"\x00"+strings.TrimPrefix(k, prefix), value)
+			taskOrigin.Delete(k)
+		}
+		return true
+	})
+}
+
 func ClearTaskOrigin(taskID string) {
 	if taskID == "" {
 		return

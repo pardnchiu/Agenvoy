@@ -2,6 +2,7 @@ package exec
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 	"strings"
 
@@ -12,9 +13,11 @@ import (
 	agentsexecmodel "github.com/pardnchiu/agenvoy/internal/agents/exec/model"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	historystore "github.com/pardnchiu/agenvoy/internal/runtime/store"
 	sessionconfigbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -48,6 +51,19 @@ func Run(ctx context.Context, data ExecuteMeta, events chan<- agentstypes.Event,
 	}
 
 	windowHash := agentstypes.WindowHash(ctx)
+	if data.PendingTask != "" && sessionlog.LastTaskHash(sessionID) != data.PendingTask {
+		renamed := go_pkg_utils.UUID()
+		if err := interactive.RenamePending(sessionID, data.PendingTask, renamed); err != nil {
+			return utilsmsg.Trace("interactive.RenamePending", data.PendingTask, err)
+		}
+		if err := historystore.RenameFileTask(ctx, sessionID, data.PendingTask, renamed); err != nil {
+			slog.Warn("historystore.RenameFileTask",
+				slog.String("session", sessionID),
+				slog.String("task", data.PendingTask),
+				slog.String("error", err.Error()))
+		}
+		data.PendingTask = renamed
+	}
 	taskHash := data.PendingTask
 	if taskHash == "" {
 		if data.TaskHash == "" {

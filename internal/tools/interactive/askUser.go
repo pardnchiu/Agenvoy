@@ -268,6 +268,23 @@ func FinalizePending(sessionID, taskHash, reply string) {
 	}
 }
 
+func RenamePending(sessionID, oldHash, newHash string) error {
+	pendingMu.Lock()
+	defer pendingMu.Unlock()
+
+	meta, err := readPending(filesystem.PendingMetaPath(sessionID, oldHash))
+	if err != nil {
+		return utilsmsg.Trace("readPending", oldHash, err)
+	}
+	if err := writePending(sessionID, newHash, &meta); err != nil {
+		return utilsmsg.Trace("writePending", newHash, err)
+	}
+	if err := os.Remove(filesystem.PendingMetaPath(sessionID, oldHash)); err != nil {
+		return utilsmsg.Wrap(utilsmsg.Internal, "os.Remove", oldHash, err)
+	}
+	return nil
+}
+
 func DeletePending(sessionID, taskHash string) {
 	if taskHash == "" {
 		return
