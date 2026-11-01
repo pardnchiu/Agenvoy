@@ -281,6 +281,13 @@ async function renderChat(sessionId) {
       if (item.paused) {
         view.paused = true;
       }
+      if (item.turns.length) {
+        view.turns = item.turns;
+        view.prompts = item.prompts;
+        view.prompt = item.prompt;
+        view.turnsOpen = true;
+        renderAnswer(view);
+      }
       setStream(sessionId, view);
       renderTodo(view, item.todos);
       continue;
@@ -289,6 +296,9 @@ async function renderChat(sessionId) {
     if (item.role === "user") {
       frame.appendChild(newUserItem(item));
       continue;
+    }
+    if (item.turns && item.turns.length) {
+      item.content = composeTurns(item.turns, item.prompts, item.content, item.paused || !item.finished);
     }
     const node = newAssisatantItem(item, sessionId);
     if (item.pending) {

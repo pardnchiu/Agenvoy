@@ -436,7 +436,7 @@ function sendAt() {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function appendInboundUser(text, sessionId) {
+function appendInboundUser(text, sessionId, task) {
   text = (text || "").trim();
   if (!text || text.startsWith("[Resumed Task") || text.startsWith("[Shell command]")) {
     return;
@@ -449,12 +449,46 @@ function appendInboundUser(text, sessionId) {
   if (!dom) {
     return;
   }
+  if (appendTaskSteer(dom, task, text, sessionId)) {
+    scrollToBottom(true, sessionId);
+    return;
+  }
   if ((sessionId || currentSessionId) === currentSessionId) {
     HISTORY.push({ role: "user", content: text });
   }
   setStream(sessionId, null);
   dom.appendChild(newUserItem({ content: text, meta: { send_at: sendAt() } }));
   scrollToBottom(true, sessionId);
+}
+
+function appendTaskSteer(dom, task, text, sessionId) {
+  if (!task) {
+    return false;
+  }
+  const items = dom.querySelectorAll(`:scope > div.assistant[data-task="${CSS.escape(task)}"]`);
+  let bubble = items.length ? items[0].previousElementSibling : null;
+  while (bubble && !bubble.classList.contains("user")) {
+    bubble = bubble.previousElementSibling;
+  }
+  if (!bubble) {
+    return false;
+  }
+
+  const view = taskStream(sessionId || currentSessionId, task);
+  if (view) {
+    view.nextPrompt = text;
+  }
+  const mark = steerMark(sendAt(), text, bubble.dataset.steered !== "1");
+  bubble.dataset.steered = "1";
+  const content = bubble.querySelector("p");
+  if (content) {
+    content.textContent += mark;
+  }
+  const source = bubble.querySelector("pre.source");
+  if (source) {
+    source.textContent += mark;
+  }
+  return true;
 }
 
 function eventSkip(event) {

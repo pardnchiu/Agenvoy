@@ -10,6 +10,7 @@ function parseActionLog(content) {
   const itemOf = (task, writer, sendAt) => {
     let item = task ? taskItems.get(task) : null;
     if (item) {
+      foldFollowUps(item);
       return item;
     }
     const current = writerItem.get(writer);
@@ -17,6 +18,8 @@ function parseActionLog(content) {
       item = current;
     } else {
       item = logItem(sendAt);
+      item.origin = list.findLast((entry) => entry.role === "user") || null;
+      item.prompt = item.origin ? item.origin.content : "";
       list.push(item);
       writerItem.set(writer, item);
     }
@@ -25,6 +28,23 @@ function parseActionLog(content) {
       taskItems.set(task, item);
     }
     return item;
+  };
+
+  const foldFollowUps = (item) => {
+    const origin = item.origin;
+    if (!origin) {
+      return;
+    }
+    const at = list.indexOf(item);
+    const moved = [];
+    while (list.length - 1 > at && list[list.length - 1].role === "user") {
+      moved.unshift(list.pop());
+    }
+    for (const entry of moved) {
+      origin.content += steerMark(entry.meta.send_at, entry.content, !origin.steered);
+      origin.steered = true;
+      item.nextPrompt = entry.content;
+    }
   };
 
   for (const line of content.split("\n")) {
@@ -74,6 +94,16 @@ function parseActionLog(content) {
       case "agent_result":
         item = itemOf(task, writer, sendAt);
         item.meta.model = body;
+        if (item.content) {
+          item.turns.push(item.content);
+          item.prompts.push(item.prompt || "");
+          item.content = "";
+          item.prompt = item.nextPrompt || "";
+        } else if (item.nextPrompt) {
+          item.prompt = item.nextPrompt;
+        }
+        item.nextPrompt = "";
+        item.resumed = false;
         break;
 
       case "edited_files": {
@@ -178,7 +208,7 @@ function parseActionLog(content) {
       return true;
     }
     item.pending = !item.finished;
-    return Boolean(item.content || item.Reasoning || (item.pending && i === list.length - 1));
+    return Boolean(item.content || item.turns.length || item.Reasoning || (item.pending && i === list.length - 1));
   });
 }
 
@@ -209,12 +239,26 @@ function logItem(sendAt) {
     role: "assistant",
     task: "",
     content: "",
+    turns: [],
+    prompts: [],
     Reasoning: "",
     files: [],
     resumed: false,
     finished: false,
     meta: { model: "", send_at: sendAt },
   };
+}
+
+function composeTurns(turns, prompts, current, open) {
+  if (!turns || !turns.length) {
+    return current;
+  }
+  const blocks = turns.map((text, i) => {
+    const prompt = Array.from(((prompts && prompts[i]) || "Background").replace(/\s+/g, " ").trim());
+    const summary = prompt.length > 64 ? prompt.slice(0, 64).join("") + "..." : prompt.join("");
+    return `<details${open ? " open" : ""}>\n<summary>${escapeSubviewText(summary)}</summary>\n\n${text}\n\n</details>`;
+  });
+  return blocks.join("\n\n") + (current ? "\n\n---\n\n" + current : "");
 }
 
 function steerMark(sendAt, body, first) {

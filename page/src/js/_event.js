@@ -3,6 +3,18 @@ function renderEvent(view, event) {
 
   if (type === "EventAgentResult") {
     view.model.textContent = event.text || "";
+    if (view.text) {
+      view.prompts = (view.prompts || []).concat([view.prompt === undefined ? originPrompt(view) : view.prompt]);
+      view.prompt = view.nextPrompt || "";
+      view.nextPrompt = "";
+      view.turns = (view.turns || []).concat([view.text]);
+      view.text = "";
+      view.textStarted = false;
+      view.streamed = false;
+      view.resumed = false;
+      view.turnsOpen = true;
+      renderAnswer(view);
+    }
     return;
   }
 
@@ -54,6 +66,10 @@ function renderEvent(view, event) {
   }
 
   if (type === "EventDone") {
+    if (view.turns && view.turns.length) {
+      view.turnsOpen = false;
+      renderAnswer(view);
+    }
     const model = event.model || view.model.textContent;
     if (event.reasoning) {
       view.model.replaceChildren(`${model}/${event.reasoning}`);
@@ -84,12 +100,21 @@ function renderEvent(view, event) {
 
 function renderAnswer(view) {
   view.source.textContent = view.text;
-  render(view.answer, view.text, view.session);
+  render(view.answer, composeTurns(view.turns, view.prompts, view.text, view.turnsOpen), view.session);
   if (view.answered) {
     return;
   }
   view.answered = true;
   scrollToBottom(true, view.session);
+}
+
+function originPrompt(view) {
+  let bubble = view.dom ? view.dom.previousElementSibling : null;
+  while (bubble && !bubble.classList.contains("user")) {
+    bubble = bubble.previousElementSibling;
+  }
+  const source = bubble ? bubble.querySelector("pre.source") || bubble.querySelector("p") : null;
+  return source ? source.textContent.split("\n===\n")[0] : "";
 }
 
 function dropResumedText(view) {

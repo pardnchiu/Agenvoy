@@ -139,7 +139,7 @@ function parseEvent(event) {
   }
 
   if (event.type === "EventUserInput") {
-    appendInboundUser(event.text, sessionId);
+    appendInboundUser(event.text, sessionId, event.task_hash);
     return;
   }
 
@@ -149,6 +149,11 @@ function parseEvent(event) {
       renderTodo(paused, []);
     }
     setPaused(sessionId, true);
+    const waiting = taskStream(sessionId, event.task_hash);
+    if (waiting && waiting.turns && waiting.turns.length) {
+      waiting.turnsOpen = true;
+      renderAnswer(waiting);
+    }
     if (event.text) {
       loadPending(sessionId, event.text, event.pending_session);
     }
