@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 
@@ -75,7 +76,8 @@ func registeredModelOptions(sid string) (options, values []string, cursor int) {
 func (t TUI) runSessionModelSelect(name string) (TUI, tea.Cmd) {
 	sid := strings.TrimSpace(t.currentSessionID)
 	if sid == "" {
-		return t, notice(msgLog("no active session") + "\n")
+		slog.Debug("tui: no active session")
+		return t, nil
 	}
 	configbot.SetModel(sid, name, "")
 	return t, nil

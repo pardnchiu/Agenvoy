@@ -12,6 +12,10 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
 
+func noPendingNotice() tea.Cmd {
+	return notice(msgLog("no pending task  it may have been resumed or deleted") + "\n")
+}
+
 type PendingSelect struct {
 	id       string
 	taskHash string
@@ -33,12 +37,13 @@ type PendingDeleteConfirm struct {
 func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 	sid := strings.TrimSpace(t.currentSessionID)
 	if sid == "" {
-		return t, notice(msgLog("no active session") + "\n"), true
+		slog.Debug("tui: no active session")
+		return t, nil, true
 	}
 
 	hashes := interactive.ListResumablePending(sid)
 	if len(hashes) == 0 {
-		return t, notice(msgLog("no pending tasks") + "\n"), true
+		return t, noPendingNotice(), true
 	}
 
 	options := make([]string, 0, len(hashes))
@@ -71,7 +76,7 @@ func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 	}
 
 	if len(options) == 0 {
-		return t, notice(msgLog("no pending tasks") + "\n"), true
+		return t, noPendingNotice(), true
 	}
 
 	sessionID := sid
@@ -121,7 +126,7 @@ func (t TUI) openPendingDeleteConfirm(msg PendingDeletePick) (TUI, tea.Cmd) {
 func (t TUI) runPendingDelete(msg PendingDeleteConfirm) (TUI, tea.Cmd) {
 	if _, ok := interactive.LoadPendingInfo(msg.id, msg.taskHash); !ok {
 		next, cmd, _ := t.commandPending()
-		return next, tea.Sequence(notice(msgLog("pending task already resolved in another session")+"\n"), cmd)
+		return next, tea.Sequence(noPendingNotice(), cmd)
 	}
 
 	interactive.DeletePending(msg.id, msg.taskHash)
@@ -136,7 +141,7 @@ func (t TUI) resumePending(msg PendingSelect) (tea.Model, tea.Cmd) {
 		return t, nil
 	}
 	if _, ok := interactive.LoadPendingInfo(msg.id, msg.taskHash); !ok {
-		return t, notice(msgLog("pending task already resolved in another session") + "\n")
+		return t, noPendingNotice()
 	}
 	return t.startPending(msg.id, msg.taskHash)
 }

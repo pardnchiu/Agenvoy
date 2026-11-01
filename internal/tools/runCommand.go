@@ -180,7 +180,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 	cmd.Stdout = sink
 	cmd.Stderr = sink
 
-	err = cmd.Run()
+	err = go_pkg_sandbox.Run(cmd)
 	output := sink.text()
 	if err != nil {
 		return fmt.Sprintf("%s\nError: %s%s", output, err.Error(), sandboxWriteHint(output, binds)), nil

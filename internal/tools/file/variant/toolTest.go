@@ -85,7 +85,7 @@ func testToolScript(ctx context.Context, name, input string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := go_pkg_sandbox.Run(cmd); err != nil {
 		if stderr.Len() > 0 {
 			return "", utilsmsg.New(utilsmsg.Internal, "test_tool", "script error: %s", strings.TrimSpace(stderr.String()))
 		}

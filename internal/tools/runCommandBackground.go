@@ -33,7 +33,7 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 		cmd.Stdout = sink
 		cmd.Stderr = sink
 
-		err = cmd.Run()
+		err = go_pkg_sandbox.Run(cmd)
 		output := sink.text()
 		switch {
 		case ctx.Err() == context.DeadlineExceeded:

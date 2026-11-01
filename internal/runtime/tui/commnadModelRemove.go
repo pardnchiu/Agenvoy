@@ -48,7 +48,8 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 		}
 	}
 	if len(kept) == len(cfg.Models) {
-		return t, notice(msgLog("no matching models found") + "\n")
+		slog.Debug("tui: no matching models found")
+		return t, nil
 	}
 
 	cfg.Models = kept

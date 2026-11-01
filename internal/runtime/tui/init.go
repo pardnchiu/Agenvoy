@@ -2,7 +2,6 @@ package tui
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -117,8 +116,9 @@ func (t TUI) Init() tea.Cmd {
 	seq = append(seq, func() tea.Msg { return initTailer{} })
 	if sid != "" {
 		if n := len(interactive.ListResumablePending(sid)); n > 0 {
-			hint := fmt.Sprintf("  %d pending task(s) — /pending to resume", n)
-			seq = append(seq, notice(msgLog(hint)+"\n"))
+			slog.Debug("tui: resumable pending tasks",
+				slog.String("session", sid),
+				slog.Int("count", n))
 		}
 	} else {
 		seq = append(seq, func() tea.Msg { return StartupSelectSession{} })

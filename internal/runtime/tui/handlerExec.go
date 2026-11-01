@@ -530,10 +530,7 @@ func (t *TUI) flushTableBuf() []tea.Cmd {
 func (t TUI) handleInterrupt() (tea.Model, tea.Cmd) {
 	if !t.interruptAt.IsZero() && time.Since(t.interruptAt) <= interruptWindow {
 		t.quitting = true
-		return t, tea.Sequence(
-			notice(msgLog("force quit")+"\n"),
-			tea.Quit,
-		)
+		return t, tea.Quit
 	}
 
 	t.interruptAt = time.Now()

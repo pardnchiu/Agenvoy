@@ -746,10 +746,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			next, cmd := t.openDiscordTokenPrompt()
 			return next, cmd
 		case "disable":
-			return t, tea.Sequence(
-				notice(msgLog("discord disabling")+"\n"),
-				disableDiscord(),
-			)
+			slog.Debug("tui: discord disabling")
+			return t, disableDiscord()
 		}
 		return t, nil
 
@@ -765,10 +763,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			next, cmd := t.openTelegramTokenPrompt()
 			return next, cmd
 		case "disable":
-			return t, tea.Sequence(
-				notice(msgLog("telegram disabling")+"\n"),
-				disableTelegram(),
-			)
+			slog.Debug("tui: telegram disabling")
+			return t, disableTelegram()
 		}
 		return t, nil
 
