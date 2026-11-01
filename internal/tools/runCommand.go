@@ -36,7 +36,7 @@ func registRunCommand() {
 Use for 跑一下 / 執行 / build / test / lint / format and local git work — one binary and its arguments.
 A watcher never exits (--watch, chokidar, npm run sass/build/dev) → background: true with timeout_min as the watch window, or the one-shot build.
 cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file.
-Expected to run longer than %d minutes (full build, whole test suite, large install or download) and its output does not decide this turn's next step → background: true; anything shorter stays foreground.
+Expected to run over %d minutes (full build, large install or download, long data job) and its output is not needed to choose your next tool call → background: true; a test or build whose failures you fix next stays foreground.
 Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else raises a confirmation, so never chain one behind && with a command that writes.`, systemPackageRoute(), configs.BACKGROUND_THRESHOLD_MIN),
 		Parameters: map[string]any{
 			"type": "object",
@@ -53,7 +53,7 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 				},
 				"background": map[string]any{
 					"type":        "boolean",
-					"description": fmt.Sprintf("true only when the command is expected to run longer than %d minutes and its output does not decide this turn's next step (full build, whole test suite, large install or download), when the user says 跑完告訴我 / 背景跑, or for a watcher, where it is required (--watch, chokidar, a package script that watches; stopped at timeout_min with its output so far). The call returns at once; this task pauses until every background task ends, then resumes with the output. false: anything shorter — a pause and resume costs a full model round, more than waiting. Needs a session (stateless requests reject it).", configs.BACKGROUND_THRESHOLD_MIN),
+					"description": fmt.Sprintf("true when the command is expected to run over %d minutes and its output is not needed to choose your next tool call (full build, large install or download, long data job), when the user says 跑完告訴我 / 背景跑, or for a watcher, where it is required (--watch, chokidar, a package script that watches; stopped at timeout_min with its output so far). A test or build whose failures you will fix next stays foreground. The call returns at once; this task pauses until every background task ends, then resumes with the output. false: anything shorter — a pause and resume costs a full model round, more than waiting. Needs a session (stateless requests reject it).", configs.BACKGROUND_THRESHOLD_MIN),
 				},
 				"timeout_min": map[string]any{
 					"type":        "integer",
