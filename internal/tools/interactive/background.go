@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -13,6 +14,37 @@ import (
 )
 
 const BackgroundTool = "subagents"
+
+var (
+	backgroundSlotMu     sync.Mutex
+	backgroundSlotCounts = map[string]int{}
+)
+
+func AcquireBackgroundSlot(sessionID string) error {
+	backgroundSlotMu.Lock()
+	defer backgroundSlotMu.Unlock()
+
+	if backgroundSlotCounts[sessionID] >= configs.MAX_BACKGROUND_TASKS {
+		return utilsmsg.New(utilsmsg.Limit, "background", "%d background tasks are already running in this session; run this one without background or wait for one to finish", configs.MAX_BACKGROUND_TASKS)
+	}
+	backgroundSlotCounts[sessionID]++
+	return nil
+}
+
+func ReleaseBackgroundSlot(sessionID string) {
+	backgroundSlotMu.Lock()
+	defer backgroundSlotMu.Unlock()
+
+	if backgroundSlotCounts[sessionID] <= 1 {
+		delete(backgroundSlotCounts, sessionID)
+	} else {
+		backgroundSlotCounts[sessionID]--
+	}
+}
+
+func IsBackgroundTool(name string) bool {
+	return name == BackgroundTool || name == "run_command"
+}
 
 type BackgroundTask struct {
 	ID          string `json:"id"`
@@ -154,34 +186,34 @@ func markBackgroundReported(sessionID, taskHash string, finished []BackgroundTas
 	}
 }
 
-func UnfinishedBackground() []BackgroundTaskRef {
+func backgroundRunning(path string) bool {
+	meta, err := readPending(path)
+	return err == nil && slices.ContainsFunc(meta.Background, func(b BackgroundTask) bool { return !b.Done })
+}
+
+func ClearAllBackground() {
 	entries, err := os.ReadDir(filesystem.SessionsDir)
 	if err != nil {
-		return nil
+		return
 	}
-	var list []BackgroundTaskRef
+	pendingMu.Lock()
+	defer pendingMu.Unlock()
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 		for _, taskHash := range listPendingTasks(entry.Name()) {
 			meta, err := readPending(filesystem.PendingMetaPath(entry.Name(), taskHash))
-			if err != nil {
+			if err != nil || len(meta.Background) == 0 {
 				continue
 			}
-			for _, b := range meta.Background {
-				if !b.Done {
-					list = append(list, BackgroundTaskRef{SessionID: entry.Name(), TaskHash: taskHash, ID: b.ID, WorkDir: b.WorkDir})
-				}
+			meta.Background = nil
+			if err := writePending(entry.Name(), taskHash, &meta); err != nil {
+				slog.Warn("ClearAllBackground",
+					slog.String("session", entry.Name()),
+					slog.String("task", taskHash),
+					slog.String("error", err.Error()))
 			}
 		}
 	}
-	return list
-}
-
-type BackgroundTaskRef struct {
-	SessionID string
-	TaskHash  string
-	ID        string
-	WorkDir   string
 }

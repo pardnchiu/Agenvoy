@@ -3,6 +3,7 @@ package configs
 import (
 	"embed"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -25,11 +26,6 @@ const (
 	TTL_MEMORY_SEC       = 90 * 24 * 60 * 60
 	TTL_TOOL_CACHE_SEC   = 30 * 60
 	TTL_MODELS_CACHE_SEC = 15 * 60
-
-	// * Concurrency
-	MAX_CONCURRENT_SUBAGENTS = 3
-	MAX_CONCURRENT_TOOLS     = 5
-	MAX_SESSION_TASKS        = 3
 
 	// * Routing
 	TIMEOUT_DISPATCH_CALL = 30 * time.Second
@@ -79,8 +75,13 @@ var (
 	MAX_SUBAGENT_TIMEOUT_MIN = 30
 	MAX_RESUME_WAIT_MIN      = 60
 
-	MAX_BACKGROUND_SUBAGENTS            = 3
-	MAX_BACKGROUND_SUBAGENT_TIMEOUT_MIN = 60
+	DEFAULT_CONCURRENCY        = max(runtime.NumCPU()/2, 3)
+	MAX_CONCURRENT_TOOLS       = DEFAULT_CONCURRENCY
+	MAX_CONCURRENT_SUBAGENTS   = DEFAULT_CONCURRENCY
+	MAX_SESSION_TASKS          = DEFAULT_CONCURRENCY
+	MAX_BACKGROUND_TASKS       = DEFAULT_CONCURRENCY
+	MAX_BACKGROUND_TIMEOUT_MIN = 60
+	BACKGROUND_THRESHOLD_MIN   = 3
 
 	// * Tools
 	SYSTEM_DEFAULT_TOOLS = []string{"find_tools", "run_tool", "reasoning_guide", "write_todo"}

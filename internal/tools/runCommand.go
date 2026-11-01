@@ -34,9 +34,10 @@ func registRunCommand() {
 		Concurrent:  false,
 		Description: fmt.Sprintf(`Runs one binary in the work directory, waits for it to exit, returns its combined stdout/stderr. Networking is off by default and opened per call with network: true, which always raises a confirmation: git clone / fetch / pull / push, npm or pip install, go mod download, curl and wget each need it set or they fail to resolve a host.
 Use for 跑一下 / 執行 / build / test / lint / format and local git work — one binary and its arguments.
-A watcher never exits and hangs the call (--watch, chokidar, npm run sass/build/dev) → run the one-shot build.
+A watcher never exits (--watch, chokidar, npm run sass/build/dev) → background: true with timeout_min as the watch window, or the one-shot build.
 cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file.
-Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else raises a confirmation, so never chain one behind && with a command that writes.`, systemPackageRoute()),
+Expected to run longer than %d minutes (full build, whole test suite, large install or download) and its output does not decide this turn's next step → background: true; anything shorter stays foreground.
+Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else raises a confirmation, so never chain one behind && with a command that writes.`, systemPackageRoute(), configs.BACKGROUND_THRESHOLD_MIN),
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -49,6 +50,17 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 				"network": map[string]any{
 					"type":        "boolean",
 					"description": "Set true when the command has to reach a host — git clone / fetch / pull / push, npm or pnpm or yarn install, pip install, go mod download, cargo fetch, curl. The sandbox keeps networking off until this is set, and setting it always raises a confirmation, so leave it out for anything that only touches local files.",
+				},
+				"background": map[string]any{
+					"type":        "boolean",
+					"description": fmt.Sprintf("true only when the command is expected to run longer than %d minutes and its output does not decide this turn's next step (full build, whole test suite, large install or download), when the user says 跑完告訴我 / 背景跑, or for a watcher, where it is required (--watch, chokidar, a package script that watches; stopped at timeout_min with its output so far). The call returns at once; this task pauses until every background task ends, then resumes with the output. false: anything shorter — a pause and resume costs a full model round, more than waiting. Needs a session (stateless requests reject it).", configs.BACKGROUND_THRESHOLD_MIN),
+				},
+				"timeout_min": map[string]any{
+					"type":        "integer",
+					"description": fmt.Sprintf("background: true only. Minutes before the command is killed and reported as timed out, 1-%d. Set it near the expected run time so a hung command fails early instead of holding the task for the full window; a foreground call is capped at %d minutes regardless.", configs.MAX_BACKGROUND_TIMEOUT_MIN, int(configs.RUN_COMMAND_TIMEOUT/time.Minute)),
+					"minimum":     1,
+					"maximum":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
+					"default":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
 				},
 				"write_paths": map[string]any{
 					"type":        "array",
@@ -63,11 +75,13 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 				Argv       []string `json:"argv"`
 				Network    bool     `json:"network"`
 				WritePaths []string `json:"write_paths"`
+				Background bool     `json:"background"`
+				TimeoutMin int      `json:"timeout_min"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network)
+			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.Background, params.TimeoutMin)
 		},
 	})
 }
@@ -88,7 +102,7 @@ func systemPackageRoute() string {
 	return "installing or removing a system package → pkg_manage"
 }
 
-func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network bool) (string, error) {
+func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, background bool, timeoutMin int) (string, error) {
 	if len(argv) == 0 {
 		return "", utilsmsg.New(utilsmsg.Invalid, "argv", "requires a non-empty array, e.g. [\"git\", \"status\"]")
 	}
@@ -128,12 +142,11 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 		}
 	}
 
-	if err := checkWatchArgs(argv, e.WorkDir, 0, map[string]bool{}); err != nil {
-		return "", err
+	if !background {
+		if err := checkWatchArgs(argv, e.WorkDir, 0, map[string]bool{}); err != nil {
+			return "", err
+		}
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, configs.RUN_COMMAND_TIMEOUT)
-	defer cancel()
 
 	binds, err := boundary.WriteBinds(e.SessionID, e.WorkDir, writePaths)
 	if err != nil {
@@ -149,6 +162,13 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 			ReadWrite:  binds,
 		}
 	}
+
+	if background {
+		return startBackgroundCommand(ctx, e, argv, binds, sandboxOpt, timeoutMin)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, configs.RUN_COMMAND_TIMEOUT)
+	defer cancel()
 
 	cmd, err := go_pkg_sandbox.Wrap(ctx, argv[0], argv[1:], e.WorkDir, sandboxOpt)
 	if err != nil {

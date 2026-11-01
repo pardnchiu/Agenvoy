@@ -28,13 +28,20 @@ var channLen = make(chan struct{}, min(configs.MAX_CONCURRENT_TOOLS, configs.MAX
 
 type backgroundKey struct{}
 
-func WithBackground(ctx context.Context) context.Context {
-	return context.WithValue(ctx, backgroundKey{}, true)
+func WithBackground(ctx context.Context, timeoutMin int) context.Context {
+	if timeoutMin <= 0 || timeoutMin > configs.MAX_BACKGROUND_TIMEOUT_MIN {
+		timeoutMin = configs.MAX_BACKGROUND_TIMEOUT_MIN
+	}
+	return context.WithValue(ctx, backgroundKey{}, timeoutMin)
+}
+
+func backgroundTimeout(ctx context.Context) int {
+	v, _ := ctx.Value(backgroundKey{}).(int)
+	return v
 }
 
 func isBackground(ctx context.Context) bool {
-	v, _ := ctx.Value(backgroundKey{}).(bool)
-	return v
+	return backgroundTimeout(ctx) > 0
 }
 
 func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemPrompt string, excludedTools []string, ignoreHistory, topLevel bool) (string, error) {
@@ -152,7 +159,7 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 	})
 	timeout := time.Duration(configs.MAX_SUBAGENT_TIMEOUT_MIN) * time.Minute
 	if isBackground(ctx) {
-		timeout = time.Duration(configs.MAX_BACKGROUND_SUBAGENT_TIMEOUT_MIN) * time.Minute
+		timeout = time.Duration(backgroundTimeout(ctx)) * time.Minute
 	}
 	subCtx, cancel := context.WithTimeout(agentstypes.WithDeliverTo(ctx, parentSessID), timeout)
 	defer cancel()

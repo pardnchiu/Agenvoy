@@ -32,6 +32,7 @@ import (
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
 	usagelog "github.com/pardnchiu/agenvoy/internal/session/usage"
+	"github.com/pardnchiu/agenvoy/internal/tools"
 	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
 	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
@@ -128,6 +129,7 @@ func Daemon() {
 
 	subagent.Register()
 	subagent.SetDeliver(app.DeliverBackground)
+	tools.SetBackgroundDeliver(app.DeliverBackground)
 
 	defer func() {
 		if m := mcp.Manager(); m != nil {
@@ -150,7 +152,7 @@ func Daemon() {
 	}
 	defer runtime.StopScheduler()
 
-	app.RecoverBackground()
+	interactive.ClearAllBackground()
 
 	if err := runtime.AddSystemCron("*/15 * * * *", app.GenerateSummary); err != nil {
 		slog.Warn("cron summaryGenerate",

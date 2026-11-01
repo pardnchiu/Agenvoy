@@ -91,6 +91,11 @@ func isBackgroundCall(toolArgs string) bool {
 	return json.Unmarshal([]byte(toolArgs), &p) == nil && p.Background
 }
 
+func hasOpenBackground(sessionID, taskHash string) bool {
+	running, unreported := interactive.BackgroundState(sessionID, taskHash)
+	return running+unreported > 0
+}
+
 func publishPending(sessionID, deliverTo, taskHash string) {
 	event := agenttypes.Event{Type: agenttypes.EventPending, Text: taskHash, TaskHash: taskHash, PendingSession: sessionID}
 	sessionlog.Record(sessionID, event)
@@ -759,8 +764,8 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 	appendImageMessage(sessionData, imageURLs)
 
 	if slices.ContainsFunc(slots, func(s toolSlot) bool {
-		return s.name == interactive.BackgroundTool && s.execErr == "" && (s.state == slotReady || s.state == slotDispatched) && isBackgroundCall(s.args)
-	}) {
+		return interactive.IsBackgroundTool(s.name) && s.execErr == "" && (s.state == slotReady || s.state == slotDispatched) && isBackgroundCall(s.args)
+	}) && hasOpenBackground(sessionData.ID, exec.PendingTask) {
 		interactive.SaveToolResults(sessionData.ID, exec.PendingTask, agenttypes.WindowHash(ctx), toolResults(sessionData), exec.EditedFiles())
 		events <- agenttypes.Event{Type: agenttypes.EventPending, Text: exec.PendingTask, TaskHash: exec.PendingTask, PendingSession: sessionData.ID, ToolName: interactive.BackgroundTool}
 		return sessionData, alreadyCall, ErrAskUserInterrupted

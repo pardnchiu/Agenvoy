@@ -293,7 +293,11 @@ func DeletePending(sessionID, taskHash string) {
 	}
 	pendingMu.Lock()
 	defer pendingMu.Unlock()
-	os.Remove(filesystem.PendingMetaPath(sessionID, taskHash))
+	path := filesystem.PendingMetaPath(sessionID, taskHash)
+	if backgroundRunning(path) {
+		return
+	}
+	os.Remove(path)
 }
 
 func CompactPending(sessionID, taskHash string) {
@@ -334,9 +338,12 @@ func CleanupPending(sessionID, taskHash string) {
 	if taskHash == "" {
 		return
 	}
+	src := filesystem.PendingMetaPath(sessionID, taskHash)
+	if backgroundRunning(src) {
+		return
+	}
 	CompactPending(sessionID, taskHash)
 
-	src := filesystem.PendingMetaPath(sessionID, taskHash)
 	if !go_pkg_filesystem_reader.Exists(src) {
 		return
 	}

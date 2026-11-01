@@ -125,9 +125,3 @@ func resumeBackground(sessionID, taskHash, workDir string) {
 			slog.String("error", err.Error()))
 	}
 }
-
-func RecoverBackground() {
-	for _, ref := range interactive.UnfinishedBackground() {
-		go DeliverBackground(ref.SessionID, ref.TaskHash, ref.WorkDir, ref.ID, "failed: the daemon restarted before this background leg finished")
-	}
-}

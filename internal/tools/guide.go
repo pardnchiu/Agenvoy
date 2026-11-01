@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/configs"
@@ -85,6 +86,11 @@ func registReasoningGuide() {
 					}
 					guide = strings.ReplaceAll(guide, "{{.ModelSelection}}", selection)
 				}
+				guide = strings.NewReplacer(
+					"{{.MaxLegs}}", strconv.Itoa(min(configs.MAX_CONCURRENT_TOOLS, configs.MAX_CONCURRENT_SUBAGENTS)),
+					"{{.MaxBackground}}", strconv.Itoa(configs.MAX_BACKGROUND_TASKS),
+					"{{.BackgroundMin}}", strconv.Itoa(configs.BACKGROUND_THRESHOLD_MIN),
+				).Replace(guide)
 				seen[topic] = true
 				guides = append(guides, "## "+topic+"\n\n"+strings.TrimSpace(guide))
 			}
