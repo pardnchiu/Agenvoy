@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -27,6 +28,9 @@ var (
 
 func DeliverBackground(sessionID, taskHash, workDir, id, result string) {
 	if err := interactive.FinishBackground(sessionID, taskHash, id, result); err != nil {
+		if errors.Is(err, interactive.ErrBackgroundCanceled) {
+			return
+		}
 		slog.Warn("interactive.FinishBackground",
 			slog.String("session", sessionID),
 			slog.String("task", taskHash),

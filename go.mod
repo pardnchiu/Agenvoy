@@ -14,7 +14,7 @@ require (
 	github.com/pardnchiu/go-bot v0.5.0
 	github.com/pardnchiu/go-browser v0.3.3
 	github.com/pardnchiu/go-llm-router v0.9.6
-	github.com/pardnchiu/go-pkg v0.13.15
+	github.com/pardnchiu/go-pkg v0.13.16
 	github.com/pardnchiu/go-scheduler v1.2.0
 	github.com/pardnchiu/go-sqlkit v0.1.1
 	golang.org/x/oauth2 v0.35.0

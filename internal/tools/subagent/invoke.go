@@ -20,6 +20,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -88,7 +89,7 @@ func invokeSubagent(ctx context.Context, e *tooltypes.Executor, params invokePar
 		ignoreHistory = *params.New
 	}
 
-	if params.Background {
+	if params.Background && interactive.BackgroundAllowed(ctx) {
 		return startBackground(ctx, e, params, task, sessionID, model, reasoning, excludeTools, ignoreHistory)
 	}
 

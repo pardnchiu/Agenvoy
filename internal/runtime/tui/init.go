@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -96,6 +97,7 @@ type TUI struct {
 	todos             []agenttypes.TodoItem
 	pendingSteer      []string
 	waitingBackground string
+	waitingTask       string
 	inputHistory      []string
 	inputHistoryIdx   int
 
@@ -283,8 +285,10 @@ func loadSessionTail(sid string, width int, all bool) []tea.Cmd {
 		lines = lines[len(lines)-historyLoad:]
 	}
 
-	cmds := make([]tea.Cmd, 0, len(lines)*2+2)
-	cmds = append(cmds, notice(msgLog(""+label+" ("+strconv.Itoa(len(lines))+")")+"\n"))
+	slog.Debug("tui: "+label+" loaded",
+		slog.String("session", sid),
+		slog.Int("lines", len(lines)))
+	cmds := make([]tea.Cmd, 0, len(lines)*2+1)
 	for i, l := range lines {
 		cmds = append(cmds, tea.Println(l.line))
 		if i+1 < len(lines) && (lines[i+1].kind == "done" || lines[i+1].kind == "canceled") {

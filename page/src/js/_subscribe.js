@@ -115,6 +115,22 @@ function parseEvent(event) {
     setTask(sessionId, event.task_hash);
   }
 
+  const settled = event.type === "EventDone" || event.type === "EventCanceled" || event.type === "EventError";
+  if (settled && event.task_hash && waitingTasks.get(sessionId) === event.task_hash) {
+    waitingTasks.delete(sessionId);
+    closePendingTask(sessionId, event.task_hash);
+  }
+  if (event.type === "EventPending" && event.tool_name === "subagents" && event.task_hash) {
+    waitingTasks.set(sessionId, event.task_hash);
+    const view = taskStream(sessionId, event.task_hash);
+    if (view) {
+      view.paused = true;
+      setStream(sessionId, view);
+    }
+    setTask(sessionId, event.task_hash);
+    setInputTask(sessionId, event.task_hash);
+  }
+
   if (event.type === "EventTextDone") {
     if (!active) {
       return;

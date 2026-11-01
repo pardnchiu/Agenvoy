@@ -20,6 +20,7 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -53,7 +54,7 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 				},
 				"background": map[string]any{
 					"type":        "boolean",
-					"description": fmt.Sprintf("true when the command is expected to run over %d minutes and its output is not needed to choose your next tool call (full build, large install or download, long data job), when the user says 跑完告訴我 / 背景跑, or for a watcher, where it is required (--watch, chokidar, a package script that watches; stopped at timeout_min with its output so far). A test or build whose failures you will fix next stays foreground. The call returns at once; this task pauses until every background task ends, then resumes with the output. false: anything shorter — a pause and resume costs a full model round, more than waiting. Needs a session (stateless requests reject it).", configs.BACKGROUND_THRESHOLD_MIN),
+					"description": fmt.Sprintf("true when the command is expected to run over %d minutes and its output is not needed to choose your next tool call (full build, large install or download, long data job), when the user says 跑完告訴我 / 背景跑, or for a watcher, where it is required (--watch, chokidar, a package script that watches; stopped at timeout_min with its output so far). A test or build whose failures you will fix next stays foreground. The call returns at once and this turn keeps going; if the turn ends first, the task stays open (the user can keep talking in it) and resumes with the output once every background task has finished. false: anything shorter — a pause and resume costs a full model round, more than waiting. Needs a session (stateless requests reject it).", configs.BACKGROUND_THRESHOLD_MIN),
 				},
 				"timeout_min": map[string]any{
 					"type":        "integer",
@@ -81,7 +82,7 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.Background, params.TimeoutMin)
+			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.Background && interactive.BackgroundAllowed(ctx), params.TimeoutMin)
 		},
 	})
 }

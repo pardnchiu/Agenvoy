@@ -22,6 +22,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -141,8 +142,10 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				t.notice, t.noticeOffset = "", 0
 				return t, nil
 			}
-			if t.running && t.cancelExec != nil {
-				if !t.emitted {
+			running := t.running && t.cancelExec != nil
+			waiting := t.waitingBackground != "" && t.waitingBackground == t.currentSessionID && t.waitingTask != ""
+			if running || waiting {
+				if running && !t.emitted {
 					return t.update(CancelRunConfirm{yes: true})
 				}
 				t.popup = &Popup{
@@ -307,7 +310,11 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return t, tea.Batch(tea.Println(messageBlock(raw)+"\n"), t.spinner.Tick)
 			}
 
-			go runExec(ipc.Frame{Type: ipc.FrameRun, SessionID: t.currentSessionID, Rayload: &ipc.Payload{Input: raw, WorkDir: t.cwd, AllowAll: t.allowAll}})
+			payload := &ipc.Payload{Input: raw, WorkDir: t.cwd, AllowAll: t.allowAll}
+			if t.waitingBackground == t.currentSessionID {
+				payload.PendingTask = t.waitingTask
+			}
+			go runExec(ipc.Frame{Type: ipc.FrameRun, SessionID: t.currentSessionID, Rayload: payload})
 
 			cmds = append(cmds,
 				tea.Println(messageBlock(raw)+"\n"),
@@ -788,15 +795,28 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return next, cmd
 
 	case CancelRunConfirm:
-		if t.cancelExec == nil {
+		if !msg.yes && !msg.pause {
 			return t, nil
 		}
-		switch {
-		case msg.yes:
-			t.cancelExec(runtime.ErrUserCanceled)
-		case msg.pause:
-			t.cancelExec(nil)
+		if t.cancelExec != nil {
+			if msg.yes {
+				t.cancelExec(runtime.ErrUserCanceled)
+			} else {
+				t.cancelExec(nil)
+			}
+			return t, nil
 		}
+		if t.waitingTask == "" {
+			return t, nil
+		}
+		client := ipcClient.Load()
+		if client == nil {
+			return t, notice(msgWarn("daemon offline") + "\n")
+		}
+		if err := client.Cancel(t.waitingBackground, t.waitingTask, msg.pause); err != nil {
+			return t, notice(msgError(err.Error()) + "\n")
+		}
+		t.waitingBackground, t.waitingTask = "", ""
 		return t, nil
 
 	case PendingDeletePick:
@@ -1061,7 +1081,20 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tailLine:
 		if !msg.foreign {
-			t.waitingBackground = ""
+			switch msg.kind {
+			case "done", "error":
+				t.waitingBackground, t.waitingTask = "", ""
+			case "canceled":
+				t.waitingBackground, t.waitingTask = "", ""
+				return t, cancelNotice()
+			case "pending":
+				if running, unreported := interactive.BackgroundState(t.currentSessionID, msg.body); running+unreported > 0 {
+					t.waitingBackground, t.waitingTask = t.currentSessionID, msg.body
+				}
+			}
+		}
+		if msg.line == "" {
+			return t, nil
 		}
 		return t, tea.Println(msg.line)
 

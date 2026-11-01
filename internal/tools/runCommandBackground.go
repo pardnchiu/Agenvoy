@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -17,53 +16,18 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-type BackgroundDeliver func(sessionID, taskHash, workDir, id, result string)
-
-var backgroundDeliver BackgroundDeliver
-
-func SetBackgroundDeliver(fn BackgroundDeliver) {
-	backgroundDeliver = fn
-}
-
 func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, binds []string, sandboxOpt *go_pkg_sandbox.Option, timeoutMin int) (string, error) {
-	if e.PendingTask == "" || backgroundDeliver == nil {
-		return "", utilsmsg.New(utilsmsg.Unavailable, "background", "this request has no session task to resume; run the command without background")
-	}
-	if err := interactive.AcquireBackgroundSlot(e.SessionID); err != nil {
-		return "", err
-	}
-
 	if timeoutMin <= 0 || timeoutMin > configs.MAX_BACKGROUND_TIMEOUT_MIN {
 		timeoutMin = configs.MAX_BACKGROUND_TIMEOUT_MIN
 	}
-
-	id := "cmd_" + strings.ReplaceAll(go_pkg_utils.UUID(), "-", "")[:8]
 	description := go_pkg_utils.TruncateString(strings.Join(argv, " "), 48)
-	sessionID, taskHash, workDir := e.SessionID, e.PendingTask, e.WorkDir
-	if err := interactive.AddBackground(sessionID, taskHash, workDir, id, description); err != nil {
-		interactive.ReleaseBackgroundSlot(sessionID)
-		return "", err
-	}
-
-	bgCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Duration(timeoutMin)*time.Minute)
-	go func() {
-		defer interactive.ReleaseBackgroundSlot(sessionID)
+	id, err := interactive.StartBackground(ctx, e.SessionID, e.PendingTask, e.WorkDir, "cmd", description, func(ctx context.Context) string {
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMin)*time.Minute)
 		defer cancel()
-		result := "failed: background command ended without a result"
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[Internal] background command: panic recovered",
-					slog.String("session", sessionID),
-					slog.Any("panic", r))
-				result = fmt.Sprintf("failed: panic: %v", r)
-			}
-			backgroundDeliver(sessionID, taskHash, workDir, id, result)
-		}()
 
-		cmd, err := go_pkg_sandbox.Wrap(bgCtx, argv[0], argv[1:], workDir, sandboxOpt)
+		cmd, err := go_pkg_sandbox.Wrap(ctx, argv[0], argv[1:], e.WorkDir, sandboxOpt)
 		if err != nil {
-			result = "failed: " + utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox.Wrap", "", err).Error()
-			return
+			return "failed: " + utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox.Wrap", "", err).Error()
 		}
 		sink := &tailWriter{limit: configs.MAX_PENDING_RESULT_BYTES - tailHeadroom}
 		cmd.Stdout = sink
@@ -72,18 +36,20 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 		err = cmd.Run()
 		output := sink.text()
 		switch {
-		case bgCtx.Err() == context.DeadlineExceeded:
-			result = fmt.Sprintf("failed: [Timeout] %s: exceeded %d minutes\n%s", argv[0], timeoutMin, output)
+		case ctx.Err() == context.DeadlineExceeded:
+			return fmt.Sprintf("failed: [Timeout] %s: exceeded %d minutes\n%s", argv[0], timeoutMin, output)
 		case err != nil:
-			result = fmt.Sprintf("failed: %s\n%s%s", err.Error(), output, sandboxWriteHint(output, binds))
+			return fmt.Sprintf("failed: %s\n%s%s", err.Error(), output, sandboxWriteHint(output, binds))
 		case strings.TrimSpace(output) == "":
-			result = "done: exit 0, printed nothing"
+			return "done: exit 0, printed nothing"
 		default:
-			result = "done: exit 0\n" + output
+			return "done: exit 0\n" + output
 		}
-	}()
-
-	return fmt.Sprintf("background command %s started. This task pauses after this step and resumes with the command's output once every background task has finished.", id), nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("background command %s started. Keep working on this turn; if it ends before every background task does, the task stays open and resumes with their output once the last one finishes.", id), nil
 }
 
 const tailHeadroom = 1 << 10

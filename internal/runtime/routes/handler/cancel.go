@@ -11,6 +11,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
 
 func CancelSessionTask() gin.HandlerFunc {
@@ -22,12 +23,16 @@ func CancelSessionTask() gin.HandlerFunc {
 			return
 		}
 
+		window := interactive.LoadPendingWindow(sessionID, taskHash)
+		if taskHash != "" && taskHash != "current" {
+			interactive.CancelTask(sessionID, taskHash)
+		}
 		if taskHash != "" && taskHash != "current" && exec.Cancel(taskHash, runtime.ErrUserCanceled) {
 			c.JSON(http.StatusOK, gin.H{"ok": true, "cancelled": true})
 			return
 		}
 
-		event := agenttypes.Event{Type: agenttypes.EventCanceled, TaskHash: taskHash}
+		event := agenttypes.Event{Type: agenttypes.EventCanceled, TaskHash: taskHash, WindowHash: window}
 		sessionlog.Record(sessionID, event)
 		pubsub.Pub(sessionID, event)
 		c.JSON(http.StatusOK, gin.H{"ok": true, "cancelled": false, "stale": true})

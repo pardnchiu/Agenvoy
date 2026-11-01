@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -15,7 +14,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/guide"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
-	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
 
 func (t TUI) View() string {
@@ -101,11 +99,8 @@ func (t TUI) viewIdle() string {
 
 	status := " " + fastMode + confirmMode
 	var right string
-	if n := pendingCount(t.currentSessionID); n > 0 {
-		right = errorStyle.Render(fmt.Sprintf("pending (%d)", n)) + " "
-	}
 	if t.quotaText != "" {
-		right = hintStyle.Render(t.quotaModel+" ") + renderQuotaBadge(t.quotaText) + " " + right
+		right = hintStyle.Render(t.quotaModel+" ") + renderQuotaBadge(t.quotaText) + " "
 	}
 	if right != "" {
 		if gap := boxWidth - lipgloss.Width(status) - lipgloss.Width(right); gap >= 1 {
@@ -481,26 +476,4 @@ func renderFooter(hint string) string {
 		items = append(items, keyStyle.Render(key)+hintStyle.Render(":"+label))
 	}
 	return strings.Join(items, hintStyle.Render(" | "))
-}
-
-var pendingCache struct {
-	sync.Mutex
-	sessionID string
-	count     int
-	at        time.Time
-}
-
-func pendingCount(sessionID string) int {
-	sessionID = strings.TrimSpace(sessionID)
-	if sessionID == "" {
-		return 0
-	}
-	pendingCache.Lock()
-	defer pendingCache.Unlock()
-	if pendingCache.sessionID != sessionID || time.Since(pendingCache.at) > 2*time.Second {
-		pendingCache.sessionID = sessionID
-		pendingCache.count = len(interactive.ListResumablePending(sessionID))
-		pendingCache.at = time.Now()
-	}
-	return pendingCache.count
 }

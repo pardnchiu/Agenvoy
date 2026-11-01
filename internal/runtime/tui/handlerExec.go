@@ -123,6 +123,10 @@ type agentExec struct {
 	cancel context.CancelCauseFunc
 }
 
+func cancelNotice() tea.Cmd {
+	return notice(msgLog("Cancel Task at "+formatFinishedAt(time.Now())) + "\n")
+}
+
 type agentExecDone struct {
 	err error
 }
@@ -155,7 +159,7 @@ func runExec(f ipc.Frame) {
 			pendingCancel = &pause
 			return
 		}
-		client.Cancel(taskHash, pause)
+		client.Cancel(f.SessionID, taskHash, pause)
 	}})
 
 	f.UUID = go_pkg_utils.UUID()
@@ -186,7 +190,7 @@ func runExec(f ipc.Frame) {
 		if ev.TaskHash != "" {
 			mu.Lock()
 			if taskHash == "" && pendingCancel != nil {
-				client.Cancel(ev.TaskHash, *pendingCancel)
+				client.Cancel(f.SessionID, ev.TaskHash, *pendingCancel)
 			}
 			taskHash = ev.TaskHash
 			mu.Unlock()
@@ -240,6 +244,7 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 			return t, nil
 		}
 		t.waitingBackground = t.currentSessionID
+		t.waitingTask = ev.TaskHash
 		t.todos = nil
 		return t, t.collapseToolBuf()
 
@@ -417,6 +422,7 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 			t.dropSubagent(ev.Source)
 			return t, nil
 		}
+		t.waitingBackground, t.waitingTask = "", ""
 		t.toolLog = nil
 		collapse := t.collapseToolBuf()
 		t.todos = nil
@@ -452,15 +458,10 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		collapse := t.collapseToolBuf()
 		t.todos = nil
 		t.subBuf, t.subOrder, t.subActive = nil, nil, 0
-		finishedAt := formatFinishedAt(time.Now())
-		line, ok := renderAgentEvent(ev, t.runTarget, t.cwd, t.width, finishedAt)
-		if !ok {
-			return t, collapse
-		}
 		if collapse != nil {
-			return t, tea.Sequence(collapse, tea.Println(line))
+			return t, tea.Sequence(collapse, cancelNotice())
 		}
-		return t, tea.Println(line)
+		return t, cancelNotice()
 
 	case agenttypes.EventUsageUpdate:
 		if ev.Source == "" && ev.Usage != nil {

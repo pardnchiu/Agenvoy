@@ -25,6 +25,7 @@ import (
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	historystore "github.com/pardnchiu/agenvoy/internal/runtime/store"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	sessionmanager "github.com/pardnchiu/agenvoy/internal/session"
@@ -277,7 +278,12 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				return
 			}
 			if running, unreported := interactive.BackgroundState(session.ID, exec.PendingTask); running+unreported > 0 {
-				publishPending(session.ID, deliverFor(ctx, session.ID), exec.PendingTask)
+				interactive.SaveToolResults(session.ID, exec.PendingTask, windowHash, nil, exec.EditedFiles())
+				event := agenttypes.Event{Type: agenttypes.EventPending, Text: exec.PendingTask, TaskHash: exec.PendingTask, PendingSession: session.ID, ToolName: interactive.BackgroundTool}
+				events <- event
+				if deliverTo := deliverFor(ctx, session.ID); deliverTo != session.ID {
+					pubsub.Pub(deliverTo, event)
+				}
 				return
 			}
 			interactive.CleanupPending(session.ID, exec.PendingTask)

@@ -32,7 +32,6 @@ import (
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
 	usagelog "github.com/pardnchiu/agenvoy/internal/session/usage"
-	"github.com/pardnchiu/agenvoy/internal/tools"
 	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
 	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
@@ -128,8 +127,7 @@ func Daemon() {
 	}
 
 	subagent.Register()
-	subagent.SetDeliver(app.DeliverBackground)
-	tools.SetBackgroundDeliver(app.DeliverBackground)
+	interactive.SetBackgroundDeliver(app.DeliverBackground)
 
 	defer func() {
 		if m := mcp.Manager(); m != nil {

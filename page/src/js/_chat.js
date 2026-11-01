@@ -252,6 +252,14 @@ async function renderChat(sessionId) {
   }
 
   const items = parseActionLog(content);
+  const waitingItem = items.findLast((item) => item.role !== "user" && item.task);
+  if (waitingItem && waitingItem.paused) {
+    waitingTasks.set(sessionId, waitingItem.task);
+    setTask(sessionId, waitingItem.task);
+    setInputTask(sessionId, waitingItem.task);
+  } else {
+    waitingTasks.delete(sessionId);
+  }
   const frame = _("temp");
 
   if (sessionId === currentSessionId) {

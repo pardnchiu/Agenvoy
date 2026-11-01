@@ -207,7 +207,7 @@ function parseActionLog(content) {
     if (item.role === "user") {
       return true;
     }
-    item.pending = !item.finished;
+    item.pending = !item.finished || Boolean(item.paused);
     return Boolean(item.content || item.turns.length || item.Reasoning || (item.pending && i === list.length - 1));
   });
 }

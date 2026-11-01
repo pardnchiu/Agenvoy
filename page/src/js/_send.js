@@ -116,6 +116,7 @@ function clearTaskCookie(sessionId) {
 }
 
 const inputTasks = new Map();
+const waitingTasks = new Map();
 
 function setInputTask(sessionId, taskHash) {
   const id = sessionId || currentSessionId;
@@ -301,8 +302,14 @@ async function send(content, target) {
   const dom = chatMessages(sessionId);
   clearPending(sessionId);
   const running = taskStream(sessionId, inputTasks.get(sessionId) || "");
+  const waiting = waitingTasks.get(sessionId) || "";
   if (running && !running.paused) {
     appendUserText(dom, content);
+  } else if (waiting && appendTaskSteer(dom, waiting, content, sessionId)) {
+    const view = taskStream(sessionId, waiting);
+    if (view) {
+      setStream(sessionId, view);
+    }
   } else {
     dom.appendChild(newUserItem({ content: content, meta: { send_at: sendAt() } }));
     setStream(sessionId, newStreamItem({}, sessionId));
@@ -324,6 +331,7 @@ async function send(content, target) {
         system_prompt: primary ? role : "",
         work_dir: chat.work_dir,
         skill: picked,
+        pending_task: waiting,
       }),
     });
     if (!response.ok) {
@@ -348,6 +356,10 @@ function appendUserText(dom, content) {
     return;
   }
 
+  appendSteerMark(bubble, content);
+}
+
+function appendSteerMark(bubble, content) {
   const mark = steerMark(sendAt(), content, bubble.dataset.steered !== "1");
   bubble.dataset.steered = "1";
   const text = bubble.querySelector("p");
@@ -478,16 +490,7 @@ function appendTaskSteer(dom, task, text, sessionId) {
   if (view) {
     view.nextPrompt = text;
   }
-  const mark = steerMark(sendAt(), text, bubble.dataset.steered !== "1");
-  bubble.dataset.steered = "1";
-  const content = bubble.querySelector("p");
-  if (content) {
-    content.textContent += mark;
-  }
-  const source = bubble.querySelector("pre.source");
-  if (source) {
-    source.textContent += mark;
-  }
+  appendSteerMark(bubble, text);
   return true;
 }
 

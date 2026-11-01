@@ -143,10 +143,10 @@ func (c *Client) Run(f Frame) (<-chan Frame, error) {
 	return ch, nil
 }
 
-func (c *Client) Cancel(taskHash string, pause bool) error {
+func (c *Client) Cancel(sessionID, taskHash string, pause bool) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.send(Frame{Type: FrameCancel, TaskHash: taskHash, Pause: pause})
+	return c.send(Frame{Type: FrameCancel, SessionID: sessionID, TaskHash: taskHash, Pause: pause})
 }
 
 func (c *Client) Steer(sessionID, windowHash, text string) error {

@@ -37,13 +37,9 @@ func ReleaseBackgroundSlot(sessionID string) {
 
 	if backgroundSlotCounts[sessionID] <= 1 {
 		delete(backgroundSlotCounts, sessionID)
-	} else {
-		backgroundSlotCounts[sessionID]--
+		return
 	}
-}
-
-func IsBackgroundTool(name string) bool {
-	return name == BackgroundTool || name == "run_command"
+	backgroundSlotCounts[sessionID]--
 }
 
 type BackgroundTask struct {
@@ -68,6 +64,14 @@ func AddBackground(sessionID, taskHash, workDir, id, description string) error {
 }
 
 func FinishBackground(sessionID, taskHash, id, result string) error {
+	unregisterBackgroundCancel(sessionID, taskHash, id)
+	if takeBackgroundCanceled(sessionID, taskHash) {
+		return ErrBackgroundCanceled
+	}
+	return finishBackground(sessionID, taskHash, id, result)
+}
+
+func finishBackground(sessionID, taskHash, id, result string) error {
 	pendingMu.Lock()
 	defer pendingMu.Unlock()
 
@@ -109,6 +113,13 @@ func LoadPendingWindow(sessionID, taskHash string) string {
 		return ""
 	}
 	return meta.WindowHash
+}
+
+func FollowUpTask(sessionID, taskHash string) (string, bool) {
+	if taskHash == "" || !HasBackground(sessionID, taskHash) {
+		return "", false
+	}
+	return taskHash, IsOnline(sessionID, taskHash)
 }
 
 func HasBackground(sessionID, taskHash string) bool {

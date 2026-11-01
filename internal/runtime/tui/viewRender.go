@@ -595,13 +595,6 @@ func renderAgentEvent(ev agenttypes.Event, sessionLabel, cwd string, width int, 
 			return "", false
 		}
 		return hintStyle.Render("  ⎿ "+footer) + "\n", true
-
-	case agenttypes.EventCanceled:
-		footer := "canceled"
-		if finishedAt != "" {
-			footer += "  " + finishedAt
-		}
-		return warnStyle.Render("  ⎿ "+footer) + "\n", true
 	}
 
 	return "", false
