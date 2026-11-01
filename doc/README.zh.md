@@ -28,6 +28,9 @@
   <a href="../README.md">English</a> · <strong>繁體中文</strong>
 </p>
 
+> [!NOTE]
+> Agenvoy 目前處於檢查與整理期，逐檔進度請見[優化進度](./optimization.zh.md)。
+
 ## 台灣自研 AI Agent Harness
 
 Agenvoy 是由[邱敬幃](https://pardn.io/)開發的台灣自研 AI Agent Harness，將對話轉化為在你的電腦上實際完成的工作。它在同一套流程中協調模型、工作脈絡、工具、即時資料、任務路由、記憶、排程與執行，同時讓檔案與環境的控制權留在你手上。透過 Web 介面，Agenvoy 也支援免持語音互動，包括自然說話、喚醒詞與可打斷的語音回覆；完整結果則會保留在聊天內容中。
