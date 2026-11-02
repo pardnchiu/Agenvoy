@@ -24,12 +24,11 @@ func registSubagents() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     time.Duration(configs.MAX_SUBAGENT_TIMEOUT_MIN) * time.Minute,
-		Description: fmt.Sprintf(`Runs a subtask in its own session (invoke), or looks up a named agent's self id (list).
+		Description: fmt.Sprintf(`Runs a subtask in its own session and returns the path of its saved report (invoke), or lists named agents' self ids (list).
 Naming an agent is an order: 呼叫 X / 請 X / 找 X / call X / ask X → dispatch to X, never answer it yourself.
 Also fan out when one lookup repeats across 3+ entities, or one question needs 2+ source classes searched independently (查資料 / 研究 / 整理報告 across several targets or sources).
-background: true when each leg is expected to take over %d minutes (roughly 5+ searches or page fetches), or the user says 慢慢查 / 跑完告訴我 / 背景跑; otherwise foreground.
-The leg's report is saved to ~/.config/agenvoy/download/temp-<report_name>.md and its path comes back — read_files it and relay it; "已呼叫" is not an answer.
-One job per leg, one call per leg, %d at a time (background: at most %d per session). Protocol and model tiers → reasoning_guide(topic=subagent_dispatch).`, configs.BACKGROUND_THRESHOLD_MIN, min(configs.MAX_CONCURRENT_TOOLS, configs.MAX_CONCURRENT_SUBAGENTS), configs.MAX_BACKGROUND_TASKS),
+The report lands at ~/.config/agenvoy/download/temp-<report_name>.md; read_files it and relay it, since "已呼叫" is not an answer.
+One job per leg, one call per leg, %d at a time (background: at most %d per session). Protocol and model tiers → reasoning_guide(topic=subagent_dispatch).`, min(configs.MAX_CONCURRENT_TOOLS, configs.MAX_CONCURRENT_SUBAGENTS), configs.MAX_BACKGROUND_TASKS),
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -76,7 +75,7 @@ One job per leg, one call per leg, %d at a time (background: at most %d per sess
 				"background": map[string]any{
 					"type":        "boolean",
 					"default":     false,
-					"description": fmt.Sprintf("mode=invoke. true when the leg is expected to take over %d minutes — roughly 5+ searches or page fetches (multi-source research, broad data gathering) — or the user says 慢慢查 / 跑完告訴我 / 背景跑. The call returns at once and this turn keeps going; if the turn ends first, the task stays open (the user can keep talking in it) and resumes once with all reports when every background task has finished. false: a lookup of a few calls, or a leg whose result you must read before choosing your next tool call; reading reports for the final synthesis does not count, since that waits for every leg either way. A pause and resume costs a full model round, more than waiting a few minutes. Same value on every leg of one fan-out; needs a session (stateless requests reject it).", configs.BACKGROUND_THRESHOLD_MIN),
+					"description": fmt.Sprintf("mode=invoke. true when every leg is very likely to take over %d minutes end to end (multi-source research, broad data gathering), or the user says 慢慢查 / 跑完告訴我 / 背景跑. Use it only for the gathering that opens a request, dispatching every background leg in one go: the turn continues at once, and each report later resumes this task with only the objective and that report, none of this turn's tool results, so anything done before a late dispatch is lost to the resume. false: a leg of a few calls, or one whose result decides your next tool call; waiting for every report before a final synthesis does not count. Same value on every leg of one fan-out; stateless requests reject true.", configs.BACKGROUND_THRESHOLD_MIN),
 				},
 				"timeout_min": map[string]any{
 					"type":        "integer",

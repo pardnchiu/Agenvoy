@@ -107,6 +107,7 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 		"schedules",
 		"store_secret",
 		"pkg_manage",
+		"run_websocket",
 	}
 	if topLevel {
 		baseExclude = []string{

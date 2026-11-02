@@ -577,10 +577,11 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 	var msg strings.Builder
 
 	finished, running := backgroundToReport(meta.Background)
+	backgroundOnly := len(meta.Questions) == 0 && len(finished) > 0
 	if len(meta.Questions) > 0 {
 		msg.WriteString("[Resumed Task — ask_user response received]\n\n")
 	} else if len(finished) > 0 {
-		msg.WriteString("[Resumed Task — background task finished]\n\n")
+		msg.WriteString(backgroundResumeHeader(finished) + "\n\n")
 	} else {
 		msg.WriteString("[Resumed Task — interrupted execution recovered]\n\n")
 	}
@@ -685,7 +686,7 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 		section := formatBackgroundSection(finished, running)
 		msg.WriteString(section)
 		if sb.Len() == 0 {
-			sb.WriteString("[Resumed Task — background task finished]\n")
+			sb.WriteString(backgroundResumeHeader(finished) + "\n")
 			sb.WriteString(section)
 		}
 		markBackgroundReported(sessionID, taskHash, finished)
@@ -724,6 +725,11 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 		pubsub.Pub(meta.DeliverTo, endEvent)
 	}
 
+	if backgroundOnly {
+		report := strings.TrimSpace(sb.String())
+		header, section, _ := strings.Cut(report, "\n")
+		return header + "\n\n## Objective\n" + strings.TrimSpace(meta.Objective) + "\n" + section, report, nil
+	}
 	return msg.String(), sb.String(), nil
 }
 

@@ -34,8 +34,9 @@ type Config struct {
 }
 
 const (
-	TypesafeKey   = "TYPESAFE_API_KEY"
-	TypesafeModel = "jev-latest"
+	TypesafeKey      = "TYPESAFE_API_KEY"
+	TypesafeModel    = "jev-latest"
+	TypesafeEndpoint = "https://api.typesafe.ai/v1/systemone"
 )
 
 type ModelEntry struct {

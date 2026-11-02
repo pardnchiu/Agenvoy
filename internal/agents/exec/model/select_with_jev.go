@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	typesafeEndpoint = "https://api.typesafe.ai/v1/systemone"
 	betaNamedNone    = "none"
 	betaTopicSame    = "same"
 	BetaLastModelKey = "lastModel:"
@@ -141,7 +140,7 @@ func selectWithJEV(ctx context.Context, meta SelectMeta, tagMap map[string]strin
 
 	routingCtx, cancel := context.WithTimeout(ctx, configs.TIMEOUT_DISPATCH_CALL)
 	defer cancel()
-	result, _, err := go_pkg_http.POST[betaAnswer](routingCtx, nil, typesafeEndpoint, map[string]string{
+	result, _, err := go_pkg_http.POST[betaAnswer](routingCtx, nil, config.TypesafeEndpoint, map[string]string{
 		"Authorization": "Bearer " + key,
 	}, body, "json")
 	if err != nil {

@@ -33,12 +33,10 @@ func registRunCommand() {
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
-		Description: fmt.Sprintf(`Runs one binary in the work directory, waits for it to exit, returns its combined stdout/stderr. Networking is off by default and opened per call with network: true, which always raises a confirmation: git clone / fetch / pull / push, npm or pip install, go mod download, curl and wget each need it set or they fail to resolve a host.
-Use for 跑一下 / 執行 / build / test / lint / format and local git work — one binary and its arguments.
-A watcher never exits (--watch, chokidar, npm run sass/build/dev) → background: true with timeout_min as the watch window, or the one-shot build.
-cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file.
-Expected to run over %d minutes (full build, large install or download, long data job) and its output is not needed to choose your next tool call → background: true; a test or build whose failures you fix next stays foreground.
-Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else raises a confirmation, so never chain one behind && with a command that writes.`, systemPackageRoute(), configs.BACKGROUND_THRESHOLD_MIN),
+		Description: fmt.Sprintf(`Runs one binary in the work directory and returns its combined stdout/stderr once it exits; with background: true it returns a task id at once and the output arrives later. Networking is off unless network: true, which always asks: git clone / fetch / pull / push, package installs, go mod download, curl and wget fail to resolve a host without it.
+Use for 跑一下 / 執行 / build / test / lint / format, local git work, and watchers (--watch, chokidar, npm run sass/build/dev), which only run with background: true; otherwise run the one-shot build.
+cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file; a live WebSocket feed → run_websocket.
+Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else asks, so never chain one behind && with a command that writes.`, systemPackageRoute()),
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -54,7 +52,7 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 				},
 				"background": map[string]any{
 					"type":        "boolean",
-					"description": fmt.Sprintf("true when the command is expected to run over %d minutes and its output is not needed to choose your next tool call (full build, large install or download, long data job), when the user says 跑完告訴我 / 背景跑, or for a watcher, where it is required (--watch, chokidar, a package script that watches; stopped at timeout_min with its output so far). A test or build whose failures you will fix next stays foreground. The call returns at once and this turn keeps going; if the turn ends first, the task stays open (the user can keep talking in it) and resumes with the output once every background task has finished. false: anything shorter — a pause and resume costs a full model round, more than waiting. Needs a session (stateless requests reject it).", configs.BACKGROUND_THRESHOLD_MIN),
+					"description": fmt.Sprintf("true when the command is very likely to run over %d minutes and its output does not decide your next tool call (full build, large install or download, long data job), when the user says 跑完告訴我 / 背景跑, or for a watcher (--watch, chokidar, a watching package script), which requires it and stops at timeout_min with its output so far. Apart from a watcher, use it only for the gathering that opens a request, starting every background command in one go: the turn continues at once, and the output later resumes this task with only the objective and that output, none of this turn's tool results. false: anything shorter, or a test or build whose failures you fix next. Stateless requests reject true.", configs.BACKGROUND_THRESHOLD_MIN),
 				},
 				"timeout_min": map[string]any{
 					"type":        "integer",
@@ -62,6 +60,15 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 					"minimum":     1,
 					"maximum":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
 					"default":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
+				},
+				"interval": map[string]any{
+					"type":        "integer",
+					"description": fmt.Sprintf("background: true only, set together with prompt. Seconds between checks of the output printed since the previous check, at least %d; a check whose lines meet prompt resumes this task with them while the command keeps running. Leave both out to hear back only when it exits.", configs.WATCH_MIN_INTERVAL_SEC),
+					"minimum":     configs.WATCH_MIN_INTERVAL_SEC,
+				},
+				"prompt": map[string]any{
+					"type":        "string",
+					"description": "background: true only, set together with interval. The condition, in plain language, that one interval's output must meet to be reported before the command exits — 'any line contains error or failed', 'loss becomes NaN'.",
 				},
 				"write_paths": map[string]any{
 					"type":        "array",
@@ -78,11 +85,25 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 				WritePaths []string `json:"write_paths"`
 				Background bool     `json:"background"`
 				TimeoutMin int      `json:"timeout_min"`
+				Interval   int      `json:"interval"`
+				Prompt     string   `json:"prompt"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.Background && interactive.BackgroundAllowed(ctx), params.TimeoutMin)
+			background := params.Background && interactive.BackgroundAllowed(ctx)
+			var watch *watchSpec
+			if params.Interval != 0 || strings.TrimSpace(params.Prompt) != "" {
+				if !background {
+					return "", utilsmsg.New(utilsmsg.Invalid, "interval", "needs background: true in a session; leave interval and prompt out for a foreground call")
+				}
+				spec, err := parseWatch(params.Interval, params.Prompt)
+				if err != nil {
+					return "", err
+				}
+				watch = &spec
+			}
+			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, background, params.TimeoutMin, watch)
 		},
 	})
 }
@@ -103,7 +124,7 @@ func systemPackageRoute() string {
 	return "installing or removing a system package → pkg_manage"
 }
 
-func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, background bool, timeoutMin int) (string, error) {
+func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, background bool, timeoutMin int, watch *watchSpec) (string, error) {
 	if len(argv) == 0 {
 		return "", utilsmsg.New(utilsmsg.Invalid, "argv", "requires a non-empty array, e.g. [\"git\", \"status\"]")
 	}
@@ -165,7 +186,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 	}
 
 	if background {
-		return startBackgroundCommand(ctx, e, argv, binds, sandboxOpt, timeoutMin)
+		return startBackgroundCommand(ctx, e, argv, binds, sandboxOpt, timeoutMin, watch)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, configs.RUN_COMMAND_TIMEOUT)

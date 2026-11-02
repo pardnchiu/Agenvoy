@@ -30,6 +30,7 @@ func init() {
 	interactive.Register()
 
 	registRunCommand()
+	registRunWebsocket()
 	registDownloadFile()
 	registOpenFile()
 	registHTMLTemplate()

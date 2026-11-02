@@ -43,12 +43,13 @@ func ReleaseBackgroundSlot(sessionID string) {
 }
 
 type BackgroundTask struct {
-	ID          string `json:"id"`
-	Description string `json:"description"`
-	WorkDir     string `json:"work_dir,omitempty"`
-	Done        bool   `json:"done,omitempty"`
-	Reported    bool   `json:"reported,omitempty"`
-	Result      string `json:"result,omitempty"`
+	ID          string   `json:"id"`
+	Description string   `json:"description"`
+	WorkDir     string   `json:"work_dir,omitempty"`
+	Done        bool     `json:"done,omitempty"`
+	Reported    bool     `json:"reported,omitempty"`
+	Result      string   `json:"result,omitempty"`
+	Updates     []string `json:"updates,omitempty"`
 }
 
 func AddBackground(sessionID, taskHash, workDir, id, description string) error {
@@ -88,6 +89,26 @@ func finishBackground(sessionID, taskHash, id, result string) error {
 	return writePending(sessionID, taskHash, &meta)
 }
 
+func UpdateBackground(sessionID, taskHash, id, text string) error {
+	pendingMu.Lock()
+	defer pendingMu.Unlock()
+
+	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+	if err != nil {
+		return utilsmsg.Trace("readPending", taskHash, err)
+	}
+	i := slices.IndexFunc(meta.Background, func(b BackgroundTask) bool { return b.ID == id })
+	if i < 0 || meta.Background[i].Done {
+		return utilsmsg.New(utilsmsg.NotFound, "background task", "%q running in pending %q", id, taskHash)
+	}
+	updates := append(meta.Background[i].Updates, clampPendingText(text, configs.MAX_PENDING_RESULT_BYTES/configs.MAX_BACKGROUND_UPDATES))
+	if over := len(updates) - configs.MAX_BACKGROUND_UPDATES; over > 0 {
+		updates = updates[over:]
+	}
+	meta.Background[i].Updates = updates
+	return writePending(sessionID, taskHash, &meta)
+}
+
 func BackgroundState(sessionID, taskHash string) (running, unreported int) {
 	if taskHash == "" {
 		return 0, 0
@@ -100,6 +121,9 @@ func BackgroundState(sessionID, taskHash string) (running, unreported int) {
 		switch {
 		case !b.Done:
 			running++
+			if len(b.Updates) > 0 {
+				unreported++
+			}
 		case !b.Reported:
 			unreported++
 		}
@@ -156,6 +180,9 @@ func backgroundToReport(list []BackgroundTask) (finished []BackgroundTask, runni
 		switch {
 		case !b.Done:
 			running++
+			if len(b.Updates) > 0 {
+				finished = append(finished, b)
+			}
 		case !b.Reported:
 			finished = append(finished, b)
 		}
@@ -163,10 +190,25 @@ func backgroundToReport(list []BackgroundTask) (finished []BackgroundTask, runni
 	return finished, running
 }
 
+func backgroundResumeHeader(finished []BackgroundTask) string {
+	if slices.ContainsFunc(finished, func(b BackgroundTask) bool { return b.Done }) {
+		return "[Resumed Task — background task finished]"
+	}
+	return "[Resumed Task — background task update]"
+}
+
 func formatBackgroundSection(finished []BackgroundTask, running int) string {
 	var sb strings.Builder
-	sb.WriteString("\n## Background Tasks Finished\n")
+	sb.WriteString("\n## Background Task Reports\n")
 	for _, b := range finished {
+		if !b.Done {
+			fmt.Fprintf(&sb, "\n### %s · %s (still running, update)\n%s\n", b.ID, b.Description, strings.Join(b.Updates, "\n\n"))
+			continue
+		}
+		if len(b.Updates) > 0 {
+			fmt.Fprintf(&sb, "\n### %s · %s\n%s\n\n%s\n", b.ID, b.Description, strings.Join(b.Updates, "\n\n"), b.Result)
+			continue
+		}
 		fmt.Fprintf(&sb, "\n### %s · %s\n%s\n", b.ID, b.Description, b.Result)
 	}
 	if running > 0 {
@@ -186,9 +228,14 @@ func markBackgroundReported(sessionID, taskHash string, finished []BackgroundTas
 		return
 	}
 	for i, b := range meta.Background {
-		if slices.ContainsFunc(finished, func(f BackgroundTask) bool { return f.ID == b.ID }) {
+		j := slices.IndexFunc(finished, func(f BackgroundTask) bool { return f.ID == b.ID })
+		if j < 0 {
+			continue
+		}
+		if finished[j].Done {
 			meta.Background[i].Reported = true
 		}
+		meta.Background[i].Updates = meta.Background[i].Updates[min(len(finished[j].Updates), len(b.Updates)):]
 	}
 	if err := writePending(sessionID, taskHash, &meta); err != nil {
 		slog.Debug("markBackgroundReported",

@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -11,8 +10,6 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
-	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
 
@@ -38,21 +35,21 @@ func DeliverBackground(sessionID, taskHash, workDir, id, result string) {
 		return
 	}
 
-	if running, _ := interactive.BackgroundState(sessionID, taskHash); running > 0 {
-		status, _, _ := strings.Cut(result, "\n")
-		event := agentstypes.Event{
-			Type:       agentstypes.EventToolResult,
-			ToolName:   interactive.BackgroundTool,
-			ToolID:     id,
-			TaskHash:   taskHash,
-			WindowHash: interactive.LoadPendingWindow(sessionID, taskHash),
-			Result:     fmt.Sprintf("%s %s; %d background task(s) still running", id, status, running),
-		}
-		sessionlog.Record(sessionID, event)
-		pubsub.Pub(sessionID, event)
+	scheduleBackgroundResume(sessionID, taskHash, workDir)
+}
+
+func DeliverBackgroundUpdate(sessionID, taskHash, workDir, id, text string) {
+	if err := interactive.UpdateBackground(sessionID, taskHash, id, text); err != nil {
+		slog.Warn("interactive.UpdateBackground",
+			slog.String("session", sessionID),
+			slog.String("task", taskHash),
+			slog.String("error", err.Error()))
 		return
 	}
+	scheduleBackgroundResume(sessionID, taskHash, workDir)
+}
 
+func scheduleBackgroundResume(sessionID, taskHash, workDir string) {
 	backgroundMu.Lock()
 	state, ok := backgroundResumes[taskHash]
 	if !ok {
@@ -115,6 +112,7 @@ func resumeBackground(sessionID, taskHash, workDir string) {
 		AllowAll:       interactive.LoadPendingAllowAll(sessionID, taskHash),
 		PendingTask:    taskHash,
 		HistoryContent: history,
+		IgnoreHistory:  true,
 		TUI:            origin == "cli-",
 	})
 	events, wait := exec.Stream(ctx, sessionID, 64, func(stream chan<- agentstypes.Event) error {

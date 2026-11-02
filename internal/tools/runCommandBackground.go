@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 	"time"
@@ -16,12 +17,12 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, binds []string, sandboxOpt *go_pkg_sandbox.Option, timeoutMin int) (string, error) {
+func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, binds []string, sandboxOpt *go_pkg_sandbox.Option, timeoutMin int, watch *watchSpec) (string, error) {
 	if timeoutMin <= 0 || timeoutMin > configs.MAX_BACKGROUND_TIMEOUT_MIN {
 		timeoutMin = configs.MAX_BACKGROUND_TIMEOUT_MIN
 	}
 	description := go_pkg_utils.TruncateString(strings.Join(argv, " "), 48)
-	id, err := interactive.StartBackground(ctx, e.SessionID, e.PendingTask, e.WorkDir, "cmd", description, func(ctx context.Context) string {
+	id, err := interactive.StartBackground(ctx, e.SessionID, e.PendingTask, e.WorkDir, "cmd", description, func(ctx context.Context, report func(string)) string {
 		ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMin)*time.Minute)
 		defer cancel()
 
@@ -30,11 +31,29 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 			return "failed: " + utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox.Wrap", "", err).Error()
 		}
 		sink := &tailWriter{limit: configs.MAX_PENDING_RESULT_BYTES - tailHeadroom}
-		cmd.Stdout = sink
-		cmd.Stderr = sink
+		var out io.Writer = sink
+		var watchErr chan error
+		done := make(chan struct{})
+		if watch != nil {
+			buf := &watchBuffer{limit: configs.WATCH_BUFFER_MAX_BYTES}
+			out = io.MultiWriter(sink, buf)
+			watchErr = make(chan error, 1)
+			go func() {
+				_, _, err := watchOutput(ctx, *watch, buf, done, report)
+				watchErr <- err
+			}()
+		}
+		cmd.Stdout = out
+		cmd.Stderr = out
 
 		err = go_pkg_sandbox.Run(cmd)
+		close(done)
 		output := sink.text()
+		if watchErr != nil {
+			if err := <-watchErr; err != nil {
+				output = "[interval checks stopped: " + err.Error() + "]\n" + output
+			}
+		}
 		switch {
 		case ctx.Err() == context.DeadlineExceeded:
 			return fmt.Sprintf("failed: [Timeout] %s: exceeded %d minutes\n%s", argv[0], timeoutMin, output)
@@ -49,7 +68,11 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("background command %s started. Keep working on this turn; if it ends before every background task does, the task stays open and resumes with their output once the last one finishes.", id), nil
+	text := fmt.Sprintf("background command %s started. Keep working on this turn; if it ends first, the task stays open and resumes with this command's output as soon as it finishes, without waiting for other background tasks.", id)
+	if watch != nil {
+		text += fmt.Sprintf(" Every %ds its new output is checked against prompt, and each check that meets it also resumes this task while the command keeps running.", int(watch.interval/time.Second))
+	}
+	return text, nil
 }
 
 const tailHeadroom = 1 << 10

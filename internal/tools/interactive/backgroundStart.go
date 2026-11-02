@@ -14,17 +14,21 @@ import (
 
 type BackgroundDeliver func(sessionID, taskHash, workDir, id, result string)
 
-var backgroundDeliver BackgroundDeliver
+var (
+	backgroundDeliver BackgroundDeliver
+	backgroundUpdate  BackgroundDeliver
+)
 
-func SetBackgroundDeliver(fn BackgroundDeliver) {
-	backgroundDeliver = fn
+func SetBackgroundDeliver(deliver, update BackgroundDeliver) {
+	backgroundDeliver = deliver
+	backgroundUpdate = update
 }
 
 func BackgroundAllowed(ctx context.Context) bool {
 	return agenttypes.OriginFrom(ctx) != "chat-"
 }
 
-func StartBackground(ctx context.Context, sessionID, taskHash, workDir, prefix, description string, run func(ctx context.Context) string) (string, error) {
+func StartBackground(ctx context.Context, sessionID, taskHash, workDir, prefix, description string, run func(ctx context.Context, report func(string)) string) (string, error) {
 	if taskHash == "" || backgroundDeliver == nil {
 		return "", utilsmsg.New(utilsmsg.Unavailable, "background", "this request has no session task to resume; run it without background")
 	}
@@ -54,7 +58,11 @@ func StartBackground(ctx context.Context, sessionID, taskHash, workDir, prefix, 
 			}
 			backgroundDeliver(sessionID, taskHash, workDir, id, result)
 		}()
-		result = run(bgCtx)
+		result = run(bgCtx, func(text string) {
+			if backgroundUpdate != nil && bgCtx.Err() == nil {
+				backgroundUpdate(sessionID, taskHash, workDir, id, text)
+			}
+		})
 	}()
 	return id, nil
 }
