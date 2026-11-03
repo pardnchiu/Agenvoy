@@ -23,6 +23,10 @@ func (c *conn) pending(ctx context.Context, f Frame) {
 		return
 	}
 	if !info.HasQuestions {
+		if !interactive.ClaimOnline(sessionID, taskHash) {
+			c.write(Frame{Type: FrameDone, UUID: f.UUID, SessionID: sessionID, Error: "[Conflict] pending task: running"})
+			return
+		}
 		c.resume(ctx, f, nil)
 		return
 	}
@@ -61,6 +65,9 @@ func (c *conn) resume(ctx context.Context, f Frame, answers []any) {
 	allowAll := interactive.LoadPendingAllowAll(sessionID, taskHash)
 	full, history, err := interactive.LoadResumeMessage(sessionID, taskHash, answers)
 	if err != nil {
+		if answers == nil {
+			interactive.ReleaseOnline(sessionID, taskHash)
+		}
 		c.write(Frame{Type: FrameDone, UUID: f.UUID, SessionID: sessionID, Error: err.Error()})
 		return
 	}

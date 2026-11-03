@@ -92,9 +92,6 @@ A one-off request → http_request or fetch_page; a job at a clock time with no 
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			if !interactive.BackgroundAllowed(ctx) {
-				return "", utilsmsg.New(utilsmsg.Denied, "run_websocket", "runs only in the background, which this entry does not support")
-			}
 			spec, err := parseWSParams(params)
 			if err != nil {
 				return "", err

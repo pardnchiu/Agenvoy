@@ -127,7 +127,7 @@ func Daemon() {
 	}
 
 	subagent.Register()
-	interactive.SetBackgroundDeliver(app.DeliverBackground, app.DeliverBackgroundUpdate)
+	interactive.SetBackgroundDeliver(app.DeliverBackground, app.DeliverBackgroundUpdate, app.ScheduleBackgroundResume)
 
 	defer func() {
 		if m := mcp.Manager(); m != nil {

@@ -290,6 +290,9 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 		}()
 		defer historystore.ClearTaskOrigin(exec.PendingTask)
 		defer interactive.KeepOnline(session.ID, exec.PendingTask)()
+		if owned, ok := ctx.Value(onlineOwnedKey{}).(*atomic.Bool); ok {
+			owned.Store(true)
+		}
 		registerCancel(exec.PendingTask, execCancel)
 		defer unregisterCancel(exec.PendingTask)
 		if runTaskHash != nil {
@@ -790,6 +793,8 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				slog.Warn("writeHistory",
 					slog.String("session", session.ID),
 					slog.String("error", err.Error()))
+			} else if data.PendingTask != "" {
+				interactive.CommitBackgroundReport(session.ID, data.PendingTask, data.HistoryContent)
 			}
 
 			interactive.FinalizePending(session.ID, exec.PendingTask, responseText)

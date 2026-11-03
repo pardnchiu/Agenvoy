@@ -33,10 +33,10 @@ import (
 
 const foregroundOrigin = "cli-"
 
-func askUserInBackground(sessionID, origin, deliverTo, taskHash, rawArgs string, toolResults []interactive.ToolResult, files []string) {
+func enqueueAskUser(sessionID, origin, deliverTo, taskHash, rawArgs string, toolResults []interactive.ToolResult, files []string) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error("askUserInBackground panic recovered",
+			slog.Error("enqueueAskUser panic recovered",
 				slog.String("session", sessionID),
 				slog.Any("panic", r))
 		}
@@ -618,7 +618,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 
 			toolResults := toolResults(sessionData)
 
-			go askUserInBackground(sessionData.ID, originFor(ctx, sessionData.ID), deliverFor(ctx, sessionData.ID), exec.PendingTask, slot.args, toolResults, exec.EditedFiles())
+			enqueueAskUser(sessionData.ID, originFor(ctx, sessionData.ID), deliverFor(ctx, sessionData.ID), exec.PendingTask, slot.args, toolResults, exec.EditedFiles())
 			if exec.CancelExecution != nil {
 				exec.CancelExecution()
 			}

@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
 
@@ -35,7 +35,7 @@ func DeliverBackground(sessionID, taskHash, workDir, id, result string) {
 		return
 	}
 
-	scheduleBackgroundResume(sessionID, taskHash, workDir)
+	ScheduleBackgroundResume(sessionID, taskHash, workDir)
 }
 
 func DeliverBackgroundUpdate(sessionID, taskHash, workDir, id, text string) {
@@ -46,10 +46,10 @@ func DeliverBackgroundUpdate(sessionID, taskHash, workDir, id, text string) {
 			slog.String("error", err.Error()))
 		return
 	}
-	scheduleBackgroundResume(sessionID, taskHash, workDir)
+	ScheduleBackgroundResume(sessionID, taskHash, workDir)
 }
 
-func scheduleBackgroundResume(sessionID, taskHash, workDir string) {
+func ScheduleBackgroundResume(sessionID, taskHash, workDir string) {
 	backgroundMu.Lock()
 	state, ok := backgroundResumes[taskHash]
 	if !ok {
@@ -80,15 +80,26 @@ func scheduleBackgroundResume(sessionID, taskHash, workDir string) {
 }
 
 func resumeBackground(sessionID, taskHash, workDir string) {
-	for interactive.IsOnline(sessionID, taskHash) {
+	if _, unreported := interactive.BackgroundState(sessionID, taskHash); unreported == 0 {
+		return
+	}
+	for {
+		if questions, _ := interactive.LoadPendingQuestions(sessionID, taskHash); len(questions) > 0 {
+			return
+		}
+		if interactive.ClaimOnline(sessionID, taskHash) {
+			break
+		}
 		time.Sleep(500 * time.Millisecond)
 	}
 	if _, unreported := interactive.BackgroundState(sessionID, taskHash); unreported == 0 {
+		interactive.ReleaseOnline(sessionID, taskHash)
 		return
 	}
 
 	input, history, err := interactive.LoadResumeMessage(sessionID, taskHash, nil)
 	if err != nil {
+		interactive.ReleaseOnline(sessionID, taskHash)
 		slog.Warn("interactive.LoadResumeMessage",
 			slog.String("session", sessionID),
 			slog.String("task", taskHash),
@@ -96,13 +107,7 @@ func resumeBackground(sessionID, taskHash, workDir string) {
 		return
 	}
 
-	origin := "chat-"
-	for _, prefix := range []string{"cli-", "tg-", "dc-", "temp-"} {
-		if strings.HasPrefix(sessionID, prefix) {
-			origin = prefix
-			break
-		}
-	}
+	origin := runtime.OriginOf(sessionID)
 	ctx := agentstypes.WithWindowHash(agentstypes.WithOrigin(context.Background(), origin), interactive.LoadPendingWindow(sessionID, taskHash))
 	data := exec.Prepare(exec.ExecuteMeta{
 		WorkDir:        workDir,
@@ -112,7 +117,6 @@ func resumeBackground(sessionID, taskHash, workDir string) {
 		AllowAll:       interactive.LoadPendingAllowAll(sessionID, taskHash),
 		PendingTask:    taskHash,
 		HistoryContent: history,
-		IgnoreHistory:  true,
 		TUI:            origin == "cli-",
 	})
 	events, wait := exec.Stream(ctx, sessionID, 64, func(stream chan<- agentstypes.Event) error {

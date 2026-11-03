@@ -17,15 +17,17 @@ type BackgroundDeliver func(sessionID, taskHash, workDir, id, result string)
 var (
 	backgroundDeliver BackgroundDeliver
 	backgroundUpdate  BackgroundDeliver
+	backgroundResume  func(sessionID, taskHash, workDir string)
 )
 
-func SetBackgroundDeliver(deliver, update BackgroundDeliver) {
+func SetBackgroundDeliver(deliver, update BackgroundDeliver, resume func(sessionID, taskHash, workDir string)) {
 	backgroundDeliver = deliver
 	backgroundUpdate = update
+	backgroundResume = resume
 }
 
 func BackgroundAllowed(ctx context.Context) bool {
-	return agenttypes.OriginFrom(ctx) != "chat-"
+	return agenttypes.OriginFrom(ctx) == "cli-" && agenttypes.DeliverToFrom(ctx) == ""
 }
 
 func StartBackground(ctx context.Context, sessionID, taskHash, workDir, prefix, description string, run func(ctx context.Context, report func(string)) string) (string, error) {

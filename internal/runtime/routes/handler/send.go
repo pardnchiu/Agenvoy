@@ -66,7 +66,11 @@ func Send() gin.HandlerFunc {
 				slog.String("error", err.Error()))
 		}
 
-		pendingTask, pendingOnline := interactive.FollowUpTask(sessionID, strings.TrimSpace(req.PendingTask))
+		steer := exec.IsRunning(sessionID)
+		pendingTask := ""
+		if !steer {
+			pendingTask, steer = interactive.ClaimFollowUp(sessionID, strings.TrimSpace(req.PendingTask))
+		}
 
 		trimContent := strings.TrimSpace(req.Content)
 		data := exec.Prepare(exec.ExecuteMeta{
@@ -81,7 +85,7 @@ func Send() gin.HandlerFunc {
 			ExtraSystemPrompt: req.SystemPrompt,
 		})
 
-		if exec.IsRunning(sessionID) || pendingOnline {
+		if steer {
 			exec.AppendSteer(sessionID, "", req.Content)
 			c.JSON(http.StatusOK, gin.H{
 				"session_id": sessionID,

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -14,6 +16,11 @@ import (
 )
 
 const BackgroundTool = "subagents"
+
+var (
+	updateNumberRegex = regexp.MustCompile(`report #(\d+)`)
+	updateElidedRegex = regexp.MustCompile(`^\.\.\.\[(\d+) reports elided(?:: #(\d+)-#(\d+))?\]\.\.\.$`)
+)
 
 var (
 	backgroundSlotMu     sync.Mutex
@@ -101,12 +108,53 @@ func UpdateBackground(sessionID, taskHash, id, text string) error {
 	if i < 0 || meta.Background[i].Done {
 		return utilsmsg.New(utilsmsg.NotFound, "background task", "%q running in pending %q", id, taskHash)
 	}
-	updates := append(meta.Background[i].Updates, clampPendingText(text, configs.MAX_PENDING_RESULT_BYTES/configs.MAX_BACKGROUND_UPDATES))
-	if over := len(updates) - configs.MAX_BACKGROUND_UPDATES; over > 0 {
-		updates = updates[over:]
-	}
-	meta.Background[i].Updates = updates
+	meta.Background[i].Updates = trimUpdates(append(meta.Background[i].Updates, clampPendingText(text, configs.MAX_PENDING_RESULT_BYTES/4)), configs.MAX_PENDING_RESULT_BYTES)
 	return writePending(sessionID, taskHash, &meta)
+}
+
+func trimUpdates(list []string, budget int) []string {
+	total := 0
+	for _, one := range list {
+		total += len(one)
+	}
+	if total <= budget || len(list) < 3 {
+		return list
+	}
+
+	first, rest := list[0], list[1:]
+	count, low, high := 0, 0, 0
+	if m := updateElidedRegex.FindStringSubmatch(rest[0]); m != nil {
+		count, _ = strconv.Atoi(m[1])
+		low, _ = strconv.Atoi(m[2])
+		high, _ = strconv.Atoi(m[3])
+		rest = rest[1:]
+	}
+
+	left := budget - len(first) - 64
+	cut := len(rest)
+	for cut > 0 && (cut == len(rest) || left-len(rest[cut-1]) >= 0) {
+		left -= len(rest[cut-1])
+		cut--
+	}
+	if cut == 0 && count == 0 {
+		return list
+	}
+
+	for _, one := range rest[:cut] {
+		count++
+		if m := updateNumberRegex.FindStringSubmatch(one); m != nil {
+			n, _ := strconv.Atoi(m[1])
+			if low == 0 || n < low {
+				low = n
+			}
+			high = max(high, n)
+		}
+	}
+	marker := fmt.Sprintf("...[%d reports elided]...", count)
+	if low > 0 {
+		marker = fmt.Sprintf("...[%d reports elided: #%d-#%d]...", count, low, high)
+	}
+	return append([]string{first, marker}, rest[cut:]...)
 }
 
 func BackgroundState(sessionID, taskHash string) (running, unreported int) {
@@ -117,18 +165,8 @@ func BackgroundState(sessionID, taskHash string) (running, unreported int) {
 	if err != nil {
 		return 0, 0
 	}
-	for _, b := range meta.Background {
-		switch {
-		case !b.Done:
-			running++
-			if len(b.Updates) > 0 {
-				unreported++
-			}
-		case !b.Reported:
-			unreported++
-		}
-	}
-	return running, unreported
+	finished, running := backgroundToReport(meta.Background)
+	return running, len(finished)
 }
 
 func LoadPendingWindow(sessionID, taskHash string) string {
@@ -139,11 +177,11 @@ func LoadPendingWindow(sessionID, taskHash string) string {
 	return meta.WindowHash
 }
 
-func FollowUpTask(sessionID, taskHash string) (string, bool) {
+func ClaimFollowUp(sessionID, taskHash string) (string, bool) {
 	if taskHash == "" || !HasBackground(sessionID, taskHash) {
 		return "", false
 	}
-	return taskHash, IsOnline(sessionID, taskHash)
+	return taskHash, !ClaimOnline(sessionID, taskHash)
 }
 
 func HasBackground(sessionID, taskHash string) bool {
@@ -219,6 +257,42 @@ func formatBackgroundSection(finished []BackgroundTask, running int) string {
 	return sb.String()
 }
 
+type stagedReport struct {
+	history  string
+	finished []BackgroundTask
+}
+
+var (
+	stagedMu      sync.Mutex
+	stagedReports = map[string]stagedReport{}
+)
+
+func stageBackgroundReport(sessionID, taskHash, history string, finished []BackgroundTask) {
+	stagedMu.Lock()
+	defer stagedMu.Unlock()
+	key := sessionID + ":" + taskHash
+	if len(finished) == 0 {
+		delete(stagedReports, key)
+		return
+	}
+	stagedReports[key] = stagedReport{history: strings.TrimSpace(history), finished: finished}
+}
+
+func CommitBackgroundReport(sessionID, taskHash, history string) {
+	key := sessionID + ":" + taskHash
+	stagedMu.Lock()
+	staged, ok := stagedReports[key]
+	if ok && staged.history == strings.TrimSpace(history) {
+		delete(stagedReports, key)
+	} else {
+		ok = false
+	}
+	stagedMu.Unlock()
+	if ok {
+		markBackgroundReported(sessionID, taskHash, staged.finished)
+	}
+}
+
 func markBackgroundReported(sessionID, taskHash string, finished []BackgroundTask) {
 	pendingMu.Lock()
 	defer pendingMu.Unlock()
@@ -235,18 +309,15 @@ func markBackgroundReported(sessionID, taskHash string, finished []BackgroundTas
 		if finished[j].Done {
 			meta.Background[i].Reported = true
 		}
-		meta.Background[i].Updates = meta.Background[i].Updates[min(len(finished[j].Updates), len(b.Updates)):]
+		meta.Background[i].Updates = slices.DeleteFunc(meta.Background[i].Updates, func(one string) bool {
+			return slices.Contains(finished[j].Updates, one)
+		})
 	}
 	if err := writePending(sessionID, taskHash, &meta); err != nil {
 		slog.Debug("markBackgroundReported",
 			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
 	}
-}
-
-func backgroundRunning(path string) bool {
-	meta, err := readPending(path)
-	return err == nil && slices.ContainsFunc(meta.Background, func(b BackgroundTask) bool { return !b.Done })
 }
 
 func ClearAllBackground() {

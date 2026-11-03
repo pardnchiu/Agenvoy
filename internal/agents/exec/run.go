@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"sync/atomic"
 
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
@@ -44,6 +45,8 @@ func Prepare(data ExecuteMeta) ExecuteMeta {
 	return data
 }
 
+type onlineOwnedKey struct{}
+
 func Run(ctx context.Context, data ExecuteMeta, events chan<- agentstypes.Event, isSub bool) error {
 	sessionID := strings.TrimSpace(data.SessionID)
 	if sessionID == "" {
@@ -62,9 +65,19 @@ func Run(ctx context.Context, data ExecuteMeta, events chan<- agentstypes.Event,
 				slog.String("task", data.PendingTask),
 				slog.String("error", err.Error()))
 		}
+		interactive.ReleaseOnline(sessionID, data.PendingTask)
 		data.PendingTask = renamed
 	}
 	taskHash := data.PendingTask
+	if data.PendingTask != "" {
+		owned := &atomic.Bool{}
+		ctx = context.WithValue(ctx, onlineOwnedKey{}, owned)
+		defer func() {
+			if !owned.Load() {
+				interactive.ReleaseOnline(sessionID, taskHash)
+			}
+		}()
+	}
 	if taskHash == "" {
 		if data.TaskHash == "" {
 			data.TaskHash = go_pkg_utils.UUID()

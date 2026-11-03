@@ -142,8 +142,13 @@ func ResumeSessionPending() gin.HandlerFunc {
 			content = full
 			historyContent = history
 		} else {
+			if !interactive.ClaimOnline(sid, taskHash) {
+				c.JSON(http.StatusConflict, gin.H{"error": "[Conflict] pending task: running"})
+				return
+			}
 			full, history, err := interactive.LoadResumeMessage(sid, taskHash, nil)
 			if err != nil {
+				interactive.ReleaseOnline(sid, taskHash)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("load resume: %v", err)})
 				return
 			}

@@ -93,7 +93,7 @@ func serve(ctx context.Context, raw net.Conn) {
 		switch f.Type {
 		case FrameRun:
 			if f.Rayload != nil {
-				task, online := interactive.FollowUpTask(f.SessionID, f.Rayload.PendingTask)
+				task, online := interactive.ClaimFollowUp(f.SessionID, f.Rayload.PendingTask)
 				f.Rayload.PendingTask = task
 				if online {
 					exec.AppendSteer(f.SessionID, f.Rayload.WindowHash, f.Rayload.Input)
