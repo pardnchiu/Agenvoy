@@ -75,12 +75,18 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 					"description": "Absolute paths outside $HOME this command has to write to — ['/usr/local'] for a system install. The sandbox only allows writes under $HOME, so a command touching anything else fails with a permission error that looks like a file ownership problem and is not one. Each path needs the user's approval on this call. Paths under $HOME need not be listed.",
 					"items":       map[string]any{"type": "string"},
 				},
+				"sandbox": map[string]any{
+					"type":        "boolean",
+					"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt.",
+					"default":     true,
+				},
 			},
 			"required": []string{"argv"},
 		},
 		Handler: func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Argv       []string `json:"argv"`
+				Sandbox    *bool    `json:"sandbox"`
 				Network    bool     `json:"network"`
 				WritePaths []string `json:"write_paths"`
 				Background bool     `json:"background"`
@@ -103,7 +109,8 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 				}
 				watch = &spec
 			}
-			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, background, params.TimeoutMin, watch)
+			unsandboxed := params.Sandbox != nil && !*params.Sandbox
+			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, unsandboxed, background, params.TimeoutMin, watch)
 		},
 	})
 }
@@ -124,7 +131,7 @@ func systemPackageRoute() string {
 	return "installing or removing a system package → pkg_manage"
 }
 
-func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, background bool, timeoutMin int, watch *watchSpec) (string, error) {
+func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, unsandboxed, background bool, timeoutMin int, watch *watchSpec) (string, error) {
 	if len(argv) == 0 {
 		return "", utilsmsg.New(utilsmsg.Invalid, "argv", "requires a non-empty array, e.g. [\"git\", \"status\"]")
 	}
@@ -183,6 +190,9 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 			WriteScope: go_pkg_sandbox.WriteHome,
 			ReadWrite:  binds,
 		}
+	}
+	if unsandboxed {
+		sandboxOpt = &go_pkg_sandbox.Option{AllowAll: true}
 	}
 
 	if background {
@@ -339,4 +349,18 @@ func shortestRoots(list []string) []string {
 		out = out[:5]
 	}
 	return out
+}
+
+func RestrictedRunCommand(toolName, toolArgs string) []string {
+	if toolName != "run_command" {
+		return nil
+	}
+	var p struct {
+		Argv    []string `json:"argv"`
+		Sandbox *bool    `json:"sandbox"`
+	}
+	if json.Unmarshal([]byte(toolArgs), &p) != nil || p.Sandbox == nil || *p.Sandbox {
+		return nil
+	}
+	return []string{"outside sandbox: " + strings.Join(p.Argv, " ")}
 }

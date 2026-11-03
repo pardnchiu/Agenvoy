@@ -478,10 +478,11 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 		}
 
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)
-		restrictedList := append(append([]string{}, restrictedPaths...), interactive.RestrictedPkgManage(toolName, toolArg)...)
+		unsandboxed := tools.RestrictedRunCommand(toolName, toolArg)
+		restrictedList := append(append(append([]string{}, restrictedPaths...), interactive.RestrictedPkgManage(toolName, toolArg)...), unsandboxed...)
 		restricted := len(restrictedList) > 0
 
-		if !allowAll && (restricted || toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll)) {
+		if (!allowAll || len(unsandboxed) > 0) && (restricted || toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll)) {
 			proceed := true
 			approved := false
 			verified := false
@@ -560,6 +561,11 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 				proceed = false
 				approved = false
 				reason = fmt.Sprintf("this needs system password verification, which this channel cannot collect: %s", strings.Join(restrictedList, ", "))
+			}
+			if proceed && len(unsandboxed) > 0 && !verified {
+				proceed = false
+				approved = false
+				reason = "running outside the sandbox needs the user's system password, and it was not verified"
 			}
 			if !proceed {
 				message := "The user declined this call. Retrying it, or reissuing it with different arguments, produces the same prompt and the same refusal. Continue without it, or use ask_user to agree on another approach."
