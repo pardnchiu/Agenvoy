@@ -15,8 +15,15 @@ func CheckThreshold(modelName string) int {
 }
 
 func InputWindow(modelName string) int {
+	learned, hasLearned := overflowLimit(modelName)
 	if in, ok := lookupLimit(modelName); ok {
+		if hasLearned && learned < in {
+			return learned
+		}
 		return in
+	}
+	if hasLearned {
+		return learned
 	}
 	if model, ok := strings.CutPrefix(strings.TrimSpace(modelName), copilotNamespace); ok {
 		WarmCopilot()

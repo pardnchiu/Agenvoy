@@ -408,6 +408,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 		reasoned    bool
 	}
 	sendFailCount := 0
+	reasoningDir, reasoningRetryCount := 0, 0
 	timeoutRetryCount := 0
 	rateLimitRetryCount := 0
 	oldHistoriesCompacted := false
@@ -508,6 +509,22 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			isTimeout := isSendTimeoutError(err, sendCtxErr)
 			modelName := data.Agent.Name()
 
+			if isReasoningRejected(err) && reasoningRetryCount < configs.MAX_RETRY_TIMES {
+				if next, dir, ok := stepReasoning(reasoning, reasoningDir); ok {
+					slog.Warn("data.Agent.Send rejected reasoning level, retrying adjacent level",
+						slog.String("session", session.ID),
+						slog.String("name", modelName),
+						slog.String("from", reasoning.String()),
+						slog.String("to", next.String()),
+						slog.String("error", err.Error()))
+					reasoning, reasoningDir = next, dir
+					reasoningRetryCount++
+					reasoningLabel = reasoning.String()
+					reasoningRef.Store(&reasoningLabel)
+					continue
+				}
+			}
+
 			reason, retryWait := retryHandler.Handle(modelName, err, sendCode, rateLimitRetryCount)
 			if reason != "" {
 				slog.Debug("data.Agent.Send "+reason+", model cooldown registered",
@@ -534,19 +551,14 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 					return utilsmsg.New(utilsmsg.Limit, "data.Agent.Send", "context exceeded, nothing left to trim: %w", err)
 				}
 				sendFailCount++
-				if !compactFailed {
-					compactHistory()
-					if !compactFailed {
-						slog.Warn("data.Agent.Send context length exceeded, compacted history",
-							slog.String("session", session.ID),
-							slog.Int("attempts", sendFailCount))
-						continue
-					}
-				}
-				compact.TrimFallback(&session.ContextHistories, &session.ToolHistories)
-				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange",
+				compact.NoteOverflow(modelName, err)
+				compact.TrimRatio(&session.ContextHistories, &session.ToolHistories, configs.CONTEXT_OVERFLOW_KEEP_RATIO)
+				lastInputTokens = 0
+				slog.Warn("data.Agent.Send context length exceeded, trimmed oldest content",
 					slog.String("session", session.ID),
-					slog.Int("attempts", sendFailCount))
+					slog.Int("attempts", sendFailCount),
+					slog.Int("history", len(session.ContextHistories)),
+					slog.Int("tool_history", len(session.ToolHistories)))
 				continue
 			}
 
