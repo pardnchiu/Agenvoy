@@ -249,12 +249,16 @@ function logItem(sendAt) {
   };
 }
 
-function composeTurns(turns, prompts, current, open) {
+function composeTurns(turns, prompts, current, open, settled) {
   if (!turns || !turns.length) {
     return current;
   }
-  const blocks = turns.map((text, i) => {
-    const prompt = Array.from(((prompts && prompts[i]) || "Background").replace(/\s+/g, " ").trim());
+  const kept = turns.map((text, i) => [text, (prompts && prompts[i]) || ""]).filter(([, prompt], i) => !settled || (i > 0 && prompt));
+  if (!kept.length) {
+    return current;
+  }
+  const blocks = kept.map(([text, raw]) => {
+    const prompt = Array.from((raw || "Background").replace(/\s+/g, " ").trim());
     const summary = prompt.length > 64 ? prompt.slice(0, 64).join("") + "..." : prompt.join("");
     return `<details${open ? " open" : ""}>\n<summary>${escapeSubviewText(summary)}</summary>\n\n${text}\n\n</details>`;
   });

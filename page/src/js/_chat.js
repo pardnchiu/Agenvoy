@@ -306,7 +306,7 @@ async function renderChat(sessionId) {
       continue;
     }
     if (item.turns && item.turns.length) {
-      item.content = composeTurns(item.turns, item.prompts, item.content, item.paused || !item.finished);
+      item.content = composeTurns(item.turns, item.prompts, item.content, item.paused || !item.finished, !item.pending);
     }
     const node = newAssisatantItem(item, sessionId);
     if (item.pending) {
