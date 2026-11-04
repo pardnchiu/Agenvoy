@@ -222,6 +222,9 @@ var InjectTools string
 //go:embed prompts/system_prompt/inject/turn_context/skills.md
 var InjectSkills string
 
+//go:embed prompts/system_prompt/inject/turn_context/tool_gap.md
+var InjectToolGap string
+
 //go:embed prompts/system_prompt/inject/turn_context/agent_guide.md
 var InjectAgentGuide string
 

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -373,7 +374,16 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			}
 		}
 	}
-	assignTurnContext(ctx, session, data.WorkDir, allowAll, scanner, data.ExcludeSkills, !exec.ExcludeTools["run_skill"], toolNames)
+	withSkills := !exec.ExcludeTools["run_skill"]
+	var toolGap bool
+	var hiddenSkills []string
+	var decideWG sync.WaitGroup
+	decideWG.Go(func() { toolGap = detectToolGap(ctx, session.ID, exec) })
+	if withSkills {
+		decideWG.Go(func() { hiddenSkills = unrelatedSkills(ctx, session.ID, exec.Objective, scanner, data.ExcludeSkills) })
+	}
+	decideWG.Wait()
+	assignTurnContext(ctx, session, data.WorkDir, allowAll, scanner, append(slices.Clone(data.ExcludeSkills), hiddenSkills...), withSkills, toolNames, toolGap)
 	if data.Skill != nil {
 		assignSkill(session, data.Skill)
 	}
