@@ -512,13 +512,12 @@ function newStreamItem(init, sessionId) {
   think.open = true;
   think.dataset.streaming = "1";
 
-  const model = _("p", init.model || "...");
   const answer = _("section.md-render.nanomd", { "data-mode": "light" });
   const source = sourceBox(init.text || "");
   const files = fileBox([]);
   const footer = _("footer");
   const todo = _("section.todo");
-  const body = _("section", [model, think, answer, source, files, footer, todo]);
+  const body = _("section", [think, answer, source, files, footer, todo]);
   const dom = _("div.assistant", [_("img", "public/logo-min.svg"), body]);
   dom.dataset.streaming = "1";
   if (init.task) {
@@ -532,7 +531,7 @@ function newStreamItem(init, sessionId) {
     task: init.task || "",
     dom: dom,
     body: body,
-    model: model,
+    model: init.model || "",
     think: think,
     reasoning: reasoning,
     answer: answer,

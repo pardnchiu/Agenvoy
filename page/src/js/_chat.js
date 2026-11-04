@@ -319,10 +319,11 @@ async function renderChat(sessionId) {
 }
 
 function assistantFooter(meta, sessionId, task) {
-  const children = [copyBtn()];
+  const buttons = [copyBtn()];
   if (sessionId && task) {
-    children.push(historyBtn(sessionId, task));
+    buttons.push(historyBtn(sessionId, task));
   }
+  const children = [];
   if (meta.canceled) {
     children.push(_("p.canceled", "canceled"));
   }
@@ -339,7 +340,9 @@ function assistantFooter(meta, sessionId, task) {
     children.push(_("div", [_("span.material-symbols-outlined", "arrow_downward_alt"), _("p", meta.output)]));
   }
   children.push(_("p", displayAt(meta.send_at)));
-  return _("footer", children);
+  const label = (meta.model || "") + (meta.model && meta.reasoning ? `/${meta.reasoning}` : "");
+  const stats = label ? _("div.stats", { name: label }, children) : _("div.stats", children);
+  return _("footer", buttons.concat([stats]));
 }
 
 function displayAt(at) {
@@ -404,7 +407,7 @@ function pendingMarkdownSection(markdown) {
 }
 
 function newAssisatantItem(item, sessionId) {
-  const body = [_("p", (item.meta.model || "") + (item.meta.reasoning ? `/${item.meta.reasoning}` : ""))];
+  const body = [];
 
   if (item.Reasoning) {
     body.push(

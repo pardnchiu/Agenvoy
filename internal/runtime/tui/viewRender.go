@@ -575,20 +575,12 @@ func renderAgentEvent(ev agenttypes.Event, sessionLabel, cwd string, width int, 
 				stats = finishedAt
 			}
 		}
-		model := utils.FormatEventFooter(0, 0, ev.Model, ev.Reasoning, nil)
-		if sessionLabel != "" {
-			if model != "" {
-				model += "  [" + sessionLabel + "]"
-			} else {
-				model = "[" + sessionLabel + "]"
-			}
-		}
 		footer := stats
-		if model != "" {
+		if sessionLabel != "" {
 			if footer != "" {
-				footer += "\n    " + model
+				footer += "\n    [" + sessionLabel + "]"
 			} else {
-				footer = model
+				footer = "[" + sessionLabel + "]"
 			}
 		}
 		if footer == "" {

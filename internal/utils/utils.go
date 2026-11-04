@@ -15,6 +15,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 var (
@@ -67,6 +68,8 @@ var toolDisplayName = map[string]string{
 	"send_to_chatbot": "Send",
 	"http_request":    "Request",
 	"schedules":       "Schedule",
+	"reasoning_guide": "Guide",
+	"write_result":    "Write",
 }
 
 func IsPlugTool(name string) bool {
@@ -312,6 +315,25 @@ func formatToolArgs(name, raw, cwd string, fullPath bool) string {
 		if skill != "" {
 			return skill
 		}
+
+	case "find_tools":
+		if names := joinStrings(dic["names"]); names != "" {
+			return names
+		}
+		if q := pick("query"); q != "" {
+			return q
+		}
+		return ""
+
+	case "reasoning_guide":
+		return joinStrings(dic["topics"])
+
+	case "write_result":
+		format := pick("format")
+		if format == "" {
+			format = "md"
+		}
+		return filepath.Join(filesystem.OutputDir(), "report-*."+format)
 
 	case "run_command":
 		var p struct {

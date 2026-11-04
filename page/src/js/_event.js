@@ -2,7 +2,7 @@ function renderEvent(view, event) {
   const type = event.type;
 
   if (type === "EventAgentResult") {
-    view.model.textContent = event.text || "";
+    view.model = event.text || "";
     if (view.text) {
       view.prompts = (view.prompts || []).concat([view.prompt === undefined ? originPrompt(view) : view.prompt]);
       view.prompt = view.nextPrompt || "";
@@ -48,6 +48,7 @@ function renderEvent(view, event) {
     const canceled = assistantFooter(
       {
         send_at: sendAt(),
+        model: view.model,
         canceled: true,
         duration: compactDuration(event.duration),
       },
@@ -70,10 +71,8 @@ function renderEvent(view, event) {
       view.turnsOpen = false;
       renderAnswer(view);
     }
-    const model = event.model || view.model.textContent;
-    if (event.reasoning) {
-      view.model.replaceChildren(`${model}/${event.reasoning}`);
-    }
+    const model = event.model || view.model;
+    view.model = model;
     loadModelQuota(view, model);
     loadFollowup(view);
     view.think.open = false;
@@ -82,6 +81,8 @@ function renderEvent(view, event) {
     const footer = assistantFooter(
       {
         send_at: sendAt(),
+        model: model,
+        reasoning: event.reasoning || "",
         duration: compactDuration(event.duration),
         input: event.usage_input || "",
         output: compactToken(usage.output_tokens),
@@ -219,11 +220,11 @@ async function loadModelQuota(view, model) {
     if (!text) {
       return;
     }
-    const quota = _("span.quota", text);
-    const percents = (text.match(/\d+(?:\.\d+)?(?=%)/g) || []).map(Number);
-    quota.dataset.level = quotaLevel(percents.length ? "percent" : "balance", percents.length ? Math.min(...percents) : parseFloat(text));
-    view.model.querySelector("span.quota")?.remove();
-    view.model.appendChild(quota);
+    const stats = view.footer.querySelector("div.stats");
+    const label = stats?.getAttribute("name");
+    if (label) {
+      stats.setAttribute("name", `${label} · ${text}`);
+    }
   } catch (err) {
     console.error("loadModelQuota", err);
   }
