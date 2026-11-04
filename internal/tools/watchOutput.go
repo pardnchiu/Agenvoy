@@ -106,7 +106,7 @@ func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport
 				"focus":    "Judge only the lines in `logs`; each line is one stream message or one line of command output, prefixed with its arrival time.",
 			},
 			"criteria": map[string]any{
-				"yes": "At least one line in `logs`, or the lines taken together, meet `condition`.",
+				"yes": "At least one line in `logs` meets `condition`.",
 				"no":  "Nothing in `logs` meets `condition`.",
 			},
 		},

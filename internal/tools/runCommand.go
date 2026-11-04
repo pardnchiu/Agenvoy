@@ -68,7 +68,7 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 				},
 				"prompt": map[string]any{
 					"type":        "string",
-					"description": "background: true only, set together with interval. The condition, in plain language, that one interval's output must meet to be reported before the command exits — 'any line contains error or failed', 'loss becomes NaN'.",
+					"description": "background: true only, set together with interval. Condition one output line must meet, checked by a small classifier that sees only this interval's lines and does no arithmetic. Write it as keyword present or value above / below a literal number. Do the math yourself before calling: turn a relative threshold into absolute bounds and list every bound joined with or. Examples: 'any line contains error or failed', 'loss above 2.5 or loss is NaN', 'eta above 600'.",
 				},
 				"write_paths": map[string]any{
 					"type":        "array",

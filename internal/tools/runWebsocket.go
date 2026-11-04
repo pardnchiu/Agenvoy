@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -75,7 +76,7 @@ A one-off request → http_request or fetch_page; a job at a clock time with no 
 				},
 				"prompt": map[string]any{
 					"type":        "string",
-					"description": "The condition, in plain language, that one interval's messages must meet to be reported to this task — 'price moves more than 2% within one message, or any message says halt', 'status changes from ok to anything else'.",
+					"description": "Condition one message must meet, checked by a small classifier that sees only this interval's messages and does no arithmetic. Write it as keyword present, field equals value, or field above / below a literal number. Do the math yourself before calling: turn a percent move, spread or baseline into absolute bounds and list every bound joined with or. Examples: 'p above 182.33 or p below 175.18' (178.75 ± 2%), 'any message contains halt', 'status is not ok', 'bid below 0.9925'.",
 				},
 				"timeout": map[string]any{
 					"type":        "integer",
@@ -215,31 +216,64 @@ func readWSConn(ctx context.Context, spec wsSpec, buf *watchBuffer) (bool, error
 	}
 	defer conn.Close()
 
+	idle := max(2*spec.watch.interval, time.Duration(configs.WS_IDLE_MIN_SEC)*time.Second)
+	extend := func() error {
+		return conn.SetReadDeadline(time.Now().Add(idle))
+	}
+	extend()
+	conn.SetPongHandler(func(string) error {
+		return extend()
+	})
+	conn.SetPingHandler(func(data string) error {
+		extend()
+		err := conn.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(10*time.Second))
+		var netErr net.Error
+		if errors.Is(err, websocket.ErrCloseSent) || (errors.As(err, &netErr) && netErr.Timeout()) {
+			return nil
+		}
+		return err
+	})
+
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
-		select {
-		case <-ctx.Done():
-			conn.Close()
-		case <-done:
+		ticker := time.NewTicker(idle / 2)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				conn.Close()
+				return
+			case <-done:
+				return
+			case <-ticker.C:
+				conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(10*time.Second))
+			}
 		}
 	}()
 
 	if spec.subscribe != "" {
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(spec.subscribe)); err != nil {
-			return true, utilsmsg.Wrap(utilsmsg.Unavailable, "conn.WriteMessage", "subscribe", err)
+			return false, utilsmsg.Wrap(utilsmsg.Unavailable, "conn.WriteMessage", "subscribe", err)
 		}
 	}
 
 	conn.SetReadLimit(int64(configs.WATCH_LINE_MAX_BYTES) * 16)
+	received := false
 	for {
 		kind, raw, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				return true, errWSClosed
+				return received, errWSClosed
 			}
-			return true, utilsmsg.Wrap(utilsmsg.Unavailable, "conn.ReadMessage", spec.url, err)
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return received, utilsmsg.New(utilsmsg.Timeout, "conn.ReadMessage", "no message or pong from %s for %s", spec.url, idle)
+			}
+			return received, utilsmsg.Wrap(utilsmsg.Unavailable, "conn.ReadMessage", spec.url, err)
 		}
+		extend()
+		received = true
 		if kind != websocket.TextMessage {
 			buf.count()
 			continue
