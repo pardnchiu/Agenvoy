@@ -16,6 +16,7 @@ import (
 	oauthgrok "github.com/pardnchiu/go-llm-router/core/oauth/grok"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	"github.com/pardnchiu/agenvoy/internal/agents/probe"
@@ -170,6 +171,7 @@ func AddProviderKey() gin.HandlerFunc {
 			}
 			DropQuotaCache(prov)
 			imagetool.DropModelsCache(c.Request.Context(), prov)
+			decision.DropModelsCache(c.Request.Context(), prov)
 			audiotool.DropModelsCache(c.Request.Context(), prov)
 			probe.DropModelsCache(c.Request.Context(), name)
 			c.JSON(http.StatusOK, gin.H{"ok": true})
@@ -215,6 +217,7 @@ func AddProviderKey() gin.HandlerFunc {
 
 		DropQuotaCache(prov)
 		imagetool.DropModelsCache(c.Request.Context(), prov)
+		decision.DropModelsCache(c.Request.Context(), prov)
 		audiotool.DropModelsCache(c.Request.Context(), prov)
 		probe.DropModelsCache(c.Request.Context(), prov)
 
@@ -285,6 +288,7 @@ func ProviderOAuth() gin.HandlerFunc {
 		}
 		DropQuotaCache(prov)
 		imagetool.DropModelsCache(c.Request.Context(), prov)
+		decision.DropModelsCache(c.Request.Context(), prov)
 		audiotool.DropModelsCache(c.Request.Context(), prov)
 		probe.DropModelsCache(c.Request.Context(), prov)
 		emit(gin.H{"done": true, "ok": true})
@@ -316,6 +320,7 @@ func ClearProviderOAuth() gin.HandlerFunc {
 
 		DropQuotaCache(prov)
 		imagetool.DropModelsCache(c.Request.Context(), prov)
+		decision.DropModelsCache(c.Request.Context(), prov)
 		audiotool.DropModelsCache(c.Request.Context(), prov)
 		probe.DropModelsCache(c.Request.Context(), prov)
 		imagetool.Prune(c.Request.Context())

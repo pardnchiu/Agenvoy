@@ -90,6 +90,13 @@ func Config(ctx context.Context, name string) (go_llm_router.Config, error) {
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
+	case "typesafe":
+		apiKey := go_pkg_keychain.Get(sessionconfig.TypesafeKey)
+		if apiKey == "" {
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain "+sessionconfig.TypesafeKey, "required")
+		}
+		return go_llm_router.Config{APIKey: apiKey}, nil
+
 	case "cloudflare":
 		apiKey := go_pkg_keychain.Get("CLOUDFLARE_API_KEY")
 		if apiKey == "" {

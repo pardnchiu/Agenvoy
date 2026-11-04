@@ -8,10 +8,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
@@ -226,15 +226,17 @@ func RemoveModel() gin.HandlerFunc {
 
 func modelRouting(c *gin.Context, cfg *config.Config) gin.H {
 	return gin.H{
-		"dispatcher":      cfg.DispatcherModel,
-		"dispatcher_beta": cfg.DispatcherBeta,
-		"summary":         cfg.SummaryModel,
-		"image":           cfg.ImageGenerator,
-		"image_options":   imagetool.Available(c.Request.Context()),
-		"image_providers": imagetool.Providers,
-		"stt":             cfg.STTModel,
-		"tts":             cfg.TTSModel,
-		"audio_providers": audiotool.Providers,
+		"dispatcher":       cfg.DispatcherModel,
+		"dispatcher_beta":  cfg.DispatcherDecision,
+		"summary":          cfg.SummaryModel,
+		"image":            cfg.ImageGenerator,
+		"image_options":    imagetool.Available(c.Request.Context()),
+		"image_providers":  imagetool.Providers,
+		"decision":         cfg.DecisionModel,
+		"decision_options": decision.Available(c.Request.Context()),
+		"stt":              cfg.STTModel,
+		"tts":              cfg.TTSModel,
+		"audio_providers":  audiotool.Providers,
 	}
 }
 
@@ -264,12 +266,13 @@ func GetModelRouting() gin.HandlerFunc {
 func SetModelRouting() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body struct {
-			Dispatcher     *string `json:"dispatcher"`
-			DispatcherBeta *bool   `json:"dispatcher_beta"`
-			Summary        *string `json:"summary"`
-			Image          *string `json:"image"`
-			STT            *string `json:"stt"`
-			TTS            *string `json:"tts"`
+			Dispatcher         *string `json:"dispatcher"`
+			DispatcherDecision *bool   `json:"dispatcher_beta"`
+			Summary            *string `json:"summary"`
+			Image              *string `json:"image"`
+			Decision           *string `json:"decision"`
+			STT                *string `json:"stt"`
+			TTS                *string `json:"tts"`
 		}
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -302,9 +305,9 @@ func SetModelRouting() gin.HandlerFunc {
 			}
 		}
 
-		enabling := body.DispatcherBeta != nil && *body.DispatcherBeta
-		if enabling && strings.TrimSpace(keychain.Get(config.TypesafeKey)) == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing key: " + config.TypesafeKey, "missing_key": config.TypesafeKey})
+		enabling := body.DispatcherDecision != nil && *body.DispatcherDecision
+		if enabling && decision.Selected() == decision.Off {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "[Unavailable] decision model: off; set it in Setting Model → Decision"})
 			return
 		}
 
@@ -320,6 +323,15 @@ func SetModelRouting() gin.HandlerFunc {
 					return
 				}
 				c.JSON(http.StatusBadRequest, gin.H{"error": image + " has no credentials stored"})
+				return
+			}
+		}
+
+		decisionModel := ""
+		if body.Decision != nil {
+			decisionModel = strings.TrimSpace(*body.Decision)
+			if decisionModel != "" && !slices.Contains(decision.Available(c.Request.Context()), decisionModel) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "unknown decision model: " + decisionModel})
 				return
 			}
 		}
@@ -343,14 +355,17 @@ func SetModelRouting() gin.HandlerFunc {
 		if body.Dispatcher != nil {
 			cfg.DispatcherModel = dispatcher
 		}
-		if body.DispatcherBeta != nil {
-			cfg.DispatcherBeta = *body.DispatcherBeta
+		if body.DispatcherDecision != nil {
+			cfg.DispatcherDecision = *body.DispatcherDecision
 		}
 		if body.Summary != nil {
 			cfg.SummaryModel = summary
 		}
 		if body.Image != nil {
 			cfg.ImageGenerator = image
+		}
+		if body.Decision != nil {
+			cfg.DecisionModel = decisionModel
 		}
 		if body.STT != nil {
 			cfg.STTModel = stt

@@ -17,6 +17,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	agentsexecallowskill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
@@ -307,6 +308,9 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	}
 	if !audiotool.TTSEnabled() {
 		data.ExcludeTools = append(data.ExcludeTools, "generate_audio")
+	}
+	if decision.Selected() == decision.Off {
+		data.ExcludeTools = append(data.ExcludeTools, "run_websocket")
 	}
 	if (cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "") &&
 		(cfg == nil || !cfg.DiscordEnabled || go_pkg_keychain.Get("DISCORD_TOKEN") == "") {
@@ -668,7 +672,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 
 		prov, model, _ := strings.Cut(data.Agent.Name(), "@")
 		usagelog.Append(session.ID, prov, model, resp.Usage, sendDur, responseToolCalls(resp))
-		if err := torii.DB(torii.DBToolCache).Set(ctx, execmodel.BetaLastModelKey+session.ID, data.Agent.Name()+"/"+reasoningLabel, torii.TTL(execmodel.BetaLastModelTTL(data.Agent.Name()))); err != nil {
+		if err := torii.DB(torii.DBToolCache).Set(ctx, execmodel.DecisionLastModelKey+session.ID, data.Agent.Name()+"/"+reasoningLabel, torii.TTL(execmodel.DecisionLastModelTTL(data.Agent.Name()))); err != nil {
 			slog.Debug("torii.Set",
 				slog.String("session", session.ID),
 				slog.String("error", err.Error()))

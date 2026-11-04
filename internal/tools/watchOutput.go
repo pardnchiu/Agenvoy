@@ -8,18 +8,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pardnchiu/go-pkg/filesystem/keychain"
-	go_pkg_http "github.com/pardnchiu/go-pkg/http"
+	go_llm_router "github.com/pardnchiu/go-llm-router/core"
 
 	"github.com/pardnchiu/agenvoy/configs"
-	"github.com/pardnchiu/agenvoy/internal/session/config"
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
 type watchSpec struct {
 	interval time.Duration
 	prompt   string
-	apiKey   string
+	agent    go_llm_router.DecisionAgent
+	model    string
 }
 
 func parseWatch(interval int, prompt string) (watchSpec, error) {
@@ -32,10 +32,11 @@ func parseWatch(interval int, prompt string) (watchSpec, error) {
 	}
 	spec.interval = time.Duration(interval) * time.Second
 
-	spec.apiKey = strings.TrimSpace(keychain.Get(config.TypesafeKey))
-	if spec.apiKey == "" {
-		return spec, utilsmsg.New(utilsmsg.Denied, config.TypesafeKey, "missing in keychain; interval checks need it to judge prompt")
+	agent, model, err := decision.Agent(context.Background())
+	if err != nil {
+		return spec, utilsmsg.Trace("decision.Agent", "interval checks need a decision model to judge prompt", err)
 	}
+	spec.agent, spec.model = agent, model
 	return spec, nil
 }
 
@@ -86,26 +87,19 @@ func watchOutput(ctx context.Context, spec watchSpec, buf *watchBuffer, done <-c
 	}
 }
 
-type watchAnswer struct {
-	Answers map[string]struct {
-		Choice     string  `json:"choice"`
-		Confidence float64 `json:"confidence"`
-	} `json:"answers"`
-}
-
 func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport string, lastReportAt time.Time) (bool, float64, error) {
 	state := map[string]any{
 		"condition": spec.prompt,
 		"logs":      lines,
 	}
-	questions := map[string]any{
-		"trigger": map[string]any{
-			"type": "choice",
-			"instructions": map[string]any{
+	questions := map[string]go_llm_router.DecisionQuestion{
+		"trigger": {
+			Type: go_llm_router.DecisionChoice,
+			Instructions: map[string]any{
 				"question": "Do `logs` satisfy `condition`?",
 				"focus":    "Judge only the lines in `logs`; each line is one stream message or one line of command output, prefixed with its arrival time.",
 			},
-			"criteria": map[string]any{
+			Criteria: map[string]any{
 				"yes": "At least one line in `logs` meets `condition`.",
 				"no":  "Nothing in `logs` meets `condition`.",
 			},
@@ -116,61 +110,58 @@ func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport
 			"time": lastReportAt.Format("15:04:05"),
 			"logs": lastReport,
 		}
-		questions["repeat"] = map[string]any{
-			"type": "choice",
-			"instructions": map[string]any{
+		questions["repeat"] = go_llm_router.DecisionQuestion{
+			Type: go_llm_router.DecisionChoice,
+			Instructions: map[string]any{
 				"question": "Do `logs` only repeat the situation already reported in `last_report`?",
 				"focus":    "`last_report` holds the lines already reported for `condition`. The condition simply staying met with similar values is a repeat.",
 			},
-			"criteria": map[string]any{
+			Criteria: map[string]any{
 				"repeat": "`condition` stays met the same way as in `last_report`; nothing new to report.",
 				"new":    "`logs` show `condition` met again after it stopped holding, or met in a clearly different way than `last_report`.",
 			},
 		}
 	}
-	body := map[string]any{
-		"model":     config.TypesafeModel,
-		"state":     state,
-		"questions": questions,
-	}
 
 	callCtx, cancel := context.WithTimeout(ctx, configs.TIMEOUT_DISPATCH_CALL)
 	defer cancel()
-	result, _, err := go_pkg_http.POST[watchAnswer](callCtx, nil, config.TypesafeEndpoint, map[string]string{
-		"Authorization": "Bearer " + spec.apiKey,
-	}, body, "json")
+	result, err := spec.agent.Decide(callCtx, state, questions)
 	if err != nil {
-		return false, 0, utilsmsg.Wrap(utilsmsg.Upstream, "go_pkg_http.POST", "jev", err)
+		return false, 0, utilsmsg.Trace("Decide", spec.model, err)
 	}
 	answer, ok := result.Answers["trigger"]
 	if !ok {
-		return false, 0, utilsmsg.New(utilsmsg.Upstream, "jev", "response has no trigger answer")
+		return false, 0, utilsmsg.New(utilsmsg.Upstream, spec.model, "response has no trigger answer")
+	}
+	confidence := 0.0
+	if answer.Confidence != nil {
+		confidence = *answer.Confidence
 	}
 	switch answer.Choice {
 	case "yes":
 	case "no":
-		return false, answer.Confidence, nil
+		return false, confidence, nil
 	default:
-		return false, 0, utilsmsg.New(utilsmsg.Upstream, "jev", "invalid choice %q", answer.Choice)
+		return false, 0, utilsmsg.New(utilsmsg.Upstream, spec.model, "invalid choice %q", answer.Choice)
 	}
-	if answer.Confidence < configs.WATCH_MIN_CONFIDENCE {
-		return false, answer.Confidence, nil
+	if confidence < configs.WATCH_MIN_CONFIDENCE {
+		return false, confidence, nil
 	}
 	if lastReportAt.IsZero() {
-		return true, answer.Confidence, nil
+		return true, confidence, nil
 	}
 
 	repeat, ok := result.Answers["repeat"]
 	if !ok {
-		return false, 0, utilsmsg.New(utilsmsg.Upstream, "jev", "response has no repeat answer")
+		return false, 0, utilsmsg.New(utilsmsg.Upstream, spec.model, "response has no repeat answer")
 	}
 	switch repeat.Choice {
 	case "new":
-		return repeat.Confidence >= configs.WATCH_MIN_CONFIDENCE, answer.Confidence, nil
+		return repeat.Confidence != nil && *repeat.Confidence >= configs.WATCH_MIN_CONFIDENCE, confidence, nil
 	case "repeat":
-		return false, answer.Confidence, nil
+		return false, confidence, nil
 	}
-	return false, 0, utilsmsg.New(utilsmsg.Upstream, "jev", "invalid repeat choice %q", repeat.Choice)
+	return false, 0, utilsmsg.New(utilsmsg.Upstream, spec.model, "invalid repeat choice %q", repeat.Choice)
 }
 
 func formatWatchLines(lines []string, dropped int) string {

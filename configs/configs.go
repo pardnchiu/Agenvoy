@@ -31,10 +31,10 @@ const (
 	// * Routing
 	TIMEOUT_DISPATCH_CALL = 30 * time.Second
 
-	// * Jev
-	TIMEOUT_JEV_CALL         = 3 * time.Second
-	MAX_JEV_HISTORY_MESSAGES = 4
-	MAX_JEV_RUNES            = 2048
+	// * Decision
+	TIMEOUT_DECISION_CALL         = 3 * time.Second
+	MAX_DECISION_HISTORY_MESSAGES = 4
+	MAX_DECISION_RUNES            = 2048
 
 	// * Retry
 	MAX_RETRY_TIMES             = 3

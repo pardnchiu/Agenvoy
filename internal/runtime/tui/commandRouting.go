@@ -9,6 +9,7 @@ import (
 
 	"github.com/pardnchiu/go-llm-router/core/claudeCode"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
@@ -16,10 +17,11 @@ import (
 )
 
 const (
-	summaryPrefix = "summary:"
-	imagePrefix   = "image:"
-	sttPrefix     = "stt:"
-	ttsPrefix     = "tts:"
+	summaryPrefix  = "summary:"
+	imagePrefix    = "image:"
+	decisionPrefix = "decision:"
+	sttPrefix      = "stt:"
+	ttsPrefix      = "tts:"
 )
 
 type RoutingTabLoaded struct {
@@ -74,6 +76,8 @@ func routingTabLoad(p *Popup, kind string) tea.Cmd {
 		case "image":
 			imagetool.Prune(ctx)
 			return RoutingTabLoaded{kind: kind, current: cfg.ImageGenerator, available: imagetool.Available(ctx), target: target}
+		case "decision":
+			return RoutingTabLoaded{kind: kind, current: cfg.DecisionModel, available: decision.Available(ctx), target: target}
 		case "stt":
 			return RoutingTabLoaded{kind: kind, current: cfg.STTModel, available: audiotool.STTOptions(ctx), target: target}
 		}
@@ -96,7 +100,7 @@ func (t TUI) runRoutingTabLoaded(msg RoutingTabLoaded) (TUI, tea.Cmd) {
 		return t, nil
 	}
 
-	prefix := map[string]string{"image": imagePrefix, "stt": sttPrefix, "tts": ttsPrefix}[msg.kind]
+	prefix := map[string]string{"image": imagePrefix, "decision": decisionPrefix, "stt": sttPrefix, "tts": ttsPrefix}[msg.kind]
 	disable := "disable"
 	if msg.current == "" {
 		disable += "  " + systemStyle.Render("[current]")
