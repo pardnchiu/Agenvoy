@@ -421,7 +421,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	oldHistoriesCompacted := false
 	firstAttempt := true
 
-	compact.Warm(execCtx)
+	go compact.Warm(context.WithoutCancel(execCtx))
 
 	compactHistory := func() {
 		compacted := false

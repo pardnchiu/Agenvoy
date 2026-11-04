@@ -42,6 +42,7 @@ var eventLabel = map[string]string{
 	"reasoning_guide":       "Guide",
 	"write_result":          "Write",
 	"find_tools":            "Tools",
+	"write_todo":            "Plan",
 }
 
 func parseToolArgs(raw string) map[string]any {
@@ -195,6 +196,9 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 			return names
 		}
 		return arg("query")
+
+	case "write_todo":
+		return todoProgress(argMap["todos"])
 	}
 
 	if len(argMap) == 0 {
@@ -314,6 +318,31 @@ func joinStrings(value any) string {
 		}
 	}
 	return strings.Join(out, ", ")
+}
+
+func todoProgress(value any) string {
+	todos := asList(value)
+	last, lastIdx := "", 0
+	for i, one := range todos {
+		content, _ := one["content"].(string)
+		content = strings.TrimSpace(content)
+		if content == "" {
+			continue
+		}
+		switch one["status"] {
+		case "in_progress":
+			if active, _ := one["active_form"].(string); strings.TrimSpace(active) != "" {
+				content = strings.TrimSpace(active)
+			}
+			return fmt.Sprintf("%s [%d/%d]", content, i+1, len(todos))
+		case "completed":
+			last, lastIdx = content, i+1
+		}
+	}
+	if last == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s [%d/%d]", last, lastIdx, len(todos))
 }
 
 func joinPaths(argMap map[string]any) string {

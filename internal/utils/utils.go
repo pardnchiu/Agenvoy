@@ -328,6 +328,9 @@ func formatToolArgs(name, raw, cwd string, fullPath bool) string {
 	case "reasoning_guide":
 		return joinStrings(dic["topics"])
 
+	case "write_todo":
+		return todoProgress(dic["todos"])
+
 	case "write_result":
 		format := pick("format")
 		if format == "" {
