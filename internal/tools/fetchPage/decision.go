@@ -53,7 +53,7 @@ func removeNoise(ctx context.Context, link, content string) string {
 
 	noise := make([]bool, len(blocks))
 	var wg sync.WaitGroup
-	for _, batch := range batchBlocks(blocks) {
+	for _, batch := range decision.Batch(len(blocks), configs.MAX_DECISION_STATE_RUNES, func(i int) int { return utf8.RuneCountInString(blocks[i]) }) {
 		wg.Go(func() {
 			state := make(map[string]string, len(batch))
 			questions := make(map[string]go_llm_router.DecisionQuestion, len(batch))
@@ -95,25 +95,6 @@ func removeNoise(ctx context.Context, link, content string) string {
 		slog.Int("blocks", len(blocks)),
 		slog.Int("noise", len(blocks)-len(kept)))
 	return strings.Join(kept, "\n\n")
-}
-
-func batchBlocks(blocks []string) [][]int {
-	var batches [][]int
-	var batch []int
-	used := 0
-	for i, block := range blocks {
-		size := utf8.RuneCountInString(block)
-		if len(batch) > 0 && (used+size > configs.MAX_DECISION_STATE_RUNES || len(batch) >= configs.MAX_DECISION_QUESTIONS) {
-			batches = append(batches, batch)
-			batch, used = nil, 0
-		}
-		batch = append(batch, i)
-		used += size
-	}
-	if len(batch) > 0 {
-		batches = append(batches, batch)
-	}
-	return batches
 }
 
 func checkRelevance(ctx context.Context, objective, link, result string) string {

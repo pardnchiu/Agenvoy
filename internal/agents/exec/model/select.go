@@ -134,9 +134,7 @@ func runSelect(ctx context.Context, meta SelectMeta, cfgMeta selectConfigMeta, d
 	}
 	results := make(chan selectResult, 2)
 	go func() {
-		decisionCtx, cancelDecision := context.WithTimeout(raceCtx, configs.TIMEOUT_DECISION_CALL)
-		defer cancelDecision()
-		names, reasoning, pinned, err := selectWithDecision(decisionCtx, meta, cfgMeta.TagMap)
+		names, reasoning, pinned, err := selectWithDecision(raceCtx, meta, cfgMeta.TagMap)
 		if err != nil && raceCtx.Err() == nil {
 			slog.Debug("[Unavailable] decision model: dispatch failed, waiting for LLM",
 				slog.String("error", err.Error()))

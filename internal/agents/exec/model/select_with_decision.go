@@ -131,23 +131,23 @@ func selectWithDecision(ctx context.Context, meta SelectMeta, tagMap map[string]
 	if meta.SkillDescription != "" {
 		state["skill"] = meta.SkillDescription
 	}
-	result, err := agent.Decide(ctx, state, questions)
+	answers, err := decision.Decide(ctx, agent, state, questions)
 	if err != nil {
 		return nil, "", 0, utilsmsg.Trace("Decide", agentName, err)
 	}
 
-	work := result.Answers["work"].Choice
+	work := answers["work"].Choice
 	order, ok := config.WorkTiers(work)
 	if !ok {
 		return nil, "", 0, utilsmsg.New(utilsmsg.Upstream, "work", "invalid choice %q", work)
 	}
 
 	list := make([]string, 0, len(meta.ModelNames)+1)
-	if choice := result.Answers["named"].Choice; choice != decisionNamedNone && named[choice] != nil {
+	if choice := answers["named"].Choice; choice != decisionNamedNone && named[choice] != nil {
 		list = append(list, choice)
 	}
 	level := config.WorkReasoning(work)
-	if previous != "" && result.Answers["topic"].Choice == decisionTopicSame && (len(list) == 0 || list[0] == previous) {
+	if previous != "" && answers["topic"].Choice == decisionTopicSame && (len(list) == 0 || list[0] == previous) {
 		if _, ok := go_llm_router.ParseReasoning(previousReasoning); ok {
 			level = previousReasoning
 		}

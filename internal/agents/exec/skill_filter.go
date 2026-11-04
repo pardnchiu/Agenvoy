@@ -55,7 +55,9 @@ func unrelatedSkills(ctx context.Context, sessionID, objective string, scanner *
 	budget := configs.MAX_DECISION_STATE_RUNES - utf8.RuneCountInString(request)
 	keep := make([]bool, len(names))
 	var wg sync.WaitGroup
-	for _, batch := range batchSkills(scanner, names, budget) {
+	for _, batch := range decision.Batch(len(names), budget, func(i int) int {
+		return utf8.RuneCountInString(names[i]) + utf8.RuneCountInString(scanner.Skills.ByName[names[i]].Description)
+	}) {
 		wg.Go(func() {
 			skills := make(map[string]map[string]string, len(batch))
 			questions := make(map[string]go_llm_router.DecisionQuestion, len(batch))
@@ -100,23 +102,4 @@ func unrelatedSkills(ctx context.Context, sessionID, objective string, scanner *
 		slog.Int("skills", len(names)),
 		slog.Int("unrelated", len(list)))
 	return list
-}
-
-func batchSkills(scanner *runtime.SkillScanner, names []string, budget int) [][]int {
-	var batches [][]int
-	var batch []int
-	used := 0
-	for i, name := range names {
-		size := utf8.RuneCountInString(name) + utf8.RuneCountInString(scanner.Skills.ByName[name].Description)
-		if len(batch) > 0 && (used+size > budget || len(batch) >= configs.MAX_DECISION_QUESTIONS) {
-			batches = append(batches, batch)
-			batch, used = nil, 0
-		}
-		batch = append(batch, i)
-		used += size
-	}
-	if len(batch) > 0 {
-		batches = append(batches, batch)
-	}
-	return batches
 }

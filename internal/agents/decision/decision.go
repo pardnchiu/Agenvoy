@@ -108,3 +108,22 @@ func Decide(ctx context.Context, agent go_llm_router.DecisionAgent, state any, q
 func Confident(answer go_llm_router.DecisionAnswer, choice string) bool {
 	return answer.Choice == choice && answer.Confidence != nil && *answer.Confidence >= configs.DECISION_MIN_CONFIDENCE
 }
+
+func Batch(n, budget int, size func(int) int) [][]int {
+	var batches [][]int
+	var batch []int
+	used := 0
+	for i := range n {
+		one := size(i)
+		if len(batch) > 0 && (used+one > budget || len(batch) >= configs.MAX_DECISION_QUESTIONS) {
+			batches = append(batches, batch)
+			batch, used = nil, 0
+		}
+		batch = append(batch, i)
+		used += one
+	}
+	if len(batch) > 0 {
+		batches = append(batches, batch)
+	}
+	return batches
+}

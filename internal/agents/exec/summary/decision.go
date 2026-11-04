@@ -93,23 +93,10 @@ func groupSummaryExchanges(histories []sessionhistory.Record) []summaryExchange 
 	return list
 }
 
-func batchSummaryExchanges(list []summaryExchange, budget int) [][]int {
-	var batches [][]int
-	var batch []int
-	used := 0
-	for i, one := range list {
-		size := utf8.RuneCountInString(one.user) + utf8.RuneCountInString(one.reply)
-		if len(batch) > 0 && used+size > budget {
-			batches = append(batches, batch)
-			batch, used = nil, 0
-		}
-		batch = append(batch, i)
-		used += size
-	}
-	if len(batch) > 0 {
-		batches = append(batches, batch)
-	}
-	return batches
+func batchExchanges(list []summaryExchange, budget int) [][]int {
+	return decision.Batch(len(list), budget, func(i int) int {
+		return utf8.RuneCountInString(list[i].user) + utf8.RuneCountInString(list[i].reply)
+	})
 }
 
 func exchangeState(list []summaryExchange, batch []int) map[string]any {
@@ -122,7 +109,7 @@ func exchangeState(list []summaryExchange, batch []int) map[string]any {
 
 func dropNoise(ctx context.Context, agent go_llm_router.DecisionAgent, sessionID, name string, dic map[string]any, list []summaryExchange, budget int) []summaryExchange {
 	noise := make([]bool, len(list))
-	for _, batch := range batchSummaryExchanges(list, budget) {
+	for _, batch := range batchExchanges(list, budget) {
 		questions := make(map[string]go_llm_router.DecisionQuestion, len(batch))
 		for _, i := range batch {
 			key := fmt.Sprintf("e%d", i)
@@ -187,7 +174,7 @@ func dropStale(ctx context.Context, agent go_llm_router.DecisionAgent, sessionID
 	}
 
 	stale := map[string]bool{}
-	for _, batch := range batchSummaryExchanges(list, budget) {
+	for _, batch := range batchExchanges(list, budget) {
 		answers, err := decision.Decide(ctx, agent, map[string]any{"summary": dic, "exchanges": exchangeState(list, batch)}, questions)
 		if err != nil {
 			slog.Debug("[Unavailable] summary stale check: keep entries",

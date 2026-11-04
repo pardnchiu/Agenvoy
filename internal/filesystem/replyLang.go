@@ -93,7 +93,7 @@ func ReplyLangDirective() string {
 	if !ok {
 		one = replyLangEntry{Name: code}
 	}
-	return "always " + one.Name + ", no mixing. The operator fixed the output language, so it holds for every reply — whatever language the user writes in, and whatever language the user's message asks for." + one.Note
+	return one.Name + " by default." + one.Note + " The operator set this default, so the language the user writes in does not change it. When the current request asks for another language (\"英文\", \"in English\", \"日本語で\") or a skill, template or tool in use fixes the output's language (a bilingual commit message, an English-only field), follow that for the output it covers and keep the rest in " + one.Name + ". Otherwise no mixing."
 }
 
 const (
