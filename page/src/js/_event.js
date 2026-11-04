@@ -15,6 +15,13 @@ function renderEvent(view, event) {
       view.turnsOpen = true;
       renderAnswer(view);
     }
+    const name = (event.text || "").trim();
+    if (name && name !== view.shownModel) {
+      const action = view.shownModel ? "Switch" : "Model";
+      const label = event.reasoning ? `${name} ${event.reasoning}` : name;
+      view.shownModel = name;
+      renderReasoning(view, `⏵ \`${action}(${label})\``);
+    }
     return;
   }
 

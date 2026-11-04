@@ -6,6 +6,7 @@ let modelProvider = "";
 let modelAbort = null;
 let modelStream = null;
 const modelOAuth = { id: "", code: "", url: "" };
+const DECISION_DISPATCHER = "decision";
 
 function modelDom() {
   return {
@@ -22,7 +23,6 @@ function modelError(text) {
   alert(text);
 }
 
-const TYPESAFE_CONSOLE = "https://console.typesafe.ai/keys";
 
 function providerConsoleLink(id, page) {
   return `${API}/v1/provider/${encodeURIComponent(id)}/console?page=${page}`;
@@ -555,10 +555,12 @@ async function modelRouting() {
       const body = (await response.json()) || {};
       return {
         dispatcher: body.dispatcher || "",
-        dispatcherBeta: Boolean(body.dispatcher_beta),
+        dispatcherDecision: Boolean(body.dispatcher_beta),
         summary: body.summary || "",
         image: body.image || "",
         imageOptions: body.image_options || [],
+        decision: body.decision || "",
+        decisionOptions: body.decision_options || [],
         stt: body.stt || "",
         tts: body.tts || "",
       };
@@ -566,132 +568,25 @@ async function modelRouting() {
   } catch (err) {
     console.error("modelRouting", err);
   }
-  return { dispatcher: "", dispatcherBeta: false, summary: "", image: "", imageOptions: [], stt: "", tts: "" };
+  return { dispatcher: "", dispatcherDecision: false, summary: "", image: "", imageOptions: [], decision: "", decisionOptions: [], stt: "", tts: "" };
 }
 
-async function saveRoutingModel(kind, model) {
+async function saveRouting(body) {
   try {
     const response = await fetch(`${API}/v1/model`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [kind]: model }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       const detail = await response.json().catch(() => ({}));
       modelError(detail.error || `HTTP ${response.status}`);
     }
   } catch (err) {
-    console.error("saveRoutingModel", err);
+    console.error("saveRouting", err);
     modelError(err.message || "failed");
   }
   renderModel();
-}
-
-async function postTypesafeToggle(field, on) {
-  const response = await fetch(`${API}/v1/model`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ [field]: on }),
-  });
-  if (response.ok) {
-    return {};
-  }
-  return response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-}
-
-function askTypesafeKey(name) {
-  return new Promise((resolve) => {
-    const key = personaField("", name, true);
-    const cancel = _("button", { type: "button" }, "cancel");
-    const save = _("button", { type: "button", class: "submit" }, "save");
-    const root = _("div.popup", [
-      _("div.panel", [
-        _("strong", `${name} is required for TypeSafe/Jev (beta).`),
-        _("p", ["Create one in the TypeSafe ", _("a", { href: TYPESAFE_CONSOLE, target: "_blank", rel: "noreferrer" }, "Console"), "."]),
-        key.field,
-        _("footer", [cancel, save]),
-      ]),
-    ]);
-    root.id = "typesafe-popup";
-
-    const close = (value) => {
-      document.removeEventListener("keydown", escape);
-      root.remove();
-      resolve(value);
-    };
-    const escape = (e) => {
-      if (e.key === "Escape") {
-        close("");
-      }
-    };
-    key.box.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
-        e.preventDefault();
-        close(key.box.value.trim());
-      }
-    });
-    cancel.addEventListener("click", () => close(""));
-    save.addEventListener("click", () => close(key.box.value.trim()));
-    root.addEventListener("click", (e) => {
-      if (e.target === root) {
-        close("");
-      }
-    });
-    document.addEventListener("keydown", escape);
-
-    document.body.appendChild(root);
-    key.box.focus();
-  });
-}
-
-function markTypesafeToggle(field, on) {
-  const dom = modelDom();
-  if (!dom.routing) {
-    return;
-  }
-  const link = dom.routing.querySelector(`a[data-kind="${field}"]`);
-  if (link) {
-    link.dataset.on = on ? "1" : "0";
-    link.textContent = on ? "disable TypeSafe/Jev(beta)" : "enable TypeSafe/Jev(beta)";
-    link.hidden = false;
-  }
-  if (field === "dispatcher_beta") {
-    const select = routingSelect("dispatcher");
-    if (select) {
-      select.hidden = on;
-    }
-  }
-}
-
-async function saveTypesafeToggle(field, on) {
-  try {
-    let detail = await postTypesafeToggle(field, on);
-    if (on && detail.missing_key) {
-      const value = await askTypesafeKey(detail.missing_key);
-      if (!value) {
-        return;
-      }
-      const saved = await fetch(`${API}/v1/keys`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: detail.missing_key, value }),
-      });
-      if (!saved.ok) {
-        const failure = await saved.json().catch(() => ({}));
-        modelError(failure.error || `HTTP ${saved.status}`);
-        return;
-      }
-      detail = await postTypesafeToggle(field, on);
-    }
-    if (detail.error) {
-      modelError(detail.error);
-      return;
-    }
-    markTypesafeToggle(field, on);
-  } catch (err) {
-    console.error("saveTypesafeToggle", err);
-    modelError(err.message || "failed");
-  }
 }
 
 function routingSelect(kind) {
@@ -710,6 +605,20 @@ function fillRoutingSelect(kind, current, options, placeholder) {
     select.appendChild(_("option", { value: name }, name));
   }
   select.value = options.includes(current) ? current : "";
+}
+
+function fillDispatcherDecision(model, on) {
+  const select = routingSelect("dispatcher");
+  if (!select) {
+    return;
+  }
+  const label = `Decision Model · ${model || "off"}`;
+  const option = _("option", { value: DECISION_DISPATCHER }, label);
+  option.disabled = !model;
+  select.appendChild(option);
+  if (on && model) {
+    select.value = DECISION_DISPATCHER;
+  }
 }
 
 async function fillAudioOptions(stt, tts) {
@@ -741,9 +650,10 @@ async function renderModelRouting(registered) {
   }
 
   fillRoutingSelect("dispatcher", routing.dispatcher, registered, "auto · first registered model");
-  markTypesafeToggle("dispatcher_beta", routing.dispatcherBeta);
+  fillDispatcherDecision(routing.decision, routing.dispatcherDecision);
   fillRoutingSelect("summary", routing.summary, registered, "auto · first registered model");
   fillRoutingSelect("image", routing.image, routing.imageOptions, "off");
+  fillRoutingSelect("decision", routing.decision, routing.decisionOptions, "off");
   fillAudioOptions(routing.stt, routing.tts);
 }
 

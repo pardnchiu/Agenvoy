@@ -91,20 +91,27 @@ function parseActionLog(content) {
         break;
       }
 
-      case "agent_result":
+      case "agent_result": {
         item = itemOf(task, writer, sendAt);
-        item.meta.model = body;
-        if (item.content) {
-          item.turns.push(item.content);
-          item.prompts.push(item.prompt || "");
-          item.content = "";
-          item.prompt = item.nextPrompt || "";
-        } else if (item.nextPrompt) {
-          item.prompt = item.nextPrompt;
-        }
-        item.nextPrompt = "";
-        item.resumed = false;
-        break;
+        const [model, reasoning = ""] = body.split(" reasoning=");
+        if (model && model !== item.meta.model) {
+          const action = item.meta.model ? "Switch" : "Model";
+          const label = reasoning ? `${model} ${reasoning}` : model;
+          item.Reasoning += (item.Reasoning ? "\n\n" : "") + `⏵ \`${action}(${label})\``;
+          }
+          item.meta.model = model;
+          if (item.content) {
+            item.turns.push(item.content);
+            item.prompts.push(item.prompt || "");
+            item.content = "";
+            item.prompt = item.nextPrompt || "";
+          } else if (item.nextPrompt) {
+            item.prompt = item.nextPrompt;
+          }
+          item.nextPrompt = "";
+          item.resumed = false;
+          break;
+      }
 
       case "edited_files": {
         item = itemOf(task, writer, sendAt);

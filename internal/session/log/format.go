@@ -125,6 +125,9 @@ func formatActionEvent(event agenttypes.Event) string {
 		if str == "" {
 			return ""
 		}
+		if event.Reasoning != "" {
+			str += " reasoning=" + event.Reasoning
+		}
 		return withTimestamp(hash, "agent_result", event.TaskHash, flatten(str))
 	}
 	return ""

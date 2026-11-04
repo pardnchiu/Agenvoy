@@ -532,6 +532,7 @@ function newStreamItem(init, sessionId) {
     dom: dom,
     body: body,
     model: init.model || "",
+    shownModel: init.trace ? init.model || "" : "",
     think: think,
     reasoning: reasoning,
     answer: answer,

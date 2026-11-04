@@ -297,10 +297,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         saveAdminChannel(this.value);
       },
       routing_change: function () {
-        saveRoutingModel(this.dataset.kind, this.value);
+        saveRouting({ [this.dataset.kind]: this.value });
       },
-      dispatcher_beta_toggle: function () {
-        saveTypesafeToggle("dispatcher_beta", this.dataset.on !== "1");
+      dispatcher_change: function () {
+        saveRouting(this.value === DECISION_DISPATCHER ? { dispatcher_beta: true } : { dispatcher: this.value, dispatcher_beta: false });
       },
       system_lang: function () {
         saveSystemLang();
