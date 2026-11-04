@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"log/slog"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -91,7 +92,8 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 func (t TUI) commandHistory() (TUI, tea.Cmd, bool) {
 	sid := strings.TrimSpace(t.currentSessionID)
 	if sid == "" {
-		return t, notice(msgLog("no active session") + "\n"), true
+		slog.Debug("tui: no active session")
+		return t, nil, true
 	}
 	seq := []tea.Cmd{
 		tea.ClearScreen,
@@ -99,9 +101,8 @@ func (t TUI) commandHistory() (TUI, tea.Cmd, bool) {
 	}
 	tail := loadSessionTail(sid, t.width, true)
 	if len(tail) == 0 {
-		seq = append(seq, notice(msgLog("no history yet")+"\n"))
-	} else {
-		seq = append(seq, tail...)
+		slog.Debug("tui: no history yet", slog.String("session", sid))
 	}
+	seq = append(seq, tail...)
 	return t, tea.Sequence(seq...), true
 }

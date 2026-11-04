@@ -146,31 +146,6 @@
         gap: 0.25rem;
         width: calc(100% - 2.5rem);
 
-        > p span.quota {
-          margin-left: 0.375rem;
-          padding: 0.0625rem 0.375rem;
-          border-radius: 0.25rem;
-          font-size: x-small;
-          vertical-align: middle;
-          color: var(--gray-3);
-          background-color: var(--gray-2);
-
-          &[data-level="okay"] {
-            color: var(--okay);
-            background-color: var(--okay-bg);
-          }
-
-          &[data-level="caution"] {
-            color: var(--caution);
-            background-color: var(--caution-bg);
-          }
-
-          &[data-level="error"] {
-            color: var(--error);
-            background-color: var(--error-bg);
-          }
-        }
-
         details {
           max-width: 100%;
 
@@ -273,6 +248,36 @@
           max-width: 100%;
           opacity: 0;
           transition: 0.2s;
+
+          div.stats {
+            position: relative;
+            gap: 0.5rem;
+            height: 1rem;
+
+            &[name]:after {
+              z-index: 1000;
+              content: attr(name);
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              transform: translateY(calc(-100% - 0.25rem));
+              padding: 0 0.5rem;
+              line-height: 1.25rem;
+              font-size: x-small;
+              white-space: nowrap;
+              color: #fff;
+              background-color: var(--black);
+              border-radius: 0.625rem;
+              opacity: 0;
+              pointer-events: none;
+            }
+
+            @media (hover: hover) {
+              &[name]:hover:after {
+                opacity: 1;
+              }
+            }
+          }
 
           div {
             display: flex;

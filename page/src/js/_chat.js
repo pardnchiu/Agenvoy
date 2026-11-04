@@ -252,6 +252,14 @@ async function renderChat(sessionId) {
   }
 
   const items = parseActionLog(content);
+  const waitingItem = items.findLast((item) => item.role !== "user" && item.task);
+  if (waitingItem && waitingItem.paused) {
+    waitingTasks.set(sessionId, waitingItem.task);
+    setTask(sessionId, waitingItem.task);
+    setInputTask(sessionId, waitingItem.task);
+  } else {
+    waitingTasks.delete(sessionId);
+  }
   const frame = _("temp");
 
   if (sessionId === currentSessionId) {
@@ -281,6 +289,13 @@ async function renderChat(sessionId) {
       if (item.paused) {
         view.paused = true;
       }
+      if (item.turns.length) {
+        view.turns = item.turns;
+        view.prompts = item.prompts;
+        view.prompt = item.prompt;
+        view.turnsOpen = true;
+        renderAnswer(view);
+      }
       setStream(sessionId, view);
       renderTodo(view, item.todos);
       continue;
@@ -289,6 +304,9 @@ async function renderChat(sessionId) {
     if (item.role === "user") {
       frame.appendChild(newUserItem(item));
       continue;
+    }
+    if (item.turns && item.turns.length) {
+      item.content = composeTurns(item.turns, item.prompts, item.content, item.paused || !item.finished, !item.pending);
     }
     const node = newAssisatantItem(item, sessionId);
     if (item.pending) {
@@ -301,10 +319,11 @@ async function renderChat(sessionId) {
 }
 
 function assistantFooter(meta, sessionId, task) {
-  const children = [copyBtn()];
+  const buttons = [copyBtn()];
   if (sessionId && task) {
-    children.push(historyBtn(sessionId, task));
+    buttons.push(historyBtn(sessionId, task));
   }
+  const children = [];
   if (meta.canceled) {
     children.push(_("p.canceled", "canceled"));
   }
@@ -321,7 +340,9 @@ function assistantFooter(meta, sessionId, task) {
     children.push(_("div", [_("span.material-symbols-outlined", "arrow_downward_alt"), _("p", meta.output)]));
   }
   children.push(_("p", displayAt(meta.send_at)));
-  return _("footer", children);
+  const label = (meta.model || "") + (meta.model && meta.reasoning ? `/${meta.reasoning}` : "");
+  const stats = label ? _("div.stats", { name: label }, children) : _("div.stats", children);
+  return _("footer", buttons.concat([stats]));
 }
 
 function displayAt(at) {
@@ -386,7 +407,7 @@ function pendingMarkdownSection(markdown) {
 }
 
 function newAssisatantItem(item, sessionId) {
-  const body = [_("p", (item.meta.model || "") + (item.meta.reasoning ? `/${item.meta.reasoning}` : ""))];
+  const body = [];
 
   if (item.Reasoning) {
     body.push(

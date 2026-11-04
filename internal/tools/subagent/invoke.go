@@ -20,6 +20,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -43,6 +44,8 @@ type invokeParams struct {
 	SystemPrompt string   `json:"system_prompt,omitempty"`
 	New          *bool    `json:"new,omitempty"`
 	ExcludeTools []string `json:"exclude_tools,omitempty"`
+	Background   bool     `json:"background,omitempty"`
+	TimeoutMin   int      `json:"timeout_min,omitempty"`
 }
 
 func invokeSubagent(ctx context.Context, e *tooltypes.Executor, params invokeParams) (string, error) {
@@ -84,6 +87,10 @@ func invokeSubagent(ctx context.Context, e *tooltypes.Executor, params invokePar
 	ignoreHistory := sessionID == ""
 	if params.New != nil {
 		ignoreHistory = *params.New
+	}
+
+	if params.Background && interactive.BackgroundAllowed(ctx) {
+		return startBackground(ctx, e, params, task, sessionID, model, reasoning, excludeTools, ignoreHistory)
 	}
 
 	output, err := execsubagent.Exec(ctx, task, sessionID, model, reasoning,

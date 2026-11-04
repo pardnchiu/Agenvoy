@@ -49,7 +49,8 @@ func (t TUI) runMcpPermissionResult(msg McpPermissionResult) (TUI, tea.Cmd) {
 		return t, notice(msgError(fmt.Sprintf("%s tools: %v", msg.server, msg.err)) + "\n")
 	}
 	if len(msg.tools) == 0 {
-		return t, notice(msgLog(fmt.Sprintf("%s exposes no tools", msg.server)) + "\n")
+		slog.Debug("tui: server exposes no tools", slog.String("server", msg.server))
+		return t, nil
 	}
 
 	nameSummary := make(map[string]string, len(msg.tools))

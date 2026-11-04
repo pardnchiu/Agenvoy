@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -20,7 +21,7 @@ import (
 
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 var eventLabel = map[string]string{
@@ -38,6 +39,9 @@ var eventLabel = map[string]string{
 	"list_chatbot":          "Chatbots",
 	"mcp__kura__search_rag": "RAG",
 	"mcp__kura__list_rag":   "RAG",
+	"reasoning_guide":       "Guide",
+	"write_result":          "Write",
+	"find_tools":            "Tools",
 }
 
 func parseToolArgs(raw string) map[string]any {
@@ -49,7 +53,7 @@ func parseToolArgs(raw string) map[string]any {
 }
 
 func hideToolEvent(name, mode string) bool {
-	return name == "" || toolregister.IsSystemUse(name) || mode == "list"
+	return name == ""
 }
 
 func HideToolEvent(name, raw string) bool {
@@ -175,6 +179,22 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 
 	case "edit_tool", "test_tool":
 		return arg("name")
+
+	case "reasoning_guide":
+		return joinStrings(argMap["topics"])
+
+	case "write_result":
+		format := arg("format")
+		if format == "" {
+			format = "md"
+		}
+		return filepath.Join(filesystem.OutputDir(), "report-*."+format)
+
+	case "find_tools":
+		if names := joinStrings(argMap["names"]); names != "" {
+			return names
+		}
+		return arg("query")
 	}
 
 	if len(argMap) == 0 {
@@ -230,7 +250,6 @@ func eventMode(name string, argMap map[string]any) string {
 
 	case "schedules":
 		return "list"
-
 	}
 	return ""
 }

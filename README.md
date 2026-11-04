@@ -28,6 +28,9 @@
   <strong>English</strong> · <a href="./doc/README.zh.md">繁體中文</a>
 </p>
 
+> [!NOTE]
+> Agenvoy is currently in a review-and-cleanup period. File-by-file progress: [Optimization Progress](./doc/optimization.md).
+
 ## Taiwan-developed AI Agent Harness
 
 Agenvoy is a Taiwan-developed AI Agent Harness by [Pardn Chiu](https://pardn.io/), built to turn conversation into completed work on your computer. It coordinates models, context, tools, real-time data, task routing, memory, schedules, and execution in one workflow, while keeping control of your files and environment in your hands. Through the Web interface, it also supports hands-free voice interaction with natural speech, wake-word detection, and interruptible spoken replies; the full result remains available in the chat.

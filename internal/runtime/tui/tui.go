@@ -47,10 +47,6 @@ type restrictedVerified struct {
 	err error
 }
 
-type WorkDir struct {
-	dir string
-}
-
 func Run(ctx context.Context) error {
 	prog := tea.NewProgram(newModel(ctx), tea.WithContext(ctx), tea.WithoutSignalHandler())
 	program.Store(prog)
@@ -77,8 +73,6 @@ func Run(ctx context.Context) error {
 		})
 	}, func(err error) {
 		send(restrictedVerified{err: err})
-	}, func(dir string) {
-		send(WorkDir{dir: dir})
 	}, func(connected bool) {
 		send(daemonState{connected: connected})
 	}))

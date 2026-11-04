@@ -25,6 +25,7 @@ import (
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	historystore "github.com/pardnchiu/agenvoy/internal/runtime/store"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	sessionmanager "github.com/pardnchiu/agenvoy/internal/session"
@@ -269,12 +270,29 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 		}
 		defer func() {
 			if keepPending || data.KeepPending {
+				if err := interactive.WriteTodos(session.ID, exec.PendingTask, nil); err != nil {
+					slog.Debug("interactive.WriteTodos",
+						slog.String("session", session.ID),
+						slog.String("error", err.Error()))
+				}
+				return
+			}
+			if running, unreported := interactive.BackgroundState(session.ID, exec.PendingTask); running+unreported > 0 {
+				interactive.SaveToolResults(session.ID, exec.PendingTask, windowHash, nil, exec.EditedFiles())
+				event := agenttypes.Event{Type: agenttypes.EventPending, Text: exec.PendingTask, TaskHash: exec.PendingTask, PendingSession: session.ID, ToolName: interactive.BackgroundTool}
+				events <- event
+				if deliverTo := deliverFor(ctx, session.ID); deliverTo != session.ID {
+					pubsub.Pub(deliverTo, event)
+				}
 				return
 			}
 			interactive.CleanupPending(session.ID, exec.PendingTask)
 		}()
 		defer historystore.ClearTaskOrigin(exec.PendingTask)
 		defer interactive.KeepOnline(session.ID, exec.PendingTask)()
+		if owned, ok := ctx.Value(onlineOwnedKey{}).(*atomic.Bool); ok {
+			owned.Store(true)
+		}
 		registerCancel(exec.PendingTask, execCancel)
 		defer unregisterCancel(exec.PendingTask)
 		if runTaskHash != nil {
@@ -393,6 +411,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 		reasoned    bool
 	}
 	sendFailCount := 0
+	reasoningDir, reasoningRetryCount := 0, 0
 	timeoutRetryCount := 0
 	rateLimitRetryCount := 0
 	oldHistoriesCompacted := false
@@ -493,6 +512,22 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			isTimeout := isSendTimeoutError(err, sendCtxErr)
 			modelName := data.Agent.Name()
 
+			if isReasoningRejected(err) && reasoningRetryCount < configs.MAX_RETRY_TIMES {
+				if next, dir, ok := stepReasoning(reasoning, reasoningDir); ok {
+					slog.Warn("data.Agent.Send rejected reasoning level, retrying adjacent level",
+						slog.String("session", session.ID),
+						slog.String("name", modelName),
+						slog.String("from", reasoning.String()),
+						slog.String("to", next.String()),
+						slog.String("error", err.Error()))
+					reasoning, reasoningDir = next, dir
+					reasoningRetryCount++
+					reasoningLabel = reasoning.String()
+					reasoningRef.Store(&reasoningLabel)
+					continue
+				}
+			}
+
 			reason, retryWait := retryHandler.Handle(modelName, err, sendCode, rateLimitRetryCount)
 			if reason != "" {
 				slog.Debug("data.Agent.Send "+reason+", model cooldown registered",
@@ -519,19 +554,14 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 					return utilsmsg.New(utilsmsg.Limit, "data.Agent.Send", "context exceeded, nothing left to trim: %w", err)
 				}
 				sendFailCount++
-				if !compactFailed {
-					compactHistory()
-					if !compactFailed {
-						slog.Warn("data.Agent.Send context length exceeded, compacted history",
-							slog.String("session", session.ID),
-							slog.Int("attempts", sendFailCount))
-						continue
-					}
-				}
-				compact.TrimFallback(&session.ContextHistories, &session.ToolHistories)
-				slog.Warn("data.Agent.Send context length exceeded, trimming oldest exchange",
+				compact.NoteOverflow(modelName, err)
+				compact.TrimRatio(&session.ContextHistories, &session.ToolHistories, configs.CONTEXT_OVERFLOW_KEEP_RATIO)
+				lastInputTokens = 0
+				slog.Warn("data.Agent.Send context length exceeded, trimmed oldest content",
 					slog.String("session", session.ID),
-					slog.Int("attempts", sendFailCount))
+					slog.Int("attempts", sendFailCount),
+					slog.Int("history", len(session.ContextHistories)),
+					slog.Int("tool_history", len(session.ToolHistories)))
 				continue
 			}
 
@@ -763,6 +793,8 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				slog.Warn("writeHistory",
 					slog.String("session", session.ID),
 					slog.String("error", err.Error()))
+			} else if data.PendingTask != "" {
+				interactive.CommitBackgroundReport(session.ID, data.PendingTask, data.HistoryContent)
 			}
 
 			interactive.FinalizePending(session.ID, exec.PendingTask, responseText)

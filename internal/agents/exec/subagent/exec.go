@@ -26,6 +26,24 @@ import (
 
 var channLen = make(chan struct{}, min(configs.MAX_CONCURRENT_TOOLS, configs.MAX_CONCURRENT_SUBAGENTS))
 
+type backgroundKey struct{}
+
+func WithBackground(ctx context.Context, timeoutMin int) context.Context {
+	if timeoutMin <= 0 || timeoutMin > configs.MAX_BACKGROUND_TIMEOUT_MIN {
+		timeoutMin = configs.MAX_BACKGROUND_TIMEOUT_MIN
+	}
+	return context.WithValue(ctx, backgroundKey{}, timeoutMin)
+}
+
+func backgroundTimeout(ctx context.Context) int {
+	v, _ := ctx.Value(backgroundKey{}).(int)
+	return v
+}
+
+func isBackground(ctx context.Context) bool {
+	return backgroundTimeout(ctx) > 0
+}
+
 func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemPrompt string, excludedTools []string, ignoreHistory, topLevel bool) (string, error) {
 	// * step 1: model exist
 	registry := agents.ModelSet()
@@ -35,11 +53,13 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 
 	// * step 2: concurrent limit
 	// * prepare channel to limit concurrent tasks, if full, then retry with a new subagent
-	select {
-	case channLen <- struct{}{}:
-		defer func() { <-channLen }()
-	case <-ctx.Done():
-		return "", utilsmsg.New(utilsmsg.Limit, "subagent slots", "full; call a new subagent to retry this task: %w", ctx.Err())
+	if !isBackground(ctx) {
+		select {
+		case channLen <- struct{}{}:
+			defer func() { <-channLen }()
+		case <-ctx.Done():
+			return "", utilsmsg.New(utilsmsg.Limit, "subagent slots", "full; call a new subagent to retry this task: %w", ctx.Err())
+		}
 	}
 
 	// * step 3: session validation and history
@@ -137,11 +157,15 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 		Source: slog.LevelDebug.String(),
 		Text:   "subagent started session=" + sessID + " parent=" + parentSessID,
 	})
-	subCtx, cancel := context.WithTimeout(agentstypes.WithDeliverTo(ctx, parentSessID), time.Duration(configs.MAX_SUBAGENT_TIMEOUT_MIN)*time.Minute)
+	timeout := time.Duration(configs.MAX_SUBAGENT_TIMEOUT_MIN) * time.Minute
+	if isBackground(ctx) {
+		timeout = time.Duration(backgroundTimeout(ctx)) * time.Minute
+	}
+	subCtx, cancel := context.WithTimeout(agentstypes.WithDeliverTo(ctx, parentSessID), timeout)
 	defer cancel()
 
 	parentEvents, ok := ctx.Value(exec.ParentEventsKey{}).(chan<- agentstypes.Event)
-	if !ok {
+	if !ok || isBackground(ctx) {
 		parentEvents = nil
 	}
 

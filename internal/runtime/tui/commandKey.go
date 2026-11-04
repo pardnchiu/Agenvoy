@@ -39,7 +39,8 @@ func (t TUI) commandKey(parts []string) (TUI, tea.Cmd, bool) {
 		return t, notice(msgError(fmt.Sprintf("session.Load: %v", err)) + "\n"), true
 	}
 	if len(cfg.Keys) == 0 {
-		return t, notice(msgLog("no keys recorded  run /model add or store_secret first") + "\n"), true
+		slog.Debug("tui: no keys recorded")
+		return t, nil, true
 	}
 
 	if len(parts) > 1 {

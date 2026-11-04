@@ -3,6 +3,7 @@ package configs
 import (
 	"embed"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -16,20 +17,16 @@ const (
 	DAEMON_LOG_CHANNEL = "daemon"
 
 	// * Context
-	COMPACT_THRESHOLD_RATIO = 0.8
-	FALLBACK_CONTEXT_WINDOW = 128_000
-	SUMMARY_RUNES           = 32_000
-	LOG_HEAD_RUNES          = 160
+	COMPACT_THRESHOLD_RATIO     = 0.8
+	CONTEXT_OVERFLOW_KEEP_RATIO = 0.8
+	FALLBACK_CONTEXT_WINDOW     = 128_000
+	SUMMARY_RUNES               = 32_000
+	LOG_HEAD_RUNES              = 160
 
 	// * Cache
 	TTL_MEMORY_SEC       = 90 * 24 * 60 * 60
 	TTL_TOOL_CACHE_SEC   = 30 * 60
 	TTL_MODELS_CACHE_SEC = 15 * 60
-
-	// * Concurrency
-	MAX_CONCURRENT_SUBAGENTS = 3
-	MAX_CONCURRENT_TOOLS     = 5
-	MAX_SESSION_TASKS        = 3
 
 	// * Routing
 	TIMEOUT_DISPATCH_CALL = 30 * time.Second
@@ -78,6 +75,25 @@ var (
 	MAX_HISTORY_BYTES        = MAX_DOCUMENT_BYTES * 4
 	MAX_SUBAGENT_TIMEOUT_MIN = 30
 	MAX_RESUME_WAIT_MIN      = 60
+
+	DEFAULT_CONCURRENCY        = max(runtime.NumCPU()/2, 3)
+	MAX_CONCURRENT_TOOLS       = DEFAULT_CONCURRENCY
+	MAX_CONCURRENT_SUBAGENTS   = DEFAULT_CONCURRENCY
+	MAX_SESSION_TASKS          = DEFAULT_CONCURRENCY
+	MAX_BACKGROUND_TASKS       = DEFAULT_CONCURRENCY
+	MAX_BACKGROUND_TIMEOUT_MIN = 60
+	BACKGROUND_THRESHOLD_MIN   = 5
+
+	// * WebSocket
+	WATCH_MIN_INTERVAL_SEC    = 15
+	WS_MAX_TIMEOUT_MIN        = 24 * 60
+	WATCH_BUFFER_MAX_BYTES    = 32 << 10
+	WATCH_LINE_MAX_BYTES      = 8 << 10
+	WS_RECONNECT_MAX          = 10
+	WS_IDLE_MIN_SEC           = 60
+	WATCH_MAX_DECIDE_FAILURES = 3
+	WATCH_REPORT_COOLDOWN_SEC = 60
+	WATCH_MIN_CONFIDENCE      = 0.7
 
 	// * Tools
 	SYSTEM_DEFAULT_TOOLS = []string{"find_tools", "run_tool", "reasoning_guide", "write_todo"}
@@ -190,6 +206,9 @@ var InjectToolSummary string
 
 //go:embed prompts/system_prompt/inject/schedule_run.md
 var InjectScheduleRun string
+
+//go:embed prompts/system_prompt/inject/shell_run.md
+var InjectShellRun string
 
 //go:embed prompts/system_prompt/inject/turn_context/work_dir.md
 var InjectWorkDir string
