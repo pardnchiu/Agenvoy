@@ -8,7 +8,7 @@ Agenvoy 是一人開發的專案，從 2 月到 10 月幾乎每天不間斷地�
 
 同時也會開始盡量補上註解，讓程式碼從「只有我看得懂」轉向方便他人閱讀。
 
-## 檔案（進度 0%）
+## 檔案（進度 1.1%）
 
 ### `cmd/app`
 
@@ -26,14 +26,14 @@ Agenvoy 是一人開發的專案，從 2 月到 10 月幾乎每天不間斷地�
 
 ### `internal/agents/exec/allow/skill`
 
-- [ ] `internal/agents/exec/allow/skill/match.go` (59)
-- [ ] `internal/agents/exec/allow/skill/toggle.go` (59)
+- [x] `internal/agents/exec/allow/skill/match.go` (59)
+- [x] `internal/agents/exec/allow/skill/toggle.go` (59)
 
 ### `internal/agents/exec/allow/tool`
 
-- [ ] `internal/agents/exec/allow/tool/match.go` (85)
-- [ ] `internal/agents/exec/allow/tool/parse.go` (80)
-- [ ] `internal/agents/exec/allow/tool/toggle.go` (101)
+- [x] `internal/agents/exec/allow/tool/match.go` (85)
+- [x] `internal/agents/exec/allow/tool/parse.go` (80)
+- [x] `internal/agents/exec/allow/tool/toggle.go` (101)
 
 ### `internal/agents/exec`
 

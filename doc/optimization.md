@@ -8,7 +8,7 @@ This period therefore centers on review and cleanup: going through every file on
 
 I will also start adding comments where I can, moving the code from "only I can read it" toward something others can follow.
 
-## Files (0% done)
+## Files (1.1% done)
 
 ### `cmd/app`
 
@@ -26,14 +26,14 @@ I will also start adding comments where I can, moving the code from "only I can 
 
 ### `internal/agents/exec/allow/skill`
 
-- [ ] `internal/agents/exec/allow/skill/match.go` (59)
-- [ ] `internal/agents/exec/allow/skill/toggle.go` (59)
+- [x] `internal/agents/exec/allow/skill/match.go` (59)
+- [x] `internal/agents/exec/allow/skill/toggle.go` (59)
 
 ### `internal/agents/exec/allow/tool`
 
-- [ ] `internal/agents/exec/allow/tool/match.go` (85)
-- [ ] `internal/agents/exec/allow/tool/parse.go` (80)
-- [ ] `internal/agents/exec/allow/tool/toggle.go` (101)
+- [x] `internal/agents/exec/allow/tool/match.go` (85)
+- [x] `internal/agents/exec/allow/tool/parse.go` (80)
+- [x] `internal/agents/exec/allow/tool/toggle.go` (101)
 
 ### `internal/agents/exec`
 
