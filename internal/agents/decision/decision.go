@@ -94,3 +94,17 @@ func Agent(ctx context.Context) (go_llm_router.DecisionAgent, string, error) {
 	}
 	return agent, name, nil
 }
+
+func Decide(ctx context.Context, agent go_llm_router.DecisionAgent, state any, questions map[string]go_llm_router.DecisionQuestion) (map[string]go_llm_router.DecisionAnswer, error) {
+	callCtx, cancel := context.WithTimeout(ctx, configs.TIMEOUT_DECISION_CALL)
+	defer cancel()
+	result, err := agent.Decide(callCtx, state, questions)
+	if err != nil {
+		return nil, err
+	}
+	return result.Answers, nil
+}
+
+func Confident(answer go_llm_router.DecisionAnswer, choice string) bool {
+	return answer.Choice == choice && answer.Confidence != nil && *answer.Confidence >= configs.DECISION_MIN_CONFIDENCE
+}

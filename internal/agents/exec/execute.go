@@ -254,12 +254,19 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 
 	exec.CancelExecution = func() { execCancel(nil) }
 	exec.IgnoreHistory = data.IgnoreHistory
+	exec.Objective = strings.TrimSpace(data.Input)
+	if exec.Objective == "" {
+		exec.Objective = strings.TrimSpace(data.Task)
+	}
 
 	keepPending := true
 	if !session.Stateless && session.ID != "" {
 		if data.PendingTask != "" {
 			exec.PendingTask = data.PendingTask
 			exec.SeedFiles(interactive.LoadPendingFiles(session.ID, data.PendingTask))
+			if info, ok := interactive.LoadPendingInfo(session.ID, data.PendingTask); ok && strings.TrimSpace(info.Objective) != "" {
+				exec.Objective = strings.TrimSpace(info.Objective)
+			}
 		} else {
 			objective := data.Task
 			if objective == "" {

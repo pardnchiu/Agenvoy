@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+
 	"github.com/pardnchiu/agenvoy/internal/tools/external/searchWeb/googleRSS"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
@@ -98,15 +100,15 @@ Several URLs from one domain on one topic → the most relevant, plus any that c
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
 
-			if !params.Force {
-				if cached, ok := toolcache.FindRecent(e.SessionID, "search_web", string(args)); ok {
-					return cached, nil
-				}
-			}
-
 			query := firstNonEmpty(params.Query, params.Keyword, params.Q)
 			if query == "" {
 				return "", utilsmsg.New(utilsmsg.Invalid, "query", "required")
+			}
+
+			if !params.Force {
+				if cached, ok := toolcache.FindRecent(e.SessionID, "search_web", string(args)); ok {
+					return keepRelated(ctx, e.Objective, query, cached), nil
+				}
 			}
 
 			source := strings.TrimSpace(params.Source)
@@ -154,7 +156,8 @@ Several URLs from one domain on one topic → the most relevant, plus any that c
 			if err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Internal, "utils.MarshalPlain", "", err)
 			}
-			return string(raw), nil
+			toolcache.Store(e.SessionID, go_pkg_utils.UUID(), "search_web", string(args), string(raw))
+			return keepRelated(ctx, e.Objective, query, string(raw)), nil
 		},
 	})
 }
