@@ -63,7 +63,7 @@ Inspection only (git status / log / diff, du, which, docker ps, git config --lis
 				},
 				"interval": map[string]any{
 					"type":        "integer",
-					"description": fmt.Sprintf("background: true only, set together with prompt. Seconds between checks of the output printed since the previous check, at least %d; a check whose lines meet prompt resumes this task with them while the command keeps running. Leave both out to hear back only when it exits.", configs.WATCH_MIN_INTERVAL_SEC),
+					"description": fmt.Sprintf("background: true only, set together with prompt. Seconds between checks of the output printed since the previous check, at least %d; a check whose lines meet prompt resumes this task with them while the command keeps running. After a report, checks pause for %d seconds, and output that only repeats the reported situation is not reported again. Leave both out to hear back only when it exits.", configs.WATCH_MIN_INTERVAL_SEC, configs.WATCH_REPORT_COOLDOWN_SEC),
 					"minimum":     configs.WATCH_MIN_INTERVAL_SEC,
 				},
 				"prompt": map[string]any{

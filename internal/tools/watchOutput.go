@@ -43,7 +43,8 @@ func watchOutput(ctx context.Context, spec watchSpec, buf *watchBuffer, done <-c
 	ticker := time.NewTicker(spec.interval)
 	defer ticker.Stop()
 
-	var last string
+	var last, lastReport string
+	var lastReportAt time.Time
 	failures, reports := 0, 0
 	for {
 		select {
@@ -54,6 +55,9 @@ func watchOutput(ctx context.Context, spec watchSpec, buf *watchBuffer, done <-c
 			return reports, last, nil
 
 		case <-ticker.C:
+			if !lastReportAt.IsZero() && time.Since(lastReportAt) < time.Duration(configs.WATCH_REPORT_COOLDOWN_SEC)*time.Second {
+				continue
+			}
 			lines, dropped := buf.take()
 			if len(lines) == 0 {
 				continue
@@ -61,7 +65,7 @@ func watchOutput(ctx context.Context, spec watchSpec, buf *watchBuffer, done <-c
 			text := formatWatchLines(lines, dropped)
 			last = text
 
-			hit, confidence, err := decideWatch(ctx, spec, lines)
+			hit, confidence, err := decideWatch(ctx, spec, lines, lastReport, lastReportAt)
 			if err != nil {
 				if ctx.Err() != nil {
 					continue
@@ -75,6 +79,7 @@ func watchOutput(ctx context.Context, spec watchSpec, buf *watchBuffer, done <-c
 			failures = 0
 			if hit {
 				reports++
+				lastReport, lastReportAt = text, time.Now()
 				report(fmt.Sprintf("condition met at %s (confidence %.2f, report #%d); still running\n%s", time.Now().Format("15:04:05"), confidence, reports, text))
 			}
 		}
@@ -88,26 +93,45 @@ type watchAnswer struct {
 	} `json:"answers"`
 }
 
-func decideWatch(ctx context.Context, spec watchSpec, lines []string) (bool, float64, error) {
-	body := map[string]any{
-		"model": config.TypesafeModel,
-		"state": map[string]any{
-			"condition": spec.prompt,
-			"logs":      lines,
-		},
-		"questions": map[string]any{
-			"trigger": map[string]any{
-				"type": "choice",
-				"instructions": map[string]any{
-					"question": "Do `logs` satisfy `condition`?",
-					"focus":    "Judge only the lines in `logs`; each line is one stream message or one line of command output, prefixed with its arrival time.",
-				},
-				"criteria": map[string]any{
-					"yes": "At least one line in `logs`, or the lines taken together, meet `condition`.",
-					"no":  "Nothing in `logs` meets `condition`.",
-				},
+func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport string, lastReportAt time.Time) (bool, float64, error) {
+	state := map[string]any{
+		"condition": spec.prompt,
+		"logs":      lines,
+	}
+	questions := map[string]any{
+		"trigger": map[string]any{
+			"type": "choice",
+			"instructions": map[string]any{
+				"question": "Do `logs` satisfy `condition`?",
+				"focus":    "Judge only the lines in `logs`; each line is one stream message or one line of command output, prefixed with its arrival time.",
+			},
+			"criteria": map[string]any{
+				"yes": "At least one line in `logs`, or the lines taken together, meet `condition`.",
+				"no":  "Nothing in `logs` meets `condition`.",
 			},
 		},
+	}
+	if !lastReportAt.IsZero() {
+		state["last_report"] = map[string]any{
+			"time": lastReportAt.Format("15:04:05"),
+			"logs": lastReport,
+		}
+		questions["repeat"] = map[string]any{
+			"type": "choice",
+			"instructions": map[string]any{
+				"question": "Do `logs` only repeat the situation already reported in `last_report`?",
+				"focus":    "`last_report` holds the lines already reported for `condition`. The condition simply staying met with similar values is a repeat.",
+			},
+			"criteria": map[string]any{
+				"repeat": "`condition` stays met the same way as in `last_report`; nothing new to report.",
+				"new":    "`logs` show `condition` met again after it stopped holding, or met in a clearly different way than `last_report`.",
+			},
+		}
+	}
+	body := map[string]any{
+		"model":     config.TypesafeModel,
+		"state":     state,
+		"questions": questions,
 	}
 
 	callCtx, cancel := context.WithTimeout(ctx, configs.TIMEOUT_DISPATCH_CALL)
@@ -124,11 +148,29 @@ func decideWatch(ctx context.Context, spec watchSpec, lines []string) (bool, flo
 	}
 	switch answer.Choice {
 	case "yes":
-		return true, answer.Confidence, nil
 	case "no":
 		return false, answer.Confidence, nil
+	default:
+		return false, 0, utilsmsg.New(utilsmsg.Upstream, "jev", "invalid choice %q", answer.Choice)
 	}
-	return false, 0, utilsmsg.New(utilsmsg.Upstream, "jev", "invalid choice %q", answer.Choice)
+	if answer.Confidence < configs.WATCH_MIN_CONFIDENCE {
+		return false, answer.Confidence, nil
+	}
+	if lastReportAt.IsZero() {
+		return true, answer.Confidence, nil
+	}
+
+	repeat, ok := result.Answers["repeat"]
+	if !ok {
+		return false, 0, utilsmsg.New(utilsmsg.Upstream, "jev", "response has no repeat answer")
+	}
+	switch repeat.Choice {
+	case "new":
+		return repeat.Confidence >= configs.WATCH_MIN_CONFIDENCE, answer.Confidence, nil
+	case "repeat":
+		return false, answer.Confidence, nil
+	}
+	return false, 0, utilsmsg.New(utilsmsg.Upstream, "jev", "invalid repeat choice %q", repeat.Choice)
 }
 
 func formatWatchLines(lines []string, dropped int) string {

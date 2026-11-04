@@ -70,7 +70,7 @@ A one-off request → http_request or fetch_page; a job at a clock time with no 
 				},
 				"interval": map[string]any{
 					"type":        "integer",
-					"description": fmt.Sprintf("Seconds between checks, at least %d. Each check judges only the messages that arrived since the previous one; a window with no messages is skipped. Shorter catches an event sooner, longer gives the condition more context per check.", configs.WATCH_MIN_INTERVAL_SEC),
+					"description": fmt.Sprintf("Seconds between checks, at least %d. Each check judges only the messages that arrived since the previous one; a window with no messages is skipped. After a report, checks pause for %d seconds, and messages that only repeat the reported situation are not reported again. Shorter catches an event sooner, longer gives the condition more context per check.", configs.WATCH_MIN_INTERVAL_SEC, configs.WATCH_REPORT_COOLDOWN_SEC),
 					"minimum":     configs.WATCH_MIN_INTERVAL_SEC,
 				},
 				"prompt": map[string]any{
