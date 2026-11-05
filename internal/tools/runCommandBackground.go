@@ -43,13 +43,13 @@ func registRunCommandBackground() {
 	})
 
 	toolregister.Regist(toolregister.Def{
-		Name:        "run_command_background",
+		Name:        "background_command",
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
 		Description: fmt.Sprintf(`Starts one binary in the work directory and returns a task id at once; its output resumes this task when it exits, and with interval + prompt also each time new output meets prompt while it keeps running. Sandbox, network and confirmation rules match run_command.
 Use for a watcher (--watch, chokidar, npm run sass/build/dev), which only runs here, for a job very likely over %d minutes whose output does not decide your next tool call (full build, large install or download, long data job), or when the user says 跑完告訴我 / 背景跑. Apart from a watcher, use it only for the gathering that opens a request, starting every background command in one go: the resumed task sees only the objective and that output, none of this turn's tool results.
-Anything shorter, or a test or build whose failures you fix next → run_command; a live WebSocket feed → run_websocket.`, configs.BACKGROUND_THRESHOLD_MIN),
+Anything shorter, or a test or build whose failures you fix next → run_command.`, configs.BACKGROUND_THRESHOLD_MIN),
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": properties,

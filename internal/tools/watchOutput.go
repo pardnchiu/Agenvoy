@@ -102,7 +102,7 @@ func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport
 			Type: go_llm_router.DecisionChoice,
 			Instructions: map[string]any{
 				"question": "Do `logs` satisfy `condition`?",
-				"focus":    "Judge only the lines in `logs`; each line is one stream message or one line of command output, prefixed with its arrival time.",
+				"focus":    "Judge only the lines in `logs`; each line is one line of command output, prefixed with its arrival time.",
 			},
 			Criteria: map[string]any{
 				"yes": "At least one line in `logs` meets `condition`.",
@@ -183,7 +183,6 @@ type watchBuffer struct {
 	lines   []string
 	size    int
 	dropped int
-	total   int
 	partial []byte
 	limit   int
 }
@@ -208,14 +207,7 @@ func (b *watchBuffer) Write(raw []byte) (int, error) {
 	return len(raw), nil
 }
 
-func (b *watchBuffer) add(line string) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.addLocked(line)
-}
-
 func (b *watchBuffer) addLocked(line string) {
-	b.total++
 	if len(line) > configs.WATCH_LINE_MAX_BYTES {
 		line = strings.ToValidUTF8(line[:configs.WATCH_LINE_MAX_BYTES], "") + "...[truncated]"
 	}
@@ -245,12 +237,6 @@ func (b *watchBuffer) restore(lines []string, dropped int) {
 	b.trimLocked()
 }
 
-func (b *watchBuffer) count() {
-	b.mu.Lock()
-	b.total++
-	b.mu.Unlock()
-}
-
 func (b *watchBuffer) take() ([]string, int) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -258,10 +244,4 @@ func (b *watchBuffer) take() ([]string, int) {
 	lines, dropped := b.lines, b.dropped
 	b.lines, b.size, b.dropped = nil, 0, 0
 	return lines, dropped
-}
-
-func (b *watchBuffer) received() int {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.total
 }

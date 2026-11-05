@@ -31,7 +31,6 @@ func init() {
 
 	registRunCommand()
 	registRunCommandBackground()
-	registRunWebsocket()
 	registDownloadFile()
 	registOpenFile()
 	registHTMLTemplate()

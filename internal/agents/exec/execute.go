@@ -318,7 +318,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 		data.ExcludeTools = append(data.ExcludeTools, "generate_audio")
 	}
 	if decision.Selected() == decision.Off {
-		data.ExcludeTools = append(data.ExcludeTools, "run_websocket", "run_command_background")
+		data.ExcludeTools = append(data.ExcludeTools, "background_command")
 	}
 	if (cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "") &&
 		(cfg == nil || !cfg.DiscordEnabled || go_pkg_keychain.Get("DISCORD_TOKEN") == "") {

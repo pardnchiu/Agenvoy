@@ -154,7 +154,7 @@ func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, 
 	if toolName == "http_request" && isGet(toolArgs) {
 		return false
 	}
-	if (toolName == "run_command" || toolName == "run_command_background") && isReadOnlyRunCommand(toolArgs) {
+	if (toolName == "run_command" || toolName == "background_command") && isReadOnlyRunCommand(toolArgs) {
 		return false
 	}
 	return !agentsexecallowtool.Match(exec.WorkDir, toolName, toolArgs)

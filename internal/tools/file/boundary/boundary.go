@@ -223,7 +223,7 @@ func rawPaths(toolName, toolArgs string) []string {
 		}
 		return append([]string{p.Path}, p.Paths...)
 
-	case "run_command", "run_command_background":
+	case "run_command", "background_command":
 		var p struct {
 			WritePaths []string `json:"write_paths"`
 		}
