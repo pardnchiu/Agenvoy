@@ -227,7 +227,6 @@ func RemoveModel() gin.HandlerFunc {
 func modelRouting(c *gin.Context, cfg *config.Config) gin.H {
 	return gin.H{
 		"dispatcher":       cfg.DispatcherModel,
-		"dispatcher_beta":  cfg.DispatcherDecision,
 		"summary":          cfg.SummaryModel,
 		"image":            cfg.ImageGenerator,
 		"image_options":    imagetool.Available(c.Request.Context()),
@@ -266,13 +265,12 @@ func GetModelRouting() gin.HandlerFunc {
 func SetModelRouting() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body struct {
-			Dispatcher         *string `json:"dispatcher"`
-			DispatcherDecision *bool   `json:"dispatcher_beta"`
-			Summary            *string `json:"summary"`
-			Image              *string `json:"image"`
-			Decision           *string `json:"decision"`
-			STT                *string `json:"stt"`
-			TTS                *string `json:"tts"`
+			Dispatcher *string `json:"dispatcher"`
+			Summary    *string `json:"summary"`
+			Image      *string `json:"image"`
+			Decision   *string `json:"decision"`
+			STT        *string `json:"stt"`
+			TTS        *string `json:"tts"`
 		}
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -303,12 +301,6 @@ func SetModelRouting() gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "unknown model: " + summary})
 				return
 			}
-		}
-
-		enabling := body.DispatcherDecision != nil && *body.DispatcherDecision
-		if enabling && decision.Selected() == decision.Off {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "[Unavailable] decision model: off; set it in Setting Model → Decision"})
-			return
 		}
 
 		image := ""
@@ -354,9 +346,6 @@ func SetModelRouting() gin.HandlerFunc {
 
 		if body.Dispatcher != nil {
 			cfg.DispatcherModel = dispatcher
-		}
-		if body.DispatcherDecision != nil {
-			cfg.DispatcherDecision = *body.DispatcherDecision
 		}
 		if body.Summary != nil {
 			cfg.SummaryModel = summary

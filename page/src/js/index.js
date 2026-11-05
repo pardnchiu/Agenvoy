@@ -299,9 +299,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       routing_change: function () {
         saveRouting({ [this.dataset.kind]: this.value });
       },
-      dispatcher_change: function () {
-        saveRouting(this.value === DECISION_DISPATCHER ? { dispatcher_beta: true } : { dispatcher: this.value, dispatcher_beta: false });
-      },
       system_lang: function () {
         saveSystemLang();
       },
