@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -66,14 +67,18 @@ func watchOutput(ctx context.Context, spec watchSpec, buf *watchBuffer, done <-c
 			text := formatWatchLines(lines, dropped)
 			last = text
 
-			hit, confidence, err := decideWatch(ctx, spec, lines, lastReport, lastReportAt)
+			hit, confidence, sent, err := decideWatch(ctx, spec, lines, lastReport, lastReportAt)
+			if !sent {
+				buf.restore(lines, dropped)
+			}
 			if err != nil {
 				if ctx.Err() != nil {
 					continue
 				}
 				failures++
 				if failures >= configs.WATCH_MAX_DECIDE_FAILURES {
-					return reports, last, err
+					pending, lost := buf.take()
+					return reports, formatWatchLines(pending, lost), err
 				}
 				continue
 			}
@@ -87,7 +92,7 @@ func watchOutput(ctx context.Context, spec watchSpec, buf *watchBuffer, done <-c
 	}
 }
 
-func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport string, lastReportAt time.Time) (bool, float64, error) {
+func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport string, lastReportAt time.Time) (bool, float64, bool, error) {
 	state := map[string]any{
 		"condition": spec.prompt,
 		"logs":      lines,
@@ -123,15 +128,13 @@ func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport
 		}
 	}
 
-	callCtx, cancel := context.WithTimeout(ctx, configs.TIMEOUT_DISPATCH_CALL)
-	defer cancel()
-	result, err := spec.agent.Decide(callCtx, state, questions)
+	answers, err := decision.Decide(ctx, spec.agent, state, questions)
 	if err != nil {
-		return false, 0, utilsmsg.Trace("Decide", spec.model, err)
+		return false, 0, false, utilsmsg.Trace("Decide", spec.model, err)
 	}
-	answer, ok := result.Answers["trigger"]
+	answer, ok := answers["trigger"]
 	if !ok {
-		return false, 0, utilsmsg.New(utilsmsg.Upstream, spec.model, "response has no trigger answer")
+		return false, 0, true, utilsmsg.New(utilsmsg.Upstream, spec.model, "response has no trigger answer")
 	}
 	confidence := 0.0
 	if answer.Confidence != nil {
@@ -140,28 +143,28 @@ func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport
 	switch answer.Choice {
 	case "yes":
 	case "no":
-		return false, confidence, nil
+		return false, confidence, true, nil
 	default:
-		return false, 0, utilsmsg.New(utilsmsg.Upstream, spec.model, "invalid choice %q", answer.Choice)
+		return false, 0, true, utilsmsg.New(utilsmsg.Upstream, spec.model, "invalid choice %q", answer.Choice)
 	}
 	if confidence < configs.WATCH_MIN_CONFIDENCE {
-		return false, confidence, nil
+		return false, confidence, true, nil
 	}
 	if lastReportAt.IsZero() {
-		return true, confidence, nil
+		return true, confidence, true, nil
 	}
 
-	repeat, ok := result.Answers["repeat"]
+	repeat, ok := answers["repeat"]
 	if !ok {
-		return false, 0, utilsmsg.New(utilsmsg.Upstream, spec.model, "response has no repeat answer")
+		return false, 0, true, utilsmsg.New(utilsmsg.Upstream, spec.model, "response has no repeat answer")
 	}
 	switch repeat.Choice {
 	case "new":
-		return repeat.Confidence != nil && *repeat.Confidence >= configs.WATCH_MIN_CONFIDENCE, confidence, nil
+		return repeat.Confidence != nil && *repeat.Confidence >= configs.WATCH_MIN_CONFIDENCE, confidence, true, nil
 	case "repeat":
-		return false, confidence, nil
+		return false, confidence, true, nil
 	}
-	return false, 0, utilsmsg.New(utilsmsg.Upstream, spec.model, "invalid repeat choice %q", repeat.Choice)
+	return false, 0, true, utilsmsg.New(utilsmsg.Upstream, spec.model, "invalid repeat choice %q", repeat.Choice)
 }
 
 func formatWatchLines(lines []string, dropped int) string {
@@ -219,11 +222,27 @@ func (b *watchBuffer) addLocked(line string) {
 	line = time.Now().Format("15:04:05") + " " + line
 	b.lines = append(b.lines, line)
 	b.size += len(line)
+	b.trimLocked()
+}
+
+func (b *watchBuffer) trimLocked() {
 	for b.size > b.limit && len(b.lines) > 1 {
 		b.size -= len(b.lines[0])
 		b.lines = b.lines[1:]
 		b.dropped++
 	}
+}
+
+func (b *watchBuffer) restore(lines []string, dropped int) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	b.lines = append(slices.Clone(lines), b.lines...)
+	for _, line := range lines {
+		b.size += len(line)
+	}
+	b.dropped += dropped
+	b.trimLocked()
 }
 
 func (b *watchBuffer) count() {

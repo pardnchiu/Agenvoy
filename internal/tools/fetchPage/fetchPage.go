@@ -86,7 +86,8 @@ func registFetchPage() {
 		Concurrent:  true,
 		Timeout:     90 * time.Second,
 		Description: `[system-default] Fetches one web page in a browser and returns it as markdown, html or json, or saves it to a file.
-Use when a URL is in hand — 讀這篇 / 這個連結寫什麼 / 下載網頁 / 存到本地 — for any search or RSS result being cited, and for researching a site, product or library: its /llms.txt or /llms-full.txt first, then page by page until complete.
+Use when a URL is in hand — 讀這篇 / 這個連結寫什麼 / 下載網頁 / 存到本地 — for any search or RSS result being cited, and for researching a site, product or library page by page until complete.
+Before the first page of a site, fetch its /llms.txt: when it lists the page you want, fetch that listed .md URL instead of the HTML page; no /llms.txt → fetch the page as usual.
 No URL yet → search_web; a binary file → download_file; an API endpoint → http_request.`,
 		Parameters: map[string]any{
 			"type": "object",

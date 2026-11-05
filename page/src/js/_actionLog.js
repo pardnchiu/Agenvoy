@@ -98,19 +98,19 @@ function parseActionLog(content) {
           const action = item.meta.model ? "Switch" : "Model";
           const label = reasoning ? `${model} ${reasoning}` : model;
           item.Reasoning += (item.Reasoning ? "\n\n" : "") + `⏵ \`${action}(${label})\``;
-          }
-          item.meta.model = model;
-          if (item.content) {
-            item.turns.push(item.content);
-            item.prompts.push(item.prompt || "");
-            item.content = "";
-            item.prompt = item.nextPrompt || "";
-          } else if (item.nextPrompt) {
-            item.prompt = item.nextPrompt;
-          }
-          item.nextPrompt = "";
-          item.resumed = false;
-          break;
+        }
+        item.meta.model = model;
+        if (item.content) {
+          item.turns.push(item.content);
+          item.prompts.push(item.prompt || "");
+          item.content = "";
+          item.prompt = item.nextPrompt || "";
+        } else if (item.nextPrompt) {
+          item.prompt = item.nextPrompt;
+        }
+        item.nextPrompt = "";
+        item.resumed = false;
+        break;
       }
 
       case "edited_files": {
@@ -204,6 +204,7 @@ function parseActionLog(content) {
         item.meta.output = meta.output;
         item.meta.tps = meta.tps;
         item.meta.send_at = sendAt;
+        item.Reasoning = dropModelLines(item.Reasoning);
         item.finished = true;
         break;
       }
@@ -297,6 +298,13 @@ function parseTodoArgs(body) {
     console.error("parseTodoArgs", err);
     return null;
   }
+}
+
+function dropModelLines(trace) {
+  return (trace || "")
+    .split("\n\n")
+    .filter((line) => !/^⏵ `(Model|Switch)\(/.test(line))
+    .join("\n\n");
 }
 
 function formatTool(body) {

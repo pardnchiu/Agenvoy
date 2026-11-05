@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -103,7 +104,10 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 			out = io.MultiWriter(sink, buf)
 			watchErr = make(chan error, 1)
 			go func() {
-				_, _, err := watchOutput(ctx, *watch, buf, done, report)
+				_, tail, err := watchOutput(ctx, *watch, buf, done, report)
+				if err != nil {
+					report("interval checks stopped: " + err.Error() + "; the command keeps running. Output not yet checked, last " + strconv.Itoa(configs.WATCH_BUFFER_MAX_BYTES>>10) + " KiB:\n" + tail)
+				}
 				watchErr <- err
 			}()
 		}
