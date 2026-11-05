@@ -41,7 +41,7 @@ func detectToolGap(ctx context.Context, sessionID string, exec *tooltypes.Execut
 			Type: go_llm_router.DecisionChoice,
 			Instructions: map[string]any{
 				"question": "Does fulfilling `request` need a capability that no tool in `tools` provides?",
-				"focus":    "Judge by tool names. A recurring live-data capability (weather, FX rate, stock or crypto quote, geocoding, air quality, translation API...) is covered only by a dedicated api_*/script_*/ext_* tool; general tools such as http_request, run_command, fetch_page or search_web do not count as covering it. Requests answered by reasoning, conversation, file or code work, or a web search need no new tool.",
+				"focus":    "Judge by tool names. A recurring live-data capability (weather, FX rate, stock or crypto quote, geocoding, air quality, translation API...) is covered only by a dedicated script_*/ext_* tool; general tools such as http_request, run_command, fetch_page or search_web do not count as covering it. Requests answered by reasoning, conversation, file or code work, or a web search need no new tool.",
 			},
 			Criteria: toolGapCriteria,
 		},

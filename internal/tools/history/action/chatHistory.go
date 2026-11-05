@@ -35,7 +35,7 @@ Not the workspace — file listing never reaches them. Versions → file_history
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"list", "tool_list", "tool", "read", "search"},
-					"description": "list: recent runs as a bare index — task_id, when it ended, what it was for. Match an objective here, then read that task_id. tool_list: the same calls flattened across the last 16 runs and reduced to the ones worth reusing (network fetches, subagent reports, generated media, mcp__/api_/script_/ext_ payloads), each with its time, arguments and task_id — scan it before fetching anything to see whether this session already has it. tool: one call's raw output, addressed by task_id + name (+ args when that run called the tool more than once) — the cheapest way back to a page or search result already paid for. read: the full runs behind one or more task_ids, tool output untruncated. search: past messages, needs keyword. Omitted: task_id with name selects tool, task_id alone selects read, keyword selects search, otherwise list.",
+					"description": "list: recent runs as a bare index — task_id, when it ended, what it was for. Match an objective here, then read that task_id. tool_list: the same calls flattened across the last 16 runs and reduced to the ones worth reusing (network fetches, subagent reports, generated media, mcp__/script_/ext_ payloads), each with its time, arguments and task_id — scan it before fetching anything to see whether this session already has it. tool: one call's raw output, addressed by task_id + name (+ args when that run called the tool more than once) — the cheapest way back to a page or search result already paid for. read: the full runs behind one or more task_ids, tool output untruncated. search: past messages, needs keyword. Omitted: task_id with name selects tool, task_id alone selects read, keyword selects search, otherwise list.",
 					"default":     "list",
 				},
 				"task_id": map[string]any{
@@ -46,7 +46,7 @@ Not the workspace — file listing never reaches them. Versions → file_history
 				"scope": map[string]any{
 					"type":        "string",
 					"enum":        []string{"reference", "full"},
-					"description": "mode=read: reference keeps what costs money or time to obtain again — fetch_page, search_web, http_request, subagents reports, generate_image, download_file, and every mcp__/api_/script_/ext_ payload — and reduces the rest to bare tool names. full includes every tool's arguments and output; use it to reconstruct what a run actually did.",
+					"description": "mode=read: reference keeps what costs money or time to obtain again — fetch_page, search_web, http_request, subagents reports, generate_image, download_file, and every mcp__/script_/ext_ payload — and reduces the rest to bare tool names. full includes every tool's arguments and output; use it to reconstruct what a run actually did.",
 					"default":     "reference",
 				},
 				"name": map[string]any{

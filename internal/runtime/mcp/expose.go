@@ -7,9 +7,7 @@ import (
 	"os"
 
 	"github.com/pardnchiu/agenvoy/configs"
-	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	apiadapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter/api"
 	scriptadapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter/script"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -19,9 +17,7 @@ type builtinHandler func(ctx context.Context, args json.RawMessage) (string, err
 
 type toolbox struct {
 	scriptBox *scriptadapter.Translator
-	apiBox    *apiadapter.Adapter
 	extScript *scriptadapter.Translator
-	extAPI    *apiadapter.Adapter
 	tools     []Tool
 	builtin   map[string]builtinHandler
 }
@@ -48,23 +44,9 @@ func scanTools() *toolbox {
 			slog.String("error", err.Error()))
 	}
 
-	box.apiBox = apiadapter.New("api_")
-	_ = box.apiBox.Builtin(extensions.APIs, "apis")
-	for _, dir := range []string{
-		filesystem.APIToolsDir,
-		filesystem.WorkAPIToolsDir,
-	} {
-		_ = box.apiBox.Load(dir)
-	}
-
-	box.extAPI = apiadapter.New("ext_")
-	_ = box.extAPI.Load(filesystem.ExtensionAPIToolsDir)
-
 	var tools []Tool
 	tools = append(tools, convertTools(box.scriptBox.GetTools())...)
 	tools = append(tools, convertTools(box.extScript.GetTools())...)
-	tools = append(tools, convertTools(box.apiBox.GetTools())...)
-	tools = append(tools, convertTools(box.extAPI.GetTools())...)
 
 	if tools == nil {
 		tools = []Tool{}
@@ -89,18 +71,6 @@ func (b *toolbox) dispatch(ctx context.Context, name string, args json.RawMessag
 		return b.scriptBox.Execute(ctx, name, args, workDir)
 	case b.extScript.IsExist(name):
 		return b.extScript.Execute(ctx, name, args, workDir)
-	case b.apiBox.IsExist(name):
-		var dic map[string]any
-		if err := json.Unmarshal(args, &dic); err != nil || dic == nil {
-			dic = map[string]any{}
-		}
-		return b.apiBox.Execute(ctx, name, dic)
-	case b.extAPI.IsExist(name):
-		var dic map[string]any
-		if err := json.Unmarshal(args, &dic); err != nil || dic == nil {
-			dic = map[string]any{}
-		}
-		return b.extAPI.Execute(ctx, name, dic)
 	default:
 		return "", utilsmsg.New(utilsmsg.NotFound, "tool", "%s", name)
 	}
@@ -110,8 +80,8 @@ func addGuide(box *toolbox) {
 	box.tools = append(box.tools, Tool{
 		Name: "tool_generate_guide",
 		Description: `You MUST call this tool before refusing any user request: no other tool here covers it (weather, prices, data lookup, conversion, scraping, analysis, etc.) → call this for instructions to build one on the fly, never say 'I cannot' or 'no tool available'.
-Covers both script tools (Python, multi-step) and API tools (single JSON, declarative REST).
-After reading the guide: edit_tool(mode=write) -> test_tool (script only) -> call the new tool to answer.`,
+Starts with public_api_list: a fitting API is read and called directly; only without one does a Python script tool get built (also for a user-supplied API that needs a key).
+After reading the guide: edit_tool(mode=write) -> test_tool -> call the new tool to answer.`,
 		InputSchema: emptySchema(),
 	})
 
@@ -125,6 +95,7 @@ After reading the guide: edit_tool(mode=write) -> test_tool (script only) -> cal
 }
 
 var bridgedTools = []string{
+	"public_api_list",
 	"edit_tool",
 	"test_tool",
 	"store_secret",

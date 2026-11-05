@@ -16,7 +16,7 @@ graph TB
     TUI -->|daemon.sock| Daemon[本機 Daemon]
     Web --> Daemon
     Daemon --> Exec[Agent 執行器]
-    MCPServer --> ToolBox[script_／api_／ext_ 工具]
+    MCPServer --> ToolBox[script_／ext_ 工具]
     Exec --> Router[模型路由器]
     Exec --> Skills[Skill 比對]
     Exec --> Tools[工具註冊表]
@@ -33,7 +33,7 @@ graph TB
 
 所有使用 session 的入口（TUI、Web `/send`、pending 恢復、Telegram、Discord）都經過相同的兩步進入執行：`exec.Prepare` 重新掃描 Skill、在 TUI 以外排除 TUI 專用的工具與 Skill，並解析開頭的 `/<skill_name>`；接著 `exec.Run` 查找以名稱指定的 Skill、記錄輸入、經 `exec/model.Route` 選擇模型、建立 session 並執行 Agent；subagent 與排程以 `isSub=true` 直接呼叫 `exec.Run`，不經 `Prepare`。各入口只負責自己的傳輸、授權與呈現；Telegram 與 Discord 共用同一套回覆流程（狀態訊息、分段、footer、錯誤提示與附件）。TUI 與 daemon 都會監看 `config.json`，變更時重新載入模型註冊表（daemon 另會重新連線聊天 bot）；TUI 也會訂閱 daemon log，讓 Telegram 與 Discord 的驗證碼顯示在 TUI 的 notice 框；所有 log、警告與錯誤都集中在這個框（顯示最後 4 行、保留 32 行，`Tab` 往上捲，`Esc` 清除）。
 
-輸入區為空時可按 `Shift+F` 切換只存在於目前行程的 fast mode；執行器、dispatcher 與 summary 呼叫會把模式傳給 `go-llm-router`。Runtime 支援多個模型 provider 與 `compat` 的 OpenAI 相容端點，並可獨立設定 dispatcher、summary、圖片生成、STT 與 TTS；已註冊模型的順序可自訂，選中的模型失敗或串流無回應時，依此順序往下找（略過 `pass` tier 與失敗模型同 provider 的模型），每個候選先做 10 秒健康檢查，最多 4 輪；session 固定模型時不 fallback。每個模型可在 `model_tag` 設定 tier（`S` `A` `B` `C` `pass`），未設定時依模型名稱推斷（例如 opus→S、haiku→B、`-mini`→C），無法辨識的才預設為 A；dispatcher 依工作類型排序 tier；開啟 `dispatcher_beta` 且 keychain 有 `TYPESAFE_API_KEY` 時由 TypeSafe 的 `jev-latest` 模型取代 dispatcher 模型：它把請求分為 `code`、`chat`、`fetch`、`research`、`work` 並判斷是否點名模型、是否延續上一則請求（延續時沿用 session 前一個模型與 reasoning 以重用快取；前一個模型記在 ToriiDB db_0 的 `lastModel:<session>`，依 provider 保留 5／30／60 分鐘），再由程式依該類型的 tier 順序排序（`research` 先 S、`work` 先 A），TypeSafe 出錯或 3 秒內沒回應時退回 dispatcher 模型；selector 回的工作類型同時決定 reasoning 等級（`xhigh`、`none`、`low`、`high`、`medium`），僅在 session reasoning 設為 `auto` 時採用（固定模型的 session 也適用），請求自帶的等級仍優先；同一 tier 內先排訂閱制的 `claude-code`、其次 `codex`；同一模型註冊在多個 provider 時，最後由 `config.OrderByRank` 依 `claude-code`、`codex`／`grok-oauth`、`copilot`、直接 API、`openrouter` 重排（點名或延續的模型維持在最前）；標記為長 context 的工作類型（目前是 `research`）反轉其中一段，同 tier 內把 `copilot` 排到最後，因為同一個模型經該 provider 轉售的 context window 較小。每條 subagent leg 都必須指定 `model`，可另帶 `reasoning`（預設 `auto`）。傳入具名模型時直接使用，會覆蓋 `self_id` session 自己固定的模型；傳 `auto` 時改用該 session 固定的模型，session 也是 `auto` 才走一般 dispatcher。reasoning 為 `auto` 時沿用 session 設定，仍為 `auto` 則由選模器決定。`reasoning_guide` 的 `subagent_dispatch` 主題會把各工作類型的 tier 順序整體降一階（例如 `code` 為 A > B > C > S、`work` 為 B > A > C > S）提供給父模型參考，程式本身不強制。本機 OpenAI 相容端點以 `<name>@<model>` 註冊；自訂端點網址記錄在 `config.json` 的 `compats`，`/model add` 在預設 port 偵測到的 Ollama 與 llama.cpp 則為內建端點。免費試用 Agenvoy 建議使用 `ollama-cloud` 的 `gemma4:31b`（免費 API key，有用量上限），它不是必要的 dispatcher 或主要模型。
+輸入區為空時可按 `Shift+F` 切換只存在於目前行程的 fast mode；執行器、dispatcher 與 summary 呼叫會把模式傳給 `go-llm-router`。Runtime 支援多個模型 provider 與 `compat` 的 OpenAI 相容端點，並可獨立設定 dispatcher、summary、圖片生成、STT 與 TTS；已註冊模型的順序可自訂，選中的模型失敗或串流無回應時，依此順序往下找（略過 `pass` tier 與失敗模型同 provider 的模型），每個候選先做 10 秒健康檢查，最多 4 輪；session 固定模型時不 fallback。每個模型可在 `model_tag` 設定 tier（`S` `A` `B` `C` `pass`），未設定時依模型名稱推斷（例如 opus→S、haiku→B、`-mini`→C），無法辨識的才預設為 A；dispatcher 依工作類型排序 tier；已設定 decision model（`decision_model`，TypeSafe 或 OpenRouter 的 decision model）時，decision model 與 dispatcher 模型同時執行，先取得有效回答者勝出：它把請求分為 `code`、`chat`、`fetch`、`research`、`work` 並判斷是否點名模型、是否延續上一則請求（延續時沿用 session 前一個模型與 reasoning 以重用快取；前一個模型記在 ToriiDB db_0 的 `lastModel:<session>`，依 provider 保留 5／30／60 分鐘），再由程式依該類型的 tier 順序排序（`research` 先 S、`work` 先 A），呼叫失敗或 3 秒內沒回應時採用 dispatcher 模型的回答；selector 回的工作類型同時決定 reasoning 等級（`xhigh`、`none`、`low`、`high`、`medium`），僅在 session reasoning 設為 `auto` 時採用（固定模型的 session 也適用），請求自帶的等級仍優先；同一 tier 內先排訂閱制的 `claude-code`、其次 `codex`；同一模型註冊在多個 provider 時，最後由 `config.OrderByRank` 依 `claude-code`、`codex`／`grok-oauth`、`copilot`、直接 API、`openrouter` 重排（點名或延續的模型維持在最前）；標記為長 context 的工作類型（目前是 `research`）反轉其中一段，同 tier 內把 `copilot` 排到最後，因為同一個模型經該 provider 轉售的 context window 較小。每條 subagent leg 都必須指定 `model`，可另帶 `reasoning`（預設 `auto`）。傳入具名模型時直接使用，會覆蓋 `self_id` session 自己固定的模型；傳 `auto` 時改用該 session 固定的模型，session 也是 `auto` 才走一般 dispatcher。reasoning 為 `auto` 時沿用 session 設定，仍為 `auto` 則由選模器決定。`reasoning_guide` 的 `subagent_dispatch` 主題會把各工作類型的 tier 順序整體降一階（例如 `code` 為 A > B > C > S、`work` 為 B > A > C > S）提供給父模型參考，程式本身不強制。本機 OpenAI 相容端點以 `<name>@<model>` 註冊；自訂端點網址記錄在 `config.json` 的 `compats`，`/model add` 在預設 port 偵測到的 Ollama 與 llama.cpp 則為內建端點。免費試用 Agenvoy 建議使用 `ollama-cloud` 的 `gemma4:31b`（免費 API key，有用量上限），它不是必要的 dispatcher 或主要模型。
 
 ```mermaid
 graph TB
@@ -84,7 +84,7 @@ Skill 以 `/<name>` 啟動時，歷史中補一組假的 `run_skill` 呼叫，�
 graph TB
     Request[使用者請求] --> Prepare[Prepare：重新掃描 Skill、排除 TUI 專用]
     Prepare --> Match[比對 /skill_name 或指定 Skill]
-    Match --> Resolve[指定模型、session 模型、dispatcher 或 TypeSafe/Jev]
+    Match --> Resolve[指定模型、session 模型、dispatcher 或 decision model]
     Resolve --> Session[建立 Agent Session]
     Session --> Prompt[建立 Prompt、官方模型指南與工具定義]
     Prompt --> Model[模型呼叫]
@@ -102,12 +102,13 @@ graph TB
 
 `internal/agents/exec` 依職責拆成多個子套件，主迴圈只負責組 prompt、送模型與分派工具：
 
-- **`exec/model`**：`Route` 決定指定模型、session 模型或選模器（`selectWithLLM`／`selectWithJev`），並建立 fallback 清單；`Next` 在失敗時挑下一個候選並以 `CheckAlive` 做健康檢查（compat 端點打 `/models`，其他 provider 走 probe 或 health endpoint）。
+- **`exec/model`**：`Route` 決定指定模型、session 模型或選模器（`selectWithLLM`／`selectWithDecision`，開啟 decision dispatcher 時兩者同時執行），並建立 fallback 清單；`Next` 在失敗時挑下一個候選並以 `CheckAlive` 做健康檢查（compat 端點打 `/models`，其他 provider 走 probe 或 health endpoint）。
 - **`exec/subagent`**：`Exec` 建立或接回子 session（`temp-` session 不讀歷史）、繼承父層工作目錄、allow-all 與 `DeliverTo`，排除寫檔與有持久副作用的工具後以 `exec.Run(..., isSub=true)` 執行，最多 3 條並行；遇到提問時由 `waitResume` 等待回答。
 - **`exec/chatbot`**：新對話的驗證碼除了寫入 daemon log，也會轉發到 `config.json` 設定的 admin 對話（`tg@<id>`／`dc@<id>`，須已授權）。
-- **`exec/summary` 與 `exec.Reset`**：daemon 每 15 分鐘產生滾動摘要，優先用 summary 模型，冷卻中或內容過大時退回主模型；`Reset(withSummary)` 先重建摘要，產生不了就中止以免遺失 context。
-- **`exec/compact`**：非第一輪且上一輪 input tokens 達上限 80% 時，先萃取舊歷史再壓縮工具歷史；context 超長錯誤走 `TrimFallback`，換模型時先試 `RawToolFallback`，不行才清空工具歷史。
-- **Turn context 與 steer**：工作目錄、權限模式、`run_tool` 工具名單、Skill 清單與 `CLAUDE.md`／`AGENTS.md`（開啟 guide 時）每輪以一則 user 訊息注入在使用者輸入之前（模板位於 `configs/prompts/system_prompt/inject/`），system prompt 因此保持穩定；執行中送入的 steer 經 IPC 進入佇列，下一輪以 `inject/steer.md` 注入，session reset 時清除。
+- **`exec/summary` 與 `exec.Reset`**：daemon 每 15 分鐘產生滾動摘要，優先用 summary 模型，冷卻中或內容過大時退回主模型；有 decision model 時，合併前先移除雜訊對話與過時的 `key_decisions`／`past_discussions`；`Reset(withSummary)` 先重建摘要，產生不了就中止以免遺失 context。
+- **`exec/compact`**：非第一輪且上一輪 input tokens 達上限 80% 時，先萃取舊歷史再壓縮工具歷史；context 超長錯誤走 `TrimRatio`：先由 decision model 移除請求已不需要的工具步驟（保留最新一步與 `write_todo`），再以 `TrimFallback` 依最舊優先刪減；換模型時先試 `RawToolFallback`，不行才清空工具歷史。
+- **Turn context 與 steer**：工作目錄、權限模式、`run_tool` 工具名單、Skill 清單與 `CLAUDE.md`／`AGENTS.md`（開啟 guide 時）每輪以一則 user 訊息注入在使用者輸入之前（模板位於 `configs/prompts/system_prompt/inject/`），system prompt 因此保持穩定；有 decision model 時，Skill 清單只保留與請求相關的 Skill，現有工具都不涵蓋請求時另加一行提示查閱建工具指南；執行中送入的 steer 經 IPC 進入佇列，下一輪以 `inject/steer.md` 注入，session reset 時清除。
+- **`agents/decision`**：`Ready` 與 `Request` 取得已設定的 decision model 並整理請求文字，`Decide` 以 3 秒逾時呼叫一次，`Batch` 依字數與題數切分大量輸入，`Confident` 在信心值達 0.7 時採用回答；未設定 decision model 或呼叫失敗時，各呼叫端維持原本的行為。
 - **`/v1/chat/completions`**：不經 `Prepare`／`Run`，以 stateless session 直接呼叫 `exec.Execute`，預設排除所有工具，agent 模式 header 才開放。
 - **錯誤訊息**：錯誤一律經 `internal/utils/msg` 的 `New`／`Wrap`／`Trace` 建立，格式為 `[Label] target: reason`；標示限 `Invalid`、`Not found`、`Denied`、`Conflict`、`Limit`、`Unavailable`、`Timeout`、`Upstream`、`Canceled`、`Internal`，包裝層保留最底層的標示，讓 agent 與 log 能直接判斷類別。
 
@@ -116,7 +117,7 @@ graph TB
     Run[exec.Run] --> Route[exec/model.Route]
     Route --> Selector{選模器}
     Selector --> LLM[dispatcher 模型]
-    Selector --> Jev[TypeSafe/Jev]
+    Selector --> Decision[Decision model]
     Run --> Execute[exec.Execute 主迴圈]
     Execute --> Turn[Turn context 與 steer 注入]
     Execute --> Compact[exec/compact]
@@ -130,14 +131,14 @@ graph TB
 
 ## 模組：工具註冊表與沙箱
 
-內建工具、API／script／extension 工具及外部 MCP 工具都進入同一份註冊表。所有工具依名稱排序；tool payload 只帶 `find_tools`、`run_tool`、`reasoning_guide` 的完整 schema，其餘工具以名稱列在每輪注入的 TurnContext，schema 由 `find_tools(mode=search)` 以工具回傳內容交付、不寫回 tool payload，呼叫則經 `run_tool(name, args)`，因此整個 session 的工具序列化結果逐位元組不變，prompt 快取得以保留。`claude-code` provider 不帶 `run_tool`，僅收到工具名稱與完整 `find_tools` schema，取得 schema 後直接以名稱呼叫。執行前，工具執行器會檢查 denied path、敏感路徑、命令政策、確認需求、參數驗證、`run_command` 的 shell AST validation 及作業系統沙箱。指令一律在禁網下執行，需要連線的呼叫帶 `network: true`，帶了就跳確認且不比對唯讀白名單；`sudo` 一律拒絕，`rm` 改為移至垃圾桶。工具確認依序判斷：讀取敏感路徑一律確認、本輪全部允許則略過、破壞性 mode 一律確認、`open_file` 開 URL 一律確認、唯讀工具與唯讀指令略過，最後比對使用者的 allow-list（全域 `~/.config/agenvoy/allow_tool` 與專案 `<workDir>/.agenvoy/allow_list`，條目可寫 `name` 或 `name(argGlob)`）。一般工具確認會詢問是否允許該次工具呼叫；受限路徑與套件管理操作在支援的頻道還需要系統驗證。命中 denied path 或使用者設定的 denied command 會直接拒絕；不在 denied command 清單不代表失敗，但仍可能進入一般確認流程。
+內建工具、script／extension 工具及外部 MCP 工具都進入同一份註冊表。所有工具依名稱排序；tool payload 只帶 `find_tools`、`run_tool`、`reasoning_guide` 的完整 schema，其餘工具以名稱列在每輪注入的 TurnContext，schema 由 `find_tools(mode=search)` 以工具回傳內容交付、不寫回 tool payload，呼叫則經 `run_tool(name, args)`，因此整個 session 的工具序列化結果逐位元組不變，prompt 快取得以保留。`claude-code` provider 不帶 `run_tool`，僅收到工具名稱與完整 `find_tools` schema，取得 schema 後直接以名稱呼叫。執行前，工具執行器會檢查 denied path、敏感路徑、命令政策、確認需求、參數驗證、`run_command` 的 shell AST validation 及作業系統沙箱。指令一律在禁網下執行，需要連線的呼叫帶 `network: true`，帶了就跳確認且不比對唯讀白名單；argv `['sudo', ...]` 與 `sandbox: false` 經系統密碼確認後在沙箱外執行，`rm` 改為移至垃圾桶。工具確認依序判斷：讀取敏感路徑一律確認、本輪全部允許則略過、破壞性 mode 一律確認、`open_file` 開 URL 一律確認、唯讀工具與唯讀指令略過，最後比對使用者的 allow-list（全域 `~/.config/agenvoy/allow_tool` 與專案 `<workDir>/.agenvoy/allow_list`，條目可寫 `name` 或 `name(argGlob)`）。一般工具確認會詢問是否允許該次工具呼叫；受限路徑、`sudo` 指令與 `sandbox: false` 指令在支援的頻道還需要系統驗證，任何權限模式都一樣。命中 denied path 或使用者設定的 denied command 會直接拒絕；不在 denied command 清單不代表失敗，但仍可能進入一般確認流程。
 
-檔案工具透過共用的邊界檢查解析路徑。`find_files` 支援列出目錄、檔名 glob 與 regex 內容搜尋。glob 結果依修改時間由新到舊排列。search 採分頁：`output=files` 回傳每個符合的路徑、命中次數與前 5 個命中行號，查詢夠精準時可直接接 `read_files`；`output=content` 回傳符合的行，可加 `context` 前後文；`multiline` 讓 regex 對整份檔案比對，`.` 可跨行，`^` 與 `$` 仍為行錨點。序列化結果上限為 128 KiB。`read_files` 批次處理文字與支援的文件、圖片、音訊／影片格式，文字預設每次讀 2048 行。純文字檔可用 `around` 讀取指定行號前後各 `context` 行（預設 20），重疊的窗口會合併，略過的內容以一行 `...` 標示；同一路徑可在一次呼叫中出現多次，結果依序串接。`edit_file` 提供 write、patch、remove、restore 四種模式。寫入或修改既有檔案時，`read_files` 必須已在同一次執行中記錄過它的修改時間，且磁碟上的修改時間之後未變；寫入成功會更新這個記錄，因此連續 patch 不需重讀。patch 的 anchor 無法精確比對時，會把彎引號視為直引號再比對一次，替換內容也會沿用檔案原本的彎引號樣式。檔案變更在可用時記錄於 SQLite 歷史；歷史記錄失敗不會撤銷已完成的寫入，並會回報給呼叫端。長篇成果（Markdown 或 HTML）經 `write_result` 寫入設定的輸出資料夾；HTML 寫入前會先驗證 QuickUI 掛載、inline script 語法與模板綁定，不符即不寫入並回傳問題清單（`output_dir`；預設 `~/Downloads`，不存在時為 `~/.config/agenvoy/download`），不寫入工作目錄，其他替使用者產生的檔案在請求沒指定位置時也放在這裡。`run_command` 會等待程序結束，因此會啟動 file watcher 的命令（`--watch`、`chokidar`，或會啟動 watcher 的 package script，含經 `sh -c` 與 `package.json` 展開者）在執行前即拒絕。缺少即時資料工具時，Agent 可依 Tool Generate 流程建立、測試並保留新工具。Web Search 與檔案搜尋可直接提供即時或本機資料；RAG 沒有內建工具，需由外部 MCP server 提供。
+檔案工具透過共用的邊界檢查解析路徑。`find_files` 支援列出目錄、檔名 glob 與 regex 內容搜尋。glob 結果依修改時間由新到舊排列。search 採分頁：`output=files` 回傳每個符合的路徑、命中次數與前 5 個命中行號，查詢夠精準時可直接接 `read_files`；`output=content` 回傳符合的行，可加 `context` 前後文；`multiline` 讓 regex 對整份檔案比對，`.` 可跨行，`^` 與 `$` 仍為行錨點。序列化結果上限為 128 KiB。`read_files` 批次處理文字與支援的文件、圖片、音訊／影片格式，文字預設每次讀 2048 行。純文字檔可用 `around` 讀取指定行號前後各 `context` 行（預設 20），重疊的窗口會合併，略過的內容以一行 `...` 標示；同一路徑可在一次呼叫中出現多次，結果依序串接。`edit_file` 提供 write、patch、remove、restore 四種模式。寫入或修改既有檔案時，`read_files` 必須已在同一次執行中記錄過它的修改時間，且磁碟上的修改時間之後未變；寫入成功會更新這個記錄，因此連續 patch 不需重讀。patch 的 anchor 無法精確比對時，會把彎引號視為直引號再比對一次，替換內容也會沿用檔案原本的彎引號樣式。檔案變更在可用時記錄於 SQLite 歷史；歷史記錄失敗不會撤銷已完成的寫入，並會回報給呼叫端。長篇成果（Markdown 或 HTML）經 `write_result` 寫入設定的輸出資料夾；HTML 寫入前會先驗證 QuickUI 掛載、inline script 語法與模板綁定，不符即不寫入並回傳問題清單（`output_dir`；預設 `~/Downloads`，不存在時為 `~/.config/agenvoy/download`），不寫入工作目錄，其他替使用者產生的檔案在請求沒指定位置時也放在這裡。`run_command` 會等待程序結束，因此會啟動 file watcher 的命令（`--watch`、`chokidar`，或會啟動 watcher 的 package script，含經 `sh -c` 與 `package.json` 展開者）在執行前即拒絕；這類命令與長時間工作改由 `background_command` 執行，它立即回傳 task id，結束時帶著輸出接續任務。它一律監看輸出：輸出行命中錯誤關鍵字（`keywords`，內建預設清單）時，會在指令繼續執行的同時帶著最新輸出接續任務；有 decision model 時，誤判與重複上次回報的會先被濾掉。執行期間的輸出寫在 `sessions/<id>/background/<task>.log`，指令結束後刪除。耗時的 subagent 以同樣方式走 `background_subagents`；兩個工具只提供給 TUI 請求。有 decision model 時，`search_web` 剔除與請求無關的結果，`fetch_page` 在存快取前去除頁面雜訊，與請求無關的頁面不交給模型。缺少即時資料工具時，Agent 先以 `public_api_list` 找免金鑰的公開 API 並用 `http_request` 呼叫；只有找不到合適的 API，或使用者提供的 API 需要金鑰時，才建立、測試並保留 script 工具。Web Search 與檔案搜尋可直接提供即時或本機資料；RAG 沒有內建工具，需由外部 MCP server 提供。
 
 ```mermaid
 graph TB
     Builtins[內建工具] --> Registry[工具註冊表]
-    Local[API／Script／Extension 工具] --> Registry
+    Local[Script／Extension 工具] --> Registry
     Remote[MCP 工具] --> Registry
     Registry --> Discover[find_tools 以工具回傳交付 schema]
     Discover --> Execute[工具執行器]
@@ -171,7 +172,7 @@ graph TB
 
 Dashboard 的 System 分頁會比對目前版本與 GitHub 最新 release，並可開啟終端機執行 `agen update`（macOS 為 Terminal.app，WSL 經 `cmd.exe` 進入 distro，Linux 為終端機模擬器）。Telegram 與 Discord 由本機 daemon 主動連線，因此不需開放入站連接埠或公開主機；設定只需要對應 bot token。兩個頻道都支援附件保存與選擇性 STT 轉錄、依來源配對的確認、格式化回覆及音訊檔傳送。自 **v0.34.4** 起，暫停「收到語音輸入後自動產生並回傳語音輸出」的預設流程；本機仍可使用 STT／TTS 生成音訊並將檔案傳送到頻道。
 
-外部 MCP server 可經 stdio 或 streamable HTTP 連接；工具清單變更時會重新註冊工具，server instructions 會加入 Agent system prompt。HTTP MCP server 可走 OAuth，token 與 client id 會存於 keychain。Agenvoy 本身也能以 stdin JSON-RPC MCP server 服務 Claude Code、Codex、OpenCode 與其他 MCP Client；它不共用 Agent 的工具註冊表，也不執行 Agent，只提供 `script_*`、`api_*`、`ext_*` 工具，加上 `tool_generate_guide`、`list_tools`、`edit_tool`、`test_tool` 與 `store_secret`，讓 client 能查找、建立並呼叫生成的工具。
+外部 MCP server 可經 stdio 或 streamable HTTP 連接；工具清單變更時會重新註冊工具，server instructions 會加入 Agent system prompt。HTTP MCP server 可走 OAuth，token 與 client id 會存於 keychain。Agenvoy 本身也能以 stdin JSON-RPC MCP server 服務 Claude Code、Codex、OpenCode 與其他 MCP Client；它不共用 Agent 的工具註冊表，也不執行 Agent，只提供 `script_*`、`ext_*` 工具，加上 `tool_generate_guide`、`public_api_list`、`list_tools`、`edit_tool`、`test_tool` 與 `store_secret`，讓 client 能找公開 API，或建立並呼叫生成的工具。
 
 ```mermaid
 graph TB
@@ -187,7 +188,7 @@ graph TB
     MCPClient --> RemoteTools[MCP 工具註冊]
     MCPClient --> OAuth[OAuth／Keychain]
     External[外部 MCP Client] --> LocalMCP[stdin JSON-RPC MCP Server]
-    LocalMCP --> ToolBox[script_／api_／ext_ 工具與工具建立]
+    LocalMCP --> ToolBox[script_／ext_ 工具與工具建立]
 ```
 
 ## 資料流
@@ -222,7 +223,7 @@ sequenceDiagram
 - Daemon 只監聽 `127.0.0.1` 與 `[::1]`；管理類 endpoint 另有 `localhostOnly()` 守衛。
 - denied path 與 denied command 會直接拒絕；敏感路徑、檔案工具在 `$HOME` 外的讀取與寫入（`read_files`、`find_files`、`file_history`、`edit_file`、`open_file`）及其他受限操作則要求明確確認，支援時再要求系統驗證；核准範圍限於該 session 與所請求的路徑或執行檔。
 - 透過 `edit_file` 寫入或修改既有檔案前，必須在同一次執行中成功以 `read_files` 讀過該檔，且之後修改時間未變，否則拒絕；新檔案不需事先讀取。這項新鮮度檢查是路徑邊界與權限檢查的補充，不取代它們。
-- 命令執行受 shell AST validation 及 OS 沙箱限制（macOS 的 `sandbox-exec`、Linux 的 `bwrap`），且預設禁網；該次呼叫帶 `network: true` 才開放，且要求確認。`run_command` 內一律拒絕 `sudo`；需要寫入 `$HOME` 以外的命令，要在該次呼叫以 `write_paths` 宣告路徑，並由使用者輸入系統密碼核准。
+- 命令執行受 shell AST validation 及 OS 沙箱限制（macOS 的 `sandbox-exec`、Linux 的 `bwrap`），且預設禁網；該次呼叫帶 `network: true` 才開放，且要求確認。需要寫入 `$HOME` 以外的命令，要在該次呼叫以 `write_paths` 宣告路徑；需要 root 的命令以 argv `['sudo', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），以 `sudo -n` 在沙箱外執行；兩者都由使用者輸入系統密碼核准。被沙箱擋住且找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。script 工具的沙箱保持網路開啟，只能寫入 `$HOME`。
 - 憑證與 provider、MCP 的 OAuth token 存在作業系統 keychain（macOS Keychain、Linux `secret-tool`），不寫入 repository；`secret-tool` 失敗時改存 `~/.config/agenvoy/.secrets`（權限 0600）；都查無時最後才讀同名環境變數。
 
 ## 持久化結構

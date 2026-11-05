@@ -124,7 +124,7 @@ func formatToolArgs(workDir, toolName, toolArgs string) (string, bool, error) {
 
 		return go_pkg_utils.AbsPath(workDir, path), true, nil
 
-	case "run_command", "run_command_background":
+	case "run_command", "background_command":
 		var e struct {
 			Argv []string `json:"argv"`
 		}

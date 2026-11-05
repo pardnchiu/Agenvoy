@@ -1,15 +1,14 @@
-### Choose the right type
+### Decide the path
 
-| | Script tool | API tool |
-|---|---|---|
-| When | Multi-step logic, computation on response, non-HTTP, complex auth | Single REST endpoint, no computation, straight request→response |
-| Files | tool.json + script.py | single <name>.json |
-| Directory | ~/.config/agenvoy/tools/script/<name>/ | ~/.config/agenvoy/tools/api/ |
-| Registered as | script_<name> | api_<name> |
-| edit_tool(mode=write) tags | tag="json" + tag="script" | tag="api" |
+1. **Find an API** — `public_api_list()` → pick ≤3 relevant categories → `public_api_list(category)` each. Every listed API is keyless; prefer `https="Yes"`.
+2. **A fitting API exists** — `fetch_page` the candidate's `url` for base URL, endpoint, params and response shape → `http_request` (as many calls as the answer needs) → answer. No tool is built; the same flow repeats next time.
+3. **Build a script tool** only outside the public list, when either holds:
+   - the user supplies an API that needs a key: a key passed through `http_request` headers lands in the conversation and history, `get_key()` inside the sandbox does not;
+   - Python (stdlib, a public data file, a library) can produce the answer.
+4. **Nothing fits** — no API and no Python route → `search_web` / `fetch_page`, and say where the data came from.
 
 ### Naming
-snake_case, no prefix (runtime adds `script_` or `api_` automatically).
+snake_case, no prefix (runtime adds `script_` automatically).
 Verb + noun pattern: calculate_rsi, fetch_weather, deduplicate_csv.
 Avoid generic verbs: process_*, handle_*, manage_*, execute_*, perform_*, dispatch_*, do_*, run_* (unless the verb IS the literal action, e.g. run_command).
 If a same-domain tool already exists, match its verb and suffix shape — don't mix analyze_* into a fetch_* cluster, don't invent a new suffix vocabulary for the same concept (read_error / remember_error / search_error_memory would be three shapes for one idea — pick one).
@@ -39,7 +38,7 @@ Examples: POLYGON_API_KEY, OPENAI_API_KEY, ALPHAVANTAGE_API_KEY.
 
 Lookup order, same for every tool: OS keychain (service `agenvoy`, account = key name) first, then `~/.config/agenvoy/.secrets` on Linux, then the environment variable of the same name. Nothing injects the key into the script's environment, so a script tool reads it itself.
 
-**Script tools** — read the keychain in-process:
+Read the keychain in-process:
 
 ```python
 def get_key(name):
@@ -66,8 +65,6 @@ def get_key(name):
 ```
 
 A key that is not there → `store_secret`, then call the tool again.
-
-**API tools** — set `auth.env` to the keychain key name. Runtime resolves automatically. If not yet stored, call `store_secret`.
 
 ---
 
@@ -157,118 +154,29 @@ if __name__ == "__main__":
 5. All error paths write stderr + exit non-zero
 6. Every required parameter has a missing-value guard in the script
 7. Default values match between tool.json and script code
-8. No hardcoded secrets; all credentials via /v1/key endpoint
+8. No hardcoded secrets; all credentials via get_key()
 9. test_tool passed with exit 0 + valid JSON stdout
 
 ---
 
-### API tool
+### Execution flow (script tool)
 
-#### How it runs
-- File: <name>.json (single file, no script)
-- Invocation: runtime reads the JSON definition, builds and executes the HTTP request
-- Input: parameters from the LLM tool call, matched against parameter schema
-- Output: raw HTTP response body returned as tool result
-- Timeout: 60s default; per-tool override via endpoint.timeout (seconds)
-- Auth: runtime resolves `auth.env` through the keychain, then the environment variable of that name
+1. `edit_tool(mode=write, name, tag="json", content)` = full tool.json
+2. `edit_tool(mode=write, name, tag="script", content)` = full script.py
+3. `test_tool(name, input)` with a JSON string matching the tool's parameters
+4. On failure: `edit_tool(mode=patch, name, tag, old_string, new_string)` → re-test (max 3 retries)
+5. Call the new tool to answer the user's original request
 
-#### JSON format
-```json
-{
-  "name": "<tool_name>",
-  "description": "<3-line What/When/Precondition per the Description section above>",
-  "always_allow": false,
-  "concurrent": false,
-  "endpoint": {
-    "url": "https://api.example.com/v1/{resource_id}",
-    "method": "GET|POST|PUT|PATCH|DELETE",
-    "content_type": "json",
-    "headers": {
-      "X-Custom-Header": "value"
-    },
-    "query": {
-      "static_param": "value"
-    },
-    "timeout": 15
-  },
-  "auth": {
-    "type": "bearer|apikey|basic",
-    "header": "Authorization",
-    "env": "SERVICE_API_KEY"
-  },
-  "parameters": {
-    "<param_name>": {
-      "type": "string|integer|number|boolean",
-      "description": "<How/When/Example per the Parameter description section above>",
-      "required": true,
-      "default": ""
-    }
-  }
-}
-```
-
-#### Field reference
-
-**endpoint:**
-- url: full URL; `{param}` placeholders for path parameters — runtime substitutes from parameters, remaining go to query (GET) or body (POST/PUT/PATCH/DELETE)
-- method: GET, POST, PUT, PATCH, or DELETE
-- content_type: "json" (default) or "form"
-- headers: static headers added to every request
-- query: static query parameters added to every GET request
-- timeout: seconds; omit for 60s default
-
-**auth** (omit block entirely for public APIs):
-- type: "bearer" (Authorization: Bearer), "apikey" (custom header), "basic" (Authorization: Basic)
-- header: header name; defaults to "Authorization" for bearer/basic, "X-API-Key" for apikey
-- env: keychain key name in SCREAMING_SNAKE_CASE
-
-**parameters:**
-- `{name}` in URL = path parameter; runtime substitutes and removes from query/body
-- Remaining: query string (GET) or JSON/form body (POST/PUT/PATCH/DELETE)
-- required: true = LLM must provide; false = uses default if omitted
-
-#### API tool checklist
-1. JSON is valid; name is snake_case without api_ prefix
-2. endpoint.url is a complete URL with correct {param} placeholders
-3. endpoint.method is one of GET/POST/PUT/PATCH/DELETE
-4. Every {param} in URL exists in parameters with required=true
-5. Auth block present only if API needs credentials; env key is SCREAMING_SNAKE_CASE
-6. No hardcoded secrets
-7. description is 60-200 chars, trigger-focused, no filler
+All steps are tool calls. Text output only at the final step. `name` without prefix (runtime adds it). A key the API needs: `get_key()` in the script, `store_secret` when it is missing.
 
 ---
-
-### Execution flow
-
-**Step 1 — Find a suitable API:**
-1. `api_public_api_list(type=category)` → pick ≤3 relevant categories → query each
-2. Auto-select best candidate: prefer `auth=""` (no key) + `https=Yes`
-3. `fetch_page` the candidate's `url` → extract base URL, endpoint, params, response format
-
-**Step 2 — Choose type and create:**
-
-*API tool* (single endpoint, no computation):
-4. `edit_tool(mode=write, name, tag="api", content)` = full <name>.json
-
-*Script tool* (multi-step, computation, complex logic):
-4a. `edit_tool(mode=write, name, tag="json", content)` = full tool.json
-4b. `edit_tool(mode=write, name, tag="script", content)` = full script.py
-
-**Step 3 — Test and fix (script tools only):**
-5. `test_tool(name, input)` with JSON string matching the tool's parameters
-6. If step 5 fails: `edit_tool(mode=patch, name, tag, old_string, new_string)` → re-test (max 3 retries)
-
-**Step 4 — Answer:**
-7. Call the new tool to answer the user's original request
-
-All steps are tool calls. Text output only at the final step. `name` without prefix (runtime adds it). Auth-required APIs: script tools use `get_key()`, API tools set `auth.env` + `store_secret` if key missing.
 
 ### When not to build
 
 One-off verification, testing or debugging — "測試 X 能不能用", "確認 Y 有沒有生效", probing an endpoint, a parameter or a flag — produces a finding for this turn, not a reusable capability. Write the script inline and run it with `run_command` (`python3 -c`, a heredoc, `curl`); report what came back. No `edit_tool`, no `test_tool`, no saved tool.
 
-The build flow above starts only when the user wants the data itself and will want it again.
+The build flow above starts only when Decide the path lands on step 3 and the user will want the data again.
 
 ---
 
-**Fallback:** on a data request, if `find_edit_tool(mode=search)` returns no match, or a tool call fails, treat as "no existing tool covers it" and enter this flow. Never say "tool not available" — build one and answer.
+**Fallback:** on a data request, if `find_tools(mode=search)` returns no match, or a tool call fails, treat it as "no existing tool covers it" and start from Decide the path. Never stop at "tool not available" — call the API, build a script tool, or fall back to search.

@@ -3,6 +3,7 @@ package subagent
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"strings"
@@ -28,16 +29,26 @@ var channLen = make(chan struct{}, min(configs.MAX_CONCURRENT_TOOLS, configs.MAX
 
 type backgroundKey struct{}
 
-func WithBackground(ctx context.Context, timeoutMin int) context.Context {
+type backgroundMeta struct {
+	timeoutMin int
+	log        io.Writer
+}
+
+func WithBackground(ctx context.Context, timeoutMin int, log io.Writer) context.Context {
 	if timeoutMin <= 0 || timeoutMin > configs.MAX_BACKGROUND_TIMEOUT_MIN {
 		timeoutMin = configs.MAX_BACKGROUND_TIMEOUT_MIN
 	}
-	return context.WithValue(ctx, backgroundKey{}, timeoutMin)
+	return context.WithValue(ctx, backgroundKey{}, backgroundMeta{timeoutMin: timeoutMin, log: log})
 }
 
 func backgroundTimeout(ctx context.Context) int {
-	v, _ := ctx.Value(backgroundKey{}).(int)
-	return v
+	v, _ := ctx.Value(backgroundKey{}).(backgroundMeta)
+	return v.timeoutMin
+}
+
+func backgroundLog(ctx context.Context) io.Writer {
+	v, _ := ctx.Value(backgroundKey{}).(backgroundMeta)
+	return v.log
 }
 
 func isBackground(ctx context.Context) bool {
@@ -96,6 +107,7 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 	// * collection-only, no nesting, no writes, no deliverable renderers
 	baseExclude := []string{
 		"subagents",
+		"background_subagents",
 		"edit_file",
 		"edit_tool",
 		"test_tool",
@@ -106,7 +118,6 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 		"open_file",
 		"schedules",
 		"store_secret",
-		"pkg_manage",
 	}
 	if topLevel {
 		baseExclude = []string{
@@ -115,8 +126,10 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 			"edit_skill",
 			"schedules",
 			"store_secret",
-			"pkg_manage",
 		}
+	}
+	if isBackground(ctx) {
+		baseExclude = append(baseExclude, "ask_user")
 	}
 	toolExclude := append(append(baseExclude, tools.TUIOnlyTools...), excludedTools...)
 
@@ -161,7 +174,11 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 	if isBackground(ctx) {
 		timeout = time.Duration(backgroundTimeout(ctx)) * time.Minute
 	}
-	subCtx, cancel := context.WithTimeout(agentstypes.WithDeliverTo(ctx, parentSessID), timeout)
+	runCtx := agentstypes.WithDeliverTo(ctx, parentSessID)
+	if isBackground(ctx) {
+		runCtx = agentstypes.WithNoPrompt(runCtx)
+	}
+	subCtx, cancel := context.WithTimeout(runCtx, timeout)
 	defer cancel()
 
 	parentEvents, ok := ctx.Value(exec.ParentEventsKey{}).(chan<- agentstypes.Event)
@@ -201,9 +218,11 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 		usage     go_llm_router.Usage
 		agentName = modelName
 	)
+	bgLog := backgroundLog(ctx)
 	for ev := range events {
 		pubsub.Pub(sessID, ev)
 		sendEvent(parentEvents, displayName, ev)
+		writeBackgroundLog(bgLog, ev)
 
 		switch ev.Type {
 		case agentstypes.EventAgentResult:

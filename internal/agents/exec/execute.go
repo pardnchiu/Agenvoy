@@ -18,7 +18,6 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
-	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	agentsexecallowskill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
@@ -317,8 +316,8 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	if !audiotool.TTSEnabled() {
 		data.ExcludeTools = append(data.ExcludeTools, "generate_audio")
 	}
-	if decision.Selected() == decision.Off {
-		data.ExcludeTools = append(data.ExcludeTools, "run_websocket", "run_command_background")
+	if !interactive.BackgroundAllowed(ctx) {
+		data.ExcludeTools = append(data.ExcludeTools, "background_command", "background_subagents")
 	}
 	if (cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "") &&
 		(cfg == nil || !cfg.DiscordEnabled || go_pkg_keychain.Get("DISCORD_TOKEN") == "") {

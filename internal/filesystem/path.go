@@ -28,10 +28,8 @@ var (
 	StoreTempDir            string
 	SessionsDir             string
 	ToolsDir                string
-	APIToolsDir             string
 	ScriptToolsDir          string
 	SystemToolsDir          string
-	ExtensionAPIToolsDir    string
 	ExtensionScriptToolsDir string
 	ScriptToolTrashDir      string
 	ErrorsDir               string
@@ -55,7 +53,6 @@ var (
 	VendorDir               string
 
 	WorkAgenvoyDir     string
-	WorkAPIToolsDir    string
 	WorkScriptToolsDir string
 	WorkSkillsDir      string
 )
@@ -88,10 +85,8 @@ func Init() error {
 		StoreTempDir = filepath.Join(StoreDir, "temp")
 		SessionsDir = filepath.Join(AgenvoyDir, "sessions")
 		ToolsDir = filepath.Join(AgenvoyDir, "tools")
-		APIToolsDir = filepath.Join(ToolsDir, "api")
 		ScriptToolsDir = filepath.Join(ToolsDir, "script")
 		SystemToolsDir = filepath.Join(ToolsDir, ".system")
-		ExtensionAPIToolsDir = filepath.Join(ToolsDir, ".extension", "api")
 		ExtensionScriptToolsDir = filepath.Join(ToolsDir, ".extension", "script")
 		ScriptToolTrashDir = filepath.Join(ScriptToolsDir, ".Trash")
 		ErrorsDir = filepath.Join(AgenvoyDir, "errors")
@@ -117,7 +112,6 @@ func Init() error {
 		VendorDir = filepath.Join(AgenvoyDir, "vendor")
 
 		WorkAgenvoyDir = filepath.Join(workDir, ".config", projectName)
-		WorkAPIToolsDir = filepath.Join(WorkAgenvoyDir, "tools", "api")
 		WorkScriptToolsDir = filepath.Join(WorkAgenvoyDir, "tools", "script")
 		WorkSkillsDir = filepath.Join(WorkAgenvoyDir, "skills")
 	})
@@ -127,7 +121,6 @@ func Init() error {
 		DownloadDir,
 		DownloadTrashDir,
 		SessionsTrashDir,
-		ExtensionAPIToolsDir,
 		ExtensionScriptToolsDir,
 	} {
 		if err = go_pkg_filesystem.CheckDir(dir, true); err != nil {
@@ -162,6 +155,14 @@ func SummaryCursorPath(sessionID string) string {
 
 func InputHistoryPath(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), ".cmd_history")
+}
+
+func BackgroundDir(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "background")
+}
+
+func BackgroundLogPath(sessionID, id string) string {
+	return filepath.Join(BackgroundDir(sessionID), id+".log")
 }
 
 func PendingDir(sessionID string) string {

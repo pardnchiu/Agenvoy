@@ -154,7 +154,7 @@ func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, 
 	if toolName == "http_request" && isGet(toolArgs) {
 		return false
 	}
-	if (toolName == "run_command" || toolName == "run_command_background") && isReadOnlyRunCommand(toolArgs) {
+	if (toolName == "run_command" || toolName == "background_command") && isReadOnlyRunCommand(toolArgs) {
 		return false
 	}
 	return !agentsexecallowtool.Match(exec.WorkDir, toolName, toolArgs)
@@ -479,7 +479,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)
 		unsandboxed := tools.RestrictedRunCommand(toolName, toolArg)
-		restrictedList := append(append(append([]string{}, restrictedPaths...), interactive.RestrictedPkgManage(toolName, toolArg)...), unsandboxed...)
+		restrictedList := append(append([]string{}, restrictedPaths...), unsandboxed...)
 		restricted := len(restrictedList) > 0
 
 		if (!allowAll || len(unsandboxed) > 0) && (restricted || toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll)) {
@@ -488,7 +488,10 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			verified := false
 			reason := ""
 			origin := originFor(ctx, sessionData.ID)
-			if runtime.HasListener(ctx, origin) {
+			if agenttypes.NoPromptFrom(ctx) {
+				proceed = false
+				reason = "a background subagent leg cannot ask the user for confirmation; return what you gathered and state that this call still needs the user's approval"
+			} else if runtime.HasListener(ctx, origin) {
 				askCtx, cancelAsk := context.WithCancel(ctx)
 				if agenttypes.OriginFrom(ctx) != foregroundOrigin {
 					askCtx, cancelAsk = context.WithTimeout(ctx, configs.CONFIRM_TIMEOUT)

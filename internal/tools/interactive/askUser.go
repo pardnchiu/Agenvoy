@@ -609,7 +609,8 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 	if len(meta.Questions) > 0 {
 		msg.WriteString("[Resumed Task — ask_user response received]\n\n")
 	} else if len(finished) > 0 {
-		msg.WriteString(backgroundResumeHeader(finished) + "\n\n")
+		msg.WriteString(backgroundResumeHeader(finished))
+		msg.WriteString("\n\n")
 	} else {
 		msg.WriteString("[Resumed Task — interrupted execution recovered]\n\n")
 	}
@@ -669,7 +670,8 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 	if askObjective != "" || len(meta.Completed) > 0 || len(meta.NextSteps) > 0 || len(meta.Answer) > 0 || len(meta.Questions) > 0 {
 		msg.WriteString("\n## Question\n")
 		if askObjective != "" {
-			msg.WriteString(askObjective + "\n")
+			msg.WriteString(askObjective)
+			msg.WriteString("\n")
 		}
 		if len(meta.Completed) > 0 {
 			msg.WriteString("\n### Completed\n")
@@ -705,7 +707,9 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 
 		sb.WriteString("[Resumed Task — ask_user response received]\n")
 		if askObjective != "" {
-			sb.WriteString("\n## Question\n" + askObjective + "\n")
+			sb.WriteString("\n## Question\n")
+			sb.WriteString(askObjective)
+			sb.WriteString("\n")
 		}
 		sb.WriteString(answered.String())
 	}
@@ -714,7 +718,8 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 		section := formatBackgroundSection(finished, running)
 		msg.WriteString(section)
 		if sb.Len() == 0 {
-			sb.WriteString(backgroundResumeHeader(finished) + "\n")
+			sb.WriteString(backgroundResumeHeader(finished))
+			sb.WriteString("\n")
 			sb.WriteString(section)
 		}
 	}

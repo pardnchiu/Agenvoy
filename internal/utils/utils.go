@@ -49,38 +49,38 @@ func CheckAgentEndpointAlive(ctx context.Context, agent agenttypes.Agent, timeou
 }
 
 var toolDisplayName = map[string]string{
-	"search_web":             "Search Web",
-	"find_tools":             "Tools",
-	"find_files":             "Find",
-	"list_chatbot":           "List Chat",
-	"read_files":             "Read",
-	"edit_file":              "Edit",
-	"fetch_page":             "Fetch",
-	"run_command":            "Run",
-	"run_command_background": "Background",
-	"run_skill":              "Skill",
-	"calculate":              "Calc",
-	"download_file":          "Download",
-	"write_todo":             "Plan",
-	"subagents":              "Subagent",
-	"chat_history":           "Chat",
-	"file_history":           "History",
-	"error_history":          "Error",
-	"send_to_chatbot":        "Send",
-	"http_request":           "Request",
-	"schedules":              "Schedule",
-	"reasoning_guide":        "Guide",
-	"write_result":           "Write",
+	"search_web":           "Search Web",
+	"find_tools":           "Tools",
+	"find_files":           "Find",
+	"list_chatbot":         "List Chat",
+	"read_files":           "Read",
+	"edit_file":            "Edit",
+	"fetch_page":           "Fetch",
+	"run_command":          "Run",
+	"background_command":   "Background",
+	"run_skill":            "Skill",
+	"calculate":            "Calc",
+	"download_file":        "Download",
+	"write_todo":           "Plan",
+	"subagents":            "Subagent",
+	"background_subagents": "Background Subagent",
+	"chat_history":         "Chat",
+	"file_history":         "History",
+	"error_history":        "Error",
+	"send_to_chatbot":      "Send",
+	"http_request":         "Request",
+	"schedules":            "Schedule",
+	"reasoning_guide":      "Guide",
+	"write_result":         "Write",
 }
 
 func IsPlugTool(name string) bool {
 	return strings.HasPrefix(name, "script_") ||
-		strings.HasPrefix(name, "api_") ||
 		strings.HasPrefix(name, "ext_")
 }
 
 func PlugToolBaseName(name string) string {
-	for _, prefix := range []string{"script_", "api_", "ext_"} {
+	for _, prefix := range []string{"script_", "ext_"} {
 		if base, ok := strings.CutPrefix(name, prefix); ok {
 			return base
 		}
@@ -114,8 +114,6 @@ func ToolName(name string) string {
 		switch {
 		case strings.HasPrefix(name, "script_"):
 			tag = "Script"
-		case strings.HasPrefix(name, "api_"):
-			tag = "API"
 		case strings.HasPrefix(name, "ext_"):
 			tag = "Extension"
 		}
@@ -176,7 +174,7 @@ func formatToolArgs(name, raw, cwd string, fullPath bool) string {
 		return PlugToolBaseName(name) + " " + raw
 	}
 	switch name {
-	case "subagents":
+	case "subagents", "background_subagents":
 		label := pick("name", "session_id")
 		if label == "" {
 			label = "subagent"
@@ -339,7 +337,7 @@ func formatToolArgs(name, raw, cwd string, fullPath bool) string {
 		}
 		return filepath.Join(filesystem.OutputDir(), "report-*."+format)
 
-	case "run_command", "run_command_background":
+	case "run_command", "background_command":
 		var p struct {
 			Argv []string `json:"argv"`
 		}

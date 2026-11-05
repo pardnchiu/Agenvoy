@@ -306,7 +306,7 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					t.running = false
 					return t, notice(msgWarn("empty command after !") + "\n")
 				}
-				go runShell(command, t.cwd)
+				go runShell(command, t.cwd, "")
 				return t, tea.Batch(tea.Println(messageBlock(raw)+"\n"), t.spinner.Tick)
 			}
 
@@ -334,6 +334,12 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case shellDone:
 		return t.handleShellDone(msg)
+
+	case shellPassword:
+		return t.openShellPassword(msg)
+
+	case shellSudo:
+		return t.startShellSudo(msg)
 
 	case agentExecDone:
 		t.running = false
@@ -1058,7 +1064,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return t, notice(msgError(fmt.Sprintf("restricted path: %v", msg.err)) + "\n")
 		}
-		return t, notice(msgWarn("⚠ restricted path approved") + "\n")
+		slog.Debug("restricted path approved")
+		return t, nil
 
 	case LogDone:
 		if msg.err != nil {

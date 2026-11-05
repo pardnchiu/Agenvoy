@@ -25,7 +25,7 @@ var packageRunners = map[string]bool{
 }
 
 func watchCommandErr(command string) error {
-	return utilsmsg.New(utilsmsg.Invalid, "run_command", "%q starts a file watcher that never exits; a foreground call would hang until the %s timeout. Re-run it with run_command_background and timeout_min set to how long it should watch, or run a one-shot build instead (the same tool without --watch, or the package script that builds once)", command, configs.RUN_COMMAND_TIMEOUT)
+	return utilsmsg.New(utilsmsg.Invalid, "run_command", "%q starts a file watcher that never exits; a foreground call would hang until the %s timeout. Re-run it with background_command and timeout_min set to how long it should watch, or run a one-shot build instead (the same tool without --watch, or the package script that builds once)", command, configs.RUN_COMMAND_TIMEOUT)
 }
 
 func isWatchFlag(arg string) bool {

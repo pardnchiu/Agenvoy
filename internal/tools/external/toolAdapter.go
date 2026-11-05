@@ -13,14 +13,15 @@ import (
 
 func Register() {
 	searchWeb.Register()
+	registPublicAPIList()
 	toolregister.Regist(toolregister.Def{
 		Name:        "http_request",
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  true,
 		Description: `Sends one HTTP request to any URL and returns status, headers and body — GET through DELETE, multipart upload included.
-Use for 打 API / 呼叫端點 / POST 一份資料, when no api_* tool covers that endpoint — what an endpoint accepts, returns or rejects is settled here, not by reading a project's source or SDK.
-HTML meant to be read → fetch_page; a binary file → download_file; an endpoint you will call again → build an api_* tool with edit_tool.`,
+Use for 打 API / 呼叫端點 / POST 一份資料, including a public API found via public_api_list — what an endpoint accepts, returns or rejects is settled here, not by reading a project's source or SDK.
+HTML meant to be read → fetch_page; a binary file → download_file; a user-supplied API needing a key → script_* tool via reasoning_guide(tool_generate).`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

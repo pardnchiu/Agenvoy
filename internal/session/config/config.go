@@ -13,27 +13,26 @@ import (
 )
 
 type Config struct {
-	DispatcherModel    string            `json:"dispatcher_model"`
-	DispatcherDecision bool              `json:"dispatcher_beta"`
-	SummaryModel       string            `json:"summary_model"`
-	Models             []ModelEntry      `json:"models"`
-	Compats            []CompatEntry     `json:"compats"`
-	Keys               []string          `json:"keys"`
-	DiscordEnabled     bool              `json:"discord_enabled"`
-	DiscordUsername    string            `json:"discord_username"`
-	TelegramEnabled    bool              `json:"telegram_enabled"`
-	TelegramUsername   string            `json:"telegram_username"`
-	LineEnabled        bool              `json:"line_enabled"`
-	LineUsername       string            `json:"line_username"`
-	ImageGenerator     string            `json:"image_generator"`
-	DecisionModel      string            `json:"decision_model"`
-	STTModel           string            `json:"stt_model"`
-	TTSModel           string            `json:"tts_model"`
-	AdminChannel       string            `json:"admin_channel"`
-	OutputDir          string            `json:"output_dir"`
-	OfficialGuideOff   bool              `json:"official_guide_disabled"`
-	SkillSourceOff     []string          `json:"skill_source_disabled"`
-	ModelTag           map[string]string `json:"model_tag"`
+	DispatcherModel  string            `json:"dispatcher_model"`
+	SummaryModel     string            `json:"summary_model"`
+	Models           []ModelEntry      `json:"models"`
+	Compats          []CompatEntry     `json:"compats"`
+	Keys             []string          `json:"keys"`
+	DiscordEnabled   bool              `json:"discord_enabled"`
+	DiscordUsername  string            `json:"discord_username"`
+	TelegramEnabled  bool              `json:"telegram_enabled"`
+	TelegramUsername string            `json:"telegram_username"`
+	LineEnabled      bool              `json:"line_enabled"`
+	LineUsername     string            `json:"line_username"`
+	ImageGenerator   string            `json:"image_generator"`
+	DecisionModel    string            `json:"decision_model"`
+	STTModel         string            `json:"stt_model"`
+	TTSModel         string            `json:"tts_model"`
+	AdminChannel     string            `json:"admin_channel"`
+	OutputDir        string            `json:"output_dir"`
+	OfficialGuideOff bool              `json:"official_guide_disabled"`
+	SkillSourceOff   []string          `json:"skill_source_disabled"`
+	ModelTag         map[string]string `json:"model_tag"`
 }
 
 const TypesafeKey = "TYPESAFE_API_KEY"

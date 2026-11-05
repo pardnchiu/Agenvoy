@@ -127,23 +127,15 @@ Every path in `files` must exist in the staging subdirectory; any missing file �
 
 ### 3. Install system dependencies
 
-For each `<dep>` in `manifest.dependence`, call:
+For each `<dep>` in `manifest.dependence`:
 
-```
-pkg_manage(action="install", package="<dep>")
-```
+1. `run_command(["sh","-c","command -v <dep>"])` prints a path → already installed, this dep is satisfied.
+2. Otherwise install it with `run_command`:
+   - Linux → find the manager with `run_command(["sh","-c","command -v apt-get dnf yum pacman apk"])` (first found), then `["sudo","apt-get","install","-y","<dep>"]` / `["sudo","dnf","install","-y","<dep>"]` / `["sudo","yum","install","-y","<dep>"]` / `["sudo","pacman","-S","--noconfirm","<dep>"]` / `["sudo","apk","add","<dep>"]`
+   - macOS → `run_command(["brew","install","<dep>"], sandbox=false)`; never sudo with brew
+3. Re-run `command -v <dep>`; still missing or the install exited non-zero → **abort immediately** and `rm -rf .staging`.
 
-The tool internally:
-- `exec.LookPath(<dep>)` already present → returns `already_installed:true`, this step is satisfied
-- Linux only — probes `apt/apt-get/dnf/yum/pacman/apk` (first found) and runs `sudo -n <pm> install -y <dep>`; the sudo ticket comes from the password collected during confirmation
-- macOS → the tool is not registered; use `run_command(["brew","install","<dep>"], write_paths=["/opt/homebrew"])`
-- After install, `LookPath` re-checks
-
-Response is JSON `{"ok": true/false, ...}`. `ok:false` or tool error → **abort immediately** and `rm -rf .staging`.
-
-Each call triggers a `KindToolConfirm` popup (`AlwaysAllow=false`); the user sees "About to run `sudo apt install -y ffmpeg` — confirm?". User decline → tool fails → skill aborts.
-
-> Note: `pkg_manage` is Linux-only (not registered on macOS) and available on every channel. Root actions go through the same system-password confirmation `run_command` uses for `write_paths`, so no terminal is needed.
+Each install call asks for the system password in the confirmation (sudo, or `sandbox=false` for brew). User decline → the call fails → skill aborts.
 
 ### 4. Check and fill keychain keys
 

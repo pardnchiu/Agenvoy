@@ -54,6 +54,17 @@ func DeliverToFrom(ctx context.Context) string {
 	return sid
 }
 
+type noPromptCtxKey struct{}
+
+func WithNoPrompt(ctx context.Context) context.Context {
+	return context.WithValue(ctx, noPromptCtxKey{}, true)
+}
+
+func NoPromptFrom(ctx context.Context) bool {
+	v, _ := ctx.Value(noPromptCtxKey{}).(bool)
+	return v
+}
+
 type ModelSet struct {
 	Registry map[string]Agent
 	Order    []ModelEntry

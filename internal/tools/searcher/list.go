@@ -13,7 +13,6 @@ import (
 func isMCPExposed(name string) bool {
 	switch {
 	case strings.HasPrefix(name, "script_"),
-		strings.HasPrefix(name, "api_"),
 		strings.HasPrefix(name, "ext_"):
 		return true
 	}

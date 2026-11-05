@@ -33,7 +33,7 @@ Each tool's own description carries the rest — snake_case aliases (`read_file`
 
 Two further rules:
 
-- A `script_*`, `api_*` or `ext_*` tool covering the same capability wins over the built-in equivalent
+- A `script_*` or `ext_*` tool covering the same capability wins over the built-in equivalent
 - A named tool matching nothing above → `find_tools(mode=search)` before improvising
 
 Parameters come from the tool's schema, never from a step's guess at them. A tool whose schema is not loaded → `find_tools(mode=search)` first.

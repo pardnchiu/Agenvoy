@@ -34,7 +34,7 @@ func registRunCommand() {
 		Concurrent:  false,
 		Description: fmt.Sprintf(`Runs one binary in the work directory and returns its combined stdout/stderr once it exits. Networking is off unless network: true, which always asks: git clone / fetch / pull / push, package installs, go mod download, curl and wget fail to resolve a host without it.
 Use for 跑一下 / 執行 / build / test / lint / format and local git work.
-A watcher (--watch, chokidar, npm run sass/build/dev), a job likely over %d minutes or 背景跑 / 跑完告訴我 → run_command_background; cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file; a live WebSocket feed → run_websocket.
+A watcher (--watch, chokidar, npm run sass/build/dev), a job likely over %d minutes or 背景跑 / 跑完告訴我 → background_command; cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file.
 Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else asks, so never chain one behind && with a command that writes.`, configs.BACKGROUND_THRESHOLD_MIN, systemPackageRoute()),
 		Parameters: map[string]any{
 			"type":       "object",
@@ -76,12 +76,12 @@ func commandProperties() map[string]any {
 		},
 		"write_paths": map[string]any{
 			"type":        "array",
-			"description": "Absolute paths outside $HOME this command has to write to — ['/usr/local'] for a system install. The sandbox only allows writes under $HOME, so a command touching anything else fails with a permission error that looks like a file ownership problem and is not one. Each path needs the user's approval on this call. Paths under $HOME need not be listed.",
+			"description": "Absolute paths outside $HOME this command has to write to — ['/usr/local'] for a system install. The sandbox only allows writes under $HOME, so a command touching anything else fails with a permission error that looks like a file ownership problem and is not one. Each path needs the user's approval on this call. Paths under $HOME need not be listed. A path still denied after approval is root-owned: re-run with argv ['sudo', ...] instead.",
 			"items":       map[string]any{"type": "string"},
 		},
 		"sandbox": map[string]any{
 			"type":        "boolean",
-			"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt.",
+			"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt. Root privileges → argv ['sudo', '<binary>', ...] (no sudo flags), which asks the same password and runs it outside the sandbox. Homebrew (brew install / upgrade / uninstall) runs its own sandbox, which cannot nest: pass false, never sudo.",
 			"default":     true,
 		},
 	}
@@ -92,7 +92,28 @@ func deniedCommandErr(binary string) error {
 }
 
 func sudoCommandErr() error {
-	return utilsmsg.New(utilsmsg.Denied, "sudo", "cannot elevate inside run_command: the sandbox blocks it. Re-run the command without sudo and declare write_paths with the absolute paths outside $HOME it writes to; that raises the sudo confirm, where the user approves them with the system password. For %s", systemPackageRoute())
+	return utilsmsg.New(utilsmsg.Denied, "sudo", "cannot elevate inside sh -c; call run_command with argv ['sudo', '<binary>', ...<args>] instead, which asks the user for the system password and runs outside the sandbox. For %s", systemPackageRoute())
+}
+
+func sudoArgv(argv []string) ([]string, error) {
+	if len(argv) < 2 {
+		return nil, utilsmsg.New(utilsmsg.Invalid, "sudo", "needs the command to elevate, e.g. ['sudo', 'rm', '/usr/local/bin/tool']")
+	}
+	target := argv[1]
+	if strings.HasPrefix(target, "-") {
+		return nil, utilsmsg.New(utilsmsg.Invalid, "sudo", "flags are not accepted (%q); pass ['sudo', '<binary>', ...<args>]", target)
+	}
+	binary := filepath.Base(target)
+	if binary != target {
+		return nil, utilsmsg.New(utilsmsg.Invalid, "sudo", "%q must be a bare command name (%q), not a path", target, binary)
+	}
+	if binary == "sudo" || binary == "su" {
+		return nil, utilsmsg.New(utilsmsg.Invalid, "sudo", "%s cannot be nested under sudo", binary)
+	}
+	if slices.Contains(filesystem.DeniedCommand, binary) {
+		return nil, deniedCommandErr(binary)
+	}
+	return append([]string{"sudo", "-n"}, argv[1:]...), nil
 }
 
 func openCommandErr() error {
@@ -100,7 +121,7 @@ func openCommandErr() error {
 }
 
 func systemPackageRoute() string {
-	return "installing or removing a system package → pkg_manage"
+	return "a system package → find the manager with command -v, then argv ['sudo', 'apt-get', 'install', '-y', '<pkg>'] (apt / dnf / yum / pacman / apk) or ['brew', 'install', '<pkg>'] with sandbox: false and no sudo on macOS"
 }
 
 func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, unsandboxed, background bool, timeoutMin int, watch *watchSpec) (string, error) {
@@ -133,7 +154,12 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 			return "", deniedCommandErr(binary)
 		}
 		if binary == "sudo" {
-			return "", sudoCommandErr()
+			elevated, err := sudoArgv(argv)
+			if err != nil {
+				return "", err
+			}
+			argv = elevated
+			unsandboxed = true
 		}
 		if binary == "open" && runtime.GOOS == "darwin" {
 			return "", openCommandErr()
@@ -186,7 +212,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 	err = go_pkg_sandbox.Run(cmd)
 	output := sink.text()
 	if err != nil {
-		return fmt.Sprintf("%s\nError: %s%s", output, err.Error(), sandboxWriteHint(output, binds)), nil
+		return fmt.Sprintf("%s\nError: %s%s", output, err.Error(), sandboxWriteHint(output, binds, unsandboxed)), nil
 	}
 
 	if strings.TrimSpace(output) == "" {
@@ -241,6 +267,10 @@ const sandboxWriteAdvice = `
 
 [agenvoy] the sandbox only allows writes under %s, which is why these read as unwritable: %s. They are writable outside the sandbox, so ownership is not the problem — do not run chown or chmod and do not ask the user to. Re-run this exact command with write_paths: [%s] and the user gets one prompt to approve those paths.`
 
+const sandboxEscalateAdvice = `
+
+[agenvoy] the sandbox blocked this command (a socket, device, system service or path outside its rules). Re-run this exact command now with sandbox: false; its confirmation asks the user for the system password, and that prompt is the permission request, so do not stop to ask in text first. A root-owned target needs argv ['sudo', ...] instead. Report only if the user declines.`
+
 var permissionMarkers = []string{
 	"not writable", "permission denied", "operation not permitted",
 	"read-only file system", "eacces",
@@ -248,7 +278,10 @@ var permissionMarkers = []string{
 
 var absPathPattern = regexp.MustCompile(`(^|[\s"'(])(/[A-Za-z0-9._@+\-/]{2,})`)
 
-func sandboxWriteHint(output string, bound []string) string {
+func sandboxWriteHint(output string, bound []string, unsandboxed bool) string {
+	if unsandboxed {
+		return ""
+	}
 	lower := strings.ToLower(output)
 	if !slices.ContainsFunc(permissionMarkers, func(m string) bool { return strings.Contains(lower, m) }) {
 		return ""
@@ -278,7 +311,7 @@ func sandboxWriteHint(output string, bound []string) string {
 
 	list = shortestRoots(list)
 	if len(list) == 0 {
-		return ""
+		return sandboxEscalateAdvice
 	}
 
 	quoted := make([]string, 0, len(list))
@@ -324,14 +357,20 @@ func shortestRoots(list []string) []string {
 }
 
 func RestrictedRunCommand(toolName, toolArgs string) []string {
-	if toolName != "run_command" && toolName != "run_command_background" {
+	if toolName != "run_command" && toolName != "background_command" {
 		return nil
 	}
 	var p struct {
 		Argv    []string `json:"argv"`
 		Sandbox *bool    `json:"sandbox"`
 	}
-	if json.Unmarshal([]byte(toolArgs), &p) != nil || p.Sandbox == nil || *p.Sandbox {
+	if json.Unmarshal([]byte(toolArgs), &p) != nil {
+		return nil
+	}
+	if len(p.Argv) > 0 && p.Argv[0] == "sudo" {
+		return []string{"sudo: " + strings.Join(p.Argv[1:], " ")}
+	}
+	if p.Sandbox == nil || *p.Sandbox {
 		return nil
 	}
 	return []string{"outside sandbox: " + strings.Join(p.Argv, " ")}

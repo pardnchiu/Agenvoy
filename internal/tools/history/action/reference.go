@@ -16,7 +16,6 @@ func isReference(name string) bool {
 		return true
 	}
 	return strings.HasPrefix(name, "mcp__") ||
-		strings.HasPrefix(name, "api_") ||
 		strings.HasPrefix(name, "script_") ||
 		strings.HasPrefix(name, "ext_")
 }

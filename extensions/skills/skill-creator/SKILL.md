@@ -96,7 +96,7 @@ skill-name/
 - **範例**：`scripts/rotate_pdf.py` 用於 PDF 旋轉任務
 - **優點**：Token 效率高、確定性強、可不載入 Context 直接執行
 - **注意**：腳本仍可能需要被 Agent 讀取以進行 Patch 或環境特定調整
-- **邊界**：這裡的腳本只服務這個 Skill 自己，用 `edit_skill(mode=write)` 寫進該 Skill 的 `scripts/`。**不要**用 `edit_tool` 產全域 `script_*`／`api_*` 工具 —— 那是 tool generate 的職責，兩者不混用：全域工具的 description 每個 session 每次請求都付 Token，而且刪掉 Skill 時不會一併清掉，會留成孤兒
+- **邊界**：這裡的腳本只服務這個 Skill 自己，用 `edit_skill(mode=write)` 寫進該 Skill 的 `scripts/`。**不要**用 `edit_tool` 產全域 `script_*` 工具 —— 那是 tool generate 的職責，兩者不混用：全域工具的 description 每個 session 每次請求都付 Token，而且刪掉 Skill 時不會一併清掉，會留成孤兒
 
 ##### References（`references/`）
 
@@ -363,7 +363,6 @@ python3 ~/.config/agenvoy/skills/.system/skill-creator/scripts/init_skill.py my-
 - **取值方式**：
   - Go 內部：`keychain.Get("<KEY_NAME>")`（只傳 key 名，無 `agenvoy.` 前綴）
   - Script tool：讀 OS keychain（service `agenvoy`）—— macOS `security find-generic-password -s agenvoy -a <KEY_NAME> -w`；Linux `secret-tool lookup service agenvoy account <KEY_NAME>`
-  - API tool（registry）：`auth.env: "<KEY_NAME>"`
 - **落地動作**：建立 Skill 時若需要新 key，呼叫 `store_secret({ key: "<KEY_NAME>", prompt: "..." })`；該 tool 內部走遮罩輸入 + `keychain.Set`，**Skill 全程不見明文**
 
 **禁止**：

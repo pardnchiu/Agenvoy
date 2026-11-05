@@ -80,8 +80,6 @@ func toolCategory(name string) string {
 	switch {
 	case strings.HasPrefix(name, "mcp__"):
 		return "mcp"
-	case strings.HasPrefix(name, "api_"):
-		return "api"
 	case strings.HasPrefix(name, "script_"):
 		return "script"
 	case strings.HasPrefix(name, "ext_"):

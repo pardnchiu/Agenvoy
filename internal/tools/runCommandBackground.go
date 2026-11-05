@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +14,7 @@ import (
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -31,25 +31,22 @@ func registRunCommandBackground() {
 			"maximum":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
 			"default":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
 		},
-		"interval": map[string]any{
-			"type":        "integer",
-			"description": fmt.Sprintf("Set together with prompt. Seconds between checks of the output printed since the previous check, at least %d; a check whose lines meet prompt resumes this task with them while the command keeps running. After a report, checks pause for %d seconds, and output that only repeats the reported situation is not reported again. Leave both out to hear back only when it exits.", configs.WATCH_MIN_INTERVAL_SEC, configs.WATCH_REPORT_COOLDOWN_SEC),
-			"minimum":     configs.WATCH_MIN_INTERVAL_SEC,
-		},
-		"prompt": map[string]any{
-			"type":        "string",
-			"description": "Set together with interval. Condition one output line must meet, checked by a small classifier that sees only this interval's lines and does no arithmetic. Write it as keyword present or value above / below a literal number. Do the math yourself before calling: turn a relative threshold into absolute bounds and list every bound joined with or. Examples: 'any line contains error or failed', 'loss above 2.5 or loss is NaN', 'eta above 600'.",
+		"keywords": map[string]any{
+			"type":        "array",
+			"items":       map[string]any{"type": "string"},
+			"description": "Case-insensitive words that flag a new output line as a possible problem; a flagged stretch resumes this task with the last output while the command keeps running. Replace the default only when the tool reports failures in other words, e.g. ['warn', 'denied'].",
+			"default":     configs.WATCH_KEYWORDS,
 		},
 	})
 
 	toolregister.Regist(toolregister.Def{
-		Name:        "run_command_background",
+		Name:        "background_command",
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
-		Description: fmt.Sprintf(`Starts one binary in the work directory and returns a task id at once; its output resumes this task when it exits, and with interval + prompt also each time new output meets prompt while it keeps running. Sandbox, network and confirmation rules match run_command.
+		Description: fmt.Sprintf(`Starts one binary in the work directory and returns a task id at once; its output resumes this task when it exits, and also whenever new output hits an error keyword while it keeps running, with the last output to explain. Sandbox, network and confirmation rules match run_command.
 Use for a watcher (--watch, chokidar, npm run sass/build/dev), which only runs here, for a job very likely over %d minutes whose output does not decide your next tool call (full build, large install or download, long data job), or when the user says 跑完告訴我 / 背景跑. Apart from a watcher, use it only for the gathering that opens a request, starting every background command in one go: the resumed task sees only the objective and that output, none of this turn's tool results.
-Anything shorter, or a test or build whose failures you fix next → run_command; a live WebSocket feed → run_websocket.`, configs.BACKGROUND_THRESHOLD_MIN),
+Anything shorter, or a test or build whose failures you fix next → run_command. 進行到哪了 / 跑到哪 on a running task → read_files the log path its start result gave, never guess from missing reports.`, configs.BACKGROUND_THRESHOLD_MIN),
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": properties,
@@ -58,26 +55,14 @@ Anything shorter, or a test or build whose failures you fix next → run_command
 		Handler: func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				commandParams
-				TimeoutMin int    `json:"timeout_min"`
-				Interval   int    `json:"interval"`
-				Prompt     string `json:"prompt"`
+				TimeoutMin int      `json:"timeout_min"`
+				Keywords   []string `json:"keywords"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			background := interactive.BackgroundAllowed(ctx)
-			var watch *watchSpec
-			if params.Interval != 0 || strings.TrimSpace(params.Prompt) != "" {
-				if !background {
-					return "", utilsmsg.New(utilsmsg.Invalid, "interval", "needs a session that can resume a background task; call run_command without interval and prompt")
-				}
-				spec, err := parseWatch(params.Interval, params.Prompt)
-				if err != nil {
-					return "", err
-				}
-				watch = &spec
-			}
-			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.unsandboxed(), background, params.TimeoutMin, watch)
+			watch := newWatch(params.Keywords)
+			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.unsandboxed(), true, params.TimeoutMin, &watch)
 		},
 	})
 }
@@ -87,7 +72,7 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 		timeoutMin = configs.MAX_BACKGROUND_TIMEOUT_MIN
 	}
 	description := go_pkg_utils.TruncateString(strings.Join(argv, " "), 48)
-	id, err := interactive.StartBackground(ctx, e.SessionID, e.PendingTask, e.WorkDir, "cmd", description, func(ctx context.Context, report func(string)) string {
+	id, err := interactive.StartBackground(ctx, e.SessionID, e.PendingTask, e.WorkDir, "cmd", description, func(ctx context.Context, report func(string), log io.Writer) string {
 		ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMin)*time.Minute)
 		defer cancel()
 
@@ -96,37 +81,26 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 			return "failed: " + utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox.Wrap", "", err).Error()
 		}
 		sink := &tailWriter{limit: configs.MAX_PENDING_RESULT_BYTES - tailHeadroom}
-		var out io.Writer = sink
-		var watchErr chan error
+		buf := newWatchBuffer(watch.keywords)
+		out := io.MultiWriter(sink, log, buf)
 		done := make(chan struct{})
-		if watch != nil {
-			buf := &watchBuffer{limit: configs.WATCH_BUFFER_MAX_BYTES}
-			out = io.MultiWriter(sink, buf)
-			watchErr = make(chan error, 1)
-			go func() {
-				_, tail, err := watchOutput(ctx, *watch, buf, done, report)
-				if err != nil {
-					report("interval checks stopped: " + err.Error() + "; the command keeps running. Output not yet checked, last " + strconv.Itoa(configs.WATCH_BUFFER_MAX_BYTES>>10) + " KiB:\n" + tail)
-				}
-				watchErr <- err
-			}()
-		}
+		watchDone := make(chan struct{})
+		go func() {
+			defer close(watchDone)
+			watchOutput(ctx, *watch, buf, done, report)
+		}()
 		cmd.Stdout = out
 		cmd.Stderr = out
 
 		err = go_pkg_sandbox.Run(cmd)
 		close(done)
+		<-watchDone
 		output := sink.text()
-		if watchErr != nil {
-			if err := <-watchErr; err != nil {
-				output = "[interval checks stopped: " + err.Error() + "]\n" + output
-			}
-		}
 		switch {
 		case ctx.Err() == context.DeadlineExceeded:
 			return fmt.Sprintf("failed: [Timeout] %s: exceeded %d minutes\n%s", argv[0], timeoutMin, output)
 		case err != nil:
-			return fmt.Sprintf("failed: %s\n%s%s", err.Error(), output, sandboxWriteHint(output, binds))
+			return fmt.Sprintf("failed: %s\n%s%s", err.Error(), output, sandboxWriteHint(output, binds, sandboxOpt.AllowAll))
 		case strings.TrimSpace(output) == "":
 			return "done: exit 0, printed nothing"
 		default:
@@ -136,11 +110,7 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 	if err != nil {
 		return "", err
 	}
-	text := fmt.Sprintf("background command %s started. Keep working on this turn; if it ends first, the task stays open and resumes with this command's output as soon as it finishes, without waiting for other background tasks.", id)
-	if watch != nil {
-		text += fmt.Sprintf(" Every %ds its new output is checked against prompt, and each check that meets it also resumes this task while the command keeps running.", int(watch.interval/time.Second))
-	}
-	return text, nil
+	return fmt.Sprintf("background command %s started. Keep working on this turn; if it ends first, the task stays open and resumes with this command's output as soon as it finishes, without waiting for other background tasks. Output lines that hit an error keyword also resume this task with the last output while the command keeps running. Live output is appended to %s until the command ends (then the file is removed): when asked how far it got, read its tail with read_files before answering.", id, filesystem.BackgroundLogPath(e.SessionID, id)), nil
 }
 
 const tailHeadroom = 1 << 10

@@ -9,7 +9,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-telegram/bot v1.20.0
-	github.com/line/line-bot-sdk-go/v8 v8.18.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/muesli/reflow v0.3.0
 	github.com/pardnchiu/go-bot v0.5.0
@@ -32,6 +31,7 @@ require (
 )
 
 require (
+	github.com/line/line-bot-sdk-go/v8 v8.18.0
 	github.com/tdewolff/parse/v2 v2.8.16
 	mvdan.cc/sh/v3 v3.13.1
 )
