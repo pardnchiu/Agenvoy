@@ -2,7 +2,7 @@
 
 The JSON below is the rolling summary of prior discussion in this session — your long-term memory anchor. It captures key decisions, past discussion topics with their direction, and the topic currently being discussed.
 
-**`key_decisions` is binding** — these are the **locked-in, concluded** outcomes from prior turns (what was finally agreed `要：` or finally rejected `不要：`). Treat them as authoritative session-level commitments: do not re-litigate, re-propose, or quietly contradict them in this turn unless the user explicitly reopens the decision. When relevant to the current task, **honor `key_decisions` first**, then layer in other context.
+**`key_decisions` is binding** — these are the **locked-in, concluded** outcomes from prior turns (each entry starts with an agreed marker such as `要：` / `Do:` or a rejected marker such as `不要：` / `Don't:`). Treat them as authoritative session-level commitments: do not re-litigate, re-propose, or quietly contradict them in this turn unless the user explicitly reopens the decision. When relevant to the current task, **honor `key_decisions` first**, then layer in other context.
 
 **When to surface this summary content (MUST include in reply):**
 

@@ -16,6 +16,7 @@ import (
 	oauthgrok "github.com/pardnchiu/go-llm-router/core/oauth/grok"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	"github.com/pardnchiu/agenvoy/internal/agents/probe"
@@ -36,6 +37,7 @@ type providerState struct {
 	LoggedIn bool     `json:"logged_in"`
 	Console  []string `json:"console"`
 	Hidden   bool     `json:"hidden"`
+	Decision bool     `json:"decision"`
 }
 
 var providerConsole = map[string]map[string]string{
@@ -48,6 +50,7 @@ var providerConsole = map[string]map[string]string{
 	"nvidia":       {"key": "https://build.nvidia.com/settings/api-keys", "billing": "https://build.nvidia.com/settings/api-keys"},
 	"ollama-cloud": {"key": "https://ollama.com/settings/keys", "billing": "https://ollama.com/settings/keys"},
 	"openrouter":   {"key": "https://openrouter.ai/settings/keys", "billing": "https://openrouter.ai/credits"},
+	"typesafe":     {"key": "https://console.typesafe.ai/keys"},
 	"cloudflare":   {"key": "https://dash.cloudflare.com/profile/api-tokens", "billing": "https://dash.cloudflare.com/profile/api-tokens"},
 	"claude-code":  {"plan": "https://claude.com/pricing"},
 	"codex":        {"plan": "https://chatgpt.com/pricing"},
@@ -69,6 +72,7 @@ var providerCatalog = []providerInfo{
 	{"nvidia", "NVIDIA NIM", map[string]string{"api_key": "pay per token"}},
 	{"ollama-cloud", "Ollama Cloud", map[string]string{"api_key": "API key"}},
 	{"openrouter", "OpenRouter", map[string]string{"api_key": "pay per token"}},
+	{"typesafe", "TypeSafe", map[string]string{"api_key": "decision model"}},
 	{"cloudflare", "Cloudflare", map[string]string{"api_key": "Workers AI · API token + account ID"}},
 	{"compat", "Local/Custom", map[string]string{"custom": "Ollama, LM Studio, or custom URL"}},
 }
@@ -105,6 +109,7 @@ func ListProviders() gin.HandlerFunc {
 				LoggedIn:     providerLoggedIn(provider.ID),
 				Console:      slices.Sorted(maps.Keys(providerConsole[provider.ID])),
 				Hidden:       provider.ID == "claude-code" && !agenttypes.ClaudeCodeEnabled(),
+				Decision:     provider.ID == "typesafe",
 			})
 		}
 		c.JSON(http.StatusOK, gin.H{"providers": list})
@@ -170,6 +175,7 @@ func AddProviderKey() gin.HandlerFunc {
 			}
 			DropQuotaCache(prov)
 			imagetool.DropModelsCache(c.Request.Context(), prov)
+			decision.DropModelsCache(c.Request.Context(), prov)
 			audiotool.DropModelsCache(c.Request.Context(), prov)
 			probe.DropModelsCache(c.Request.Context(), name)
 			c.JSON(http.StatusOK, gin.H{"ok": true})
@@ -215,6 +221,7 @@ func AddProviderKey() gin.HandlerFunc {
 
 		DropQuotaCache(prov)
 		imagetool.DropModelsCache(c.Request.Context(), prov)
+		decision.DropModelsCache(c.Request.Context(), prov)
 		audiotool.DropModelsCache(c.Request.Context(), prov)
 		probe.DropModelsCache(c.Request.Context(), prov)
 
@@ -285,6 +292,7 @@ func ProviderOAuth() gin.HandlerFunc {
 		}
 		DropQuotaCache(prov)
 		imagetool.DropModelsCache(c.Request.Context(), prov)
+		decision.DropModelsCache(c.Request.Context(), prov)
 		audiotool.DropModelsCache(c.Request.Context(), prov)
 		probe.DropModelsCache(c.Request.Context(), prov)
 		emit(gin.H{"done": true, "ok": true})
@@ -316,6 +324,7 @@ func ClearProviderOAuth() gin.HandlerFunc {
 
 		DropQuotaCache(prov)
 		imagetool.DropModelsCache(c.Request.Context(), prov)
+		decision.DropModelsCache(c.Request.Context(), prov)
 		audiotool.DropModelsCache(c.Request.Context(), prov)
 		probe.DropModelsCache(c.Request.Context(), prov)
 		imagetool.Prune(c.Request.Context())

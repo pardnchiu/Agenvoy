@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	agentsexecallowskill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
@@ -253,12 +255,19 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 
 	exec.CancelExecution = func() { execCancel(nil) }
 	exec.IgnoreHistory = data.IgnoreHistory
+	exec.Objective = strings.TrimSpace(data.Input)
+	if exec.Objective == "" {
+		exec.Objective = strings.TrimSpace(data.Task)
+	}
 
 	keepPending := true
 	if !session.Stateless && session.ID != "" {
 		if data.PendingTask != "" {
 			exec.PendingTask = data.PendingTask
 			exec.SeedFiles(interactive.LoadPendingFiles(session.ID, data.PendingTask))
+			if info, ok := interactive.LoadPendingInfo(session.ID, data.PendingTask); ok && strings.TrimSpace(info.Objective) != "" {
+				exec.Objective = strings.TrimSpace(info.Objective)
+			}
 		} else {
 			objective := data.Task
 			if objective == "" {
@@ -307,6 +316,9 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	}
 	if !audiotool.TTSEnabled() {
 		data.ExcludeTools = append(data.ExcludeTools, "generate_audio")
+	}
+	if decision.Selected() == decision.Off {
+		data.ExcludeTools = append(data.ExcludeTools, "run_websocket", "run_command_background")
 	}
 	if (cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "") &&
 		(cfg == nil || !cfg.DiscordEnabled || go_pkg_keychain.Get("DISCORD_TOKEN") == "") {
@@ -362,7 +374,16 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			}
 		}
 	}
-	assignTurnContext(ctx, session, data.WorkDir, allowAll, scanner, data.ExcludeSkills, !exec.ExcludeTools["run_skill"], toolNames)
+	withSkills := !exec.ExcludeTools["run_skill"]
+	var toolGap bool
+	var hiddenSkills []string
+	var decideWG sync.WaitGroup
+	decideWG.Go(func() { toolGap = detectToolGap(ctx, session.ID, exec) })
+	if withSkills {
+		decideWG.Go(func() { hiddenSkills = unrelatedSkills(ctx, session.ID, exec.Objective, scanner, data.ExcludeSkills) })
+	}
+	decideWG.Wait()
+	assignTurnContext(ctx, session, data.WorkDir, allowAll, scanner, append(slices.Clone(data.ExcludeSkills), hiddenSkills...), withSkills, toolNames, toolGap)
 	if data.Skill != nil {
 		assignSkill(session, data.Skill)
 	}
@@ -417,7 +438,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	oldHistoriesCompacted := false
 	firstAttempt := true
 
-	compact.Warm(execCtx)
+	go compact.Warm(context.WithoutCancel(execCtx))
 
 	compactHistory := func() {
 		compacted := false
@@ -555,7 +576,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				}
 				sendFailCount++
 				compact.NoteOverflow(modelName, err)
-				compact.TrimRatio(&session.ContextHistories, &session.ToolHistories, configs.CONTEXT_OVERFLOW_KEEP_RATIO)
+				compact.TrimRatio(execCtx, session.ID, exec.Objective, &session.ContextHistories, &session.ToolHistories, configs.CONTEXT_OVERFLOW_KEEP_RATIO)
 				lastInputTokens = 0
 				slog.Warn("data.Agent.Send context length exceeded, trimmed oldest content",
 					slog.String("session", session.ID),
@@ -668,7 +689,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 
 		prov, model, _ := strings.Cut(data.Agent.Name(), "@")
 		usagelog.Append(session.ID, prov, model, resp.Usage, sendDur, responseToolCalls(resp))
-		if err := torii.DB(torii.DBToolCache).Set(ctx, execmodel.BetaLastModelKey+session.ID, data.Agent.Name()+"/"+reasoningLabel, torii.TTL(execmodel.BetaLastModelTTL(data.Agent.Name()))); err != nil {
+		if err := torii.DB(torii.DBToolCache).Set(ctx, execmodel.DecisionLastModelKey+session.ID, data.Agent.Name()+"/"+reasoningLabel, torii.TTL(execmodel.DecisionLastModelTTL(data.Agent.Name()))); err != nil {
 			slog.Debug("torii.Set",
 				slog.String("session", session.ID),
 				slog.String("error", err.Error()))

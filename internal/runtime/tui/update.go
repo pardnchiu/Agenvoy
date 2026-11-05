@@ -969,9 +969,6 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		slog.Debug("key updated", slog.String("key", msg.key))
 		return t, nil
 
-	case TypesafeKeySubmit:
-		return t.runTypesafeKeySubmit(msg.field, msg.value)
-
 	case DispatcherSelect:
 		next, cmd := t.runDispatcherSelect(msg.name)
 		agents.Reload()
@@ -997,6 +994,10 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ImageModelSelect:
 		next, cmd := t.runImageModelSelect(msg.name)
+		return next, cmd
+
+	case DecisionModelSelect:
+		next, cmd := t.runDecisionModelSelect(msg.name)
 		return next, cmd
 	case UpdateConfirm:
 		if !msg.ok {

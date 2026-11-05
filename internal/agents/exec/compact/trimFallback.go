@@ -1,6 +1,7 @@
 package compact
 
 import (
+	"context"
 	"encoding/json"
 	"regexp"
 	"strconv"
@@ -45,12 +46,13 @@ func overflowLimit(modelName string) (int, bool) {
 	return limit, ok
 }
 
-func TrimRatio(oldHistory *[]go_llm_router.Message, toolCall *[]go_llm_router.Message, ratio float64) bool {
+func TrimRatio(ctx context.Context, sessionID, objective string, oldHistory *[]go_llm_router.Message, toolCall *[]go_llm_router.Message, ratio float64) bool {
 	total := messagesSize(*oldHistory) + messagesSize(*toolCall)
 	if total == 0 {
 		return false
 	}
 	target := int(float64(total) * ratio)
+	pruneToolsWithDecision(ctx, sessionID, objective, toolCall)
 	for messagesSize(*oldHistory)+messagesSize(*toolCall) > target {
 		before := len(*oldHistory) + len(*toolCall)
 		TrimFallback(oldHistory, toolCall)

@@ -25,23 +25,25 @@ import (
 )
 
 var eventLabel = map[string]string{
-	"read_files":            "File",
-	"run_command":           "Run",
-	"open_file":             "Open",
-	"download_file":         "Download",
-	"pkg_manage":            "Package",
-	"search_web":            "Search",
-	"fetch_page":            "Fetch",
-	"http_request":          "Send",
-	"calculate":             "Calc",
-	"test_tool":             "Test",
-	"send_to_chatbot":       "Push",
-	"list_chatbot":          "Chatbots",
-	"mcp__kura__search_rag": "RAG",
-	"mcp__kura__list_rag":   "RAG",
-	"reasoning_guide":       "Guide",
-	"write_result":          "Write",
-	"find_tools":            "Tools",
+	"read_files":             "File",
+	"run_command":            "Run",
+	"run_command_background": "Background",
+	"open_file":              "Open",
+	"download_file":          "Download",
+	"pkg_manage":             "Package",
+	"search_web":             "Search",
+	"fetch_page":             "Fetch",
+	"http_request":           "Send",
+	"calculate":              "Calc",
+	"test_tool":              "Test",
+	"send_to_chatbot":        "Push",
+	"list_chatbot":           "Chatbots",
+	"mcp__kura__search_rag":  "RAG",
+	"mcp__kura__list_rag":    "RAG",
+	"reasoning_guide":        "Guide",
+	"write_result":           "Write",
+	"find_tools":             "Tools",
+	"write_todo":             "Plan",
 }
 
 func parseToolArgs(raw string) map[string]any {
@@ -132,7 +134,7 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 		}
 		return arg("model")
 
-	case "run_command":
+	case "run_command", "run_command_background":
 		return joinArgv(raw)
 
 	case "open_file":
@@ -195,6 +197,9 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 			return names
 		}
 		return arg("query")
+
+	case "write_todo":
+		return todoProgress(argMap["todos"])
 	}
 
 	if len(argMap) == 0 {
@@ -314,6 +319,31 @@ func joinStrings(value any) string {
 		}
 	}
 	return strings.Join(out, ", ")
+}
+
+func todoProgress(value any) string {
+	todos := asList(value)
+	last, lastIdx := "", 0
+	for i, one := range todos {
+		content, _ := one["content"].(string)
+		content = strings.TrimSpace(content)
+		if content == "" {
+			continue
+		}
+		switch one["status"] {
+		case "in_progress":
+			if active, _ := one["active_form"].(string); strings.TrimSpace(active) != "" {
+				content = strings.TrimSpace(active)
+			}
+			return fmt.Sprintf("%s [%d/%d]", content, i+1, len(todos))
+		case "completed":
+			last, lastIdx = content, i+1
+		}
+	}
+	if last == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s [%d/%d]", last, lastIdx, len(todos))
 }
 
 func joinPaths(argMap map[string]any) string {

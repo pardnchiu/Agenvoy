@@ -15,6 +15,7 @@ import (
 
 	go_browser "github.com/pardnchiu/go-browser/core"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
@@ -85,7 +86,8 @@ func registFetchPage() {
 		Concurrent:  true,
 		Timeout:     90 * time.Second,
 		Description: `[system-default] Fetches one web page in a browser and returns it as markdown, html or json, or saves it to a file.
-Use when a URL is in hand — 讀這篇 / 這個連結寫什麼 / 下載網頁 / 存到本地 — for any search or RSS result being cited, and for researching a site, product or library: its /llms.txt or /llms-full.txt first, then page by page until complete.
+Use when a URL is in hand — 讀這篇 / 這個連結寫什麼 / 下載網頁 / 存到本地 — for any search or RSS result being cited, and for researching a site, product or library page by page until complete.
+Before the first page of a site, fetch its /llms.txt: when it lists the page you want, fetch that listed .md URL instead of the HTML page; no /llms.txt → fetch the page as usual.
 No URL yet → search_web; a binary file → download_file; an API endpoint → http_request.`,
 		Parameters: map[string]any{
 			"type": "object",
@@ -149,12 +151,6 @@ No URL yet → search_web; a binary file → download_file; an API endpoint → 
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
 
-			if !params.Save && !params.Force {
-				if cached, ok := toolcache.FindRecent(e.SessionID, "fetch_page", string(args)); ok {
-					return cached, nil
-				}
-			}
-
 			link := strings.TrimSpace(params.Link)
 			if link == "" {
 				return "", utilsmsg.New(utilsmsg.Invalid, "link", "required")
@@ -162,6 +158,18 @@ No URL yet → search_web; a binary file → download_file; an API endpoint → 
 			outType, err := parseOutputType(params.Type)
 			if err != nil {
 				return "", err
+			}
+			deliver := func(result string) string {
+				if outType != go_browser.TypeMarkdown {
+					return result
+				}
+				return checkRelevance(ctx, e.Objective, link, result)
+			}
+
+			if !params.Save && !params.Force {
+				if cached, ok := toolcache.FindRecent(e.SessionID, "fetch_page", string(args)); ok {
+					return deliver(cached), nil
+				}
 			}
 			sameSession := true
 			if params.SameSession != nil {
@@ -186,7 +194,12 @@ No URL yet → search_web; a binary file → download_file; an API endpoint → 
 				}
 				saveTo = &p
 			}
-			return handler(ctx, link, params.KeepLinks, sameSession, headless, outType, saveTo, params.Force)
+			result, err := handler(ctx, link, params.KeepLinks, sameSession, headless, outType, saveTo, params.Force)
+			if err != nil || saveTo != nil {
+				return result, err
+			}
+			toolcache.Store(e.SessionID, go_pkg_utils.UUID(), "fetch_page", string(args), result)
+			return deliver(result), nil
 		},
 	})
 }
@@ -253,6 +266,9 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 		if strings.TrimSpace(result.Content) == "" {
 			addToSkippedMap(link, 0, result.Title)
 			return "", utilsmsg.New(utilsmsg.Upstream, link, "empty content")
+		}
+		if !keepLinks && saveTo == nil {
+			result.Content = removeNoise(ctx, link, result.Content)
 		}
 		full = buildFrontmatter(result)
 	case go_browser.TypeJSON:

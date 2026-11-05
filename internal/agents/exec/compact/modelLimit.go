@@ -17,6 +17,7 @@ import (
 const (
 	limitTTL     = time.Hour
 	limitTimeout = 5 * time.Second
+	limitRetry   = 5 * time.Minute
 )
 
 type modelLimit struct {
@@ -25,9 +26,11 @@ type modelLimit struct {
 }
 
 var (
-	limitMu  sync.RWMutex
-	limitDic map[string]map[string]modelLimit
-	limitAt  time.Time
+	limitMu     sync.RWMutex
+	limitDic    map[string]map[string]modelLimit
+	limitAt     time.Time
+	limitFailAt time.Time
+	warmMu      sync.Mutex
 )
 
 var vendorAlias = map[string]string{
@@ -100,22 +103,36 @@ func claudeVersion(vendor, model string) string {
 	return claudeDashVersion.ReplaceAllString(model, "$1.$2")
 }
 
-func Warm(ctx context.Context) {
+func limitSkip() bool {
 	limitMu.RLock()
-	fresh := limitDic != nil && time.Since(limitAt) < limitTTL
-	limitMu.RUnlock()
-	if fresh {
+	defer limitMu.RUnlock()
+	return (limitDic != nil && time.Since(limitAt) < limitTTL) || time.Since(limitFailAt) < limitRetry
+}
+
+func Warm(ctx context.Context) {
+	if limitSkip() {
+		return
+	}
+	warmMu.Lock()
+	defer warmMu.Unlock()
+	if limitSkip() {
 		return
 	}
 
 	client := &http.Client{Timeout: limitTimeout}
 	dic, status, err := go_pkg_http.GET[map[string]map[string]modelLimit](ctx, client, configs.ENDPOINT_LLM_WINDOW, nil)
-	if err != nil {
-		slog.Debug("compact.Warm", slog.String("error", err.Error()))
-		return
-	}
-	if status != http.StatusOK || len(dic) == 0 {
-		slog.Debug("compact.Warm",
+	if err != nil || status != http.StatusOK || len(dic) == 0 {
+		if ctx.Err() != nil {
+			return
+		}
+		limitMu.Lock()
+		limitFailAt = time.Now()
+		limitMu.Unlock()
+		if err != nil {
+			slog.Debug("[Unavailable] compact.Warm: retry after "+limitRetry.String(), slog.String("error", err.Error()))
+			return
+		}
+		slog.Debug("[Upstream] compact.Warm: retry after "+limitRetry.String(),
 			slog.Int("status", status),
 			slog.Int("vendors", len(dic)))
 		return

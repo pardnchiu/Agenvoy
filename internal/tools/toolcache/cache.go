@@ -20,8 +20,6 @@ type toolHistory struct {
 }
 
 var cacheable = map[string]bool{
-	"fetch_page":   true,
-	"search_web":   true,
 	"http_request": true,
 }
 

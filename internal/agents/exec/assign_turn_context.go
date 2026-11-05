@@ -16,7 +16,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 )
 
-func assignTurnContext(ctx context.Context, session *agenttypes.Session, workDir string, allowAll bool, skillScanner *runtime.SkillScanner, excludeSkills []string, withSkills bool, toolNames []string) {
+func assignTurnContext(ctx context.Context, session *agenttypes.Session, workDir string, allowAll bool, skillScanner *runtime.SkillScanner, excludeSkills []string, withSkills bool, toolNames []string, toolGap bool) {
 	var parts []string
 	if !session.Stateless {
 		parts = append(parts,
@@ -26,6 +26,9 @@ func assignTurnContext(ctx context.Context, session *agenttypes.Session, workDir
 	}
 	if len(toolNames) > 0 {
 		parts = append(parts, strings.ReplaceAll(strings.TrimSpace(configs.InjectTools), "{{.Tools}}", strings.Join(toolNames, ", ")))
+	}
+	if toolGap {
+		parts = append(parts, strings.TrimSpace(configs.InjectToolGap))
 	}
 	if withSkills {
 		if list := skillListBlock(skillScanner, excludeSkills); list != "" {

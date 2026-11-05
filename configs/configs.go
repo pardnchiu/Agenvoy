@@ -31,10 +31,13 @@ const (
 	// * Routing
 	TIMEOUT_DISPATCH_CALL = 30 * time.Second
 
-	// * Jev
-	TIMEOUT_JEV_CALL         = 3 * time.Second
-	MAX_JEV_HISTORY_MESSAGES = 4
-	MAX_JEV_RUNES            = 2048
+	// * Decision
+	TIMEOUT_DECISION_CALL         = 3 * time.Second
+	MAX_DECISION_HISTORY_MESSAGES = 4
+	MAX_DECISION_RUNES            = 2048
+	MAX_DECISION_STATE_RUNES      = 20_000
+	DECISION_MIN_CONFIDENCE       = 0.7
+	MAX_DECISION_QUESTIONS        = 120
 
 	// * Retry
 	MAX_RETRY_TIMES             = 3
@@ -218,6 +221,9 @@ var InjectTools string
 
 //go:embed prompts/system_prompt/inject/turn_context/skills.md
 var InjectSkills string
+
+//go:embed prompts/system_prompt/inject/turn_context/tool_gap.md
+var InjectToolGap string
 
 //go:embed prompts/system_prompt/inject/turn_context/agent_guide.md
 var InjectAgentGuide string

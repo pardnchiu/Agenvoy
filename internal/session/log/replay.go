@@ -111,7 +111,8 @@ func ParseLine(line string) (agenttypes.Event, bool) {
 	case "skill_result":
 		return agenttypes.Event{Type: agenttypes.EventSkillResult, Text: body}, true
 	case "agent_result":
-		return agenttypes.Event{Type: agenttypes.EventAgentResult, Text: body}, true
+		model, reasoning, _ := strings.Cut(body, " reasoning=")
+		return agenttypes.Event{Type: agenttypes.EventAgentResult, Text: model, Reasoning: reasoning}, true
 	}
 	return agenttypes.Event{}, false
 }
