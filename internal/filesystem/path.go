@@ -162,6 +162,14 @@ func InputHistoryPath(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), ".cmd_history")
 }
 
+func BackgroundDir(sessionID string) string {
+	return filepath.Join(SessionDir(sessionID), "background")
+}
+
+func BackgroundLogPath(sessionID, id string) string {
+	return filepath.Join(BackgroundDir(sessionID), id+".log")
+}
+
 func PendingDir(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), "pending")
 }

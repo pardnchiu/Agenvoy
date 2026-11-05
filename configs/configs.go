@@ -88,12 +88,13 @@ var (
 	BACKGROUND_THRESHOLD_MIN   = 5
 
 	// * Watch
-	WATCH_MIN_INTERVAL_SEC    = 15
+	WATCH_KEYWORDS            = []string{"error", "err!", "fail", "fatal", "panic", "exception", "traceback", "segmentation fault", "core dumped", "out of memory", "permission denied", "command not found", "no such file"}
+	WATCH_SETTLE_SEC          = 2
+	WATCH_SETTLE_MAX_SEC      = 10
+	WATCH_REPORT_COOLDOWN_SEC = 30
 	WATCH_BUFFER_MAX_BYTES    = 32 << 10
 	WATCH_LINE_MAX_BYTES      = 8 << 10
-	WATCH_MAX_DECIDE_FAILURES = 3
-	WATCH_REPORT_COOLDOWN_SEC = 60
-	WATCH_MIN_CONFIDENCE      = 0.7
+	WATCH_REPORT_MAX_BYTES    = 8 << 10
 
 	// * Tools
 	SYSTEM_DEFAULT_TOOLS = []string{"find_tools", "run_tool", "reasoning_guide", "write_todo"}

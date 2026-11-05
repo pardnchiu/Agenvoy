@@ -49,28 +49,29 @@ func CheckAgentEndpointAlive(ctx context.Context, agent agenttypes.Agent, timeou
 }
 
 var toolDisplayName = map[string]string{
-	"search_web":         "Search Web",
-	"find_tools":         "Tools",
-	"find_files":         "Find",
-	"list_chatbot":       "List Chat",
-	"read_files":         "Read",
-	"edit_file":          "Edit",
-	"fetch_page":         "Fetch",
-	"run_command":        "Run",
-	"background_command": "Background",
-	"run_skill":          "Skill",
-	"calculate":          "Calc",
-	"download_file":      "Download",
-	"write_todo":         "Plan",
-	"subagents":          "Subagent",
-	"chat_history":       "Chat",
-	"file_history":       "History",
-	"error_history":      "Error",
-	"send_to_chatbot":    "Send",
-	"http_request":       "Request",
-	"schedules":          "Schedule",
-	"reasoning_guide":    "Guide",
-	"write_result":       "Write",
+	"search_web":           "Search Web",
+	"find_tools":           "Tools",
+	"find_files":           "Find",
+	"list_chatbot":         "List Chat",
+	"read_files":           "Read",
+	"edit_file":            "Edit",
+	"fetch_page":           "Fetch",
+	"run_command":          "Run",
+	"background_command":   "Background",
+	"run_skill":            "Skill",
+	"calculate":            "Calc",
+	"download_file":        "Download",
+	"write_todo":           "Plan",
+	"subagents":            "Subagent",
+	"background_subagents": "Background Subagent",
+	"chat_history":         "Chat",
+	"file_history":         "History",
+	"error_history":        "Error",
+	"send_to_chatbot":      "Send",
+	"http_request":         "Request",
+	"schedules":            "Schedule",
+	"reasoning_guide":      "Guide",
+	"write_result":         "Write",
 }
 
 func IsPlugTool(name string) bool {
@@ -176,7 +177,7 @@ func formatToolArgs(name, raw, cwd string, fullPath bool) string {
 		return PlugToolBaseName(name) + " " + raw
 	}
 	switch name {
-	case "subagents":
+	case "subagents", "background_subagents":
 		label := pick("name", "session_id")
 		if label == "" {
 			label = "subagent"

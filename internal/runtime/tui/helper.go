@@ -37,7 +37,7 @@ func activityVerb(activity string) string {
 		case "fetch_page":
 			return "Fetching"
 
-		case "subagents":
+		case "subagents", "background_subagents":
 			return "Delegating"
 
 		case "find_files":

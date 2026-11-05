@@ -488,7 +488,10 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			verified := false
 			reason := ""
 			origin := originFor(ctx, sessionData.ID)
-			if runtime.HasListener(ctx, origin) {
+			if agenttypes.NoPromptFrom(ctx) {
+				proceed = false
+				reason = "a background subagent leg cannot ask the user for confirmation; return what you gathered and state that this call still needs the user's approval"
+			} else if runtime.HasListener(ctx, origin) {
 				askCtx, cancelAsk := context.WithCancel(ctx)
 				if agenttypes.OriginFrom(ctx) != foregroundOrigin {
 					askCtx, cancelAsk = context.WithTimeout(ctx, configs.CONFIRM_TIMEOUT)

@@ -28,6 +28,7 @@ var eventLabel = map[string]string{
 	"read_files":            "File",
 	"run_command":           "Run",
 	"background_command":    "Background",
+	"background_subagents":  "Background Subagents",
 	"open_file":             "Open",
 	"download_file":         "Download",
 	"pkg_manage":            "Package",
@@ -125,8 +126,8 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 	case "schedules":
 		return arg("skill_name")
 
-	case "subagents":
-		if mode != "invoke" {
+	case "subagents", "background_subagents":
+		if name == "subagents" && mode != "invoke" {
 			return ""
 		}
 		if target := arg("self_id"); target != "" {
