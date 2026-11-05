@@ -76,12 +76,12 @@ func commandProperties() map[string]any {
 		},
 		"write_paths": map[string]any{
 			"type":        "array",
-			"description": "Absolute paths outside $HOME this command has to write to — ['/usr/local'] for a system install. The sandbox only allows writes under $HOME, so a command touching anything else fails with a permission error that looks like a file ownership problem and is not one. Each path needs the user's approval on this call. Paths under $HOME need not be listed.",
+			"description": "Absolute paths outside $HOME this command has to write to — ['/usr/local'] for a system install. The sandbox only allows writes under $HOME, so a command touching anything else fails with a permission error that looks like a file ownership problem and is not one. Each path needs the user's approval on this call. Paths under $HOME need not be listed. A path still denied after approval is root-owned: re-run with argv ['sudo', ...] instead.",
 			"items":       map[string]any{"type": "string"},
 		},
 		"sandbox": map[string]any{
 			"type":        "boolean",
-			"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt.",
+			"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt. Root privileges → argv ['sudo', '<binary>', ...] (no sudo flags), which asks the same password and runs it outside the sandbox.",
 			"default":     true,
 		},
 	}
@@ -92,7 +92,28 @@ func deniedCommandErr(binary string) error {
 }
 
 func sudoCommandErr() error {
-	return utilsmsg.New(utilsmsg.Denied, "sudo", "cannot elevate inside run_command: the sandbox blocks it. Re-run the command without sudo and declare write_paths with the absolute paths outside $HOME it writes to; that raises the sudo confirm, where the user approves them with the system password. For %s", systemPackageRoute())
+	return utilsmsg.New(utilsmsg.Denied, "sudo", "cannot elevate inside sh -c; call run_command with argv ['sudo', '<binary>', ...<args>] instead, which asks the user for the system password and runs outside the sandbox. For %s", systemPackageRoute())
+}
+
+func sudoArgv(argv []string) ([]string, error) {
+	if len(argv) < 2 {
+		return nil, utilsmsg.New(utilsmsg.Invalid, "sudo", "needs the command to elevate, e.g. ['sudo', 'rm', '/usr/local/bin/tool']")
+	}
+	target := argv[1]
+	if strings.HasPrefix(target, "-") {
+		return nil, utilsmsg.New(utilsmsg.Invalid, "sudo", "flags are not accepted (%q); pass ['sudo', '<binary>', ...<args>]", target)
+	}
+	binary := filepath.Base(target)
+	if binary != target {
+		return nil, utilsmsg.New(utilsmsg.Invalid, "sudo", "%q must be a bare command name (%q), not a path", target, binary)
+	}
+	if binary == "sudo" || binary == "su" {
+		return nil, utilsmsg.New(utilsmsg.Invalid, "sudo", "%s cannot be nested under sudo", binary)
+	}
+	if slices.Contains(filesystem.DeniedCommand, binary) {
+		return nil, deniedCommandErr(binary)
+	}
+	return append([]string{"sudo", "-n"}, argv[1:]...), nil
 }
 
 func openCommandErr() error {
@@ -133,7 +154,12 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 			return "", deniedCommandErr(binary)
 		}
 		if binary == "sudo" {
-			return "", sudoCommandErr()
+			elevated, err := sudoArgv(argv)
+			if err != nil {
+				return "", err
+			}
+			argv = elevated
+			unsandboxed = true
 		}
 		if binary == "open" && runtime.GOOS == "darwin" {
 			return "", openCommandErr()
@@ -331,7 +357,13 @@ func RestrictedRunCommand(toolName, toolArgs string) []string {
 		Argv    []string `json:"argv"`
 		Sandbox *bool    `json:"sandbox"`
 	}
-	if json.Unmarshal([]byte(toolArgs), &p) != nil || p.Sandbox == nil || *p.Sandbox {
+	if json.Unmarshal([]byte(toolArgs), &p) != nil {
+		return nil
+	}
+	if len(p.Argv) > 0 && p.Argv[0] == "sudo" {
+		return []string{"sudo: " + strings.Join(p.Argv[1:], " ")}
+	}
+	if p.Sandbox == nil || *p.Sandbox {
 		return nil
 	}
 	return []string{"outside sandbox: " + strings.Join(p.Argv, " ")}

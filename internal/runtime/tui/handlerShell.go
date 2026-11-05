@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	osexec "os/exec"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -15,7 +17,21 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/runtime/ipc"
+	"github.com/pardnchiu/agenvoy/internal/sudo"
 )
+
+var sudoWord = regexp.MustCompile(`(^|[\s;&|(])sudo(\s|$)`)
+
+type shellPassword struct {
+	command string
+	workDir string
+}
+
+type shellSudo struct {
+	command  string
+	workDir  string
+	password string
+}
 
 type shellDone struct {
 	command  string
@@ -25,10 +41,23 @@ type shellDone struct {
 	err      error
 }
 
-func runShell(command, workDir string) {
+func runShell(command, workDir, password string) {
 	ctx, cancel := context.WithTimeout(context.Background(), configs.RUN_COMMAND_TIMEOUT)
 	defer cancel()
 	send(agentExec{cancel: func(error) { cancel() }})
+
+	if sudoWord.MatchString(command) {
+		if password == "" && !sudo.Cached(ctx) {
+			send(shellPassword{command: command, workDir: workDir})
+			return
+		}
+		if password != "" {
+			if err := sudo.Verify(ctx, password); err != nil {
+				send(shellDone{command: command, workDir: workDir, err: err})
+				return
+			}
+		}
+	}
 
 	shell := os.Getenv("SHELL")
 	if shell == "" {
@@ -59,6 +88,31 @@ func runShell(command, workDir string) {
 		done.err = fmt.Errorf("[Internal] %s: %w", command, err)
 	}
 	send(done)
+}
+
+func (t TUI) openShellPassword(msg shellPassword) (tea.Model, tea.Cmd) {
+	t.running = false
+	t.cancelExec = nil
+	t.popup = &Popup{
+		kind:     popupSecret,
+		title:    "System password:",
+		subtitle: msg.command,
+		input:    newPopupInput("", false),
+		onConfirm: func(value string) any {
+			return shellSudo{command: msg.command, workDir: msg.workDir, password: value}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) startShellSudo(msg shellSudo) (tea.Model, tea.Cmd) {
+	if msg.password == "" {
+		return t, notice(msgWarn("[Canceled] sudo: no password entered") + "\n")
+	}
+	t.running = true
+	t.runStartedAt = time.Now()
+	go runShell(msg.command, msg.workDir, msg.password)
+	return t, t.spinner.Tick
 }
 
 func (t TUI) handleShellDone(msg shellDone) (tea.Model, tea.Cmd) {
