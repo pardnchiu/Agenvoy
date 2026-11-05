@@ -576,7 +576,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				}
 				sendFailCount++
 				compact.NoteOverflow(modelName, err)
-				compact.TrimRatio(&session.ContextHistories, &session.ToolHistories, configs.CONTEXT_OVERFLOW_KEEP_RATIO)
+				compact.TrimRatio(execCtx, session.ID, exec.Objective, &session.ContextHistories, &session.ToolHistories, configs.CONTEXT_OVERFLOW_KEEP_RATIO)
 				lastInputTokens = 0
 				slog.Warn("data.Agent.Send context length exceeded, trimmed oldest content",
 					slog.String("session", session.ID),

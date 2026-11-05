@@ -20,6 +20,15 @@ import (
 
 var Providers = []string{"typesafe", "openrouter"}
 
+// * can not use or input type not same as others, so hide first
+var excludeModels = map[string]bool{
+	"openrouter@cloudflare/clairic":       true,
+	"openrouter@respan/span-01":           true,
+	"openrouter@respan/span-01-lite":      true,
+	"openrouter@respan/span-01-lite:free": true,
+	"openrouter@scaledown/classify-1":     true,
+}
+
 const Off = ""
 
 func Selected() string {
@@ -66,7 +75,9 @@ func Available(ctx context.Context) []string {
 				return
 			}
 			for _, model := range models {
-				found[i] = append(found[i], name+"@"+model)
+				if full := name + "@" + model; !excludeModels[full] {
+					found[i] = append(found[i], full)
+				}
 			}
 		})
 	}
