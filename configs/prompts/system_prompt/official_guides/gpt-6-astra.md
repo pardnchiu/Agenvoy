@@ -12,7 +12,6 @@
 
 ## Instructions
 
-- User instructions take precedence over a skill's guidance
 - A skill that made you pause, ask permission, leave work unfinished or diverge → name the file, quote the instruction, explain how it applies
 - Separate a skill's explicit requirement from your interpretation of its guidance, and say which one drove the pause
 
