@@ -40,7 +40,7 @@ Agenvoy is a Taiwan-developed AI Agent Harness by [Pardn Chiu](https://pardn.io/
 A chat can give you an answer; work needs a result. Agenvoy breaks requests into steps, calls tools, and delivers outcomes on your computer—while you retain control of files, tools, schedules, and working context.
 
 - **Turns conversation into deliverable work** — Research live data, organize files, and complete multi-step tasks with an agent that acts and reports the result.
-- **Fills capability gaps itself** — Creates, tests, and keeps a new tool when no suitable one exists, ready to reuse next time.
+- **Fills capability gaps itself** — Finds a keyless public API and calls it directly; when none fits, creates, tests, and keeps a new tool, ready to reuse next time.
 - **Shares one tool library across agents** — Agenvoy, Claude Code, Codex, and other agents use the same sandboxed tools instead of rebuilding them.
 - **Keeps automation running** — Create schedules in one sentence; recurring work runs in your environment and pushes the result.
 - **Makes every step visible and controllable** — Command output streams to the TUI and Web dashboard, while sensitive paths and restricted actions still require confirmation.
@@ -72,7 +72,7 @@ Agenvoy has already implemented the design directions below, and other teams hav
 >
 > The agent finds current data, calls tools, and gives you the answer.
 >
-> If a tool doesn't exist, it builds one.
+> If a tool doesn't exist, it calls a public API or builds one.
 
 <p align="center">
   <a href="https://youtu.be/floMBsAfziY">
@@ -275,7 +275,7 @@ A cost-effective model setup to get started:
 
 | Capability           | Description                                                              |
 | :------------------- | :----------------------------------------------------------------------- |
-| Auto tool generation | Builds and saves tools when they're missing                              |
+| Auto tool generation | Calls a public API, or builds and saves a tool when none fits            |
 | Self-scheduling      | Create cron jobs with a single sentence                                  |
 | Long-term memory     | Retains key info and context                                             |
 | File search          | Answers from your local files                                            |
