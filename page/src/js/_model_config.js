@@ -69,6 +69,7 @@ function providerFailure(id, method, error, pages) {
 }
 
 let catalogIds = [];
+let decisionIds = [];
 
 function isCompatPrefix(id) {
   return id.startsWith("compat[") || (catalogIds.length > 0 && !catalogIds.includes(id));
@@ -156,6 +157,7 @@ async function providerCatalog() {
     if (response.ok) {
       const list = (await response.json()).providers || [];
       catalogIds = list.map((provider) => provider.id);
+      decisionIds = list.filter((provider) => provider.decision).map((provider) => provider.id);
       return list;
     }
   } catch (err) {
@@ -305,8 +307,9 @@ async function renderModel() {
   }
   const count = (prefix) => registered.filter((id) => modelPrefix(id) === prefix).length;
 
+  const sideIds = prefixes.filter((id) => !decisionIds.includes(id));
   const picked = praseURL().target || "";
-  if (picked && prefixes.includes(picked)) {
+  if (picked && sideIds.includes(picked)) {
     modelView = "provider";
     modelProvider = picked;
   } else {
@@ -347,11 +350,11 @@ async function renderModel() {
     return card;
   };
 
-  for (const prefix of prefixes.filter((id) => count(id) > 0)) {
+  for (const prefix of sideIds.filter((id) => count(id) > 0)) {
     dom.list.appendChild(providerCard(prefix));
   }
 
-  const empty = prefixes.filter((id) => count(id) === 0);
+  const empty = sideIds.filter((id) => count(id) === 0);
   if (empty.length > 0) {
     dom.list.appendChild(_("span.group", "No models"));
     for (const prefix of empty) {
@@ -858,6 +861,10 @@ async function saveProviderKey(id, body) {
   const prefix = id === "compat" ? body.name.toLowerCase() : id;
   delete providerProbe[prefix];
   providerQuota = null;
+  if (decisionIds.includes(prefix)) {
+    selectProviderAdd();
+    return;
+  }
   selectProvider(prefix);
 }
 
