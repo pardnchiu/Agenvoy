@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"maps"
 	"slices"
 	"strings"
@@ -36,7 +37,8 @@ type CompactDone struct {
 func (t TUI) commandCompactReset(tab int) (TUI, tea.Cmd, bool) {
 	sid := strings.TrimSpace(t.currentSessionID)
 	if sid == "" {
-		return t, notice(msgLog("no active session") + "\n"), true
+		slog.Debug("tui: no active session")
+		return t, nil, true
 	}
 
 	label := utils.ShortenSessionID(sid)
@@ -160,8 +162,8 @@ func (t TUI) runCompact(sid string) (TUI, tea.Cmd) {
 	t.runTarget = utils.ShortenSessionID(sid)
 	t.activity = "compacting history..."
 
+	slog.Debug("tui: compacting history", slog.String("session", sid))
 	return t, tea.Batch(
-		notice(msgLog(fmt.Sprintf("compacting history for %s...", utils.ShortenSessionID(sid)))+"\n"),
 		t.spinner.Tick,
 		func() tea.Msg {
 			ctx := context.Background()
@@ -187,21 +189,15 @@ func (t TUI) finishCompact(msg CompactDone) (TUI, tea.Cmd) {
 	t.lastCacheRead = 0
 	t.lastCacheCreate = 0
 
-	hint := fmt.Sprintf("compact: %s (nothing to remove)", utils.ShortenSessionID(msg.id))
-	if msg.removed > 0 {
-		hint = fmt.Sprintf("compact: %s (%d messages removed)", utils.ShortenSessionID(msg.id), msg.removed)
-	}
+	slog.Debug("tui: compact finished",
+		slog.String("session", msg.id),
+		slog.Int("removed", msg.removed))
 
 	seq := []tea.Cmd{
 		tea.ClearScreen,
 		tea.Println(headerBlock(t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.lineStatus, t.currentSessionID)),
 	}
 	tail := loadSessionTail(msg.id, t.width, false)
-	if len(tail) == 0 {
-		seq = append(seq, notice(msgLog("no history yet")+"\n"))
-	} else {
-		seq = append(seq, tail...)
-	}
-	seq = append(seq, notice(msgLog(hint)+"\n"))
+	seq = append(seq, tail...)
 	return t, tea.Sequence(seq...)
 }

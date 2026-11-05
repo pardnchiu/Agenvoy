@@ -41,6 +41,20 @@ func RecentEvents(sessionID string, limit int) []agenttypes.Event {
 	return events
 }
 
+func LastTaskHash(sessionID string) string {
+	text, err := go_pkg_filesystem.ReadText(filesystem.ActionLogPath(sessionID))
+	if err != nil {
+		return ""
+	}
+	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if m := lineRegex.FindStringSubmatch(lines[i]); len(m) >= 6 && m[4] != "" {
+			return m[4]
+		}
+	}
+	return ""
+}
+
 func ParseLine(line string) (agenttypes.Event, bool) {
 	m := lineRegex.FindStringSubmatch(line)
 	if len(m) < 6 {
@@ -52,7 +66,7 @@ func ParseLine(line string) (agenttypes.Event, bool) {
 	switch kind {
 	case "user", "steer":
 		body = metaWrapRegex.ReplaceAllString(body, "")
-		if strings.Contains(body, "[Resumed Task") || strings.HasPrefix(body, "[Scheduled Task") {
+		if strings.Contains(body, "[Resumed Task") || strings.HasPrefix(body, "[Scheduled Task") || strings.HasPrefix(body, "[Shell command]") {
 			return agenttypes.Event{}, false
 		}
 		body = strings.TrimSpace(body)
@@ -97,7 +111,8 @@ func ParseLine(line string) (agenttypes.Event, bool) {
 	case "skill_result":
 		return agenttypes.Event{Type: agenttypes.EventSkillResult, Text: body}, true
 	case "agent_result":
-		return agenttypes.Event{Type: agenttypes.EventAgentResult, Text: body}, true
+		model, reasoning, _ := strings.Cut(body, " reasoning=")
+		return agenttypes.Event{Type: agenttypes.EventAgentResult, Text: model, Reasoning: reasoning}, true
 	}
 	return agenttypes.Event{}, false
 }

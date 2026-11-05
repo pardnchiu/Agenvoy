@@ -15,8 +15,10 @@ import (
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
+	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/sudo"
-	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -33,8 +35,6 @@ func Listen(ctx context.Context) (func(), error) {
 		listener.Close()
 		return nil, utilsmsg.Wrap(utilsmsg.Internal, "os.Chmod", "", err)
 	}
-
-	tools.WorkDirChangeHook = notifyWorkDir
 
 	go func() {
 		for {
@@ -68,15 +68,6 @@ var (
 	runningConn = map[string]*conn{}
 )
 
-func notifyWorkDir(sessionID, dir string) {
-	runningMu.Lock()
-	c := runningConn[sessionID]
-	runningMu.Unlock()
-	if c != nil {
-		c.write(Frame{Type: FrameWorkDir, SessionID: sessionID, Rayload: &Payload{WorkDir: dir}})
-	}
-}
-
 func serve(ctx context.Context, raw net.Conn) {
 	c := &conn{
 		enc:     json.NewEncoder(raw),
@@ -101,12 +92,35 @@ func serve(ctx context.Context, raw net.Conn) {
 		}
 		switch f.Type {
 		case FrameRun:
+			if f.Rayload != nil {
+				task, online := interactive.ClaimFollowUp(f.SessionID, f.Rayload.PendingTask)
+				f.Rayload.PendingTask = task
+				if online {
+					exec.AppendSteer(f.SessionID, f.Rayload.WindowHash, f.Rayload.Input)
+					c.write(Frame{Type: FrameDone, UUID: f.UUID, SessionID: f.SessionID})
+					continue
+				}
+			}
 			go c.run(connCtx, f)
 		case FrameCancel:
+			waiting := f.SessionID != "" && interactive.HasBackground(f.SessionID, f.TaskHash)
+			window := interactive.LoadPendingWindow(f.SessionID, f.TaskHash)
+			if f.SessionID != "" {
+				if f.Pause {
+					interactive.PauseTask(f.SessionID, f.TaskHash)
+				} else {
+					interactive.CancelTask(f.SessionID, f.TaskHash)
+				}
+			}
 			c.askMu.Lock()
 			own := c.tasks[f.TaskHash]
 			c.askMu.Unlock()
 			if !own {
+				if waiting {
+					event := agenttypes.Event{Type: agenttypes.EventCanceled, TaskHash: f.TaskHash, WindowHash: window}
+					sessionlog.Record(f.SessionID, event)
+					pubsub.Pub(f.SessionID, event)
+				}
 				continue
 			}
 			cause := runtime.ErrUserCanceled

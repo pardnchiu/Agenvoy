@@ -1,5 +1,7 @@
 {
-  "tools": [],
+  "tools": [
+    "run_websocket"
+  ],
   "skills": [
     "extension-upload",
     "extension-install"

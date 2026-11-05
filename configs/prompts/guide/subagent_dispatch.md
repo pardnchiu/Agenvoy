@@ -1,6 +1,6 @@
 ### When to fan out
 
-- **Countable trigger**: the same lookup repeated across 3+ entities (tickers, repos, regions, files, documents), or one lookup spanning 2+ source classes (web / news / RAG / API / script tools) → fan out, one leg per entity or per source cluster. Plurality is the trigger, not analysis or report wording, and it applies whenever decomposition becomes possible — at turn start or mid-task when a new sub-need appears.
+- **Countable trigger**: the same lookup repeated across 3+ entities (tickers, repos, regions, files, documents), or one question needing 2+ source classes that are each searched on their own (web / RAG / API / script tools; web and news search on the same query are one class) → fan out, one leg per entity or per source class. Plurality is the trigger, not analysis or report wording, and it applies whenever decomposition becomes possible — at turn start or mid-task when a new sub-need appears.
 - **Discover-then-expand**: a task that first establishes a set and then works through it (top-N by mentions, a watchlist, search hits, glob matches) → run the discovery here, then fan out over the set once it is known. Walking the discovered set yourself is the most common way this protocol gets skipped.
 - **Aggregate tools count per entity**: a `report_*`-style tool called once per entity is still the same lookup repeated, so three or more entities still fan out.
 - **A leg has your whole toolset**, every MCP server included, minus `subagents`, file writes and deliverable renderers — a tool's reach is not a reason to keep the loop in this session.
@@ -27,7 +27,8 @@
 
   A leg that mixes jobs was split too coarsely: gathering and judging what was gathered are two legs (collect legs first, then an analyze or compare leg fed their output). `research` is never a leg's work kind — it is collect plus analyze, split. Merging every leg into one answer stays with the planner at synthesis.
 - **Open a `write_todo` plan** with dispatch / gather / synthesize as phases, so the user can follow progress.
-- **Send each batch of three in one response.** Three legs run concurrently; a fourth queues behind them while its own timeout keeps running, so a wider set goes out in successive batches of three. One call per leg.
+- **Send each batch of {{.MaxLegs}} in one response.** {{.MaxLegs}} foreground legs run concurrently; one more queues behind them while its own timeout keeps running, so a wider set goes out in successive batches of {{.MaxLegs}}. Background legs are capped at {{.MaxBackground}} per session (run_command_background counts too); one over the cap is rejected, not queued. One call per leg.
+- **Background**: set `background` per that parameter's rule (over {{.BackgroundMin}} minutes per leg, or the user asks to be told later), with the same value on every leg of one fan-out.
 - **Leave `self_id` empty** for fan-out legs: they run as temp sessions, and a descriptive label matches no session.
 - **Name each leg's report** with `report_name` (job + entity, e.g. `nvda-news`), so the returned paths say which leg wrote them.
 - **Legs return material; deliverables are rendered here.** Legs cannot write files or render pages / PDFs, so any page, document or report the user wants is produced by the planner after synthesis.

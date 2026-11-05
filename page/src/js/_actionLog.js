@@ -10,6 +10,7 @@ function parseActionLog(content) {
   const itemOf = (task, writer, sendAt) => {
     let item = task ? taskItems.get(task) : null;
     if (item) {
+      foldFollowUps(item);
       return item;
     }
     const current = writerItem.get(writer);
@@ -17,6 +18,8 @@ function parseActionLog(content) {
       item = current;
     } else {
       item = logItem(sendAt);
+      item.origin = list.findLast((entry) => entry.role === "user") || null;
+      item.prompt = item.origin ? item.origin.content : "";
       list.push(item);
       writerItem.set(writer, item);
     }
@@ -25,6 +28,23 @@ function parseActionLog(content) {
       taskItems.set(task, item);
     }
     return item;
+  };
+
+  const foldFollowUps = (item) => {
+    const origin = item.origin;
+    if (!origin) {
+      return;
+    }
+    const at = list.indexOf(item);
+    const moved = [];
+    while (list.length - 1 > at && list[list.length - 1].role === "user") {
+      moved.unshift(list.pop());
+    }
+    for (const entry of moved) {
+      origin.content += steerMark(entry.meta.send_at, entry.content, !origin.steered);
+      origin.steered = true;
+      item.nextPrompt = entry.content;
+    }
   };
 
   for (const line of content.split("\n")) {
@@ -47,7 +67,7 @@ function parseActionLog(content) {
     let item = null;
     switch (kind) {
       case "user":
-        if (body.startsWith("[Resumed Task") || body.startsWith("[Scheduled Task")) {
+        if (body.startsWith("[Resumed Task") || body.startsWith("[Scheduled Task") || body.startsWith("[Shell command]")) {
           break;
         }
 
@@ -71,10 +91,27 @@ function parseActionLog(content) {
         break;
       }
 
-      case "agent_result":
+      case "agent_result": {
         item = itemOf(task, writer, sendAt);
-        item.meta.model = body;
+        const [model, reasoning = ""] = body.split(" reasoning=");
+        if (model && model !== item.meta.model) {
+          const action = item.meta.model ? "Switch" : "Model";
+          const label = reasoning ? `${model} ${reasoning}` : model;
+          item.Reasoning += (item.Reasoning ? "\n\n" : "") + `⏵ \`${action}(${label})\``;
+        }
+        item.meta.model = model;
+        if (item.content) {
+          item.turns.push(item.content);
+          item.prompts.push(item.prompt || "");
+          item.content = "";
+          item.prompt = item.nextPrompt || "";
+        } else if (item.nextPrompt) {
+          item.prompt = item.nextPrompt;
+        }
+        item.nextPrompt = "";
+        item.resumed = false;
         break;
+      }
 
       case "edited_files": {
         item = itemOf(task, writer, sendAt);
@@ -167,6 +204,7 @@ function parseActionLog(content) {
         item.meta.output = meta.output;
         item.meta.tps = meta.tps;
         item.meta.send_at = sendAt;
+        item.Reasoning = dropModelLines(item.Reasoning);
         item.finished = true;
         break;
       }
@@ -177,8 +215,8 @@ function parseActionLog(content) {
     if (item.role === "user") {
       return true;
     }
-    item.pending = !item.finished;
-    return Boolean(item.content || item.Reasoning || (item.pending && i === list.length - 1));
+    item.pending = !item.finished || Boolean(item.paused);
+    return Boolean(item.content || item.turns.length || item.Reasoning || (item.pending && i === list.length - 1));
   });
 }
 
@@ -209,12 +247,30 @@ function logItem(sendAt) {
     role: "assistant",
     task: "",
     content: "",
+    turns: [],
+    prompts: [],
     Reasoning: "",
     files: [],
     resumed: false,
     finished: false,
     meta: { model: "", send_at: sendAt },
   };
+}
+
+function composeTurns(turns, prompts, current, open, settled) {
+  if (!turns || !turns.length) {
+    return current;
+  }
+  const kept = turns.map((text, i) => [text, (prompts && prompts[i]) || ""]).filter(([, prompt], i) => !settled || (i > 0 && prompt));
+  if (!kept.length) {
+    return current;
+  }
+  const blocks = kept.map(([text, raw]) => {
+    const prompt = Array.from((raw || "Background").replace(/\s+/g, " ").trim());
+    const summary = prompt.length > 64 ? prompt.slice(0, 64).join("") + "..." : prompt.join("");
+    return `<details${open ? " open" : ""}>\n<summary>${escapeSubviewText(summary)}</summary>\n\n${text}\n\n</details>`;
+  });
+  return blocks.join("\n\n") + (current ? "\n\n---\n\n" + current : "");
 }
 
 function steerMark(sendAt, body, first) {
@@ -242,6 +298,13 @@ function parseTodoArgs(body) {
     console.error("parseTodoArgs", err);
     return null;
   }
+}
+
+function dropModelLines(trace) {
+  return (trace || "")
+    .split("\n\n")
+    .filter((line) => !/^⏵ `(Model|Switch)\(/.test(line))
+    .join("\n\n");
 }
 
 function formatTool(body) {

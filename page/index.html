@@ -430,9 +430,8 @@
                   <div class="label">
                     <strong>Dispatcher</strong>
                     <p>smart routing</p>
-                    <a data-kind="dispatcher_beta" @click="dispatcher_beta_toggle" hidden></a>
                   </div>
-                  <select data-kind="dispatcher" @change="routing_change"></select>
+                  <select data-kind="dispatcher" @change="dispatcher_change"></select>
                 </div>
                 <div class="routing">
                   <div class="label">
@@ -440,6 +439,13 @@
                     <p>summary memory</p>
                   </div>
                   <select data-kind="summary" @change="routing_change"></select>
+                </div>
+                <div class="routing">
+                  <div class="label">
+                    <strong>Decision</strong>
+                    <p>interval checks</p>
+                  </div>
+                  <select data-kind="decision" @change="routing_change"></select>
                 </div>
                 <div class="routing">
                   <div class="label">

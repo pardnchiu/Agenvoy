@@ -69,7 +69,8 @@ func (t TUI) runScheduleRemove(kind, skillName string) (TUI, tea.Cmd) {
 		return t, notice(msgError(fmt.Sprintf("%s remove: %v", kind, err)) + "\n")
 	}
 	if removed == 0 {
-		return t, notice(msgLog(fmt.Sprintf("no %s found for %s", kind, skillName)) + "\n")
+		slog.Debug("tui: nothing found", slog.String("kind", kind), slog.String("skill", skillName))
+		return t, nil
 	}
 	if err := skill.TrashSchedule(context.Background(), skillName, historystore.Meta{SessionID: t.currentSessionID}); err != nil {
 		return t, notice(msgError(fmt.Sprintf("TrashSchedule: %v", err)) + "\n")

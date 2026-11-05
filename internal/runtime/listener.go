@@ -405,7 +405,7 @@ func confirmReplyFor(data string) (reply Reply, finalize bool) {
 }
 
 func FormatToolArgs(name, raw string) (formatted string, multiline bool) {
-	if name == "run_command" {
+	if name == "run_command" || name == "run_command_background" {
 		var parsed struct {
 			Argv []string `json:"argv"`
 		}

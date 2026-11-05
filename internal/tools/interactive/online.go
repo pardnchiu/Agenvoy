@@ -62,6 +62,22 @@ func ActiveCounts() map[string]int {
 	return dic
 }
 
+var claimMu sync.Mutex
+
+func ClaimOnline(sessionID, taskHash string) bool {
+	claimMu.Lock()
+	defer claimMu.Unlock()
+	if IsOnline(sessionID, taskHash) {
+		return false
+	}
+	markOnline(sessionID, taskHash)
+	return true
+}
+
+func ReleaseOnline(sessionID, taskHash string) {
+	torii.DB(torii.DBOnline).Del(context.Background(), onlineKey(sessionID, taskHash))
+}
+
 func IsOnline(sessionID, taskHash string) bool {
 	_, ok := torii.DB(torii.DBOnline).Get(context.Background(), onlineKey(sessionID, taskHash))
 	return ok
@@ -111,7 +127,7 @@ func KeepOnline(sessionID, taskHash string) func() {
 	return func() {
 		once.Do(func() {
 			close(done)
-			torii.DB(torii.DBOnline).Del(context.Background(), onlineKey(sessionID, taskHash))
+			ReleaseOnline(sessionID, taskHash)
 		})
 	}
 }

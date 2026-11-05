@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"log/slog"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -9,7 +10,8 @@ import (
 func (t TUI) commandScheduleMenu(_ []string) (TUI, tea.Cmd, bool) {
 	labels, tails, values := t.scheduleOptions()
 	if len(labels) == 0 {
-		return t, notice(msgLog("nothing scheduled") + "\n"), true
+		slog.Debug("tui: nothing scheduled")
+		return t, nil, true
 	}
 
 	t.popup = &Popup{

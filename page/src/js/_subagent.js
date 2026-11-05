@@ -1,4 +1,5 @@
 const SUBAGENT_SUBSCRIBE_DELAY = 300;
+const SUBAGENT_BATCH_WINDOW = 60000;
 const SUBAGENT_STARTED = "subagent started";
 const SUBAGENT_SESSION = /\bsession=(temp-\S+)(?: parent=(\S+))?/;
 
@@ -7,6 +8,7 @@ let subagentSubscribeTimer = 0;
 let subagentPending = [];
 let subagentFinished = [];
 const subagentParent = new Map();
+const subagentPinnedAt = new Map();
 
 function subagentPanel(sessionId) {
   const unpin = _("button", { class: "unpin", type: "button", name: "Unpin" }, [
@@ -27,11 +29,20 @@ function pinSubagent(text) {
     return;
   }
   const sessionId = match[1];
+  const parent = match[2] || "";
   for (const id of subagentFinished.filter((one) => one !== sessionId)) {
     unpinSubagent(id);
   }
   subagentFinished = [];
-  if (subagentSessions.includes(sessionId) || pinChats().includes(sessionId) || subagentSessions.length >= PIN_CHAT_MAX) {
+  if (subagentSessions.includes(sessionId) || pinChats().includes(sessionId)) {
+    return;
+  }
+  const batchStart = Date.now() - SUBAGENT_BATCH_WINDOW;
+  const stale = subagentSessions.find((one) => (subagentPinnedAt.get(one) || 0) < batchStart);
+  if (subagentSessions.length >= PIN_CHAT_MAX && stale) {
+    unpinSubagent(stale);
+  }
+  if (subagentSessions.length >= PIN_CHAT_MAX) {
     return;
   }
 
@@ -42,7 +53,8 @@ function pinSubagent(text) {
   box.appendChild(panel);
   subagentSessions.push(sessionId);
   subagentPending.push(sessionId);
-  subagentParent.set(sessionId, match[2] || "");
+  subagentParent.set(sessionId, parent);
+  subagentPinnedAt.set(sessionId, Date.now());
 
   clearTimeout(subagentSubscribeTimer);
   subagentSubscribeTimer = setTimeout(function () {
@@ -60,6 +72,7 @@ function unpinSubagent(sessionId) {
   }
   subagentSessions = subagentSessions.filter((id) => id !== sessionId);
   subagentParent.delete(sessionId);
+  subagentPinnedAt.delete(sessionId);
   subagentFinished = subagentFinished.filter((id) => id !== sessionId);
   const panel = chatPanel(sessionId);
   if (panel) {

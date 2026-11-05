@@ -20,6 +20,8 @@ import (
 )
 
 type tailLine struct {
+	kind    string
+	body    string
 	line    string
 	foreign bool
 }
@@ -146,16 +148,25 @@ func drainNew(path string, lastSize int64) int64 {
 		if !ok {
 			continue
 		}
-		if parsed.hash == own {
+		foreign := parsed.hash != own
+		if !foreign && execActive() {
 			continue
 		}
 		line := renderActionLine(parsed, defaultWrapWidth)
-		if line == "" {
+		if line != "" && foreign {
+			line = foreignWrap(line)
+		}
+		if line != "" && parsed.kind == "user" {
+			line += "\n"
+		}
+		if line == "" && parsed.kind != "pending" && parsed.kind != "canceled" {
 			continue
 		}
 		send(tailLine{
-			line:    foreignWrap(line),
-			foreign: true,
+			kind:    parsed.kind,
+			body:    strings.TrimSpace(parsed.body),
+			line:    line,
+			foreign: foreign,
 		})
 	}
 	if err := scanner.Err(); err != nil {

@@ -16,6 +16,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	sessionconfigbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -29,6 +30,7 @@ type Request struct {
 	SystemPrompt string   `json:"system_prompt,omitempty"`
 	WorkDir      string   `json:"work_dir,omitempty"`
 	Skill        string   `json:"skill,omitempty"`
+	PendingTask  string   `json:"pending_task,omitempty"`
 }
 
 func Send() gin.HandlerFunc {
@@ -64,8 +66,15 @@ func Send() gin.HandlerFunc {
 				slog.String("error", err.Error()))
 		}
 
+		steer := exec.IsRunning(sessionID)
+		pendingTask := ""
+		if !steer {
+			pendingTask, steer = interactive.ClaimFollowUp(sessionID, strings.TrimSpace(req.PendingTask))
+		}
+
 		trimContent := strings.TrimSpace(req.Content)
 		data := exec.Prepare(exec.ExecuteMeta{
+			PendingTask:       pendingTask,
 			Model:             req.Model,
 			WorkDir:           workDir,
 			SkillName:         req.Skill,
@@ -76,7 +85,7 @@ func Send() gin.HandlerFunc {
 			ExtraSystemPrompt: req.SystemPrompt,
 		})
 
-		if exec.IsRunning(sessionID) {
+		if steer {
 			exec.AppendSteer(sessionID, "", req.Content)
 			c.JSON(http.StatusOK, gin.H{
 				"session_id": sessionID,

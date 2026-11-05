@@ -16,6 +16,7 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionhistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	"github.com/pardnchiu/agenvoy/internal/session/summary"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -46,15 +47,30 @@ func Generate(ctx context.Context, sessionID string, histories []sessionhistory.
 		return nil
 	}
 
-	// * step2: split chunks
-	chunks := chunkHistories(histories, cursor)
-
-	// * step3: start to summary
+	histories = sinceCursor(histories, cursor)
+	latest := latestTime(histories)
 	oldSummary := string(raw)
 	if oldSummary == "" {
 		oldSummary = "{}"
 	}
+	if len(histories) > 0 {
+		if filtered, pruned, ok := filterWithDecision(summaryCtx, sessionID, dic, histories); ok {
+			histories, dic = filtered, pruned
+			if raw, err := json.Marshal(dic); err == nil {
+				oldSummary = string(raw)
+			}
+			if len(histories) == 0 {
+				summary.Save(sessionID, dic)
+				summary.SaveCursor(sessionID, latest)
+				return nil
+			}
+		}
+	}
 
+	// * step2: split chunks
+	chunks := chunkHistories(histories)
+
+	// * step3: start to summary
 	for i, chunk := range chunks {
 		newDic := generateSmmary(summaryCtx, agent, oldSummary, chunk)
 		if newDic == nil {
@@ -71,20 +87,27 @@ func Generate(ctx context.Context, sessionID string, histories []sessionhistory.
 		}
 		summary.SaveCursor(sessionID, cursor)
 	}
+	if latest > cursor {
+		summary.SaveCursor(sessionID, latest)
+	}
 	return nil
 }
 
-func chunkHistories(histories []sessionhistory.Record, cursor string) [][]sessionhistory.Record {
-	if cursor != "" {
-		latest := make([]sessionhistory.Record, 0, len(histories))
-		for _, message := range histories {
-			t := extractTime(message)
-			if t == "" || t > cursor {
-				latest = append(latest, message)
-			}
-		}
-		histories = latest
+func sinceCursor(histories []sessionhistory.Record, cursor string) []sessionhistory.Record {
+	if cursor == "" {
+		return histories
 	}
+	list := make([]sessionhistory.Record, 0, len(histories))
+	for _, message := range histories {
+		t := extractTime(message)
+		if t == "" || t > cursor {
+			list = append(list, message)
+		}
+	}
+	return list
+}
+
+func chunkHistories(histories []sessionhistory.Record) [][]sessionhistory.Record {
 	if len(histories) == 0 {
 		return nil
 	}
@@ -116,7 +139,8 @@ func contentRunes(msg sessionhistory.Record) int {
 func generateSmmary(ctx context.Context, agent agentstypes.Agent, oldSummary string, histories []sessionhistory.Record) map[string]any {
 	prompt := strings.NewReplacer(
 		"{{.Summary}}", oldSummary,
-	).Replace(strings.TrimSpace(configs.SummaryPrompt))
+		"{{.ReplyLanguage}}", filesystem.ReplyLangDirective(),
+	).Replace(strings.TrimSpace(filesystem.ApplyReplyLang(configs.SummaryPrompt)))
 
 	var sb strings.Builder
 	for _, hist := range histories {

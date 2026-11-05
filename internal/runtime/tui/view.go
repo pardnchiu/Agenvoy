@@ -55,7 +55,7 @@ func (t TUI) viewIdle() string {
 	var top string
 	if t.running {
 		if block := t.viewThinking(); block != "" {
-			top = "\n" + block + "\n"
+			top = block + "\n"
 		}
 	}
 
@@ -63,29 +63,48 @@ func (t TUI) viewIdle() string {
 		top += renderCmdSelector(t.selector) + "\n"
 	}
 
+	if t.waitingBackground != "" && t.waitingBackground == t.currentSessionID {
+		top += warnStyle.Render(t.spinner.View()+" Waiting for background tasks") + " " + hintStyle.Render("(the reply continues here)") + "\n"
+	}
+
 	if t.notice != "" {
 		top += noticeBlock(t.notice, t.noticeOffset, width-4) + "\n"
 	}
 
-	box := textAreaStyle.Width(width - 1).Render(t.textarea.View())
+	boxStyle, lineStyle := textAreaStyle, thinkStyle
+	if strings.HasPrefix(t.textarea.Value(), "!") {
+		boxStyle, lineStyle = textAreaStyle.BorderForeground(colError), errorStyle
+		t.textarea.FocusedStyle.Text = errorStyle
+		t.textarea.Focus()
+		t.textarea.SetPromptFunc(2, func(lineIdx int) string {
+			if lineIdx == 0 {
+				return errorStyle.Render("$ ")
+			}
+			return "  "
+		})
+	}
+	box := boxStyle.Width(width - 1).Render(t.textarea.View())
 	boxWidth := lipgloss.Width(box)
-	bottom := thinkStyle.Render(strings.Repeat("─", boxWidth))
+	bottom := lineStyle.Render(strings.Repeat("─", boxWidth))
 	if model := t.modelTag(); model != "" {
 		tag := " " + model + " "
 		if fill := boxWidth - lipgloss.Width(tag) - 1; fill >= 1 {
-			bottom = thinkStyle.Render(strings.Repeat("─", fill)) + tag + thinkStyle.Render("─")
+			bottom = lineStyle.Render(strings.Repeat("─", fill)) + tag + lineStyle.Render("─")
 		}
 	}
 
 	if t.connecting {
-		return top + box + "\n" + bottom + "\n " + t.spinner.View() + systemStyle.Render(" Connecting")
+		return top + box + "\n" + bottom + "\n " + systemStyle.Render(t.spinner.View()+" Connecting")
 	}
 
 	status := " " + fastMode + confirmMode
+	var right string
 	if t.quotaText != "" {
-		quota := hintStyle.Render(t.quotaModel+" ") + renderQuotaBadge(t.quotaText) + " "
-		if gap := boxWidth - lipgloss.Width(status) - lipgloss.Width(quota); gap >= 1 {
-			status += strings.Repeat(" ", gap) + quota
+		right = hintStyle.Render(t.quotaModel+" ") + renderQuotaBadge(t.quotaText) + " "
+	}
+	if right != "" {
+		if gap := boxWidth - lipgloss.Width(status) - lipgloss.Width(right); gap >= 1 {
+			status += strings.Repeat(" ", gap) + right
 		}
 	}
 
@@ -126,7 +145,7 @@ func (t TUI) viewThinking() string {
 	sb.WriteString(" ")
 	sb.WriteString(hintStyle.Render("(" + strings.Join(detail, "  ") + ")"))
 
-	if block := renderTodoList(t.todos, t.spinner.View()); block != "" {
+	if block := renderTodoList(t.todos, systemStyle.Render(t.spinner.View())); block != "" {
 		sb.WriteString("\n\n")
 		sb.WriteString(block)
 	}

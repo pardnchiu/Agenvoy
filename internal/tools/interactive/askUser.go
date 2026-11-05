@@ -70,6 +70,7 @@ type pendingMeta struct {
 	Model        string                `json:"model,omitempty"`
 	Reasoning    string                `json:"reasoning,omitempty"`
 	Objective    string                `json:"objective,omitempty"`
+	AskObjective string                `json:"ask_objective,omitempty"`
 	Completed    []string              `json:"completed,omitempty"`
 	NextSteps    []string              `json:"next_steps,omitempty"`
 	Questions    []runtime.Question    `json:"questions,omitempty"`
@@ -80,6 +81,8 @@ type pendingMeta struct {
 	Files        []string              `json:"files,omitempty"`
 	Reply        string                `json:"reply,omitempty"`
 	AllowAll     bool                  `json:"allow_all,omitempty"`
+	Background   []BackgroundTask      `json:"background,omitempty"`
+	WindowHash   string                `json:"window_hash,omitempty"`
 }
 
 var pendingMu sync.Mutex
@@ -268,13 +271,47 @@ func FinalizePending(sessionID, taskHash, reply string) {
 	}
 }
 
+func RenamePending(sessionID, oldHash, newHash string) error {
+	pendingMu.Lock()
+	defer pendingMu.Unlock()
+
+	meta, err := readPending(filesystem.PendingMetaPath(sessionID, oldHash))
+	if err != nil {
+		return utilsmsg.Trace("readPending", oldHash, err)
+	}
+	if err := writePending(sessionID, newHash, &meta); err != nil {
+		return utilsmsg.Trace("writePending", newHash, err)
+	}
+	if err := os.Remove(filesystem.PendingMetaPath(sessionID, oldHash)); err != nil {
+		return utilsmsg.Wrap(utilsmsg.Internal, "os.Remove", oldHash, err)
+	}
+	return nil
+}
+
 func DeletePending(sessionID, taskHash string) {
 	if taskHash == "" {
 		return
 	}
 	pendingMu.Lock()
-	defer pendingMu.Unlock()
-	os.Remove(filesystem.PendingMetaPath(sessionID, taskHash))
+	path := filesystem.PendingMetaPath(sessionID, taskHash)
+	if running, unreported := BackgroundState(sessionID, taskHash); running+unreported > 0 {
+		meta, err := readPending(path)
+		pendingMu.Unlock()
+		if err == nil {
+			resumeUnreported(sessionID, taskHash, meta.Background)
+		}
+		return
+	}
+	os.Remove(path)
+	pendingMu.Unlock()
+}
+
+func resumeUnreported(sessionID, taskHash string, list []BackgroundTask) {
+	finished, running := backgroundToReport(list)
+	if running > 0 || len(finished) == 0 || backgroundResume == nil {
+		return
+	}
+	backgroundResume(sessionID, taskHash, finished[0].WorkDir)
 }
 
 func CompactPending(sessionID, taskHash string) {
@@ -315,9 +352,26 @@ func CleanupPending(sessionID, taskHash string) {
 	if taskHash == "" {
 		return
 	}
+	src := filesystem.PendingMetaPath(sessionID, taskHash)
+	if running, unreported := BackgroundState(sessionID, taskHash); running+unreported > 0 {
+		pendingMu.Lock()
+		meta, err := readPending(src)
+		if err == nil && len(meta.Questions) > 0 {
+			meta.Questions = nil
+			if err := writePending(sessionID, taskHash, &meta); err != nil {
+				slog.Warn("CleanupPending writePending",
+					slog.String("file", src),
+					slog.String("error", err.Error()))
+			}
+		}
+		pendingMu.Unlock()
+		if err == nil {
+			resumeUnreported(sessionID, taskHash, meta.Background)
+		}
+		return
+	}
 	CompactPending(sessionID, taskHash)
 
-	src := filesystem.PendingMetaPath(sessionID, taskHash)
 	if !go_pkg_filesystem_reader.Exists(src) {
 		return
 	}
@@ -550,8 +604,12 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 
 	var msg strings.Builder
 
+	finished, running := backgroundToReport(meta.Background)
+	backgroundOnly := len(meta.Questions) == 0 && len(finished) > 0
 	if len(meta.Questions) > 0 {
 		msg.WriteString("[Resumed Task — ask_user response received]\n\n")
+	} else if len(finished) > 0 {
+		msg.WriteString(backgroundResumeHeader(finished) + "\n\n")
 	} else {
 		msg.WriteString("[Resumed Task — interrupted execution recovered]\n\n")
 	}
@@ -572,13 +630,6 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 				mark = "[~]"
 			}
 			msg.WriteString(fmt.Sprintf("- %s %s\n", mark, td.Content))
-		}
-	}
-
-	if len(meta.Completed) > 0 {
-		msg.WriteString("\n## Completed Steps\n")
-		for _, s := range meta.Completed {
-			msg.WriteString(fmt.Sprintf("- %s\n", s))
 		}
 	}
 
@@ -614,41 +665,57 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 		}
 	}
 
-	if len(meta.Answer) > 0 {
-		msg.WriteString("\n## Answers\n")
-		for i, a := range meta.Answer {
-			msg.WriteString(fmt.Sprintf("%d. Q: %s\n   A: %s\n", i+1, a.Question, a.Answer))
+	askObjective := strings.TrimSpace(meta.AskObjective)
+	if askObjective != "" || len(meta.Completed) > 0 || len(meta.NextSteps) > 0 || len(meta.Answer) > 0 || len(meta.Questions) > 0 {
+		msg.WriteString("\n## Question\n")
+		if askObjective != "" {
+			msg.WriteString(askObjective + "\n")
+		}
+		if len(meta.Completed) > 0 {
+			msg.WriteString("\n### Completed\n")
+			for _, s := range meta.Completed {
+				msg.WriteString(fmt.Sprintf("- %s\n", s))
+			}
+		}
+		if len(meta.NextSteps) > 0 {
+			msg.WriteString("\n### Remaining Steps\n")
+			for _, s := range meta.NextSteps {
+				msg.WriteString(fmt.Sprintf("- %s\n", s))
+			}
+		}
+		if len(meta.Answer) > 0 {
+			msg.WriteString("\n### Previous Answers\n")
+			for i, a := range meta.Answer {
+				msg.WriteString(fmt.Sprintf("%d. Q: %s\n   A: %s\n", i+1, a.Question, a.Answer))
+			}
 		}
 	}
 
 	var sb strings.Builder
 	if len(meta.Questions) > 0 {
-		sb.WriteString("[Resumed Task — ask_user response received]\n\n")
-		if obj := strings.TrimSpace(meta.Objective); obj != "" {
-			sb.WriteString("## User Input\n")
-			sb.WriteString(obj)
-			sb.WriteString("\n\n")
-		}
-		sb.WriteString("## Current Answers\n")
+		var answered strings.Builder
+		answered.WriteString("\n### Answers\n")
 		for i, q := range meta.Questions {
-			sb.WriteString(fmt.Sprintf("%d. Q: %s\n", i+1, q.Question))
+			answered.WriteString(fmt.Sprintf("%d. Q: %s\n", i+1, q.Question))
 			if i < len(answers) {
-				sb.WriteString(fmt.Sprintf("   A: %s\n", buildResumeAnswer(answers[i])))
+				answered.WriteString(fmt.Sprintf("   A: %s\n", buildResumeAnswer(answers[i])))
 			}
 		}
-		msg.WriteString("\n## Current Answers\n")
-		for i, q := range meta.Questions {
-			msg.WriteString(fmt.Sprintf("%d. Q: %s\n", i+1, q.Question))
-			if i < len(answers) {
-				msg.WriteString(fmt.Sprintf("   A: %s\n", buildResumeAnswer(answers[i])))
-			}
+		msg.WriteString(answered.String())
+
+		sb.WriteString("[Resumed Task — ask_user response received]\n")
+		if askObjective != "" {
+			sb.WriteString("\n## Question\n" + askObjective + "\n")
 		}
+		sb.WriteString(answered.String())
 	}
 
-	if len(meta.NextSteps) > 0 {
-		msg.WriteString("\n## Remaining Steps\n")
-		for _, s := range meta.NextSteps {
-			msg.WriteString(fmt.Sprintf("- %s\n", s))
+	if len(finished) > 0 {
+		section := formatBackgroundSection(finished, running)
+		msg.WriteString(section)
+		if sb.Len() == 0 {
+			sb.WriteString(backgroundResumeHeader(finished) + "\n")
+			sb.WriteString(section)
 		}
 	}
 
@@ -656,15 +723,20 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 
 	if len(meta.Questions) > 0 {
 		pendingMu.Lock()
+		latest, readErr := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+		if readErr != nil {
+			latest = meta
+		}
 		for i, q := range meta.Questions {
 			answer := ""
 			if i < len(answers) {
 				answer = buildResumeAnswer(answers[i])
 			}
-			meta.Answer = append(meta.Answer, answeredQuestion{Question: q.Question, Answer: answer})
+			latest.Answer = append(latest.Answer, answeredQuestion{Question: q.Question, Answer: answer})
 		}
-		meta.Questions = nil
-		if writeErr := writePending(sessionID, taskHash, &meta); writeErr != nil {
+		latest.Questions = nil
+		markOnline(sessionID, taskHash)
+		if writeErr := writePending(sessionID, taskHash, &latest); writeErr != nil {
 			slog.Debug("LoadResumeMessage: move answered questions",
 				slog.String("session", sessionID),
 				slog.String("task_hash", taskHash),
@@ -685,6 +757,12 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 		pubsub.Pub(meta.DeliverTo, endEvent)
 	}
 
+	stageBackgroundReport(sessionID, taskHash, sb.String(), finished)
+	if backgroundOnly {
+		report := strings.TrimSpace(sb.String())
+		header, section, _ := strings.Cut(report, "\n")
+		return header + "\n\n## Objective\n" + strings.TrimSpace(meta.Objective) + "\n" + section, report, nil
+	}
 	return msg.String(), sb.String(), nil
 }
 
@@ -711,15 +789,21 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 	pendingMu.Lock()
 	var allResults []ToolResult
 	var messageID, model, reasoning string
-	var todos []agenttypes.TodoItem
 	var allowAll bool
+	var background []BackgroundTask
+	var windowHash string
+	taskObjective := objective
 	allFiles := files
 	if existing, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash)); err == nil {
 		allowAll = existing.AllowAll
+		background = existing.Background
+		windowHash = existing.WindowHash
+		if strings.TrimSpace(existing.Objective) != "" {
+			taskObjective = existing.Objective
+		}
 		messageID = existing.MessageID
 		model = existing.Model
 		reasoning = existing.Reasoning
-		todos = existing.Todos
 		allFiles = mergeFiles(existing.Files, files)
 		seen := make(map[string]bool, len(toolResults))
 		for _, r := range toolResults {
@@ -738,18 +822,20 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 		model, reasoning = configbot.GetModel(sessionID)
 	}
 	if err := writePending(sessionID, taskHash, &pendingMeta{
-		MessageID:   messageID,
-		DeliverTo:   deliverTo,
-		Model:       model,
-		Reasoning:   reasoning,
-		Objective:   objective,
-		Completed:   completed,
-		NextSteps:   nextSteps,
-		Questions:   questions,
-		Files:       allFiles,
-		ToolResults: allResults,
-		Todos:       todos,
-		AllowAll:    allowAll,
+		MessageID:    messageID,
+		DeliverTo:    deliverTo,
+		Model:        model,
+		Reasoning:    reasoning,
+		Objective:    taskObjective,
+		AskObjective: objective,
+		Completed:    completed,
+		NextSteps:    nextSteps,
+		Questions:    questions,
+		Files:        allFiles,
+		ToolResults:  allResults,
+		AllowAll:     allowAll,
+		Background:   background,
+		WindowHash:   windowHash,
 	}); err != nil {
 		slog.Warn("SaveAndEnqueueAskUser: writePending", slog.String("error", err.Error()))
 	}

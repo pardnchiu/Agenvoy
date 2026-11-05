@@ -116,6 +116,7 @@ function clearTaskCookie(sessionId) {
 }
 
 const inputTasks = new Map();
+const waitingTasks = new Map();
 
 function setInputTask(sessionId, taskHash) {
   const id = sessionId || currentSessionId;
@@ -301,8 +302,14 @@ async function send(content, target) {
   const dom = chatMessages(sessionId);
   clearPending(sessionId);
   const running = taskStream(sessionId, inputTasks.get(sessionId) || "");
+  const waiting = waitingTasks.get(sessionId) || "";
   if (running && !running.paused) {
     appendUserText(dom, content);
+  } else if (waiting && appendTaskSteer(dom, waiting, content, sessionId)) {
+    const view = taskStream(sessionId, waiting);
+    if (view) {
+      setStream(sessionId, view);
+    }
   } else {
     dom.appendChild(newUserItem({ content: content, meta: { send_at: sendAt() } }));
     setStream(sessionId, newStreamItem({}, sessionId));
@@ -324,6 +331,7 @@ async function send(content, target) {
         system_prompt: primary ? role : "",
         work_dir: chat.work_dir,
         skill: picked,
+        pending_task: waiting,
       }),
     });
     if (!response.ok) {
@@ -348,6 +356,10 @@ function appendUserText(dom, content) {
     return;
   }
 
+  appendSteerMark(bubble, content);
+}
+
+function appendSteerMark(bubble, content) {
   const mark = steerMark(sendAt(), content, bubble.dataset.steered !== "1");
   bubble.dataset.steered = "1";
   const text = bubble.querySelector("p");
@@ -436,9 +448,9 @@ function sendAt() {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function appendInboundUser(text, sessionId) {
+function appendInboundUser(text, sessionId, task) {
   text = (text || "").trim();
-  if (!text || text.startsWith("[Resumed Task")) {
+  if (!text || text.startsWith("[Resumed Task") || text.startsWith("[Shell command]")) {
     return;
   }
   if (takeEcho(sessionId, text)) {
@@ -449,12 +461,37 @@ function appendInboundUser(text, sessionId) {
   if (!dom) {
     return;
   }
+  if (appendTaskSteer(dom, task, text, sessionId)) {
+    scrollToBottom(true, sessionId);
+    return;
+  }
   if ((sessionId || currentSessionId) === currentSessionId) {
     HISTORY.push({ role: "user", content: text });
   }
   setStream(sessionId, null);
   dom.appendChild(newUserItem({ content: text, meta: { send_at: sendAt() } }));
   scrollToBottom(true, sessionId);
+}
+
+function appendTaskSteer(dom, task, text, sessionId) {
+  if (!task) {
+    return false;
+  }
+  const items = dom.querySelectorAll(`:scope > div.assistant[data-task="${CSS.escape(task)}"]`);
+  let bubble = items.length ? items[0].previousElementSibling : null;
+  while (bubble && !bubble.classList.contains("user")) {
+    bubble = bubble.previousElementSibling;
+  }
+  if (!bubble) {
+    return false;
+  }
+
+  const view = taskStream(sessionId || currentSessionId, task);
+  if (view) {
+    view.nextPrompt = text;
+  }
+  appendSteerMark(bubble, text);
+  return true;
 }
 
 function eventSkip(event) {
@@ -475,13 +512,12 @@ function newStreamItem(init, sessionId) {
   think.open = true;
   think.dataset.streaming = "1";
 
-  const model = _("p", init.model || "...");
   const answer = _("section.md-render.nanomd", { "data-mode": "light" });
   const source = sourceBox(init.text || "");
   const files = fileBox([]);
   const footer = _("footer");
   const todo = _("section.todo");
-  const body = _("section", [model, think, answer, source, files, footer, todo]);
+  const body = _("section", [think, answer, source, files, footer, todo]);
   const dom = _("div.assistant", [_("img", "public/logo-min.svg"), body]);
   dom.dataset.streaming = "1";
   if (init.task) {
@@ -495,7 +531,8 @@ function newStreamItem(init, sessionId) {
     task: init.task || "",
     dom: dom,
     body: body,
-    model: model,
+    model: init.model || "",
+    shownModel: init.trace ? init.model || "" : "",
     think: think,
     reasoning: reasoning,
     answer: answer,

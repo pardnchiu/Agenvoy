@@ -2,7 +2,7 @@ package tui
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -89,16 +89,18 @@ type TUI struct {
 	streaming      bool
 	tableBuf       []string
 
-	toolBuf         []string
-	toolCount       int
-	subCount        int
-	subActive       int
-	subBuf          map[string]*subagentLive
-	subOrder        []string
-	todos           []agenttypes.TodoItem
-	pendingSteer    []string
-	inputHistory    []string
-	inputHistoryIdx int
+	toolBuf           []string
+	toolCount         int
+	subCount          int
+	subActive         int
+	subBuf            map[string]*subagentLive
+	subOrder          []string
+	todos             []agenttypes.TodoItem
+	pendingSteer      []string
+	waitingBackground string
+	waitingTask       string
+	inputHistory      []string
+	inputHistoryIdx   int
 
 	quitting bool
 
@@ -116,8 +118,9 @@ func (t TUI) Init() tea.Cmd {
 	seq = append(seq, func() tea.Msg { return initTailer{} })
 	if sid != "" {
 		if n := len(interactive.ListResumablePending(sid)); n > 0 {
-			hint := fmt.Sprintf("  %d pending task(s) — /pending to resume", n)
-			seq = append(seq, notice(msgLog(hint)+"\n"))
+			slog.Debug("tui: resumable pending tasks",
+				slog.String("session", sid),
+				slog.Int("count", n))
 		}
 	} else {
 		seq = append(seq, func() tea.Msg { return StartupSelectSession{} })
@@ -140,7 +143,7 @@ type StartupSessionSkip struct{}
 
 func newModel(ctx context.Context) TUI {
 	textArea := textarea.New()
-	textArea.Placeholder = `/ commands  enter send  esc cancel  shift+u usage  shift+f fast  shift+g guide`
+	textArea.Placeholder = `/ commands  shift+u usage  shift+f fast  shift+g guide  shift+p workdir`
 	textArea.CharLimit = 8000
 	textArea.SetHeight(1)
 	textArea.ShowLineNumbers = false
@@ -157,10 +160,10 @@ func newModel(ctx context.Context) TUI {
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Spinner{
-		Frames: []string{"✶", "✷", "✸", "✹", "✺", "✹", "✸", "✷"},
+		Frames: []string{"⠾", "⠷", "⠯", "⠟", "⠻", "⠽"},
 		FPS:    time.Second / 8,
 	}
-	sp.Style = systemStyle
+	sp.Style = lipgloss.NewStyle()
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -299,14 +302,16 @@ func loadSessionTail(sid string, width int, all bool) []tea.Cmd {
 		lines = lines[len(lines)-historyLoad:]
 	}
 
-	cmds := make([]tea.Cmd, 0, len(lines)*2+2)
-	cmds = append(cmds, notice(msgLog(""+label+" ("+strconv.Itoa(len(lines))+")")+"\n"))
+	slog.Debug("tui: "+label+" loaded",
+		slog.String("session", sid),
+		slog.Int("lines", len(lines)))
+	cmds := make([]tea.Cmd, 0, len(lines)*2+1)
 	for i, l := range lines {
-		if i > 0 && l.kind != "done" && l.kind != "canceled" {
-			cmds = append(cmds, tea.Println(""))
-		}
 		cmds = append(cmds, tea.Println(l.line))
+		if i+1 < len(lines) && (lines[i+1].kind == "done" || lines[i+1].kind == "canceled") {
+			continue
+		}
+		cmds = append(cmds, tea.Println(""))
 	}
-	cmds = append(cmds, tea.Println(""))
 	return cmds
 }

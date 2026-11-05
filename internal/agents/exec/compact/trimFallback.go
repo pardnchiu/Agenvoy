@@ -1,10 +1,79 @@
 package compact
 
 import (
+	"context"
+	"encoding/json"
+	"regexp"
+	"strconv"
 	"strings"
+	"sync"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
 )
+
+var (
+	overflowMu  sync.RWMutex
+	overflowDic = map[string]int{}
+)
+
+var overflowNumber = regexp.MustCompile(`\d{4,}`)
+
+func NoteOverflow(modelName string, err error) {
+	limit := 0
+	for _, raw := range overflowNumber.FindAllString(strings.ReplaceAll(err.Error(), ",", ""), -1) {
+		n, convErr := strconv.Atoi(raw)
+		if convErr != nil || n < 4096 {
+			continue
+		}
+		if limit == 0 || n < limit {
+			limit = n
+		}
+	}
+	if limit == 0 {
+		return
+	}
+	overflowMu.Lock()
+	defer overflowMu.Unlock()
+	if prev, ok := overflowDic[modelName]; !ok || limit < prev {
+		overflowDic[modelName] = limit
+	}
+}
+
+func overflowLimit(modelName string) (int, bool) {
+	overflowMu.RLock()
+	defer overflowMu.RUnlock()
+	limit, ok := overflowDic[modelName]
+	return limit, ok
+}
+
+func TrimRatio(ctx context.Context, sessionID, objective string, oldHistory *[]go_llm_router.Message, toolCall *[]go_llm_router.Message, ratio float64) bool {
+	total := messagesSize(*oldHistory) + messagesSize(*toolCall)
+	if total == 0 {
+		return false
+	}
+	target := int(float64(total) * ratio)
+	pruneToolsWithDecision(ctx, sessionID, objective, toolCall)
+	for messagesSize(*oldHistory)+messagesSize(*toolCall) > target {
+		before := len(*oldHistory) + len(*toolCall)
+		TrimFallback(oldHistory, toolCall)
+		if len(*oldHistory)+len(*toolCall) == before {
+			break
+		}
+	}
+	return messagesSize(*oldHistory)+messagesSize(*toolCall) < total
+}
+
+func messagesSize(list []go_llm_router.Message) int {
+	size := 0
+	for _, m := range list {
+		raw, err := json.Marshal(m)
+		if err != nil {
+			continue
+		}
+		size += len(raw)
+	}
+	return size
+}
 
 func TrimFallback(oldHistory *[]go_llm_router.Message, toolCall *[]go_llm_router.Message) {
 	if len(*oldHistory) > 0 {
@@ -65,5 +134,6 @@ func IsContextLengthError(err error) bool {
 		strings.Contains(msg, "maximum prompt length") ||
 		strings.Contains(msg, "input size exceeds") ||
 		strings.Contains(msg, "max_tokens must be at least") ||
-		strings.Contains(msg, "context length")
+		strings.Contains(msg, "context length") ||
+		strings.Contains(msg, "range of input length")
 }

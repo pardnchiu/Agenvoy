@@ -45,7 +45,8 @@ func (t TUI) commandSessions(parts []string) (TUI, tea.Cmd, bool) {
 
 	popup := popupSwitch(t.currentSessionID)
 	if popup == nil {
-		return t, notice(msgLog("no sessions available") + "\n"), true
+		slog.Debug("tui: no sessions available")
+		return t, nil, true
 	}
 	popup.subtitle = "pick a session to switch to"
 	if sid != "" {

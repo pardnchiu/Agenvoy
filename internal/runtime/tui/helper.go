@@ -28,7 +28,7 @@ func activityVerb(activity string) string {
 		case "edit_file":
 			return "Writing"
 
-		case "run_command":
+		case "run_command", "run_command_background":
 			return "Running"
 
 		case "search_web", "error_history", "chat_history":

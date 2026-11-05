@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"log/slog"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
@@ -41,7 +43,8 @@ func reasoningOptions(sid string) (options, values []string) {
 func (t TUI) runSessionReasoningSelect(level string) (TUI, tea.Cmd) {
 	sid := t.currentSessionID
 	if sid == "" {
-		return t, notice(msgLog("no active session") + "\n")
+		slog.Debug("tui: no active session")
+		return t, nil
 	}
 	configbot.SetModel(sid, "", level)
 	return t, nil

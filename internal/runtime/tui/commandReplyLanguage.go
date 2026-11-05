@@ -17,7 +17,8 @@ type ReplyLanguageSelect struct {
 func (t TUI) commandReplyLanguage() (TUI, tea.Cmd, bool) {
 	languages := filesystem.ReplyLangOptions()
 	if len(languages) == 0 {
-		return t, notice(msgLog("no languages available") + "\n"), true
+		slog.Debug("tui: no languages available")
+		return t, nil, true
 	}
 
 	keys := make([]string, 0, len(languages))

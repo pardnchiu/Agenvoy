@@ -2,7 +2,26 @@ function renderEvent(view, event) {
   const type = event.type;
 
   if (type === "EventAgentResult") {
-    view.model.textContent = event.text || "";
+    view.model = event.text || "";
+    if (view.text) {
+      view.prompts = (view.prompts || []).concat([view.prompt === undefined ? originPrompt(view) : view.prompt]);
+      view.prompt = view.nextPrompt || "";
+      view.nextPrompt = "";
+      view.turns = (view.turns || []).concat([view.text]);
+      view.text = "";
+      view.textStarted = false;
+      view.streamed = false;
+      view.resumed = false;
+      view.turnsOpen = true;
+      renderAnswer(view);
+    }
+    const name = (event.text || "").trim();
+    if (name && name !== view.shownModel) {
+      const action = view.shownModel ? "Switch" : "Model";
+      const label = event.reasoning ? `${name} ${event.reasoning}` : name;
+      view.shownModel = name;
+      renderReasoning(view, `⏵ \`${action}(${label})\``);
+    }
     return;
   }
 
@@ -36,6 +55,7 @@ function renderEvent(view, event) {
     const canceled = assistantFooter(
       {
         send_at: sendAt(),
+        model: view.model,
         canceled: true,
         duration: compactDuration(event.duration),
       },
@@ -54,10 +74,12 @@ function renderEvent(view, event) {
   }
 
   if (type === "EventDone") {
-    const model = event.model || view.model.textContent;
-    if (event.reasoning) {
-      view.model.replaceChildren(`${model}/${event.reasoning}`);
+    if (view.turns && view.turns.length) {
+      view.turnsOpen = false;
+      renderAnswer(view);
     }
+    const model = event.model || view.model;
+    view.model = model;
     loadModelQuota(view, model);
     loadFollowup(view);
     view.think.open = false;
@@ -66,6 +88,8 @@ function renderEvent(view, event) {
     const footer = assistantFooter(
       {
         send_at: sendAt(),
+        model: model,
+        reasoning: event.reasoning || "",
         duration: compactDuration(event.duration),
         input: event.usage_input || "",
         output: compactToken(usage.output_tokens),
@@ -84,12 +108,21 @@ function renderEvent(view, event) {
 
 function renderAnswer(view) {
   view.source.textContent = view.text;
-  render(view.answer, view.text, view.session);
+  render(view.answer, composeTurns(view.turns, view.prompts, view.text, view.turnsOpen), view.session);
   if (view.answered) {
     return;
   }
   view.answered = true;
   scrollToBottom(true, view.session);
+}
+
+function originPrompt(view) {
+  let bubble = view.dom ? view.dom.previousElementSibling : null;
+  while (bubble && !bubble.classList.contains("user")) {
+    bubble = bubble.previousElementSibling;
+  }
+  const source = bubble ? bubble.querySelector("pre.source") || bubble.querySelector("p") : null;
+  return source ? source.textContent.split("\n===\n")[0] : "";
 }
 
 function dropResumedText(view) {
@@ -194,11 +227,11 @@ async function loadModelQuota(view, model) {
     if (!text) {
       return;
     }
-    const quota = _("span.quota", text);
-    const percents = (text.match(/\d+(?:\.\d+)?(?=%)/g) || []).map(Number);
-    quota.dataset.level = quotaLevel(percents.length ? "percent" : "balance", percents.length ? Math.min(...percents) : parseFloat(text));
-    view.model.querySelector("span.quota")?.remove();
-    view.model.appendChild(quota);
+    const stats = view.footer.querySelector("div.stats");
+    const label = stats?.getAttribute("name");
+    if (label) {
+      stats.setAttribute("name", `${label} · ${text}`);
+    }
   } catch (err) {
     console.error("loadModelQuota", err);
   }

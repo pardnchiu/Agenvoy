@@ -297,10 +297,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         saveAdminChannel(this.value);
       },
       routing_change: function () {
-        saveRoutingModel(this.dataset.kind, this.value);
+        saveRouting({ [this.dataset.kind]: this.value });
       },
-      dispatcher_beta_toggle: function () {
-        saveTypesafeToggle("dispatcher_beta", this.dataset.on !== "1");
+      dispatcher_change: function () {
+        saveRouting(this.value === DECISION_DISPATCHER ? { dispatcher_beta: true } : { dispatcher: this.value, dispatcher_beta: false });
       },
       system_lang: function () {
         saveSystemLang();
@@ -336,8 +336,14 @@ document.addEventListener("DOMContentLoaded", async function () {
           document.body.dataset.rendered = "1";
         }, 0);
 
+        let oldWidth = document.documentElement.clientWidth;
         window.addEventListener("resize", function (e) {
           const vw = document.documentElement.clientWidth;
+          const crossed = oldWidth < LEFT_TAB_WIDE !== vw < LEFT_TAB_WIDE;
+          oldWidth = vw;
+          if (!crossed) {
+            return;
+          }
           const dom = $(".left-tab");
 
           let timer;

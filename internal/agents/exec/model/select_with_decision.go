@@ -7,10 +7,9 @@ import (
 	"strings"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
-	"github.com/pardnchiu/go-pkg/filesystem/keychain"
-	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	"github.com/pardnchiu/agenvoy/internal/session/history"
@@ -18,15 +17,14 @@ import (
 )
 
 const (
-	typesafeEndpoint = "https://api.typesafe.ai/v1/systemone"
-	betaNamedNone    = "none"
-	betaTopicSame    = "same"
-	BetaLastModelKey = "lastModel:"
+	decisionNamedNone    = "none"
+	decisionTopicSame    = "same"
+	DecisionLastModelKey = "lastModel:"
 )
 
-var betaWorkCriteria = map[string]any{
+var decisionWorkCriteria = map[string]any{
 	"code": map[string]any{
-		"what":    betaWorkWhat("code"),
+		"what":    decisionWorkWhat("code"),
 		"not_for": "Explaining, reviewing or planning code without changing it.",
 		"examples": []string{
 			"這段有 race condition 嗎？幫我修掉",
@@ -35,7 +33,7 @@ var betaWorkCriteria = map[string]any{
 		},
 	},
 	"chat": map[string]any{
-		"what":    betaWorkWhat("chat"),
+		"what":    decisionWorkWhat("chat"),
 		"not_for": "Anything that needs tools, research or more than a few sentences.",
 		"examples": []string{
 			"早安",
@@ -44,7 +42,7 @@ var betaWorkCriteria = map[string]any{
 		},
 	},
 	"fetch": map[string]any{
-		"what":    betaWorkWhat("fetch"),
+		"what":    decisionWorkWhat("fetch"),
 		"not_for": "Comparing, explaining or drawing conclusions from the data.",
 		"examples": []string{
 			"查一下現在的天氣",
@@ -53,7 +51,7 @@ var betaWorkCriteria = map[string]any{
 		},
 	},
 	"research": map[string]any{
-		"what":    betaWorkWhat("research"),
+		"what":    decisionWorkWhat("research"),
 		"not_for": "Fetching one value and returning it as-is, or a task that needs no investigation.",
 		"examples": []string{
 			"比較這三家雲端供應商的價格與限制",
@@ -62,7 +60,7 @@ var betaWorkCriteria = map[string]any{
 		},
 	},
 	"work": map[string]any{
-		"what":    betaWorkWhat("work"),
+		"what":    decisionWorkWhat("work"),
 		"not_for": "A request that merely sounds important or long but is really one of the other options.",
 		"examples": []string{
 			"Review this design doc and list the risks",
@@ -72,56 +70,56 @@ var betaWorkCriteria = map[string]any{
 	},
 }
 
-func selectWithJEV(ctx context.Context, meta SelectMeta, tagMap map[string]string) ([]string, string, int, error) {
-	// * step 1: get key
-	key := strings.TrimSpace(keychain.Get(config.TypesafeKey))
-	if key == "" {
-		return nil, "", 0, utilsmsg.New(utilsmsg.Denied, config.TypesafeKey, "missing in keychain")
+func selectWithDecision(ctx context.Context, meta SelectMeta, tagMap map[string]string) ([]string, string, int, error) {
+	// * step 1: get decision agent
+	agent, agentName, err := decision.Agent(ctx)
+	if err != nil {
+		return nil, "", 0, err
 	}
 
 	if len(meta.ModelNames) == 0 {
 		return meta.ModelNames, "", 0, nil
 	}
 
-	named := map[string]any{betaNamedNone: "The user does not mention any model."}
+	named := map[string]any{decisionNamedNone: "The user does not mention any model."}
 	for _, name := range meta.ModelNames {
 		named[name] = "The request asks to use " + name + " (fuzzy match on provider, family or version)."
 	}
 
-	turns := betaContext(meta.SessionID)
-	questions := map[string]any{
-		"work": map[string]any{
-			"type": "choice",
-			"instructions": map[string]any{
+	turns := decisionContext(meta.SessionID)
+	questions := map[string]go_llm_router.DecisionQuestion{
+		"work": {
+			Type: go_llm_router.DecisionChoice,
+			Instructions: map[string]any{
 				"question": "What kind of work does `request` ask for?",
 				"focus":    "Classify `request`; use `context` only to resolve references such as 'this' or 'continue'. When `skill` is present, `request` runs that Skill: classify the work `skill` describes, not its name.",
 			},
-			"criteria": betaWorkCriteria,
+			Criteria: decisionWorkCriteria,
 		},
-		"named": map[string]any{
-			"type": "choice",
-			"instructions": map[string]any{
+		"named": {
+			Type: go_llm_router.DecisionChoice,
+			Instructions: map[string]any{
 				"question": "Does `request` explicitly ask to use a specific model, such as \"use/with <name>\" or 指定/用 <名稱>?",
 				"focus":    "Only an explicit instruction about which model to use counts; a model merely mentioned as a topic is none.",
 			},
-			"criteria": named,
+			Criteria: named,
 		},
 	}
 
 	var previous, previousReasoning string
 	if len(turns) > 0 {
-		previous, previousReasoning = betaPrevious(ctx, meta.SessionID, meta.ModelNames)
+		previous, previousReasoning = decisionPrevious(ctx, meta.SessionID, meta.ModelNames)
 	}
 	if previous != "" {
-		questions["topic"] = map[string]any{
-			"type": "choice",
-			"instructions": map[string]any{
+		questions["topic"] = go_llm_router.DecisionQuestion{
+			Type: go_llm_router.DecisionChoice,
+			Instructions: map[string]any{
 				"question": "Does `request` continue the subject of the last user message in `context`?",
 				"focus":    "Compare only with the last user message in `context` and its reply; earlier turns do not count. Follow-ups, corrections, refinements and next steps on that subject are same, even when the kind of work changes.",
 			},
-			"criteria": map[string]any{
-				betaTopicSame: "`request` follows up on, refers to or builds on the last user message in `context` and its reply.",
-				"new":         "`request` changes to a different subject than the last user message in `context`, even if an earlier turn discussed it.",
+			Criteria: map[string]any{
+				decisionTopicSame: "`request` follows up on, refers to or builds on the last user message in `context` and its reply.",
+				"new":             "`request` changes to a different subject than the last user message in `context`, even if an earlier turn discussed it.",
 			},
 		}
 	}
@@ -133,33 +131,23 @@ func selectWithJEV(ctx context.Context, meta SelectMeta, tagMap map[string]strin
 	if meta.SkillDescription != "" {
 		state["skill"] = meta.SkillDescription
 	}
-	body := map[string]any{
-		"model":     config.TypesafeModel,
-		"state":     state,
-		"questions": questions,
-	}
-
-	routingCtx, cancel := context.WithTimeout(ctx, configs.TIMEOUT_DISPATCH_CALL)
-	defer cancel()
-	result, _, err := go_pkg_http.POST[betaAnswer](routingCtx, nil, typesafeEndpoint, map[string]string{
-		"Authorization": "Bearer " + key,
-	}, body, "json")
+	answers, err := decision.Decide(ctx, agent, state, questions)
 	if err != nil {
-		return nil, "", 0, utilsmsg.Wrap(utilsmsg.Upstream, "go_pkg_http.POST", "", err)
+		return nil, "", 0, utilsmsg.Trace("Decide", agentName, err)
 	}
 
-	work := result.Answers["work"].Choice
+	work := answers["work"].Choice
 	order, ok := config.WorkTiers(work)
 	if !ok {
 		return nil, "", 0, utilsmsg.New(utilsmsg.Upstream, "work", "invalid choice %q", work)
 	}
 
 	list := make([]string, 0, len(meta.ModelNames)+1)
-	if choice := result.Answers["named"].Choice; choice != betaNamedNone && named[choice] != nil {
+	if choice := answers["named"].Choice; choice != decisionNamedNone && named[choice] != nil {
 		list = append(list, choice)
 	}
 	level := config.WorkReasoning(work)
-	if previous != "" && result.Answers["topic"].Choice == betaTopicSame && (len(list) == 0 || list[0] == previous) {
+	if previous != "" && answers["topic"].Choice == decisionTopicSame && (len(list) == 0 || list[0] == previous) {
 		if _, ok := go_llm_router.ParseReasoning(previousReasoning); ok {
 			level = previousReasoning
 		}
@@ -177,7 +165,7 @@ func selectWithJEV(ctx context.Context, meta SelectMeta, tagMap map[string]strin
 	return list, level, pinned, nil
 }
 
-func betaWorkWhat(key string) string {
+func decisionWorkWhat(key string) string {
 	i := slices.IndexFunc(config.WorkKinds, func(k config.WorkKind) bool { return k.Key == key })
 	if i < 0 {
 		return ""
@@ -185,13 +173,7 @@ func betaWorkWhat(key string) string {
 	return config.WorkKinds[i].What
 }
 
-type betaAnswer struct {
-	Answers map[string]struct {
-		Choice string `json:"choice"`
-	} `json:"answers"`
-}
-
-func BetaLastModelTTL(name string) int64 {
+func DecisionLastModelTTL(name string) int64 {
 	prov, _, _ := strings.Cut(name, "@")
 	switch prov {
 	case "openai", "codex":
@@ -202,11 +184,11 @@ func BetaLastModelTTL(name string) int64 {
 	return 5 * 60
 }
 
-func betaPrevious(ctx context.Context, sessionID string, candidates []string) (model, reasoning string) {
+func decisionPrevious(ctx context.Context, sessionID string, candidates []string) (model, reasoning string) {
 	if sessionID == "" {
 		return "", ""
 	}
-	entry, ok := torii.DB(torii.DBToolCache).Get(ctx, BetaLastModelKey+sessionID)
+	entry, ok := torii.DB(torii.DBToolCache).Get(ctx, DecisionLastModelKey+sessionID)
 	if !ok {
 		return "", ""
 	}
@@ -218,7 +200,7 @@ func betaPrevious(ctx context.Context, sessionID string, candidates []string) (m
 	return value[:i], value[i+1:]
 }
 
-func betaContext(sessionID string) []map[string]string {
+func decisionContext(sessionID string) []map[string]string {
 	var records []history.Record
 	if sessionID != "" {
 		_, records = history.Get(sessionID)
@@ -226,7 +208,7 @@ func betaContext(sessionID string) []map[string]string {
 
 	list := []map[string]string{}
 	for _, r := range slices.Backward(records) {
-		if len(list) >= configs.MAX_JEV_HISTORY_MESSAGES {
+		if len(list) >= configs.MAX_DECISION_HISTORY_MESSAGES {
 			break
 		}
 		if r.Role != "user" && r.Role != "assistant" {
@@ -236,8 +218,8 @@ func betaContext(sessionID string) []map[string]string {
 		if text == "" {
 			continue
 		}
-		if runes := []rune(text); len(runes) > configs.MAX_JEV_RUNES {
-			text = string(runes[:configs.MAX_JEV_RUNES]) + "..."
+		if runes := []rune(text); len(runes) > configs.MAX_DECISION_RUNES {
+			text = string(runes[:configs.MAX_DECISION_RUNES]) + "..."
 		}
 		list = append(list, map[string]string{"role": r.Role, "content": text})
 	}

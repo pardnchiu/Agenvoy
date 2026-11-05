@@ -270,6 +270,11 @@ async function renderPendingHint(sessionId) {
   const dom = chatPart("pending", sessionId);
   for (const one of tasks) {
     const title = String(one.objective || "").replace(/\s+/g, " ").trim() || one.task_hash;
+    if (one.background > 0) {
+      waitingTasks.set(sessionId, one.task_hash);
+      setInputTask(sessionId, one.task_hash);
+      continue;
+    }
     const open = _("button", { type: "button", class: "open" }, [
       _("span.material-symbols-outlined", "live_help"),
       _("p", title),

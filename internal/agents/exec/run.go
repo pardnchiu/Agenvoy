@@ -2,8 +2,10 @@ package exec
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 	"strings"
+	"sync/atomic"
 
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
@@ -12,9 +14,11 @@ import (
 	agentsexecmodel "github.com/pardnchiu/agenvoy/internal/agents/exec/model"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	historystore "github.com/pardnchiu/agenvoy/internal/runtime/store"
 	sessionconfigbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -41,6 +45,8 @@ func Prepare(data ExecuteMeta) ExecuteMeta {
 	return data
 }
 
+type onlineOwnedKey struct{}
+
 func Run(ctx context.Context, data ExecuteMeta, events chan<- agentstypes.Event, isSub bool) error {
 	sessionID := strings.TrimSpace(data.SessionID)
 	if sessionID == "" {
@@ -48,7 +54,30 @@ func Run(ctx context.Context, data ExecuteMeta, events chan<- agentstypes.Event,
 	}
 
 	windowHash := agentstypes.WindowHash(ctx)
+	if data.PendingTask != "" && !interactive.HasBackground(sessionID, data.PendingTask) && sessionlog.LastTaskHash(sessionID) != data.PendingTask {
+		renamed := go_pkg_utils.UUID()
+		if err := interactive.RenamePending(sessionID, data.PendingTask, renamed); err != nil {
+			return utilsmsg.Trace("interactive.RenamePending", data.PendingTask, err)
+		}
+		if err := historystore.RenameFileTask(ctx, sessionID, data.PendingTask, renamed); err != nil {
+			slog.Warn("historystore.RenameFileTask",
+				slog.String("session", sessionID),
+				slog.String("task", data.PendingTask),
+				slog.String("error", err.Error()))
+		}
+		interactive.ReleaseOnline(sessionID, data.PendingTask)
+		data.PendingTask = renamed
+	}
 	taskHash := data.PendingTask
+	if data.PendingTask != "" {
+		owned := &atomic.Bool{}
+		ctx = context.WithValue(ctx, onlineOwnedKey{}, owned)
+		defer func() {
+			if !owned.Load() {
+				interactive.ReleaseOnline(sessionID, taskHash)
+			}
+		}()
+	}
 	if taskHash == "" {
 		if data.TaskHash == "" {
 			data.TaskHash = go_pkg_utils.UUID()

@@ -72,8 +72,8 @@ func (t TUI) runResetSession(sid, mode string) (TUI, tea.Cmd) {
 	}
 
 	t.activity = "resetting (summary refresh first)..."
+	slog.Debug("tui: refreshing summary before clearing history", slog.String("session", sid))
 	return t, tea.Batch(
-		notice(msgLog(fmt.Sprintf("refreshing summary for %s, then clearing history...", label))+"\n"),
 		t.spinner.Tick,
 		func() tea.Msg {
 			ctx := context.Background()

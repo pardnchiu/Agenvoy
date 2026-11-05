@@ -26,12 +26,14 @@ func (t TUI) commandModel(parts []string) (TUI, tea.Cmd, bool) {
 			return t.modelPopup(1)
 		case "summary":
 			return t.modelPopup(3)
-		case "image":
+		case "decision":
 			return t.modelPopup(4)
-		case "stt":
+		case "image":
 			return t.modelPopup(5)
-		case "tts":
+		case "stt":
 			return t.modelPopup(6)
+		case "tts":
+			return t.modelPopup(7)
 		}
 	}
 
@@ -57,7 +59,7 @@ func (t TUI) modelPopup(tab int) (TUI, tea.Cmd, bool) {
 	popup := &Popup{
 		kind:  popupSingleSelect,
 		title: "/model",
-		tabs:  []string{"model", "reasoning", "dispatch", "summary", "image", "stt", "tts"},
+		tabs:  []string{"model", "reasoning", "dispatch", "summary", "decision", "image", "stt", "tts"},
 	}
 
 	moved := false
@@ -100,6 +102,9 @@ func (t TUI) modelPopup(tab int) (TUI, tea.Cmd, bool) {
 		if name, ok := strings.CutPrefix(chosen, imagePrefix); ok {
 			return ImageModelSelect{name: name}
 		}
+		if name, ok := strings.CutPrefix(chosen, decisionPrefix); ok {
+			return DecisionModelSelect{name: name}
+		}
 		if name, ok := strings.CutPrefix(chosen, sttPrefix); ok {
 			return AudioModelSelect{kind: "stt", name: name}
 		}
@@ -136,7 +141,7 @@ func (t TUI) modelPopup(tab int) (TUI, tea.Cmd, bool) {
 			return nil
 		case 2:
 			options, values, cursor := dispatcherOptions()
-			p.subtitle = "model that routes each request  Jev replaces it with the CLM classifier"
+			p.subtitle = "model that routes each request  Decision Model replaces it with the model set in the decision tab"
 			if len(options) == 0 {
 				p.styledLines = []string{hintStyle.Render("  no models configured")}
 			}
@@ -151,12 +156,15 @@ func (t TUI) modelPopup(tab int) (TUI, tea.Cmd, bool) {
 			p.options, p.values, p.cursor = options, values, cursor
 			return nil
 		case 4:
+			p.subtitle = "model that judges interval checks"
+			return routingTabLoad(p, "decision")
+		case 5:
 			p.subtitle = "provider that generates images"
 			return routingTabLoad(p, "image")
-		case 5:
+		case 6:
 			p.subtitle = "model that transcribes audio"
 			return routingTabLoad(p, "stt")
-		case 6:
+		case 7:
 			p.subtitle = "model that generates speech"
 			return routingTabLoad(p, "tts")
 		}

@@ -32,44 +32,59 @@ func registRunCommand() {
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
-		Description: fmt.Sprintf(`Runs one binary in the work directory, waits for it to exit, returns its combined stdout/stderr. Networking is off by default and opened per call with network: true, which always raises a confirmation: git clone / fetch / pull / push, npm or pip install, go mod download, curl and wget each need it set or they fail to resolve a host.
-Use for 跑一下 / 執行 / build / test / lint / format and local git work — one binary and its arguments.
-A watcher never exits and hangs the call (--watch, chokidar, npm run sass/build/dev) → run the one-shot build.
-cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file.
-Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else raises a confirmation, so never chain one behind && with a command that writes.`, systemPackageRoute()),
+		Description: fmt.Sprintf(`Runs one binary in the work directory and returns its combined stdout/stderr once it exits. Networking is off unless network: true, which always asks: git clone / fetch / pull / push, package installs, go mod download, curl and wget fail to resolve a host without it.
+Use for 跑一下 / 執行 / build / test / lint / format and local git work.
+A watcher (--watch, chokidar, npm run sass/build/dev), a job likely over %d minutes or 背景跑 / 跑完告訴我 → run_command_background; cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file; a live WebSocket feed → run_websocket.
+Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else asks, so never chain one behind && with a command that writes.`, configs.BACKGROUND_THRESHOLD_MIN, systemPackageRoute()),
 		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"argv": map[string]any{
-					"type":        "array",
-					"description": "The command as an argv array — ['git','status'], ['go','test','./...']. A single pipeline or redirect needs ['sh','-c','<full command>']; without a shell metacharacter (| && > * ~) it is called directly, never wrapped in sh -c. A multi-line script goes in a file you write first, then run that file. ['cd','<path>'] switches the work directory for later calls, and the path is verified first. When the request names a capability rather than an exact command, resolve which binary is installed before running one: a single ['sh','-c','command -v <every candidate>'] prints only those that exist. Guessing the most common name costs one round trip per guess and the failure reads as 'command not found', not as 'wrong binary'.",
-					"items":       map[string]any{"type": "string"},
-					"minItems":    1,
-				},
-				"network": map[string]any{
-					"type":        "boolean",
-					"description": "Set true when the command has to reach a host — git clone / fetch / pull / push, npm or pnpm or yarn install, pip install, go mod download, cargo fetch, curl. The sandbox keeps networking off until this is set, and setting it always raises a confirmation, so leave it out for anything that only touches local files.",
-				},
-				"write_paths": map[string]any{
-					"type":        "array",
-					"description": "Absolute paths outside $HOME this command has to write to — ['/usr/local'] for a system install. The sandbox only allows writes under $HOME, so a command touching anything else fails with a permission error that looks like a file ownership problem and is not one. Each path needs the user's approval on this call. Paths under $HOME need not be listed.",
-					"items":       map[string]any{"type": "string"},
-				},
-			},
-			"required": []string{"argv"},
+			"type":       "object",
+			"properties": commandProperties(),
+			"required":   []string{"argv"},
 		},
 		Handler: func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				Argv       []string `json:"argv"`
-				Network    bool     `json:"network"`
-				WritePaths []string `json:"write_paths"`
-			}
+			var params commandParams
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network)
+			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.unsandboxed(), false, 0, nil)
 		},
 	})
+}
+
+type commandParams struct {
+	Argv       []string `json:"argv"`
+	Sandbox    *bool    `json:"sandbox"`
+	Network    bool     `json:"network"`
+	WritePaths []string `json:"write_paths"`
+}
+
+func (p commandParams) unsandboxed() bool {
+	return p.Sandbox != nil && !*p.Sandbox
+}
+
+func commandProperties() map[string]any {
+	return map[string]any{
+		"argv": map[string]any{
+			"type":        "array",
+			"description": "The command as an argv array — ['git','status'], ['go','test','./...']. A single pipeline or redirect needs ['sh','-c','<full command>']; without a shell metacharacter (| && > * ~) it is called directly, never wrapped in sh -c. A multi-line script goes in a file you write first, then run that file. When the request names a capability rather than an exact command, resolve which binary is installed before running one: a single ['sh','-c','command -v <every candidate>'] prints only those that exist. Guessing the most common name costs one round trip per guess and the failure reads as 'command not found', not as 'wrong binary'.",
+			"items":       map[string]any{"type": "string"},
+			"minItems":    1,
+		},
+		"network": map[string]any{
+			"type":        "boolean",
+			"description": "Set true when the command has to reach a host — git clone / fetch / pull / push, npm or pnpm or yarn install, pip install, go mod download, cargo fetch, curl. The sandbox keeps networking off until this is set, and setting it always raises a confirmation, so leave it out for anything that only touches local files.",
+		},
+		"write_paths": map[string]any{
+			"type":        "array",
+			"description": "Absolute paths outside $HOME this command has to write to — ['/usr/local'] for a system install. The sandbox only allows writes under $HOME, so a command touching anything else fails with a permission error that looks like a file ownership problem and is not one. Each path needs the user's approval on this call. Paths under $HOME need not be listed.",
+			"items":       map[string]any{"type": "string"},
+		},
+		"sandbox": map[string]any{
+			"type":        "boolean",
+			"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt.",
+			"default":     true,
+		},
+	}
 }
 
 func deniedCommandErr(binary string) error {
@@ -88,7 +103,7 @@ func systemPackageRoute() string {
 	return "installing or removing a system package → pkg_manage"
 }
 
-func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network bool) (string, error) {
+func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, unsandboxed, background bool, timeoutMin int, watch *watchSpec) (string, error) {
 	if len(argv) == 0 {
 		return "", utilsmsg.New(utilsmsg.Invalid, "argv", "requires a non-empty array, e.g. [\"git\", \"status\"]")
 	}
@@ -112,7 +127,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 		}
 	} else {
 		if binary == "cd" {
-			return changeWorkDir(e, argv[1:])
+			return "", utilsmsg.New(utilsmsg.Invalid, "cd", "the work directory is set by the user and cannot be changed here; pass absolute paths, or ['sh','-c','cd <dir> && <command>'] for a single command")
 		}
 		if slices.Contains(denied, binary) {
 			return "", deniedCommandErr(binary)
@@ -128,12 +143,11 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 		}
 	}
 
-	if err := checkWatchArgs(argv, e.WorkDir, 0, map[string]bool{}); err != nil {
-		return "", err
+	if !background {
+		if err := checkWatchArgs(argv, e.WorkDir, 0, map[string]bool{}); err != nil {
+			return "", err
+		}
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, configs.RUN_COMMAND_TIMEOUT)
-	defer cancel()
 
 	binds, err := boundary.WriteBinds(e.SessionID, e.WorkDir, writePaths)
 	if err != nil {
@@ -149,6 +163,16 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 			ReadWrite:  binds,
 		}
 	}
+	if unsandboxed {
+		sandboxOpt = &go_pkg_sandbox.Option{AllowAll: true}
+	}
+
+	if background {
+		return startBackgroundCommand(ctx, e, argv, binds, sandboxOpt, timeoutMin, watch)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, configs.RUN_COMMAND_TIMEOUT)
+	defer cancel()
 
 	cmd, err := go_pkg_sandbox.Wrap(ctx, argv[0], argv[1:], e.WorkDir, sandboxOpt)
 	if err != nil {
@@ -159,7 +183,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 	cmd.Stdout = sink
 	cmd.Stderr = sink
 
-	err = cmd.Run()
+	err = go_pkg_sandbox.Run(cmd)
 	output := sink.text()
 	if err != nil {
 		return fmt.Sprintf("%s\nError: %s%s", output, err.Error(), sandboxWriteHint(output, binds)), nil
@@ -297,4 +321,18 @@ func shortestRoots(list []string) []string {
 		out = out[:5]
 	}
 	return out
+}
+
+func RestrictedRunCommand(toolName, toolArgs string) []string {
+	if toolName != "run_command" && toolName != "run_command_background" {
+		return nil
+	}
+	var p struct {
+		Argv    []string `json:"argv"`
+		Sandbox *bool    `json:"sandbox"`
+	}
+	if json.Unmarshal([]byte(toolArgs), &p) != nil || p.Sandbox == nil || *p.Sandbox {
+		return nil
+	}
+	return []string{"outside sandbox: " + strings.Join(p.Argv, " ")}
 }

@@ -38,6 +38,7 @@ import (
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	"github.com/pardnchiu/agenvoy/internal/agents/probe"
@@ -111,6 +112,7 @@ var modelAddProviders = []struct {
 		{"OpenRouter", "pay per token", "openrouter"},
 		{"Ollama Cloud", "API key", "ollama-cloud"},
 		{"NVIDIA NIM", "pay per token", "nvidia"},
+		{"TypeSafe", "decision model", "typesafe"},
 	}},
 	{"Custom", []modelAddMethod{
 		{"Cloudflare", "Workers AI  API token + account ID", "cloudflare"},
@@ -401,6 +403,9 @@ func (t TUI) runModelAddAPIKeyReplace(replace string) (TUI, tea.Cmd) {
 		}
 		return t, nil
 	}
+	if t.modelAdd.provider == "typesafe" {
+		return t.finishModelAddDecisionKey()
+	}
 	return t.openModelAddModelPick()
 }
 
@@ -428,7 +433,16 @@ func (t TUI) runModelAddAPIKeySubmit(key string) (TUI, tea.Cmd) {
 	if t.modelAdd.provider == "openai" {
 		return t.openVectorRestartNotice()
 	}
+	if t.modelAdd.provider == "typesafe" {
+		return t.finishModelAddDecisionKey()
+	}
 	return t.openModelAddModelPick()
+}
+
+func (t TUI) finishModelAddDecisionKey() (TUI, tea.Cmd) {
+	decision.DropModelsCache(context.Background(), t.modelAdd.provider)
+	t.modelAdd = nil
+	return t, notice(msgLog("TypeSafe API key saved; pick its model in /model decision") + "\n")
 }
 
 func (t TUI) openVectorRestartNotice() (TUI, tea.Cmd) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"log/slog"
+	"maps"
 	"slices"
 
 	"github.com/pardnchiu/agenvoy/configs"
@@ -30,20 +31,7 @@ type SelectMeta struct {
 type selectConfigMeta struct {
 	TagMap          map[string]string
 	SelectionPrompt string
-	JEVEnabled      bool
-}
-
-func Select(ctx context.Context, meta SelectMeta) agenttypes.Agent {
-	models, deadMap, _ := selectModel(ctx, meta)
-	for _, e := range models {
-		if deadMap[e] {
-			continue
-		}
-		if model, ok := meta.ModelSet.Registry[e]; ok && model != nil {
-			return model
-		}
-	}
-	return meta.ModelSet.Fallback
+	DecisionEnabled bool
 }
 
 func selectModel(ctx context.Context, meta SelectMeta) ([]string, map[string]bool, string) {
@@ -129,32 +117,60 @@ func selectModel(ctx context.Context, meta SelectMeta) ([]string, map[string]boo
 }
 
 func runSelect(ctx context.Context, meta SelectMeta, cfgMeta selectConfigMeta, deadMap map[string]bool) ([]string, string, int) {
-	if cfgMeta.JEVEnabled {
-		jevCtx, cancel := context.WithTimeout(ctx, configs.TIMEOUT_JEV_CALL)
-		newModelNames, reasoning, pinned, err := selectWithJEV(jevCtx, meta, cfgMeta.TagMap)
-		cancel()
-		if err == nil {
-			return newModelNames, reasoning, pinned
-		}
-		if ctx.Err() == nil {
-			slog.Debug("[Unavailable] jev: dispatch failed, falling back to LLM",
+	if !cfgMeta.DecisionEnabled {
+		newModelNames, reasoning := selectWithLLM(ctx, meta, cfgMeta.SelectionPrompt, deadMap)
+		return newModelNames, reasoning, 0
+	}
+
+	raceCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	type selectResult struct {
+		names     []string
+		reasoning string
+		pinned    int
+		dead      map[string]bool
+		ok        bool
+	}
+	results := make(chan selectResult, 2)
+	go func() {
+		names, reasoning, pinned, err := selectWithDecision(raceCtx, meta, cfgMeta.TagMap)
+		if err != nil && raceCtx.Err() == nil {
+			slog.Debug("[Unavailable] decision model: dispatch failed, waiting for LLM",
 				slog.String("error", err.Error()))
 		}
+		results <- selectResult{names: names, reasoning: reasoning, pinned: pinned, ok: err == nil}
+	}()
+	go func() {
+		dead := maps.Clone(deadMap)
+		names, reasoning := selectWithLLM(raceCtx, meta, cfgMeta.SelectionPrompt, dead)
+		results <- selectResult{names: names, reasoning: reasoning, dead: dead, ok: len(names) > 0}
+	}()
+
+	var llm selectResult
+	for range 2 {
+		r := <-results
+		if r.dead != nil {
+			llm = r
+			maps.Copy(deadMap, r.dead)
+		}
+		if r.ok {
+			return r.names, r.reasoning, r.pinned
+		}
 	}
-	newModelNames, reasoning := selectWithLLM(ctx, meta, cfgMeta.SelectionPrompt, deadMap)
-	return newModelNames, reasoning, 0
+	return llm.names, llm.reasoning, 0
 }
 
 func loadConfig() selectConfigMeta {
 	cfgMeta := selectConfigMeta{
 		TagMap:          map[string]string{},
 		SelectionPrompt: config.SelectionPrompt(&config.Config{}, false),
-		JEVEnabled:      false,
+		DecisionEnabled: false,
 	}
 	if c, err := config.Load(); err == nil {
 		cfgMeta.TagMap = c.ModelTag
 		cfgMeta.SelectionPrompt = config.SelectionPrompt(c, false)
-		cfgMeta.JEVEnabled = c.DispatcherBeta
+		cfgMeta.DecisionEnabled = c.DispatcherDecision && c.DecisionModel != ""
 	}
 	return cfgMeta
 }

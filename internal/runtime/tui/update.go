@@ -22,6 +22,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -141,8 +142,10 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				t.notice, t.noticeOffset = "", 0
 				return t, nil
 			}
-			if t.running && t.cancelExec != nil {
-				if !t.emitted {
+			running := t.running && t.cancelExec != nil
+			waiting := t.waitingBackground != "" && t.waitingBackground == t.currentSessionID && t.waitingTask != ""
+			if running || waiting {
+				if running && !t.emitted {
 					return t.update(CancelRunConfirm{yes: true})
 				}
 				t.popup = &Popup{
@@ -191,6 +194,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "U":
 					next, cmd, _ := t.commandProviderUsage()
 					return next, cmd
+				case "P":
+					return t.commandWorkDir(), nil
 				}
 			}
 
@@ -295,10 +300,24 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.lastIn, t.lastOut, t.lastCacheRead, t.lastCacheCreate, t.lastContext = 0, 0, 0, 0, 0
 			t.runTarget = ""
 
-			go runExec(ipc.Frame{Type: ipc.FrameRun, SessionID: t.currentSessionID, Rayload: &ipc.Payload{Input: raw, WorkDir: t.cwd, AllowAll: t.allowAll}})
+			if command, ok := strings.CutPrefix(content, "!"); ok {
+				command = strings.TrimSpace(command)
+				if command == "" {
+					t.running = false
+					return t, notice(msgWarn("empty command after !") + "\n")
+				}
+				go runShell(command, t.cwd)
+				return t, tea.Batch(tea.Println(messageBlock(raw)+"\n"), t.spinner.Tick)
+			}
+
+			payload := &ipc.Payload{Input: raw, WorkDir: t.cwd, AllowAll: t.allowAll}
+			if t.waitingBackground == t.currentSessionID {
+				payload.PendingTask = t.waitingTask
+			}
+			go runExec(ipc.Frame{Type: ipc.FrameRun, SessionID: t.currentSessionID, Rayload: payload})
 
 			cmds = append(cmds,
-				tea.Println(messageBlock(raw)),
+				tea.Println(messageBlock(raw)+"\n"),
 				t.spinner.Tick,
 			)
 			return t, tea.Batch(cmds...)
@@ -310,10 +329,15 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.toolBuf, t.toolCount = nil, 0
 		t.subCount, t.subActive = 0, 0
 		t.subBuf, t.subOrder = nil, nil
+		t.todos = nil
 		return t, nil
+
+	case shellDone:
+		return t.handleShellDone(msg)
 
 	case agentExecDone:
 		t.running = false
+		t.todos = nil
 		t.cancelExec = nil
 		t.activity = ""
 		t.runTarget = ""
@@ -348,10 +372,6 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PendingSelect:
 		return t.resumePending(msg)
-
-	case WorkDir:
-		t.cwd = msg.dir
-		return t, nil
 
 	case agentEvent:
 		return t.handleAgentEvent(msg.event)
@@ -726,10 +746,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			next, cmd := t.openDiscordTokenPrompt()
 			return next, cmd
 		case "disable":
-			return t, tea.Sequence(
-				notice(msgLog("discord disabling")+"\n"),
-				disableDiscord(),
-			)
+			slog.Debug("tui: discord disabling")
+			return t, disableDiscord()
 		}
 		return t, nil
 
@@ -745,10 +763,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			next, cmd := t.openTelegramTokenPrompt()
 			return next, cmd
 		case "disable":
-			return t, tea.Sequence(
-				notice(msgLog("telegram disabling")+"\n"),
-				disableTelegram(),
-			)
+			slog.Debug("tui: telegram disabling")
+			return t, disableTelegram()
 		}
 		return t, nil
 
@@ -764,10 +780,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			next, cmd := t.openLineSecretPrompt()
 			return next, cmd
 		case "disable":
-			return t, tea.Sequence(
-				notice(msgLog("line disabling")+"\n"),
-				disableLine(),
-			)
+			slog.Debug("tui: line disabling")
+			return t, disableLine()
 		}
 		return t, nil
 
@@ -798,15 +812,28 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return next, cmd
 
 	case CancelRunConfirm:
-		if t.cancelExec == nil {
+		if !msg.yes && !msg.pause {
 			return t, nil
 		}
-		switch {
-		case msg.yes:
-			t.cancelExec(runtime.ErrUserCanceled)
-		case msg.pause:
-			t.cancelExec(nil)
+		if t.cancelExec != nil {
+			if msg.yes {
+				t.cancelExec(runtime.ErrUserCanceled)
+			} else {
+				t.cancelExec(nil)
+			}
+			return t, nil
 		}
+		if t.waitingTask == "" {
+			return t, nil
+		}
+		client := ipcClient.Load()
+		if client == nil {
+			return t, notice(msgWarn("daemon offline") + "\n")
+		}
+		if err := client.Cancel(t.waitingBackground, t.waitingTask, msg.pause); err != nil {
+			return t, notice(msgError(err.Error()) + "\n")
+		}
+		t.waitingBackground, t.waitingTask = "", ""
 		return t, nil
 
 	case PendingDeletePick:
@@ -978,9 +1005,6 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		slog.Debug("key updated", slog.String("key", msg.key))
 		return t, nil
 
-	case TypesafeKeySubmit:
-		return t.runTypesafeKeySubmit(msg.field, msg.value)
-
 	case DispatcherSelect:
 		next, cmd := t.runDispatcherSelect(msg.name)
 		agents.Reload()
@@ -994,6 +1018,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ReplyLanguageSelect:
 		return t.runReplyLanguageSelect(msg.code)
 
+	case WorkDirSubmit:
+		return t.runWorkDirSubmit(msg.value)
+
 	case OutputDirSubmit:
 		return t.runOutputDirSubmit(msg.value)
 
@@ -1003,6 +1030,10 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ImageModelSelect:
 		next, cmd := t.runImageModelSelect(msg.name)
+		return next, cmd
+
+	case DecisionModelSelect:
+		next, cmd := t.runDecisionModelSelect(msg.name)
 		return next, cmd
 	case UpdateConfirm:
 		if !msg.ok {
@@ -1082,6 +1113,22 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 
 	case tailLine:
+		if !msg.foreign {
+			switch msg.kind {
+			case "done", "error":
+				t.waitingBackground, t.waitingTask = "", ""
+			case "canceled":
+				t.waitingBackground, t.waitingTask = "", ""
+				return t, cancelNotice()
+			case "pending":
+				if running, unreported := interactive.BackgroundState(t.currentSessionID, msg.body); running+unreported > 0 {
+					t.waitingBackground, t.waitingTask = t.currentSessionID, msg.body
+				}
+			}
+		}
+		if msg.line == "" {
+			return t, nil
+		}
 		return t, tea.Println(msg.line)
 
 	case Log:
@@ -1096,7 +1143,7 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t.restartTailer(), nil
 
 	case spinner.TickMsg:
-		if t.running || t.connecting {
+		if t.running || t.connecting || t.waitingBackground != "" {
 			var cmd tea.Cmd
 			t.spinner, cmd = t.spinner.Update(msg)
 			cmds = append(cmds, cmd)
