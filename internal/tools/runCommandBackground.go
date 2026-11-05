@@ -2,8 +2,10 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"strings"
 	"sync"
 	"time"
@@ -13,9 +15,71 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
+	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
+
+func registRunCommandBackground() {
+	properties := commandProperties()
+	maps.Copy(properties, map[string]any{
+		"timeout_min": map[string]any{
+			"type":        "integer",
+			"description": fmt.Sprintf("Minutes before the command is killed and reported as timed out, 1-%d. Set it near the expected run time so a hung command fails early instead of holding the task for the full window; a watcher stops here with its output so far.", configs.MAX_BACKGROUND_TIMEOUT_MIN),
+			"minimum":     1,
+			"maximum":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
+			"default":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
+		},
+		"interval": map[string]any{
+			"type":        "integer",
+			"description": fmt.Sprintf("Set together with prompt. Seconds between checks of the output printed since the previous check, at least %d; a check whose lines meet prompt resumes this task with them while the command keeps running. After a report, checks pause for %d seconds, and output that only repeats the reported situation is not reported again. Leave both out to hear back only when it exits.", configs.WATCH_MIN_INTERVAL_SEC, configs.WATCH_REPORT_COOLDOWN_SEC),
+			"minimum":     configs.WATCH_MIN_INTERVAL_SEC,
+		},
+		"prompt": map[string]any{
+			"type":        "string",
+			"description": "Set together with interval. Condition one output line must meet, checked by a small classifier that sees only this interval's lines and does no arithmetic. Write it as keyword present or value above / below a literal number. Do the math yourself before calling: turn a relative threshold into absolute bounds and list every bound joined with or. Examples: 'any line contains error or failed', 'loss above 2.5 or loss is NaN', 'eta above 600'.",
+		},
+	})
+
+	toolregister.Regist(toolregister.Def{
+		Name:        "run_command_background",
+		SystemUse:   false,
+		AlwaysAllow: false,
+		Concurrent:  false,
+		Description: fmt.Sprintf(`Starts one binary in the work directory and returns a task id at once; its output resumes this task when it exits, and with interval + prompt also each time new output meets prompt while it keeps running. Sandbox, network and confirmation rules match run_command.
+Use for a watcher (--watch, chokidar, npm run sass/build/dev), which only runs here, for a job very likely over %d minutes whose output does not decide your next tool call (full build, large install or download, long data job), or when the user says 跑完告訴我 / 背景跑. Apart from a watcher, use it only for the gathering that opens a request, starting every background command in one go: the resumed task sees only the objective and that output, none of this turn's tool results.
+Anything shorter, or a test or build whose failures you fix next → run_command; a live WebSocket feed → run_websocket.`, configs.BACKGROUND_THRESHOLD_MIN),
+		Parameters: map[string]any{
+			"type":       "object",
+			"properties": properties,
+			"required":   []string{"argv"},
+		},
+		Handler: func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
+			var params struct {
+				commandParams
+				TimeoutMin int    `json:"timeout_min"`
+				Interval   int    `json:"interval"`
+				Prompt     string `json:"prompt"`
+			}
+			if err := json.Unmarshal(args, &params); err != nil {
+				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
+			}
+			background := interactive.BackgroundAllowed(ctx)
+			var watch *watchSpec
+			if params.Interval != 0 || strings.TrimSpace(params.Prompt) != "" {
+				if !background {
+					return "", utilsmsg.New(utilsmsg.Invalid, "interval", "needs a session that can resume a background task; call run_command without interval and prompt")
+				}
+				spec, err := parseWatch(params.Interval, params.Prompt)
+				if err != nil {
+					return "", err
+				}
+				watch = &spec
+			}
+			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.unsandboxed(), background, params.TimeoutMin, watch)
+		},
+	})
+}
 
 func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, binds []string, sandboxOpt *go_pkg_sandbox.Option, timeoutMin int, watch *watchSpec) (string, error) {
 	if timeoutMin <= 0 || timeoutMin > configs.MAX_BACKGROUND_TIMEOUT_MIN {

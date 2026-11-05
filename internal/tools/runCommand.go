@@ -20,7 +20,6 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
-	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -33,86 +32,59 @@ func registRunCommand() {
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
-		Description: fmt.Sprintf(`Runs one binary in the work directory and returns its combined stdout/stderr once it exits; with background: true it returns a task id at once and the output arrives later. Networking is off unless network: true, which always asks: git clone / fetch / pull / push, package installs, go mod download, curl and wget fail to resolve a host without it.
-Use for 跑一下 / 執行 / build / test / lint / format, local git work, and watchers (--watch, chokidar, npm run sass/build/dev), which only run with background: true; otherwise run the one-shot build.
-cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file; a live WebSocket feed → run_websocket.
-Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else asks, so never chain one behind && with a command that writes.`, systemPackageRoute()),
+		Description: fmt.Sprintf(`Runs one binary in the work directory and returns its combined stdout/stderr once it exits. Networking is off unless network: true, which always asks: git clone / fetch / pull / push, package installs, go mod download, curl and wget fail to resolve a host without it.
+Use for 跑一下 / 執行 / build / test / lint / format and local git work.
+A watcher (--watch, chokidar, npm run sass/build/dev), a job likely over %d minutes or 背景跑 / 跑完告訴我 → run_command_background; cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file; a live WebSocket feed → run_websocket.
+Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else asks, so never chain one behind && with a command that writes.`, configs.BACKGROUND_THRESHOLD_MIN, systemPackageRoute()),
 		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"argv": map[string]any{
-					"type":        "array",
-					"description": "The command as an argv array — ['git','status'], ['go','test','./...']. A single pipeline or redirect needs ['sh','-c','<full command>']; without a shell metacharacter (| && > * ~) it is called directly, never wrapped in sh -c. A multi-line script goes in a file you write first, then run that file. When the request names a capability rather than an exact command, resolve which binary is installed before running one: a single ['sh','-c','command -v <every candidate>'] prints only those that exist. Guessing the most common name costs one round trip per guess and the failure reads as 'command not found', not as 'wrong binary'.",
-					"items":       map[string]any{"type": "string"},
-					"minItems":    1,
-				},
-				"network": map[string]any{
-					"type":        "boolean",
-					"description": "Set true when the command has to reach a host — git clone / fetch / pull / push, npm or pnpm or yarn install, pip install, go mod download, cargo fetch, curl. The sandbox keeps networking off until this is set, and setting it always raises a confirmation, so leave it out for anything that only touches local files.",
-				},
-				"background": map[string]any{
-					"type":        "boolean",
-					"description": fmt.Sprintf("true when the command is very likely to run over %d minutes and its output does not decide your next tool call (full build, large install or download, long data job), when the user says 跑完告訴我 / 背景跑, or for a watcher (--watch, chokidar, a watching package script), which requires it and stops at timeout_min with its output so far. Apart from a watcher, use it only for the gathering that opens a request, starting every background command in one go: the turn continues at once, and the output later resumes this task with only the objective and that output, none of this turn's tool results. false: anything shorter, or a test or build whose failures you fix next. Stateless requests reject true.", configs.BACKGROUND_THRESHOLD_MIN),
-				},
-				"timeout_min": map[string]any{
-					"type":        "integer",
-					"description": fmt.Sprintf("background: true only. Minutes before the command is killed and reported as timed out, 1-%d. Set it near the expected run time so a hung command fails early instead of holding the task for the full window; a foreground call is capped at %d minutes regardless.", configs.MAX_BACKGROUND_TIMEOUT_MIN, int(configs.RUN_COMMAND_TIMEOUT/time.Minute)),
-					"minimum":     1,
-					"maximum":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
-					"default":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
-				},
-				"interval": map[string]any{
-					"type":        "integer",
-					"description": fmt.Sprintf("background: true only, set together with prompt. Seconds between checks of the output printed since the previous check, at least %d; a check whose lines meet prompt resumes this task with them while the command keeps running. After a report, checks pause for %d seconds, and output that only repeats the reported situation is not reported again. Leave both out to hear back only when it exits.", configs.WATCH_MIN_INTERVAL_SEC, configs.WATCH_REPORT_COOLDOWN_SEC),
-					"minimum":     configs.WATCH_MIN_INTERVAL_SEC,
-				},
-				"prompt": map[string]any{
-					"type":        "string",
-					"description": "background: true only, set together with interval. Condition one output line must meet, checked by a small classifier that sees only this interval's lines and does no arithmetic. Write it as keyword present or value above / below a literal number. Do the math yourself before calling: turn a relative threshold into absolute bounds and list every bound joined with or. Examples: 'any line contains error or failed', 'loss above 2.5 or loss is NaN', 'eta above 600'.",
-				},
-				"write_paths": map[string]any{
-					"type":        "array",
-					"description": "Absolute paths outside $HOME this command has to write to — ['/usr/local'] for a system install. The sandbox only allows writes under $HOME, so a command touching anything else fails with a permission error that looks like a file ownership problem and is not one. Each path needs the user's approval on this call. Paths under $HOME need not be listed.",
-					"items":       map[string]any{"type": "string"},
-				},
-				"sandbox": map[string]any{
-					"type":        "boolean",
-					"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt.",
-					"default":     true,
-				},
-			},
-			"required": []string{"argv"},
+			"type":       "object",
+			"properties": commandProperties(),
+			"required":   []string{"argv"},
 		},
 		Handler: func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
-			var params struct {
-				Argv       []string `json:"argv"`
-				Sandbox    *bool    `json:"sandbox"`
-				Network    bool     `json:"network"`
-				WritePaths []string `json:"write_paths"`
-				Background bool     `json:"background"`
-				TimeoutMin int      `json:"timeout_min"`
-				Interval   int      `json:"interval"`
-				Prompt     string   `json:"prompt"`
-			}
+			var params commandParams
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			background := params.Background && interactive.BackgroundAllowed(ctx)
-			var watch *watchSpec
-			if params.Interval != 0 || strings.TrimSpace(params.Prompt) != "" {
-				if !background {
-					return "", utilsmsg.New(utilsmsg.Invalid, "interval", "needs background: true in a session; leave interval and prompt out for a foreground call")
-				}
-				spec, err := parseWatch(params.Interval, params.Prompt)
-				if err != nil {
-					return "", err
-				}
-				watch = &spec
-			}
-			unsandboxed := params.Sandbox != nil && !*params.Sandbox
-			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, unsandboxed, background, params.TimeoutMin, watch)
+			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.unsandboxed(), false, 0, nil)
 		},
 	})
+}
+
+type commandParams struct {
+	Argv       []string `json:"argv"`
+	Sandbox    *bool    `json:"sandbox"`
+	Network    bool     `json:"network"`
+	WritePaths []string `json:"write_paths"`
+}
+
+func (p commandParams) unsandboxed() bool {
+	return p.Sandbox != nil && !*p.Sandbox
+}
+
+func commandProperties() map[string]any {
+	return map[string]any{
+		"argv": map[string]any{
+			"type":        "array",
+			"description": "The command as an argv array — ['git','status'], ['go','test','./...']. A single pipeline or redirect needs ['sh','-c','<full command>']; without a shell metacharacter (| && > * ~) it is called directly, never wrapped in sh -c. A multi-line script goes in a file you write first, then run that file. When the request names a capability rather than an exact command, resolve which binary is installed before running one: a single ['sh','-c','command -v <every candidate>'] prints only those that exist. Guessing the most common name costs one round trip per guess and the failure reads as 'command not found', not as 'wrong binary'.",
+			"items":       map[string]any{"type": "string"},
+			"minItems":    1,
+		},
+		"network": map[string]any{
+			"type":        "boolean",
+			"description": "Set true when the command has to reach a host — git clone / fetch / pull / push, npm or pnpm or yarn install, pip install, go mod download, cargo fetch, curl. The sandbox keeps networking off until this is set, and setting it always raises a confirmation, so leave it out for anything that only touches local files.",
+		},
+		"write_paths": map[string]any{
+			"type":        "array",
+			"description": "Absolute paths outside $HOME this command has to write to — ['/usr/local'] for a system install. The sandbox only allows writes under $HOME, so a command touching anything else fails with a permission error that looks like a file ownership problem and is not one. Each path needs the user's approval on this call. Paths under $HOME need not be listed.",
+			"items":       map[string]any{"type": "string"},
+		},
+		"sandbox": map[string]any{
+			"type":        "boolean",
+			"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt.",
+			"default":     true,
+		},
+	}
 }
 
 func deniedCommandErr(binary string) error {
@@ -352,7 +324,7 @@ func shortestRoots(list []string) []string {
 }
 
 func RestrictedRunCommand(toolName, toolArgs string) []string {
-	if toolName != "run_command" {
+	if toolName != "run_command" && toolName != "run_command_background" {
 		return nil
 	}
 	var p struct {

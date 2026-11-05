@@ -25,24 +25,25 @@ import (
 )
 
 var eventLabel = map[string]string{
-	"read_files":            "File",
-	"run_command":           "Run",
-	"open_file":             "Open",
-	"download_file":         "Download",
-	"pkg_manage":            "Package",
-	"search_web":            "Search",
-	"fetch_page":            "Fetch",
-	"http_request":          "Send",
-	"calculate":             "Calc",
-	"test_tool":             "Test",
-	"send_to_chatbot":       "Push",
-	"list_chatbot":          "Chatbots",
-	"mcp__kura__search_rag": "RAG",
-	"mcp__kura__list_rag":   "RAG",
-	"reasoning_guide":       "Guide",
-	"write_result":          "Write",
-	"find_tools":            "Tools",
-	"write_todo":            "Plan",
+	"read_files":             "File",
+	"run_command":            "Run",
+	"run_command_background": "Background",
+	"open_file":              "Open",
+	"download_file":          "Download",
+	"pkg_manage":             "Package",
+	"search_web":             "Search",
+	"fetch_page":             "Fetch",
+	"http_request":           "Send",
+	"calculate":              "Calc",
+	"test_tool":              "Test",
+	"send_to_chatbot":        "Push",
+	"list_chatbot":           "Chatbots",
+	"mcp__kura__search_rag":  "RAG",
+	"mcp__kura__list_rag":    "RAG",
+	"reasoning_guide":        "Guide",
+	"write_result":           "Write",
+	"find_tools":             "Tools",
+	"write_todo":             "Plan",
 }
 
 func parseToolArgs(raw string) map[string]any {
@@ -133,7 +134,7 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 		}
 		return arg("model")
 
-	case "run_command":
+	case "run_command", "run_command_background":
 		return joinArgv(raw)
 
 	case "open_file":
