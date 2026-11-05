@@ -479,7 +479,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)
 		unsandboxed := tools.RestrictedRunCommand(toolName, toolArg)
-		restrictedList := append(append(append([]string{}, restrictedPaths...), interactive.RestrictedPkgManage(toolName, toolArg)...), unsandboxed...)
+		restrictedList := append(append([]string{}, restrictedPaths...), unsandboxed...)
 		restricted := len(restrictedList) > 0
 
 		if (!allowAll || len(unsandboxed) > 0) && (restricted || toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll)) {

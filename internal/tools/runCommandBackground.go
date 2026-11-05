@@ -14,6 +14,7 @@ import (
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -45,7 +46,7 @@ func registRunCommandBackground() {
 		Concurrent:  false,
 		Description: fmt.Sprintf(`Starts one binary in the work directory and returns a task id at once; its output resumes this task when it exits, and also whenever new output hits an error keyword while it keeps running, with the last output to explain. Sandbox, network and confirmation rules match run_command.
 Use for a watcher (--watch, chokidar, npm run sass/build/dev), which only runs here, for a job very likely over %d minutes whose output does not decide your next tool call (full build, large install or download, long data job), or when the user says 跑完告訴我 / 背景跑. Apart from a watcher, use it only for the gathering that opens a request, starting every background command in one go: the resumed task sees only the objective and that output, none of this turn's tool results.
-Anything shorter, or a test or build whose failures you fix next → run_command.`, configs.BACKGROUND_THRESHOLD_MIN),
+Anything shorter, or a test or build whose failures you fix next → run_command. 進行到哪了 / 跑到哪 on a running task → read_files the log path its start result gave, never guess from missing reports.`, configs.BACKGROUND_THRESHOLD_MIN),
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": properties,
@@ -99,7 +100,7 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 		case ctx.Err() == context.DeadlineExceeded:
 			return fmt.Sprintf("failed: [Timeout] %s: exceeded %d minutes\n%s", argv[0], timeoutMin, output)
 		case err != nil:
-			return fmt.Sprintf("failed: %s\n%s%s", err.Error(), output, sandboxWriteHint(output, binds))
+			return fmt.Sprintf("failed: %s\n%s%s", err.Error(), output, sandboxWriteHint(output, binds, sandboxOpt.AllowAll))
 		case strings.TrimSpace(output) == "":
 			return "done: exit 0, printed nothing"
 		default:
@@ -109,7 +110,7 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("background command %s started. Keep working on this turn; if it ends first, the task stays open and resumes with this command's output as soon as it finishes, without waiting for other background tasks. Output lines that hit an error keyword also resume this task with the last output while the command keeps running.", id), nil
+	return fmt.Sprintf("background command %s started. Keep working on this turn; if it ends first, the task stays open and resumes with this command's output as soon as it finishes, without waiting for other background tasks. Output lines that hit an error keyword also resume this task with the last output while the command keeps running. Live output is appended to %s until the command ends (then the file is removed): when asked how far it got, read its tail with read_files before answering.", id, filesystem.BackgroundLogPath(e.SessionID, id)), nil
 }
 
 const tailHeadroom = 1 << 10

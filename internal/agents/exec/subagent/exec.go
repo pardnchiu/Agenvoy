@@ -118,7 +118,6 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 		"open_file",
 		"schedules",
 		"store_secret",
-		"pkg_manage",
 	}
 	if topLevel {
 		baseExclude = []string{
@@ -127,7 +126,6 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 			"edit_skill",
 			"schedules",
 			"store_secret",
-			"pkg_manage",
 		}
 	}
 	if isBackground(ctx) {

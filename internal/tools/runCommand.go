@@ -81,7 +81,7 @@ func commandProperties() map[string]any {
 		},
 		"sandbox": map[string]any{
 			"type":        "boolean",
-			"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt. Root privileges → argv ['sudo', '<binary>', ...] (no sudo flags), which asks the same password and runs it outside the sandbox.",
+			"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt. Root privileges → argv ['sudo', '<binary>', ...] (no sudo flags), which asks the same password and runs it outside the sandbox. Homebrew (brew install / upgrade / uninstall) runs its own sandbox, which cannot nest: pass false, never sudo.",
 			"default":     true,
 		},
 	}
@@ -121,7 +121,7 @@ func openCommandErr() error {
 }
 
 func systemPackageRoute() string {
-	return "installing or removing a system package → pkg_manage"
+	return "a system package → find the manager with command -v, then argv ['sudo', 'apt-get', 'install', '-y', '<pkg>'] (apt / dnf / yum / pacman / apk) or ['brew', 'install', '<pkg>'] with sandbox: false and no sudo on macOS"
 }
 
 func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, unsandboxed, background bool, timeoutMin int, watch *watchSpec) (string, error) {
@@ -212,7 +212,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 	err = go_pkg_sandbox.Run(cmd)
 	output := sink.text()
 	if err != nil {
-		return fmt.Sprintf("%s\nError: %s%s", output, err.Error(), sandboxWriteHint(output, binds)), nil
+		return fmt.Sprintf("%s\nError: %s%s", output, err.Error(), sandboxWriteHint(output, binds, unsandboxed)), nil
 	}
 
 	if strings.TrimSpace(output) == "" {
@@ -267,6 +267,10 @@ const sandboxWriteAdvice = `
 
 [agenvoy] the sandbox only allows writes under %s, which is why these read as unwritable: %s. They are writable outside the sandbox, so ownership is not the problem — do not run chown or chmod and do not ask the user to. Re-run this exact command with write_paths: [%s] and the user gets one prompt to approve those paths.`
 
+const sandboxEscalateAdvice = `
+
+[agenvoy] the sandbox blocked this command (a socket, device, system service or path outside its rules). Re-run this exact command now with sandbox: false; its confirmation asks the user for the system password, and that prompt is the permission request, so do not stop to ask in text first. A root-owned target needs argv ['sudo', ...] instead. Report only if the user declines.`
+
 var permissionMarkers = []string{
 	"not writable", "permission denied", "operation not permitted",
 	"read-only file system", "eacces",
@@ -274,7 +278,10 @@ var permissionMarkers = []string{
 
 var absPathPattern = regexp.MustCompile(`(^|[\s"'(])(/[A-Za-z0-9._@+\-/]{2,})`)
 
-func sandboxWriteHint(output string, bound []string) string {
+func sandboxWriteHint(output string, bound []string, unsandboxed bool) string {
+	if unsandboxed {
+		return ""
+	}
 	lower := strings.ToLower(output)
 	if !slices.ContainsFunc(permissionMarkers, func(m string) bool { return strings.Contains(lower, m) }) {
 		return ""
@@ -304,7 +311,7 @@ func sandboxWriteHint(output string, bound []string) string {
 
 	list = shortestRoots(list)
 	if len(list) == 0 {
-		return ""
+		return sandboxEscalateAdvice
 	}
 
 	quoted := make([]string, 0, len(list))

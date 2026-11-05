@@ -31,7 +31,6 @@ var eventLabel = map[string]string{
 	"background_subagents":  "Background Subagents",
 	"open_file":             "Open",
 	"download_file":         "Download",
-	"pkg_manage":            "Package",
 	"search_web":            "Search",
 	"fetch_page":            "Fetch",
 	"http_request":          "Send",
@@ -143,16 +142,6 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 
 	case "download_file":
 		return arg("url", "link")
-
-	case "pkg_manage":
-		action := arg("action")
-		if action == "" {
-			action = "install"
-		}
-		if pkg := arg("package"); pkg != "" {
-			return action + " " + pkg
-		}
-		return action
 
 	case "fetch_page":
 		return arg("link", "url")
