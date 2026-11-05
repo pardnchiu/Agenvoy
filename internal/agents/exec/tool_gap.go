@@ -3,12 +3,9 @@ package exec
 import (
 	"context"
 	"log/slog"
-	"strings"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
-	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
@@ -21,15 +18,12 @@ var toolGapCriteria = map[string]any{
 }
 
 func detectToolGap(ctx context.Context, sessionID string, exec *tooltypes.Executor) bool {
-	objective := strings.TrimSpace(exec.Objective)
-	if objective == "" || exec.ExcludeTools["reasoning_guide"] || exec.ExcludeTools["edit_tool"] || decision.Selected() == decision.Off {
+	request, ok := decision.Request(exec.Objective)
+	if !ok || exec.ExcludeTools["reasoning_guide"] || exec.ExcludeTools["edit_tool"] {
 		return false
 	}
-	agent, name, err := decision.Agent(ctx)
-	if err != nil {
-		slog.Debug("decision.Agent",
-			slog.String("session", sessionID),
-			slog.String("error", err.Error()))
+	agent, name, ok := decision.Ready(ctx, slog.String("session", sessionID))
+	if !ok {
 		return false
 	}
 
@@ -40,7 +34,7 @@ func detectToolGap(ctx context.Context, sessionID string, exec *tooltypes.Execut
 		}
 	}
 	answers, err := decision.Decide(ctx, agent, map[string]any{
-		"request": go_pkg_utils.TruncateString(objective, configs.MAX_DECISION_RUNES),
+		"request": request,
 		"tools":   names,
 	}, map[string]go_llm_router.DecisionQuestion{
 		"tool": {

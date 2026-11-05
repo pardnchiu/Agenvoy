@@ -8,9 +8,7 @@ import (
 	"strings"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
-	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
@@ -23,8 +21,12 @@ var relatedCriteria = map[string]any{
 }
 
 func keepRelated(ctx context.Context, objective, query, raw string) string {
-	objective = strings.TrimSpace(objective)
-	if objective == "" || decision.Selected() == decision.Off {
+	request, ok := decision.Request(objective)
+	if !ok {
+		return raw
+	}
+	agent, name, ok := decision.Ready(ctx, slog.String("query", query))
+	if !ok {
 		return raw
 	}
 	var out searchResult
@@ -36,14 +38,6 @@ func keepRelated(ctx context.Context, objective, query, raw string) string {
 	_ = json.Unmarshal(out.News, &news)
 	total := len(web) + len(news)
 	if total == 0 {
-		return raw
-	}
-
-	agent, name, err := decision.Agent(ctx)
-	if err != nil {
-		slog.Debug("decision.Agent",
-			slog.String("query", query),
-			slog.String("error", err.Error()))
 		return raw
 	}
 
@@ -72,7 +66,7 @@ func keepRelated(ctx context.Context, objective, query, raw string) string {
 	}
 
 	answers, err := decision.Decide(ctx, agent, map[string]any{
-		"request": go_pkg_utils.TruncateString(objective, configs.MAX_DECISION_RUNES),
+		"request": request,
 		"query":   query,
 		"titles":  titles,
 	}, questions)

@@ -10,6 +10,7 @@ import (
 	openrouter "github.com/pardnchiu/go-llm-router/core/openRouter"
 	"github.com/pardnchiu/go-llm-router/core/router"
 	"github.com/pardnchiu/go-llm-router/core/typesafe"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
@@ -104,6 +105,25 @@ func Agent(ctx context.Context) (go_llm_router.DecisionAgent, string, error) {
 		return nil, name, utilsmsg.Trace("router.NewDecision", name, err)
 	}
 	return agent, name, nil
+}
+
+func Ready(ctx context.Context, attrs ...any) (go_llm_router.DecisionAgent, string, bool) {
+	agent, name, err := Agent(ctx)
+	if err != nil {
+		if name != "" {
+			slog.Debug("decision.Agent", append(attrs, slog.String("error", err.Error()))...)
+		}
+		return nil, name, false
+	}
+	return agent, name, true
+}
+
+func Request(objective string) (string, bool) {
+	objective = strings.TrimSpace(objective)
+	if objective == "" {
+		return "", false
+	}
+	return go_pkg_utils.TruncateString(objective, configs.MAX_DECISION_RUNES), true
 }
 
 func Decide(ctx context.Context, agent go_llm_router.DecisionAgent, state any, questions map[string]go_llm_router.DecisionQuestion) (map[string]go_llm_router.DecisionAnswer, error) {

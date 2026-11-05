@@ -43,13 +43,10 @@ type summaryExchange struct {
 	reply   string
 }
 
-func filterWithDecision(ctx context.Context, sessionID string, dic map[string]any, histories []sessionhistory.Record) ([]sessionhistory.Record, map[string]any) {
-	agent, name, err := decision.Agent(ctx)
-	if err != nil {
-		slog.Debug("decision.Agent",
-			slog.String("session", sessionID),
-			slog.String("error", err.Error()))
-		return histories, dic
+func filterWithDecision(ctx context.Context, sessionID string, dic map[string]any, histories []sessionhistory.Record) ([]sessionhistory.Record, map[string]any, bool) {
+	agent, name, ok := decision.Ready(ctx, slog.String("session", sessionID))
+	if !ok {
+		return histories, dic, false
 	}
 
 	raw, _ := json.Marshal(dic)
@@ -69,7 +66,7 @@ func filterWithDecision(ctx context.Context, sessionID string, dic map[string]an
 	for _, one := range kept {
 		out = append(out, one.records...)
 	}
-	return out, pruned
+	return out, pruned, true
 }
 
 func groupSummaryExchanges(histories []sessionhistory.Record) []summaryExchange {

@@ -10,7 +10,6 @@ import (
 	"unicode/utf8"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents/decision"
@@ -35,14 +34,8 @@ var (
 )
 
 func removeNoise(ctx context.Context, link, content string) string {
-	if decision.Selected() == decision.Off {
-		return content
-	}
-	agent, name, err := decision.Agent(ctx)
-	if err != nil {
-		slog.Debug("decision.Agent",
-			slog.String("url", link),
-			slog.String("error", err.Error()))
+	agent, name, ok := decision.Ready(ctx, slog.String("url", link))
+	if !ok {
 		return content
 	}
 
@@ -98,19 +91,15 @@ func removeNoise(ctx context.Context, link, content string) string {
 }
 
 func checkRelevance(ctx context.Context, objective, link, result string) string {
-	objective = strings.TrimSpace(objective)
-	if objective == "" || decision.Selected() == decision.Off {
+	request, ok := decision.Request(objective)
+	if !ok {
 		return result
 	}
-	agent, name, err := decision.Agent(ctx)
-	if err != nil {
-		slog.Debug("decision.Agent",
-			slog.String("url", link),
-			slog.String("error", err.Error()))
+	agent, name, ok := decision.Ready(ctx, slog.String("url", link))
+	if !ok {
 		return result
 	}
 
-	request := go_pkg_utils.TruncateString(objective, configs.MAX_DECISION_RUNES)
 	page := []rune(result)
 	if limit := configs.MAX_DECISION_STATE_RUNES - utf8.RuneCountInString(request); len(page) > limit {
 		page = page[:max(limit, 0)]

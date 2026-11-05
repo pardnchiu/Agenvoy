@@ -29,8 +29,8 @@ type toolStep struct {
 }
 
 func pruneToolsWithDecision(ctx context.Context, sessionID, objective string, toolCall *[]go_llm_router.Message) {
-	objective = strings.TrimSpace(objective)
-	if objective == "" || decision.Selected() == decision.Off {
+	request, ok := decision.Request(objective)
+	if !ok {
 		return
 	}
 	steps, owner := groupToolSteps(*toolCall)
@@ -39,15 +39,11 @@ func pruneToolsWithDecision(ctx context.Context, sessionID, objective string, to
 	}
 	candidates := steps[:len(steps)-1]
 
-	agent, name, err := decision.Agent(ctx)
-	if err != nil {
-		slog.Debug("decision.Agent",
-			slog.String("session", sessionID),
-			slog.String("error", err.Error()))
+	agent, name, ok := decision.Ready(ctx, slog.String("session", sessionID))
+	if !ok {
 		return
 	}
 
-	request := go_pkg_utils.TruncateString(objective, configs.MAX_DECISION_RUNES)
 	budget := configs.MAX_DECISION_STATE_RUNES - utf8.RuneCountInString(request)
 	drop := make([]bool, len(steps))
 	var wg sync.WaitGroup

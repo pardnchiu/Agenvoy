@@ -15,7 +15,6 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
-	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	sessionhistory "github.com/pardnchiu/agenvoy/internal/session/history"
@@ -54,15 +53,17 @@ func Generate(ctx context.Context, sessionID string, histories []sessionhistory.
 	if oldSummary == "" {
 		oldSummary = "{}"
 	}
-	if decision.Selected() != decision.Off && len(histories) > 0 {
-		histories, dic = filterWithDecision(summaryCtx, sessionID, dic, histories)
-		if raw, err := json.Marshal(dic); err == nil {
-			oldSummary = string(raw)
-		}
-		if len(histories) == 0 {
-			summary.Save(sessionID, dic)
-			summary.SaveCursor(sessionID, latest)
-			return nil
+	if len(histories) > 0 {
+		if filtered, pruned, ok := filterWithDecision(summaryCtx, sessionID, dic, histories); ok {
+			histories, dic = filtered, pruned
+			if raw, err := json.Marshal(dic); err == nil {
+				oldSummary = string(raw)
+			}
+			if len(histories) == 0 {
+				summary.Save(sessionID, dic)
+				summary.SaveCursor(sessionID, latest)
+				return nil
+			}
 		}
 	}
 

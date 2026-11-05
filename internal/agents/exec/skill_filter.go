@@ -9,7 +9,6 @@ import (
 	"unicode/utf8"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents/decision"
@@ -24,8 +23,12 @@ var skillCriteria = map[string]any{
 }
 
 func unrelatedSkills(ctx context.Context, sessionID, objective string, scanner *runtime.SkillScanner, excludeSkills []string) []string {
-	objective = strings.TrimSpace(objective)
-	if objective == "" || scanner == nil || decision.Selected() == decision.Off {
+	request, ok := decision.Request(objective)
+	if !ok || scanner == nil {
+		return nil
+	}
+	agent, model, ok := decision.Ready(ctx, slog.String("session", sessionID))
+	if !ok {
 		return nil
 	}
 
@@ -43,15 +46,6 @@ func unrelatedSkills(ctx context.Context, sessionID, objective string, scanner *
 		return nil
 	}
 
-	agent, model, err := decision.Agent(ctx)
-	if err != nil {
-		slog.Debug("decision.Agent",
-			slog.String("session", sessionID),
-			slog.String("error", err.Error()))
-		return nil
-	}
-
-	request := go_pkg_utils.TruncateString(objective, configs.MAX_DECISION_RUNES)
 	budget := configs.MAX_DECISION_STATE_RUNES - utf8.RuneCountInString(request)
 	keep := make([]bool, len(names))
 	var wg sync.WaitGroup
