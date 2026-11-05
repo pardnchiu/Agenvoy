@@ -20,7 +20,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
-	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -44,14 +43,13 @@ type invokeParams struct {
 	SystemPrompt string   `json:"system_prompt,omitempty"`
 	New          *bool    `json:"new,omitempty"`
 	ExcludeTools []string `json:"exclude_tools,omitempty"`
-	Background   bool     `json:"background,omitempty"`
 	TimeoutMin   int      `json:"timeout_min,omitempty"`
 }
 
-func invokeSubagent(ctx context.Context, e *tooltypes.Executor, params invokeParams) (string, error) {
+func invokeSubagent(ctx context.Context, e *tooltypes.Executor, params invokeParams, background bool) (string, error) {
 	task := strings.TrimSpace(params.Task)
 	if task == "" {
-		return "", utilsmsg.New(utilsmsg.Invalid, "task", "required when mode=invoke")
+		return "", utilsmsg.New(utilsmsg.Invalid, "task", "required")
 	}
 
 	sessionID := ""
@@ -61,7 +59,7 @@ func invokeSubagent(ctx context.Context, e *tooltypes.Executor, params invokePar
 
 	model := strings.TrimSpace(params.Model)
 	if model == "" {
-		return "", utilsmsg.New(utilsmsg.Invalid, "model", "required when mode=invoke")
+		return "", utilsmsg.New(utilsmsg.Invalid, "model", "required")
 	}
 	if model != configbot.DefaultModel {
 		if err := checkLegModel(model); err != nil {
@@ -89,7 +87,7 @@ func invokeSubagent(ctx context.Context, e *tooltypes.Executor, params invokePar
 		ignoreHistory = *params.New
 	}
 
-	if params.Background && interactive.BackgroundAllowed(ctx) {
+	if background {
 		return startBackground(ctx, e, params, task, sessionID, model, reasoning, excludeTools, ignoreHistory)
 	}
 

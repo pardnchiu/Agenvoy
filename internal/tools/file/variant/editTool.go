@@ -33,8 +33,8 @@ The build flow is write → test_tool → call it. Finding an existing tool → 
 				},
 				"tag": map[string]any{
 					"type":        "string",
-					"enum":        []string{"json", "script", "api"},
-					"description": "mode=write / mode=patch: which file — json = tool.json (schema), script = script.py (runtime), api = <name>.json (API tool).",
+					"enum":        []string{"json", "script"},
+					"description": "mode=write / mode=patch: which file — json = tool.json (schema), script = script.py (runtime).",
 				},
 				"content": map[string]any{
 					"type":        "string",

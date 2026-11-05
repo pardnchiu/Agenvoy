@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -17,100 +16,116 @@ import (
 )
 
 type watchSpec struct {
-	interval time.Duration
-	prompt   string
+	keywords []string
 	agent    go_llm_router.DecisionAgent
 	model    string
 }
 
-func parseWatch(interval int, prompt string) (watchSpec, error) {
-	spec := watchSpec{prompt: strings.TrimSpace(prompt)}
-	if spec.prompt == "" {
-		return spec, utilsmsg.New(utilsmsg.Invalid, "prompt", "required")
+func newWatch(keywords []string) watchSpec {
+	spec := watchSpec{}
+	for _, keyword := range keywords {
+		if keyword = strings.ToLower(strings.TrimSpace(keyword)); keyword != "" {
+			spec.keywords = append(spec.keywords, keyword)
+		}
 	}
-	if interval < configs.WATCH_MIN_INTERVAL_SEC {
-		return spec, utilsmsg.New(utilsmsg.Invalid, "interval", "must be at least %d seconds", configs.WATCH_MIN_INTERVAL_SEC)
+	if len(spec.keywords) == 0 {
+		spec.keywords = configs.WATCH_KEYWORDS
 	}
-	spec.interval = time.Duration(interval) * time.Second
-
-	agent, model, err := decision.Agent(context.Background())
-	if err != nil {
-		return spec, utilsmsg.Trace("decision.Agent", "interval checks need a decision model to judge prompt", err)
+	if agent, model, ok := decision.Ready(context.Background(), "tool", "background_command"); ok {
+		spec.agent, spec.model = agent, model
 	}
-	spec.agent, spec.model = agent, model
-	return spec, nil
+	return spec
 }
 
-func watchOutput(ctx context.Context, spec watchSpec, buf *watchBuffer, done <-chan struct{}, report func(string)) (int, string, error) {
-	ticker := time.NewTicker(spec.interval)
+func watchOutput(ctx context.Context, spec watchSpec, buf *watchBuffer, done <-chan struct{}, report func(string)) {
+	settle := time.Duration(configs.WATCH_SETTLE_SEC) * time.Second
+	settleMax := time.Duration(configs.WATCH_SETTLE_MAX_SEC) * time.Second
+	cooldown := time.Duration(configs.WATCH_REPORT_COOLDOWN_SEC) * time.Second
+	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
+	wait := func(until func() bool) bool {
+		for !until() {
+			select {
+			case <-ctx.Done():
+				return false
+			case <-done:
+				return false
+			case <-ticker.C:
+			}
+		}
+		return true
+	}
 
-	var last, lastReport string
+	var lastReport string
 	var lastReportAt time.Time
-	failures, reports := 0, 0
+	reports := 0
 	for {
 		select {
 		case <-ctx.Done():
-			return reports, last, nil
-
+			return
 		case <-done:
-			return reports, last, nil
+			return
+		case <-buf.hit:
+		}
 
-		case <-ticker.C:
-			if !lastReportAt.IsZero() && time.Since(lastReportAt) < time.Duration(configs.WATCH_REPORT_COOLDOWN_SEC)*time.Second {
-				continue
-			}
-			lines, dropped := buf.take()
-			if len(lines) == 0 {
-				continue
-			}
-			text := formatWatchLines(lines, dropped)
-			last = text
+		hitAt := time.Now()
+		settled := wait(func() bool {
+			return time.Since(buf.lastWrite()) >= settle || time.Since(hitAt) >= settleMax
+		})
+		if !settled || !wait(func() bool { return time.Since(lastReportAt) >= cooldown }) {
+			return
+		}
 
-			hit, confidence, sent, err := decideWatch(ctx, spec, lines, lastReport, lastReportAt)
-			if !sent {
-				buf.restore(lines, dropped)
+		lines, dropped := buf.take()
+		segment := tailWatchLines(lines, dropped, configs.WATCH_REPORT_MAX_BYTES-watchHeaderBytes)
+		if segment == "" {
+			continue
+		}
+
+		note := ""
+		if spec.agent != nil {
+			send, err := decideWatch(ctx, spec, segment, lastReport, lastReportAt)
+			if ctx.Err() != nil {
+				return
 			}
-			if err != nil {
-				if ctx.Err() != nil {
-					continue
-				}
-				failures++
-				if failures >= configs.WATCH_MAX_DECIDE_FAILURES {
-					pending, lost := buf.take()
-					return reports, formatWatchLines(pending, lost), err
-				}
+			switch {
+			case err != nil:
+				note = fmt.Sprintf(" (decision check failed, reported unchecked: %v)", err)
+			case !send:
 				continue
-			}
-			failures = 0
-			if hit {
-				reports++
-				lastReport, lastReportAt = text, time.Now()
-				report(fmt.Sprintf("condition met at %s (confidence %.2f, report #%d); still running\n%s", time.Now().Format("15:04:05"), confidence, reports, text))
 			}
 		}
+
+		reports++
+		lastReport, lastReportAt = segment, time.Now()
+		report(fmt.Sprintf("error keyword matched at %s (report #%d); the command keeps running%s. Explain what went wrong from the last output below:\n%s", hitAt.Format("15:04:05"), reports, note, segment))
 	}
 }
 
-func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport string, lastReportAt time.Time) (bool, float64, bool, error) {
+const watchHeaderBytes = 512
+
+func decideWatch(ctx context.Context, spec watchSpec, segment, lastReport string, lastReportAt time.Time) (bool, error) {
 	state := map[string]any{
-		"condition": spec.prompt,
-		"logs":      lines,
+		"keywords": spec.keywords,
+		"logs":     segment,
 	}
 	questions := map[string]go_llm_router.DecisionQuestion{
-		"trigger": {
+		"problem": {
 			Type: go_llm_router.DecisionChoice,
 			Instructions: map[string]any{
-				"question": "Do `logs` satisfy `condition`?",
-				"focus":    "Judge only the lines in `logs`; each line is one stream message or one line of command output, prefixed with its arrival time.",
+				"question": "Do `logs` show an actual error or failure?",
+				"focus":    "`logs` is the latest output of a running command, each line prefixed with its arrival time; it was flagged because a line contains one of `keywords`.",
 			},
 			Criteria: map[string]any{
-				"yes": "At least one line in `logs` meets `condition`.",
-				"no":  "Nothing in `logs` meets `condition`.",
+				"yes": "A line reports a real error, failure, crash or exception.",
+				"no":  "The keyword only appears in a benign context, such as `0 errors`, a file or flag name, or a passing summary.",
 			},
 		},
 	}
 	if !lastReportAt.IsZero() {
+		if runes := []rune(lastReport); len(runes) > configs.MAX_DECISION_RUNES {
+			lastReport = string(runes[len(runes)-configs.MAX_DECISION_RUNES:])
+		}
 		state["last_report"] = map[string]any{
 			"time": lastReportAt.Format("15:04:05"),
 			"logs": lastReport,
@@ -118,60 +133,48 @@ func decideWatch(ctx context.Context, spec watchSpec, lines []string, lastReport
 		questions["repeat"] = go_llm_router.DecisionQuestion{
 			Type: go_llm_router.DecisionChoice,
 			Instructions: map[string]any{
-				"question": "Do `logs` only repeat the situation already reported in `last_report`?",
-				"focus":    "`last_report` holds the lines already reported for `condition`. The condition simply staying met with similar values is a repeat.",
+				"question": "Are the problems in `logs` all the same kind as those already reported in `last_report`?",
+				"focus":    "`logs` may hold several errors accumulated since the last report. Compare each error itself (type, message, failing file or component), ignoring timestamps and line numbers that shift between rebuilds.",
 			},
 			Criteria: map[string]any{
-				"repeat": "`condition` stays met the same way as in `last_report`; nothing new to report.",
-				"new":    "`logs` show `condition` met again after it stopped holding, or met in a clearly different way than `last_report`.",
+				"same": "Every error in `logs` is one already reported in `last_report`, recurring or still unresolved.",
+				"new":  "At least one error in `logs` is of a different kind, or the same component fails for a different reason.",
 			},
 		}
 	}
 
 	answers, err := decision.Decide(ctx, spec.agent, state, questions)
 	if err != nil {
-		return false, 0, false, utilsmsg.Trace("Decide", spec.model, err)
+		return false, utilsmsg.Trace("Decide", spec.model, err)
 	}
-	answer, ok := answers["trigger"]
+	answer, ok := answers["problem"]
 	if !ok {
-		return false, 0, true, utilsmsg.New(utilsmsg.Upstream, spec.model, "response has no trigger answer")
+		return false, utilsmsg.New(utilsmsg.Upstream, spec.model, "response has no problem answer")
 	}
-	confidence := 0.0
-	if answer.Confidence != nil {
-		confidence = *answer.Confidence
-	}
-	switch answer.Choice {
-	case "yes":
-	case "no":
-		return false, confidence, true, nil
-	default:
-		return false, 0, true, utilsmsg.New(utilsmsg.Upstream, spec.model, "invalid choice %q", answer.Choice)
-	}
-	if confidence < configs.WATCH_MIN_CONFIDENCE {
-		return false, confidence, true, nil
+	if !decision.Confident(answer, "yes") {
+		return false, nil
 	}
 	if lastReportAt.IsZero() {
-		return true, confidence, true, nil
+		return true, nil
 	}
-
 	repeat, ok := answers["repeat"]
 	if !ok {
-		return false, 0, true, utilsmsg.New(utilsmsg.Upstream, spec.model, "response has no repeat answer")
+		return false, utilsmsg.New(utilsmsg.Upstream, spec.model, "response has no repeat answer")
 	}
-	switch repeat.Choice {
-	case "new":
-		return repeat.Confidence != nil && *repeat.Confidence >= configs.WATCH_MIN_CONFIDENCE, confidence, true, nil
-	case "repeat":
-		return false, confidence, true, nil
-	}
-	return false, 0, true, utilsmsg.New(utilsmsg.Upstream, spec.model, "invalid repeat choice %q", repeat.Choice)
+	return decision.Confident(repeat, "new"), nil
 }
 
-func formatWatchLines(lines []string, dropped int) string {
+func tailWatchLines(lines []string, dropped, limit int) string {
 	if len(lines) == 0 {
 		return ""
 	}
-	text := strings.Join(lines, "\n")
+	size, start := 0, len(lines)
+	for start > 0 && (start == len(lines) || size+len(lines[start-1])+1 <= limit) {
+		size += len(lines[start-1]) + 1
+		start--
+	}
+	dropped += start
+	text := strings.Join(lines[start:], "\n")
 	if dropped > 0 {
 		text = fmt.Sprintf("...[%d earlier lines dropped]...\n", dropped) + text
 	}
@@ -179,19 +182,26 @@ func formatWatchLines(lines []string, dropped int) string {
 }
 
 type watchBuffer struct {
-	mu      sync.Mutex
-	lines   []string
-	size    int
-	dropped int
-	total   int
-	partial []byte
-	limit   int
+	mu       sync.Mutex
+	lines    []string
+	size     int
+	dropped  int
+	partial  []byte
+	limit    int
+	keywords []string
+	written  time.Time
+	hit      chan struct{}
+}
+
+func newWatchBuffer(keywords []string) *watchBuffer {
+	return &watchBuffer{limit: configs.WATCH_BUFFER_MAX_BYTES, keywords: keywords, hit: make(chan struct{}, 1)}
 }
 
 func (b *watchBuffer) Write(raw []byte) (int, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
+	b.written = time.Now()
 	b.partial = append(b.partial, raw...)
 	for {
 		i := bytes.IndexByte(b.partial, '\n')
@@ -208,24 +218,23 @@ func (b *watchBuffer) Write(raw []byte) (int, error) {
 	return len(raw), nil
 }
 
-func (b *watchBuffer) add(line string) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.addLocked(line)
-}
-
 func (b *watchBuffer) addLocked(line string) {
-	b.total++
 	if len(line) > configs.WATCH_LINE_MAX_BYTES {
 		line = strings.ToValidUTF8(line[:configs.WATCH_LINE_MAX_BYTES], "") + "...[truncated]"
+	}
+	lower := strings.ToLower(line)
+	for _, keyword := range b.keywords {
+		if strings.Contains(lower, keyword) {
+			select {
+			case b.hit <- struct{}{}:
+			default:
+			}
+			break
+		}
 	}
 	line = time.Now().Format("15:04:05") + " " + line
 	b.lines = append(b.lines, line)
 	b.size += len(line)
-	b.trimLocked()
-}
-
-func (b *watchBuffer) trimLocked() {
 	for b.size > b.limit && len(b.lines) > 1 {
 		b.size -= len(b.lines[0])
 		b.lines = b.lines[1:]
@@ -233,22 +242,10 @@ func (b *watchBuffer) trimLocked() {
 	}
 }
 
-func (b *watchBuffer) restore(lines []string, dropped int) {
+func (b *watchBuffer) lastWrite() time.Time {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
-	b.lines = append(slices.Clone(lines), b.lines...)
-	for _, line := range lines {
-		b.size += len(line)
-	}
-	b.dropped += dropped
-	b.trimLocked()
-}
-
-func (b *watchBuffer) count() {
-	b.mu.Lock()
-	b.total++
-	b.mu.Unlock()
+	return b.written
 }
 
 func (b *watchBuffer) take() ([]string, int) {
@@ -258,10 +255,4 @@ func (b *watchBuffer) take() ([]string, int) {
 	lines, dropped := b.lines, b.dropped
 	b.lines, b.size, b.dropped = nil, 0, 0
 	return lines, dropped
-}
-
-func (b *watchBuffer) received() int {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.total
 }

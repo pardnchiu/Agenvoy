@@ -331,6 +331,11 @@ func ClearAllBackground() {
 		if !entry.IsDir() {
 			continue
 		}
+		if err := os.RemoveAll(filesystem.BackgroundDir(entry.Name())); err != nil {
+			slog.Warn("ClearAllBackground",
+				slog.String("session", entry.Name()),
+				slog.String("error", err.Error()))
+		}
 		for _, taskHash := range listPendingTasks(entry.Name()) {
 			meta, err := readPending(filesystem.PendingMetaPath(entry.Name(), taskHash))
 			if err != nil || len(meta.Background) == 0 {

@@ -43,7 +43,7 @@ Branch by candidate count:
 
 `extension_dir` is the **absolute path** `<SCRIPT_ROOT>/<basename>`, used by every step below.
 
-> Note: this skill only packages script tools (fixed `type: "script"`). Packaging api tools requires a separate skill. The worker does not accept `mcp` type.
+> Note: this skill only packages script tools (fixed `type: "script"`). The worker does not accept `mcp` type.
 
 ## Flow
 

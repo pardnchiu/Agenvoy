@@ -27,8 +27,8 @@
 
   A leg that mixes jobs was split too coarsely: gathering and judging what was gathered are two legs (collect legs first, then an analyze or compare leg fed their output). `research` is never a leg's work kind — it is collect plus analyze, split. Merging every leg into one answer stays with the planner at synthesis.
 - **Open a `write_todo` plan** with dispatch / gather / synthesize as phases, so the user can follow progress.
-- **Send each batch of {{.MaxLegs}} in one response.** {{.MaxLegs}} foreground legs run concurrently; one more queues behind them while its own timeout keeps running, so a wider set goes out in successive batches of {{.MaxLegs}}. Background legs are capped at {{.MaxBackground}} per session (run_command_background counts too); one over the cap is rejected, not queued. One call per leg.
-- **Background**: set `background` per that parameter's rule (over {{.BackgroundMin}} minutes per leg, or the user asks to be told later), with the same value on every leg of one fan-out.
+- **Send each batch of {{.MaxLegs}} in one response.** {{.MaxLegs}} foreground legs run concurrently; one more queues behind them while its own timeout keeps running, so a wider set goes out in successive batches of {{.MaxLegs}}. Background legs are capped at {{.MaxBackground}} per session (background_command counts too); one over the cap is rejected, not queued. One call per leg.
+- **Background**: dispatch through `background_subagents` instead of `subagents` when every leg runs over {{.BackgroundMin}} minutes or the user asks to be told later, using the same tool for every leg of one fan-out.
 - **Leave `self_id` empty** for fan-out legs: they run as temp sessions, and a descriptive label matches no session.
 - **Name each leg's report** with `report_name` (job + entity, e.g. `nvda-news`), so the returned paths say which leg wrote them.
 - **Legs return material; deliverables are rendered here.** Legs cannot write files or render pages / PDFs, so any page, document or report the user wants is produced by the planner after synthesis.

@@ -25,25 +25,25 @@ import (
 )
 
 var eventLabel = map[string]string{
-	"read_files":             "File",
-	"run_command":            "Run",
-	"run_command_background": "Background",
-	"open_file":              "Open",
-	"download_file":          "Download",
-	"pkg_manage":             "Package",
-	"search_web":             "Search",
-	"fetch_page":             "Fetch",
-	"http_request":           "Send",
-	"calculate":              "Calc",
-	"test_tool":              "Test",
-	"send_to_chatbot":        "Push",
-	"list_chatbot":           "Chatbots",
-	"mcp__kura__search_rag":  "RAG",
-	"mcp__kura__list_rag":    "RAG",
-	"reasoning_guide":        "Guide",
-	"write_result":           "Write",
-	"find_tools":             "Tools",
-	"write_todo":             "Plan",
+	"read_files":            "File",
+	"run_command":           "Run",
+	"background_command":    "Background",
+	"background_subagents":  "Background Subagents",
+	"open_file":             "Open",
+	"download_file":         "Download",
+	"search_web":            "Search",
+	"fetch_page":            "Fetch",
+	"http_request":          "Send",
+	"calculate":             "Calc",
+	"test_tool":             "Test",
+	"send_to_chatbot":       "Push",
+	"list_chatbot":          "Chatbots",
+	"mcp__kura__search_rag": "RAG",
+	"mcp__kura__list_rag":   "RAG",
+	"reasoning_guide":       "Guide",
+	"write_result":          "Write",
+	"find_tools":            "Tools",
+	"write_todo":            "Plan",
 }
 
 func parseToolArgs(raw string) map[string]any {
@@ -125,8 +125,8 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 	case "schedules":
 		return arg("skill_name")
 
-	case "subagents":
-		if mode != "invoke" {
+	case "subagents", "background_subagents":
+		if name == "subagents" && mode != "invoke" {
 			return ""
 		}
 		if target := arg("self_id"); target != "" {
@@ -134,7 +134,7 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 		}
 		return arg("model")
 
-	case "run_command", "run_command_background":
+	case "run_command", "background_command":
 		return joinArgv(raw)
 
 	case "open_file":
@@ -142,16 +142,6 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 
 	case "download_file":
 		return arg("url", "link")
-
-	case "pkg_manage":
-		action := arg("action")
-		if action == "" {
-			action = "install"
-		}
-		if pkg := arg("package"); pkg != "" {
-			return action + " " + pkg
-		}
-		return action
 
 	case "fetch_page":
 		return arg("link", "url")

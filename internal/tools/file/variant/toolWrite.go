@@ -30,14 +30,8 @@ func toolTarget(name, tag string, mustExist bool) (string, error) {
 			return filepath.Join(dir, "tool.json"), nil
 		}
 		return filepath.Join(dir, "script.py"), nil
-	case "api":
-		target := filepath.Join(filesystem.APIToolsDir, name+".json")
-		if mustExist && !go_pkg_filesystem_reader.Exists(target) {
-			return "", utilsmsg.New(utilsmsg.NotFound, "api tool", "%q does not exist", name)
-		}
-		return target, nil
 	}
-	return "", utilsmsg.New(utilsmsg.Invalid, "tag", "must be 'json', 'script', or 'api', got %q", tag)
+	return "", utilsmsg.New(utilsmsg.Invalid, "tag", "must be 'json' or 'script', got %q", tag)
 }
 
 func writeToolFile(ctx context.Context, e *tooltypes.Executor, name, tag, content string) (string, error) {

@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/retryHandler"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
@@ -170,7 +171,7 @@ func loadConfig() selectConfigMeta {
 	if c, err := config.Load(); err == nil {
 		cfgMeta.TagMap = c.ModelTag
 		cfgMeta.SelectionPrompt = config.SelectionPrompt(c, false)
-		cfgMeta.DecisionEnabled = c.DispatcherDecision && c.DecisionModel != ""
+		cfgMeta.DecisionEnabled = decision.Selected() != decision.Off
 	}
 	return cfgMeta
 }

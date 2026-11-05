@@ -11,10 +11,8 @@ import (
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
 
 	"github.com/pardnchiu/agenvoy/configs"
-	"github.com/pardnchiu/agenvoy/extensions"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	apiadapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter/api"
 	scriptadapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter/script"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -27,41 +25,7 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 		return nil, utilsmsg.Wrap(utilsmsg.Internal, "json.Unmarshal", "", err)
 	}
 
-	apiToolbox := apiadapter.New("api_")
-	apiToolbox.Builtin(extensions.APIs, "apis")
-
-	for _, dir := range []string{
-		filesystem.APIToolsDir,
-		filesystem.WorkAPIToolsDir,
-	} {
-		apiToolbox.Load(dir)
-	}
-
-	extAPIToolbox := apiadapter.New("ext_")
-	extAPIToolbox.Load(filesystem.ExtensionAPIToolsDir)
-
-	for _, tb := range []*apiadapter.Adapter{apiToolbox, extAPIToolbox} {
-		for _, tool := range tb.GetTools() {
-			raw, err := json.Marshal(tool)
-			if err != nil {
-				continue
-			}
-			var t go_llm_router.Tool
-			if err := json.Unmarshal(raw, &t); err != nil {
-				continue
-			}
-			tools = append(tools, t)
-		}
-		for _, name := range tb.AlwaysAllowNames() {
-			toolregister.MarkAlwaysAllow(name)
-		}
-		for _, name := range tb.ConcurrentNames() {
-			toolregister.MarkConcurrent(name)
-		}
-		for name, timeoutSec := range tb.Timeouts() {
-			toolregister.MarkTimeout(name, time.Duration(timeoutSec)*time.Second)
-		}
-	}
+	warnLegacyAPITools()
 
 	scriptToolbox := scriptadapter.New("script_")
 	for _, dir := range []string{
@@ -120,9 +84,7 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 		Tools:            initial,
 		AllTools:         tools,
 		UnmarkedTools:    unmarkedTools,
-		APIToolbox:       apiToolbox,
 		ScriptToolbox:    scriptToolbox,
-		ExtAPIToolbox:    extAPIToolbox,
 		ExtScriptToolbox: extScriptToolbox,
 		SkillScanner:     scanner,
 	}, nil

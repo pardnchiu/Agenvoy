@@ -31,22 +31,9 @@ func init() {
 
 	registRunCommand()
 	registRunCommandBackground()
-	registRunWebsocket()
 	registDownloadFile()
 	registOpenFile()
 	registHTMLTemplate()
-
-	toolregister.RegistGroup("api_", func(ctx context.Context, e *tooltypes.Executor, name string, args json.RawMessage) (string, error) {
-		if e.APIToolbox == nil || !e.APIToolbox.IsExist(name) {
-			return "", utilsmsg.New(utilsmsg.NotFound, "tool", "not exist: %s", name)
-		}
-
-		var params map[string]any
-		if err := json.Unmarshal(args, &params); err != nil {
-			return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
-		}
-		return e.APIToolbox.Execute(ctx, name, params)
-	})
 
 	toolregister.RegistGroup("script_", func(ctx context.Context, e *tooltypes.Executor, name string, args json.RawMessage) (string, error) {
 		if e.ScriptToolbox == nil || !e.ScriptToolbox.IsExist(name) {
@@ -56,13 +43,6 @@ func init() {
 	})
 
 	toolregister.RegistGroup("ext_", func(ctx context.Context, e *tooltypes.Executor, name string, args json.RawMessage) (string, error) {
-		if e.ExtAPIToolbox != nil && e.ExtAPIToolbox.IsExist(name) {
-			var params map[string]any
-			if err := json.Unmarshal(args, &params); err != nil {
-				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
-			}
-			return e.ExtAPIToolbox.Execute(ctx, name, params)
-		}
 		if e.ExtScriptToolbox != nil && e.ExtScriptToolbox.IsExist(name) {
 			return e.ExtScriptToolbox.Execute(ctx, name, args, e.WorkDir)
 		}

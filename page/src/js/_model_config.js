@@ -6,7 +6,6 @@ let modelProvider = "";
 let modelAbort = null;
 let modelStream = null;
 const modelOAuth = { id: "", code: "", url: "" };
-const DECISION_DISPATCHER = "decision";
 
 function modelDom() {
   return {
@@ -558,7 +557,6 @@ async function modelRouting() {
       const body = (await response.json()) || {};
       return {
         dispatcher: body.dispatcher || "",
-        dispatcherDecision: Boolean(body.dispatcher_beta),
         summary: body.summary || "",
         image: body.image || "",
         imageOptions: body.image_options || [],
@@ -571,7 +569,7 @@ async function modelRouting() {
   } catch (err) {
     console.error("modelRouting", err);
   }
-  return { dispatcher: "", dispatcherDecision: false, summary: "", image: "", imageOptions: [], decision: "", decisionOptions: [], stt: "", tts: "" };
+  return { dispatcher: "", summary: "", image: "", imageOptions: [], decision: "", decisionOptions: [], stt: "", tts: "" };
 }
 
 async function saveRouting(body) {
@@ -610,20 +608,6 @@ function fillRoutingSelect(kind, current, options, placeholder) {
   select.value = options.includes(current) ? current : "";
 }
 
-function fillDispatcherDecision(model, on) {
-  const select = routingSelect("dispatcher");
-  if (!select) {
-    return;
-  }
-  const label = `Decision Model · ${model || "off"}`;
-  const option = _("option", { value: DECISION_DISPATCHER }, label);
-  option.disabled = !model;
-  select.appendChild(option);
-  if (on && model) {
-    select.value = DECISION_DISPATCHER;
-  }
-}
-
 async function fillAudioOptions(stt, tts) {
   let body = {};
   try {
@@ -653,7 +637,6 @@ async function renderModelRouting(registered) {
   }
 
   fillRoutingSelect("dispatcher", routing.dispatcher, registered, "auto · first registered model");
-  fillDispatcherDecision(routing.decision, routing.dispatcherDecision);
   fillRoutingSelect("summary", routing.summary, registered, "auto · first registered model");
   fillRoutingSelect("image", routing.image, routing.imageOptions, "off");
   fillRoutingSelect("decision", routing.decision, routing.decisionOptions, "off");
