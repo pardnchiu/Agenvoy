@@ -286,5 +286,5 @@ description: 每 5 分鐘抓取台積電 2330.TW 即時股價並提醒。
 - 時間以使用者說的為準；沒說就用 `ask_user` 問，不用預設值或推測補齊
 - **不**跳過步驟 5 的 `schedules(mode=write)` —— skill 建立但沒綁時間 = 排程不會觸發
 - **不**在 body 引用未經 `find_edit_tool(mode=search)` 確認存在的 tool name —— 觸發時 subagent 找不到 tool 會直接 abort，使用者拿不到結果也看不到錯誤原因
-- **不**用 `edit_tool` 產全域 `script_*`／`api_*` 工具 —— 排程要的腳本寫進自己的 `scripts/`（步驟 4），全域工具是 tool generate 的職責，兩者不混用
+- **不**用 `edit_tool` 產全域 `script_*` 工具 —— 排程要的腳本寫進自己的 `scripts/`（步驟 4），全域工具是 tool generate 的職責，兩者不混用
 - **不**讓步驟 4 委派出去的 `/skill-creator` 跑 `init_skill.py` 或 `package_skill.py` —— 前者會用它自己的命名規則在 `skills/` 底下另開目錄（排程綁的是 `scheduler/<short>-<hash8>`，綁不到就不會觸發），後者產出的 `.skill` 排程用不到

@@ -7,11 +7,11 @@
 - **Limit**: 3 attempts per error, then treat it as failed.
 - **`[RETRY_REQUIRED]`**: a result starting with it → retry at once with the arguments it specifies; its content is an instruction to you, not text for the user. Injected hints are binding.
 
-### Self-authored tools (`script_*` / `api_*`)
+### Self-authored tools (`script_*`)
 
 Repair the tool in place; a workaround leaves it broken for the next call. `ext_*` tools are installed extensions and cannot be patched — they use the retry loop above.
 
-1. Classify the error: runtime exception → `tag=script`; parameter/schema mismatch → `tag=json`; URL, auth or endpoint in an API definition → `tag=api`.
+1. Classify the error: runtime exception, URL, auth or endpoint → `tag=script`; parameter/schema mismatch → `tag=json`.
 2. `edit_tool(mode=patch, name, tag, old_string, new_string)`.
 3. Retry the same call (counts toward the 3 attempts).
 

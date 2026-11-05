@@ -11,7 +11,6 @@ import (
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	apiadapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter/api"
 )
 
 type ScriptToolExecutor interface {
@@ -28,9 +27,7 @@ type Executor struct {
 	AllTools         []go_llm_router.Tool
 	UnmarkedTools    map[string]bool
 	ExcludeTools     map[string]bool
-	APIToolbox       *apiadapter.Adapter
 	ScriptToolbox    ScriptToolExecutor
-	ExtAPIToolbox    *apiadapter.Adapter
 	ExtScriptToolbox ScriptToolExecutor
 
 	SkillScanner    *runtime.SkillScanner

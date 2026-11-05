@@ -76,12 +76,11 @@ var toolDisplayName = map[string]string{
 
 func IsPlugTool(name string) bool {
 	return strings.HasPrefix(name, "script_") ||
-		strings.HasPrefix(name, "api_") ||
 		strings.HasPrefix(name, "ext_")
 }
 
 func PlugToolBaseName(name string) string {
-	for _, prefix := range []string{"script_", "api_", "ext_"} {
+	for _, prefix := range []string{"script_", "ext_"} {
 		if base, ok := strings.CutPrefix(name, prefix); ok {
 			return base
 		}
@@ -115,8 +114,6 @@ func ToolName(name string) string {
 		switch {
 		case strings.HasPrefix(name, "script_"):
 			tag = "Script"
-		case strings.HasPrefix(name, "api_"):
-			tag = "API"
 		case strings.HasPrefix(name, "ext_"):
 			tag = "Extension"
 		}

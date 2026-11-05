@@ -65,9 +65,10 @@ const (
 	MAX_PENDING_ARGS_BYTES   = MAX_DOCUMENT_BYTES / 256
 
 	// * Endpoint
-	ENDPOINT_LLM_WINDOW    = "https://llm-io.agenvoy.com/"
-	ENDPOINT_UPDATE_SHELL  = "https://agenvoy.com/scripts/update.sh"
-	ENDPOINT_HTML_TEMPLATE = "https://view.agenvoy.com"
+	ENDPOINT_LLM_WINDOW      = "https://llm-io.agenvoy.com/"
+	ENDPOINT_UPDATE_SHELL    = "https://agenvoy.com/scripts/update.sh"
+	ENDPOINT_HTML_TEMPLATE   = "https://view.agenvoy.com"
+	ENDPOINT_PUBLIC_API_LIST = "https://public-api-list.agenvoy.com/"
 )
 
 var (

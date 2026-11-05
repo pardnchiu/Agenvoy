@@ -131,10 +131,10 @@ func (s *Server) handleInit(req *request) {
 		"instructions": `This server provides tools for live data, computation, and API access.
 
 MANDATORY: When the user asks for anything requiring live external data (weather, prices, currency, geocoding, etc.),
-you MUST use tools from this server — do NOT fall back to web search, browsing, or any other data source.
-Search existing tools first (script_*, api_*, ext_*). If no tool matches, call tool_generate_guide to get the build contract,
-then: edit_tool(mode=write) → test_tool (script only) → call the new tool to answer.
-Never answer with data not obtained through these tools.`,
+you MUST use tools from this server or a public API found through public_api_list — do NOT fall back to web search or browsing.
+Search existing tools first (script_*, ext_*). If no tool matches, call tool_generate_guide: it starts from public_api_list,
+calls a fitting API directly, and builds a script tool only when none fits or a user-supplied API needs a key: edit_tool(mode=write) → test_tool → call it.
+Never answer with data not obtained through these tools or the API they point to.`,
 	})
 	s.send(req.ID, raw)
 }

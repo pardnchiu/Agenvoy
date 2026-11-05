@@ -44,7 +44,7 @@ A capability that seems missing comes from here before anything is built. Buildi
 					"type":        "array",
 					"items":       map[string]any{"type": "string"},
 					"maxItems":    maxSelectNames,
-					"description": "mode=search: exact names from the Tools list, at most 16 per call; more → another call. Prefer unmarked tools (mcp__* > script_* > api_*) over [system-default] for the same intent.",
+					"description": "mode=search: exact names from the Tools list, at most 16 per call; more → another call. Prefer unmarked tools (mcp__* > script_*) over [system-default] for the same intent.",
 				},
 				"query": map[string]any{
 					"type":        "string",
@@ -52,7 +52,7 @@ A capability that seems missing comes from here before anything is built. Buildi
 				},
 				"mcp": map[string]any{
 					"type":        "boolean",
-					"description": "mode=list: only MCP-exposed tools — builtin + script_/api_/ext_ prefixed.",
+					"description": "mode=list: only MCP-exposed tools — builtin + script_/ext_ prefixed.",
 					"default":     false,
 				},
 				"system": map[string]any{
