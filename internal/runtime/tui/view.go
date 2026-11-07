@@ -191,6 +191,52 @@ func renderPopupTabs(p *Popup) string {
 	return strings.Join(cells, "   ")
 }
 
+func fitAskText(p *Popup, width, height int) (string, string) {
+	optionRows := 1
+	if p.kind == popupSingleSelect || p.kind == popupMultiSelect {
+		optionRows = max(len(p.options), 1)
+	}
+	footerRows := 2
+	if len(p.questions) > 1 {
+		footerRows++
+	}
+	budget := max(height-optionRows-footerRows-2, 1)
+
+	titleLines := wrapPlain(p.title, width-2)
+	subLines := wrapPlain(p.subtitle, width)
+	titleMax := budget
+	if len(subLines) > 0 && budget > 1 {
+		titleMax = budget - 1
+	}
+	titleLines = clipLines(titleLines, titleMax, width)
+	subLines = clipLines(subLines, budget-len(titleLines), width)
+	return strings.Join(titleLines, "\n"), strings.Join(subLines, "\n")
+}
+
+func wrapPlain(text string, width int) []string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return nil
+	}
+	lines := strings.Split(lipgloss.NewStyle().Width(max(width, 10)).Render(text), "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimRight(line, " ")
+	}
+	return lines
+}
+
+func clipLines(lines []string, limit, width int) []string {
+	if limit <= 0 {
+		return nil
+	}
+	if len(lines) <= limit {
+		return lines
+	}
+	lines = lines[:limit]
+	lines[limit-1] = truncate.StringWithTail(lines[limit-1]+" ...", uint(max(width, 10)), "...")
+	return lines
+}
+
 func (t TUI) viewPopup() string {
 	width := t.width
 	if width < 20 {
@@ -201,14 +247,19 @@ func (t TUI) viewPopup() string {
 		return ""
 	}
 
+	title, subtitle := p.title, p.subtitle
+	if len(p.questions) > 0 && t.height > 0 {
+		title, subtitle = fitAskText(p, width-2, t.height)
+	}
+
 	header := ""
 	switch {
 	case len(p.tabs) > 1:
 		header = renderPopupTabs(p)
 	case len(p.restricted) > 0:
-		header = errorStyle.Render("⚠ " + p.title)
-	case p.title != "":
-		header = systemStyle.Render("● " + strings.TrimPrefix(p.title, "/"))
+		header = errorStyle.Render("⚠ " + title)
+	case title != "":
+		header = systemStyle.Render("● " + strings.TrimPrefix(title, "/"))
 	}
 	divider := thinkStyle.Render(strings.Repeat("─", width))
 	headerHeight := 0
@@ -227,10 +278,24 @@ func (t TUI) viewPopup() string {
 	}
 
 	var body []string
-	if p.subtitle != "" {
-		body = append(body, textStyle.Render(p.subtitle))
+	if p.explain != "" {
+		body = append(body, textStyle.Render(p.explain), thinkStyle.Render(strings.Repeat("─", max(width-2, 1))))
+	}
+	showCommand := subtitle != "" && !(p.commandLine && len(p.restricted) > 0)
+	if showCommand {
+		if p.commandLine {
+			body = append(body, hintStyle.Render(subtitle))
+		} else {
+			body = append(body, textStyle.Render(subtitle))
+		}
+	}
+	if p.explain != "" && showCommand {
+		body = append(body, "")
 	}
 	body = append(body, p.styledLines...)
+	if p.status != "" {
+		body = append(body, p.status)
+	}
 	diffWidth := max(width-6, 20)
 	for _, dl := range p.diffLines {
 		switch {
@@ -251,6 +316,9 @@ func (t TUI) viewPopup() string {
 	appendFooter := func(hint string) {
 		if p.back != nil && p.kind != popupOAuth {
 			hint = strings.NewReplacer("Esc:cancel", "Esc:back", "Esc:close", "Esc:back").Replace(hint)
+		}
+		if p.pendingId != "" {
+			hint = strings.ReplaceAll(hint, "  Esc:cancel", "")
 		}
 		trimTail()
 		tail = []string{renderFooter(hint)}

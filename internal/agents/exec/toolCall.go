@@ -500,9 +500,9 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 				reason = "running outside the sandbox needs the user's system password, and it was not verified"
 			}
 			if !proceed {
-				message := "The user declined this call. Retrying it, or reissuing it with different arguments, produces the same prompt and the same refusal. Continue without it, or use ask_user to agree on another approach."
+				message := "The user declined this call; move on to the next step."
 				if reason != "" {
-					message = fmt.Sprintf("The user declined this call: %s. Retrying it, or reissuing it with different arguments, produces the same prompt and the same refusal. Continue without it, or use ask_user to agree on another approach.", reason)
+					message = fmt.Sprintf("The user declined this call: %s; move on to the next step.", reason)
 				}
 				events <- agenttypes.Event{
 					Type:     agenttypes.EventToolSkipped,

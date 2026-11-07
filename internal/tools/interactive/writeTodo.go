@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -137,7 +138,11 @@ func WriteTodos(sessionID, taskHash string, todos []agenttypes.TodoItem) error {
 	pendingMu.Lock()
 	defer pendingMu.Unlock()
 
-	meta, err := go_pkg_filesystem.ReadJSON[pendingMeta](filesystem.PendingMetaPath(sessionID, taskHash))
+	path := filesystem.PendingMetaPath(sessionID, taskHash)
+	if !go_pkg_filesystem_reader.Exists(path) {
+		return nil
+	}
+	meta, err := go_pkg_filesystem.ReadJSON[pendingMeta](path)
 	if err != nil {
 		meta = pendingMeta{}
 	}

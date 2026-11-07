@@ -59,6 +59,7 @@ type Reply struct {
 	AllowTurn bool   `json:"allow_turn,omitempty"`
 	Skip      bool   `json:"skip,omitempty"`
 	Abort     bool   `json:"abort,omitempty"`
+	Keep      bool   `json:"keep,omitempty"`
 	Reason    string `json:"reason,omitempty"`
 	Answers   []any  `json:"answers,omitempty"`
 	Password  string `json:"password,omitempty"`

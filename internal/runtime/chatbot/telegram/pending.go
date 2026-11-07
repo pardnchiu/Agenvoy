@@ -44,7 +44,7 @@ func (t *telegramTransport) LookupChatID(sessionID string) (int64, error) {
 	return chatID, nil
 }
 
-func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolName, toolArgs, explain string, multiline bool) (int, error) {
+func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolName, toolArgs, explain string, options []string, multiline bool) (int, error) {
 	const limit = 3200
 	var str string
 	var modes []go_bot_telegram.MessageOption
@@ -67,7 +67,7 @@ func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolN
 		}
 		modes = append(modes, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
 	}
-	msg, err := t.bot.client.SendSelect(ctx, chatID, 0, str, runtime.ConfirmOptions, modes...)
+	msg, err := t.bot.client.SendSelect(ctx, chatID, 0, str, options, modes...)
 	if err != nil {
 		return 0, err
 	}

@@ -7,6 +7,8 @@ import (
 
 var ErrUserCanceled = errors.New("user cancelled")
 
+var ErrUserAborted = errors.New("[Canceled] task: aborted by user; pending kept for resume")
+
 var (
 	cancelMu       sync.RWMutex
 	cancelNotifier func(sessionID, taskHash, reason string)
