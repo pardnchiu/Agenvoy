@@ -76,7 +76,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	_, resizing := msg.(tea.WindowSizeMsg)
 	_, settled := msg.(resizeSettled)
-	if t.popup != nil && !resizing && !settled {
+	_, verified := msg.(restrictedVerified)
+	if t.popup != nil && !resizing && !settled && !verified {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			return t.updatePopup(msg)
