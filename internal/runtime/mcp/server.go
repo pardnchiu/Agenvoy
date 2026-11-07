@@ -49,9 +49,7 @@ type toolResult struct {
 	IsError bool          `json:"isError,omitempty"`
 }
 
-func emptySchema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{}}`)
-}
+var emptySchema = json.RawMessage(`{"type":"object","properties":{}}`)
 
 type Server struct {
 	readMu  sync.RWMutex

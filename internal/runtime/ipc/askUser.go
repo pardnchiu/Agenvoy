@@ -25,6 +25,7 @@ func (c *conn) askUser(ctx context.Context) {
 				ToolName:   req.ToolName,
 				ToolArgs:   req.ToolArgs,
 				Restricted: req.Restricted,
+				Explain:    req.Explain,
 			}
 			if len(req.Restricted) > 0 {
 				ask.NeedPassword = !sudo.Cached(ctx)

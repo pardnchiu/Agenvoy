@@ -2,8 +2,9 @@ const CONFIRM_OPTIONS = [
   { label: "yes", body: { approve: true }, style: "approve" },
   { label: "yes, don't ask again", body: { approve: true, remember: true }, style: "approve" },
   { label: "yes, allow this turn", body: { approve: true, allow_turn: true }, style: "approve" },
-  { label: "no", body: { approve: false }, style: "reject", reason: true },
+  { label: "no, skip this", body: { approve: false }, style: "reject", reason: true },
   { label: "abort task", body: { approve: false, abort: true }, style: "abort" },
+  { label: "cancel task", body: { approve: false, cancel: true }, style: "abort" },
 ];
 
 async function resolveToolConfirm(sessionId, requestId, body, dom) {
@@ -17,7 +18,7 @@ async function resolveToolConfirm(sessionId, requestId, body, dom) {
         body: JSON.stringify(body),
       },
     );
-    if (response.status === 401) {
+    if (response.status === 401 || response.status === 403) {
       const detail = await response.json().catch(() => ({}));
       if (note) {
         note.textContent = detail.error || "password rejected";
@@ -74,6 +75,9 @@ function renderToolConfirm(event, sessionId) {
   if (args && args !== "{}") {
     body.push(_("pre.args", args));
   }
+  if (event.explain) {
+    body.push(_("p.explain", event.explain));
+  }
 
   const restricted = event.restricted || [];
   const cached = Boolean(event.password_cached);
@@ -81,6 +85,8 @@ function renderToolConfirm(event, sessionId) {
   let note = null;
   if (restricted.length > 0 && cached) {
     body.push(_("p.restricted", `outside the allow list · ${restricted.join(", ")} · sudo still valid, no password needed`));
+    note = _("p.note", "");
+    body.push(note);
   }
   if (restricted.length > 0 && !cached) {
     body.push(_("p.restricted", `needs your system password · ${restricted.join(", ")}`));
@@ -103,7 +109,7 @@ function renderToolConfirm(event, sessionId) {
   let primary = null;
   const card = _("div.tool-confirm", { "data-id": requestId }, [...body, action]);
   for (const option of CONFIRM_OPTIONS) {
-    if (restricted.length > 0 && option.body.remember) {
+    if (restricted.length > 0 && (option.body.remember || option.body.allow_turn)) {
       continue;
     }
     const button = _("button", { type: "button", class: option.style }, [_("p", option.label)]);

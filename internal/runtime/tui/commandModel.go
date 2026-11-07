@@ -141,7 +141,7 @@ func (t TUI) modelPopup(tab int) (TUI, tea.Cmd, bool) {
 			return nil
 		case 2:
 			options, values, cursor := dispatcherOptions()
-			p.subtitle = "model that routes each request  Decision Model replaces it with the model set in the decision tab"
+			p.subtitle = "model that routes each request, writes follow-ups and titles, and explains commands before you confirm  Decision Model takes over routing only"
 			if len(options) == 0 {
 				p.styledLines = []string{hintStyle.Render("  no models configured")}
 			}

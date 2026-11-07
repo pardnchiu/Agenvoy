@@ -39,6 +39,7 @@ type Request struct {
 	ToolName   string
 	ToolArgs   string
 	Restricted []string
+	Explain    string
 	AskUser    *UserPayload
 	Inline     bool
 	Ctx        context.Context

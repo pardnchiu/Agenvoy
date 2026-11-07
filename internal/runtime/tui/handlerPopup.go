@@ -65,6 +65,10 @@ type Popup struct {
 	restricted     []string
 	needPassword   bool
 	passwordPrompt bool
+	explain        string
+	commandLine    bool
+	status         string
+	verifying      bool
 
 	questions   []runtime.Question
 	questionIdx int
@@ -194,11 +198,7 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		p.cursor = (p.cursor + 1) % len(p.options)
 
 	case tea.KeyEsc:
-		resolvePending(p.pendingId, runtime.Reply{
-			Approve: false,
-			Error:   runtime.ErrUserCanceled,
-		})
-		t = t.closePopup()
+		return t, nil
 
 	case tea.KeyEnter:
 		chosen := p.options[p.cursor]
@@ -214,7 +214,10 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				p.kind = popupSecret
 				p.passwordPrompt = true
 				p.title = "System password:"
-				p.subtitle = ""
+				p.styledLines = nil
+				for _, one := range p.restricted {
+					p.styledLines = append(p.styledLines, warnStyle.Render("⚠ "+one))
+				}
 				p.input = newPopupInput("", false)
 				return t, nil
 			}
@@ -223,13 +226,15 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			reply = runtime.Reply{Approve: true, Remember: true}
 		case strings.HasPrefix(chosen, "Yes  allow this turn"):
 			reply = runtime.Reply{Approve: true, AllowTurn: true}
-		case chosen == "No":
+		case chosen == confirmSkip:
 			p.kind = popupText
 			p.skipWithReason = true
 			p.title = "Reason (enter to skip):"
 			p.input = newPopupInput("", false)
 			return t, nil
-		case chosen == "Abort task":
+		case chosen == confirmAbort:
+			reply = runtime.Reply{Approve: false, Error: runtime.ErrUserAborted}
+		case chosen == confirmCancel:
 			reply = runtime.Reply{Approve: false, Error: runtime.ErrUserCanceled}
 		}
 		resolvePending(p.pendingId, reply)
@@ -288,10 +293,7 @@ func (t TUI) updateSingleSelectPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if p.pendingId == "" {
 			return t.escapePopup()
 		}
-		resolvePending(p.pendingId, runtime.Reply{
-			Error: runtime.ErrUserCanceled,
-		})
-		t = t.closePopup()
+		return t, nil
 	case tea.KeyRunes:
 		if p.pendingId != "" {
 			break
@@ -544,10 +546,7 @@ func (t TUI) updateMultiSelectPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if p.pendingId == "" {
 			return t.escapePopup()
 		}
-		resolvePending(p.pendingId, runtime.Reply{
-			Error: runtime.ErrUserCanceled,
-		})
-		t = t.closePopup()
+		return t, nil
 
 	case tea.KeyEnter:
 		options, values, multi := p.options, p.values, p.multi
@@ -619,8 +618,12 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return t, popupNext(p, func() any { return cb(value) })
 		}
 		if p.passwordPrompt {
+			if p.verifying {
+				return t, nil
+			}
+			p.verifying = true
+			p.status = hintStyle.Render("verifying...")
 			resolvePendingWithPassword(p.pendingId, runtime.Reply{Approve: true}, value)
-			t = t.closePopup()
 			return t, nil
 		}
 		if p.skipWithReason {
@@ -645,10 +648,6 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if p.pendingId == "" {
 			return t.escapePopup()
 		}
-		resolvePending(p.pendingId, runtime.Reply{
-			Error: runtime.ErrUserCanceled,
-		})
-		t = t.closePopup()
 		return t, nil
 
 	case tea.KeyCtrlS:
@@ -677,6 +676,12 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return t, cmd
 }
 
+const (
+	confirmSkip   = "No  skip this"
+	confirmAbort  = "Abort  keep for resume"
+	confirmCancel = "Cancel  delete task"
+)
+
 func newPopup(pending Pending) *Popup {
 	id, req := pending.id, pending.request
 	switch req.Kind {
@@ -689,14 +694,16 @@ func newPopup(pending Pending) *Popup {
 			"Yes",
 			"Yes  don't ask again",
 			"Yes  allow this turn",
-			"No",
-			"Abort task",
+			confirmSkip,
+			confirmAbort,
+			confirmCancel,
 		}
 		if len(req.Restricted) > 0 {
 			options = []string{
 				"Yes",
-				"No",
-				"Abort task",
+				confirmSkip,
+				confirmAbort,
+				confirmCancel,
 			}
 		}
 		p := &Popup{
@@ -708,6 +715,8 @@ func newPopup(pending Pending) *Popup {
 			restricted:   req.Restricted,
 			needPassword: pending.needPassword,
 		}
+		p.explain = req.Explain
+		p.commandLine = true
 		if len(req.Restricted) > 0 {
 			p.title = fmt.Sprintf("Run %s outside the allow list?", utils.ToolName(req.ToolName))
 			for _, one := range req.Restricted {

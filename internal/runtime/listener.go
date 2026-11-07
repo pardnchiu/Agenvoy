@@ -20,11 +20,13 @@ const (
 	TypeAskSecret
 	TypeAskSingle
 	TypeAskMulti
+	TypeSkipChoice
+	TypeSkipText
 )
 
 type Transport[CID comparable, MID comparable] interface {
 	LookupChatID(sessionID string) (CID, error)
-	SendConfirm(ctx context.Context, chatID CID, toolName, toolArgs string, multiline bool) (MID, error)
+	SendConfirm(ctx context.Context, chatID CID, toolName, toolArgs, explain string, options []string, multiline bool) (MID, error)
 	SendAskText(ctx context.Context, chatID CID, header string, secret bool) (MID, error)
 	SendAskSingle(ctx context.Context, chatID CID, header string, options []string) (MID, error)
 	SendAskMulti(ctx context.Context, chatID CID, header string, options []string) (MID, error)
@@ -177,7 +179,12 @@ func (l *Listener[CID, MID]) sendPrompt(ctx context.Context, id string, req Requ
 
 func (l *Listener[CID, MID]) startConfirm(ctx context.Context, id string, chatID CID, req Request) {
 	args, multiline := FormatToolArgs(req.ToolName, req.ToolArgs)
-	msgID, err := l.transport.SendConfirm(ctx, chatID, req.ToolName, args, multiline)
+	options, explain := ConfirmOptions, req.Explain
+	if len(req.Restricted) > 0 {
+		options = RestrictedConfirmOptions
+		explain = strings.TrimSpace(explain + "\n" + restrictedChatNote + strings.Join(req.Restricted, ", "))
+	}
+	msgID, err := l.transport.SendConfirm(ctx, chatID, req.ToolName, args, explain, options, multiline)
 	if err != nil {
 		Resolve(id, Reply{Error: utilsmsg.Wrap(utilsmsg.Upstream, "SendConfirm", "", err)})
 		return
@@ -288,7 +295,31 @@ func (l *Listener[CID, MID]) OnCallback(ctx context.Context, chatID CID, msgID M
 			return true
 		}
 		l.deletePrompt(ctx, state)
+		if reply.Skip {
+			l.askSkipReason(ctx, state)
+			return true
+		}
 		l.finalize(state, reply)
+
+	case TypeSkipChoice:
+		switch data {
+		case skipWithoutReason:
+			l.deletePrompt(ctx, state)
+			l.finalize(state, Reply{Approve: false, Skip: true})
+		case skipWriteReason:
+			l.deletePrompt(ctx, state)
+			msgID, err := l.transport.SendAskText(ctx, state.chatID, skipReasonHeader, false)
+			if err != nil {
+				l.finalize(state, Reply{Approve: false, Skip: true})
+				return true
+			}
+			state.kind = TypeSkipText
+			state.message = msgID
+		}
+
+	case TypeSkipText:
+		l.deletePrompt(ctx, state)
+		l.finalize(state, Reply{Approve: false, Skip: true, Reason: strings.TrimSpace(data)})
 
 	case TypeAskSingle:
 		l.deletePrompt(ctx, state)
@@ -317,6 +348,18 @@ func (l *Listener[CID, MID]) OnText(ctx context.Context, chatID CID, msgID MID, 
 	if state == nil {
 		l.mu.Unlock()
 		return false
+	}
+	if state.kind == TypeSkipText {
+		l.mu.Unlock()
+		if err := l.delete(ctx, chatID, msgID); err != nil {
+			slog.Debug("connector.Delete user reply",
+				slog.String("prefix", l.prefix),
+				slog.String("chat", state.chatName),
+				slog.String("error", err.Error()))
+		}
+		l.deletePrompt(ctx, state)
+		l.finalize(state, Reply{Approve: false, Skip: true, Reason: strings.TrimSpace(text)})
+		return true
 	}
 	if state.kind != TypeAskText && state.kind != TypeAskSecret {
 		l.mu.Unlock()
@@ -375,17 +418,38 @@ func (l *Listener[CID, MID]) finalize(state *active[CID, MID], reply Reply) {
 	}
 }
 
-var confirmOptions = []string{
+var ConfirmOptions = []string{
 	"✅ Yes",
 	"✅ Yes, don't ask again",
 	"✅ Yes, allow this turn",
-	"❌ No",
-	"⛔ Stop",
+	"❌ No, skip this",
+	"⛔ Abort task",
+	"🗑️ Cancel task",
 }
 
-func ConfirmOptions() []string {
-	return confirmOptions
+var RestrictedConfirmOptions = []string{
+	"❌ No, skip this",
+	"⛔ Abort task",
+	"🗑️ Cancel task",
 }
+
+const (
+	skipWithoutReason = "↪️ Skip without reason"
+	skipWriteReason   = "✏️ Write a reason"
+	skipReasonHeader  = "Reason for skipping"
+)
+
+func (l *Listener[CID, MID]) askSkipReason(ctx context.Context, state *active[CID, MID]) {
+	msgID, err := l.transport.SendAskSingle(ctx, state.chatID, "Skipped. Add a reason for the agent?", []string{skipWithoutReason, skipWriteReason})
+	if err != nil {
+		l.finalize(state, Reply{Approve: false, Skip: true})
+		return
+	}
+	state.kind = TypeSkipChoice
+	state.message = msgID
+}
+
+const restrictedChatNote = "needs your system password, which chat cannot collect: approve it from the TUI or Web UI on this machine. "
 
 func confirmReplyFor(data string) (reply Reply, finalize bool) {
 	switch data {
@@ -395,10 +459,12 @@ func confirmReplyFor(data string) (reply Reply, finalize bool) {
 		return Reply{Approve: true, Remember: true}, true
 	case "✅ Yes, allow this turn":
 		return Reply{Approve: true, AllowTurn: true}, true
-	case "❌ No":
+	case "❌ No, skip this", "❌ No":
 		return Reply{Approve: false, Skip: true}, true
-	case "⛔ Stop":
-		return Reply{Approve: false, Error: utilsmsg.New(utilsmsg.Canceled, "confirm", "user stopped")}, true
+	case "⛔ Abort task", "⛔ Stop":
+		return Reply{Approve: false, Error: ErrUserAborted}, true
+	case "🗑️ Cancel task":
+		return Reply{Approve: false, Error: ErrUserCanceled}, true
 	default:
 		return Reply{}, false
 	}

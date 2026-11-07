@@ -35,7 +35,7 @@ func registRunCommand() {
 		Description: fmt.Sprintf(`Runs one binary in the work directory and returns its combined stdout/stderr once it exits. Networking is off unless network: true, which always asks: git clone / fetch / pull / push, package installs, go mod download, curl and wget fail to resolve a host without it.
 Use for 跑一下 / 執行 / build / test / lint / format and local git work.
 A watcher (--watch, chokidar, npm run sass/build/dev), a job likely over %d minutes or 背景跑 / 跑完告訴我 → background_command; cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file.
-Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else asks, so never chain one behind && with a command that writes.`, configs.BACKGROUND_THRESHOLD_MIN, systemPackageRoute()),
+Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else asks, so never chain one behind && with a command that writes.`, configs.BACKGROUND_THRESHOLD_MIN, systemPackageRoute),
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": commandProperties(),
@@ -91,9 +91,7 @@ func deniedCommandErr(binary string) error {
 	return utilsmsg.New(utilsmsg.Denied, "run_command", "%s is on denied_command and can never run; it cannot be approved and retrying changes nothing", binary)
 }
 
-func sudoCommandErr() error {
-	return utilsmsg.New(utilsmsg.Denied, "sudo", "cannot elevate inside sh -c; call run_command with argv ['sudo', '<binary>', ...<args>] instead, which asks the user for the system password and runs outside the sandbox. For %s", systemPackageRoute())
-}
+var errSudoInShell = utilsmsg.New(utilsmsg.Denied, "sudo", "cannot elevate inside sh -c; call run_command with argv ['sudo', '<binary>', ...<args>] instead, which asks the user for the system password and runs outside the sandbox. For %s", systemPackageRoute)
 
 func sudoArgv(argv []string) ([]string, error) {
 	if len(argv) < 2 {
@@ -116,13 +114,9 @@ func sudoArgv(argv []string) ([]string, error) {
 	return append([]string{"sudo", "-n"}, argv[1:]...), nil
 }
 
-func openCommandErr() error {
-	return utilsmsg.New(utilsmsg.Denied, "open", "the sandbox has no route to the app-launch service (error -54); call open_file with the file path or URL instead")
-}
+var errOpenCommand = utilsmsg.New(utilsmsg.Denied, "open", "the sandbox has no route to the app-launch service (error -54); call open_file with the file path or URL instead")
 
-func systemPackageRoute() string {
-	return "a system package → find the manager with command -v, then argv ['sudo', 'apt-get', 'install', '-y', '<pkg>'] (apt / dnf / yum / pacman / apk) or ['brew', 'install', '<pkg>'] with sandbox: false and no sudo on macOS"
-}
+const systemPackageRoute = "a system package → the package manager named on the Host OS line: argv ['sudo', '<manager>', ...] (e.g. ['sudo', 'apt-get', 'install', '-y', '<pkg>']), or ['brew', 'install', '<pkg>'] with sandbox: false and never sudo; only when Host OS names none, find it with command -v"
 
 func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, unsandboxed, background bool, timeoutMin int, watch *watchSpec) (string, error) {
 	if len(argv) == 0 {
@@ -162,7 +156,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 			unsandboxed = true
 		}
 		if binary == "open" && runtime.GOOS == "darwin" {
-			return "", openCommandErr()
+			return "", errOpenCommand
 		}
 		if binary == "rm" {
 			return moveToTrash(ctx, e, argv[1:])

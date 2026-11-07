@@ -188,11 +188,17 @@ func (c *conn) reply(ctx context.Context, r *Reply) {
 	if r.Abort {
 		reply.Error = runtime.ErrUserCanceled
 	}
+	if r.Keep {
+		reply.Error = runtime.ErrUserAborted
+	}
 	if reply.Approve && len(req.Restricted) > 0 {
 		err := sudo.Verify(ctx, r.Password)
 		if err != nil {
-			reply = runtime.Reply{Reason: "system password verification failed"}
+			c.askMu.Lock()
+			c.asks[r.ID] = req
+			c.askMu.Unlock()
 			c.write(Frame{Type: FrameVerify, Error: err.Error()})
+			return
 		} else {
 			reply.Verified = true
 			if r.Password != "" {
