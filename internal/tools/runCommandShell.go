@@ -53,11 +53,11 @@ func validateShellScript(script string, denied []string) error {
 			return false
 		}
 		if base == "sudo" {
-			bad = sudoCommandErr()
+			bad = errSudoInShell
 			return false
 		}
 		if base == "open" && runtime.GOOS == "darwin" {
-			bad = openCommandErr()
+			bad = errOpenCommand
 			return false
 		}
 		if shellAllow[base] {

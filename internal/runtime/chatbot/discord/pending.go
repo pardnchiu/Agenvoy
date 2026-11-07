@@ -49,7 +49,7 @@ func (t *discordTransport) SendConfirm(ctx context.Context, channelID, toolName,
 	} else {
 		str = fmt.Sprintf("Run `%s`?\n`%s`", toolName, toolArgs)
 	}
-	msg, err := t.bot.client.SendSelect(ctx, channelID, "", str, runtime.ConfirmOptions())
+	msg, err := t.bot.client.SendSelect(ctx, channelID, "", str, runtime.ConfirmOptions)
 	if err != nil {
 		return "", err
 	}

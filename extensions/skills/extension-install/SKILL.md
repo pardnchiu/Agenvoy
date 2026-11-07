@@ -131,7 +131,7 @@ For each `<dep>` in `manifest.dependence`:
 
 1. `run_command(["sh","-c","command -v <dep>"])` prints a path → already installed, this dep is satisfied.
 2. Otherwise install it with `run_command`:
-   - Linux → find the manager with `run_command(["sh","-c","command -v apt-get dnf yum pacman apk"])` (first found), then `["sudo","apt-get","install","-y","<dep>"]` / `["sudo","dnf","install","-y","<dep>"]` / `["sudo","yum","install","-y","<dep>"]` / `["sudo","pacman","-S","--noconfirm","<dep>"]` / `["sudo","apk","add","<dep>"]`
+   - Linux → use the package manager named on the system prompt's `Host OS` line (only when it names none, find it with `run_command(["sh","-c","command -v apt-get dnf yum pacman apk"])`), then `["sudo","apt-get","install","-y","<dep>"]` / `["sudo","dnf","install","-y","<dep>"]` / `["sudo","yum","install","-y","<dep>"]` / `["sudo","pacman","-S","--noconfirm","<dep>"]` / `["sudo","apk","add","<dep>"]`
    - macOS → `run_command(["brew","install","<dep>"], sandbox=false)`; never sudo with brew
 3. Re-run `command -v <dep>`; still missing or the install exited non-zero → **abort immediately** and `rm -rf .staging`.
 

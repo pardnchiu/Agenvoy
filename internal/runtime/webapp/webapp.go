@@ -7,12 +7,8 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 )
 
-func port() string {
-	return filesystem.Port
-}
-
 func appURL() string {
-	return "http://127.0.0.1:" + port()
+	return "http://127.0.0.1:" + filesystem.Port
 }
 
 func appVersion() string {
