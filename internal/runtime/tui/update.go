@@ -60,6 +60,12 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			nt = model.(TUI)
 			cmds = append(cmds, evCmd)
 		}
+		if done := nt.execDone; done != nil {
+			nt.execDone = nil
+			model, doneCmd := nt.update(*done)
+			nt = model.(TUI)
+			cmds = append(cmds, doneCmd)
+		}
 		return nt, tea.Sequence(cmds...)
 	}
 	return nt, cmd
@@ -68,7 +74,9 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	if t.popup != nil {
+	_, resizing := msg.(tea.WindowSizeMsg)
+	_, settled := msg.(resizeSettled)
+	if t.popup != nil && !resizing && !settled {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			return t.updatePopup(msg)
@@ -82,6 +90,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, nil
 		case agentEvent:
 			t.eventQueue = append(t.eventQueue, msg.event)
+			return t, nil
+		case agentExecDone:
+			t.execDone = &msg
 			return t, nil
 		case OAuthInfo:
 			return t.runOAuthInfo(msg)
@@ -126,7 +137,28 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.width = msg.Width
 		t.height = msg.Height
 		t.textarea.SetWidth(msg.Width - 4)
-		return t, nil
+		if t.renderedWidth == 0 {
+			t.renderedWidth = msg.Width
+			return t, nil
+		}
+		if msg.Width == t.renderedWidth {
+			return t, nil
+		}
+		t.resizeGen++
+		return t, resizeSettleTick(t.resizeGen)
+
+	case resizeSettled:
+		if msg.gen != t.resizeGen || t.width == t.renderedWidth {
+			return t, nil
+		}
+		if t.popupOnScreen {
+			return t, resizeSettleTick(msg.gen)
+		}
+		t.renderedWidth = t.width
+		return t, tea.Sequence(
+			tea.ClearScreen,
+			tea.Println(headerBlock(t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.currentSessionID)),
+		)
 
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -1025,6 +1057,17 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t, tea.Quit
 
 	case restrictedVerified:
+		if p := t.popup; p != nil && p.passwordPrompt && p.verifying {
+			if msg.err != nil {
+				p.verifying = false
+				p.status = errorStyle.Render(msg.err.Error())
+				p.input = newPopupInput("", false)
+				return t, nil
+			}
+			t = t.closePopup()
+			slog.Debug("restricted path approved")
+			return t, nil
+		}
 		if msg.err != nil {
 			return t, notice(msgError(fmt.Sprintf("restricted path: %v", msg.err)) + "\n")
 		}

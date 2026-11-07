@@ -12,6 +12,7 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 	"github.com/pardnchiu/agenvoy/page"
@@ -145,7 +146,7 @@ func installWindows(ctx context.Context) (string, error) {
 }
 
 func windowsURL() string {
-	return "http://localhost:" + port()
+	return "http://localhost:" + filesystem.Port
 }
 
 func psQuote(value string) string {

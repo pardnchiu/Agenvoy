@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -95,15 +96,32 @@ func (c *sdkClient) Call(ctx context.Context, name string, args map[string]any) 
 	}
 
 	var sb strings.Builder
+	var images []string
 	for _, content := range res.Content {
-		text, ok := content.(*mcpsdk.TextContent)
-		if !ok {
-			continue
+		switch c := content.(type) {
+		case *mcpsdk.TextContent:
+			if sb.Len() > 0 {
+				sb.WriteByte('\n')
+			}
+			sb.WriteString(c.Text)
+		case *mcpsdk.ImageContent:
+			images = append(images, "data:"+c.MIMEType+";base64,"+base64.StdEncoding.EncodeToString(c.Data))
+		}
+	}
+
+	if !res.IsError && len(images) > 0 {
+		dic := make(map[string]string, len(images)+1)
+		for i, url := range images {
+			dic["image_"+strconv.Itoa(i)] = url
 		}
 		if sb.Len() > 0 {
-			sb.WriteByte('\n')
+			dic["text"] = sb.String()
 		}
-		sb.WriteString(text.Text)
+		raw, err := json.Marshal(dic)
+		if err != nil {
+			return "", utilsmsg.Wrap(utilsmsg.Internal, "json.Marshal", "", err)
+		}
+		return string(raw), nil
 	}
 
 	if res.IsError {

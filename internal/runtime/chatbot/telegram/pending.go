@@ -44,13 +44,16 @@ func (t *telegramTransport) LookupChatID(sessionID string) (int64, error) {
 	return chatID, nil
 }
 
-func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolName, toolArgs string, multiline bool) (int, error) {
+func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolName, toolArgs, explain string, options []string, multiline bool) (int, error) {
 	const limit = 3200
 	var str string
 	var modes []go_bot_telegram.MessageOption
 	truncated := go_pkg_utils.TruncateString(toolArgs, limit)
 	if truncated != toolArgs {
 		str = fmt.Sprintf("Run %s?\n\n%s", toolName, truncated)
+		if explain != "" {
+			str += "\n\n" + explain
+		}
 	} else {
 		var body string
 		if multiline {
@@ -59,9 +62,12 @@ func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolN
 			body = fmt.Sprintf("<code>%s</code>", html.EscapeString(toolArgs))
 		}
 		str = fmt.Sprintf("Run %s?\n\n%s", html.EscapeString(toolName), body)
+		if explain != "" {
+			str += "\n\n" + html.EscapeString(explain)
+		}
 		modes = append(modes, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
 	}
-	msg, err := t.bot.client.SendSelect(ctx, chatID, 0, str, runtime.ConfirmOptions(), modes...)
+	msg, err := t.bot.client.SendSelect(ctx, chatID, 0, str, options, modes...)
 	if err != nil {
 		return 0, err
 	}

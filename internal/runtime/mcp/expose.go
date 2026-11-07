@@ -82,7 +82,7 @@ func addGuide(box *toolbox) {
 		Description: `You MUST call this tool before refusing any user request: no other tool here covers it (weather, prices, data lookup, conversion, scraping, analysis, etc.) → call this for instructions to build one on the fly, never say 'I cannot' or 'no tool available'.
 Starts with public_api_list: a fitting API is read and called directly; only without one does a Python script tool get built (also for a user-supplied API that needs a key).
 After reading the guide: edit_tool(mode=write) -> test_tool -> call the new tool to answer.`,
-		InputSchema: emptySchema(),
+		InputSchema: emptySchema,
 	})
 
 	box.builtin["tool_generate_guide"] = func(_ context.Context, _ json.RawMessage) (string, error) {
@@ -121,7 +121,7 @@ func addBuiltins(box *toolbox) {
 	box.tools = append(box.tools, Tool{
 		Name:        "list_tools",
 		Description: "List all tools exposed by this MCP server with name and description.",
-		InputSchema: emptySchema(),
+		InputSchema: emptySchema,
 	})
 	box.builtin["list_tools"] = func(_ context.Context, _ json.RawMessage) (string, error) {
 		type entry struct {
@@ -152,7 +152,7 @@ func convertTools(openAI []map[string]any) []Tool {
 			schema, _ = json.Marshal(params)
 		}
 		if len(schema) == 0 {
-			schema = emptySchema()
+			schema = emptySchema
 		}
 
 		tools = append(tools, Tool{

@@ -105,6 +105,7 @@ func emitWebConfirms() {
 			ToolArgs:    req.ToolArgs,
 			ConfirmHash: id,
 			Restricted:  req.Restricted,
+			Explain:     req.Explain,
 		}
 		if len(req.Restricted) > 0 {
 			event.PasswordCached = sudo.Cached(context.Background())
@@ -127,6 +128,7 @@ func ResolveToolConfirm() gin.HandlerFunc {
 			Remember  bool   `json:"remember,omitempty"`
 			AllowTurn bool   `json:"allow_turn,omitempty"`
 			Abort     bool   `json:"abort,omitempty"`
+			Cancel    bool   `json:"cancel,omitempty"`
 			Reason    string `json:"reason,omitempty"`
 			Password  string `json:"password,omitempty"`
 		}
@@ -140,7 +142,7 @@ func ResolveToolConfirm() gin.HandlerFunc {
 			return
 		}
 
-		approve := body.Approve && !body.Abort
+		approve := body.Approve && !body.Abort && !body.Cancel
 		restricted := restrictedOf(requestID)
 		verified := false
 
@@ -164,8 +166,11 @@ func ResolveToolConfirm() gin.HandlerFunc {
 			Reason:    strings.TrimSpace(body.Reason),
 			Verified:  verified,
 		}
-		if body.Abort {
+		switch {
+		case body.Cancel:
 			reply.Error = runtime.ErrUserCanceled
+		case body.Abort:
+			reply.Error = runtime.ErrUserAborted
 		}
 		runtime.Resolve(requestID, reply)
 		c.JSON(http.StatusOK, gin.H{"ok": true})

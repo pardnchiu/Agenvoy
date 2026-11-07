@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -16,9 +15,10 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	agentsexecallowtool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
+	"github.com/pardnchiu/agenvoy/internal/agents/exec/explain"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
+	"github.com/pardnchiu/agenvoy/internal/agents/exec/readonly"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
@@ -154,7 +154,7 @@ func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, 
 	if toolName == "http_request" && isGet(toolArgs) {
 		return false
 	}
-	if (toolName == "run_command" || toolName == "background_command") && isReadOnlyRunCommand(toolArgs) {
+	if (toolName == "run_command" || toolName == "background_command") && readonly.IsRunCommand(toolArgs) {
 		return false
 	}
 	return !agentsexecallowtool.Match(exec.WorkDir, toolName, toolArgs)
@@ -199,79 +199,6 @@ func isReadOnlyMode(toolArgs string) bool {
 		return false
 	}
 	return readOnlyModes[strings.TrimSpace(p.Mode)]
-}
-
-func hasDangerousGitFlag(args []string) bool {
-	for _, a := range args {
-		switch {
-		case a == "-o", a == "--output", a == "--output-directory":
-			return true
-		case strings.HasPrefix(a, "--output=") || strings.HasPrefix(a, "--output-directory="):
-			return true
-		case strings.HasPrefix(a, "-o") && a != "-o":
-			return true
-		}
-	}
-	return false
-}
-
-func stripSafeGitGlobalFlags(argv []string) []string {
-	i := 1
-	for i < len(argv) && strings.HasPrefix(argv[i], "-") {
-		if argv[i] == "-c" || strings.HasPrefix(argv[i], "-c=") {
-			break
-		}
-		if !strings.Contains(argv[i], "=") && i+1 < len(argv) && !strings.HasPrefix(argv[i+1], "-") {
-			i += 2
-		} else {
-			i++
-		}
-	}
-	return append([]string{argv[0]}, argv[i:]...)
-}
-
-func readOnlyCandidates(bin string, argv []string) []string {
-	list := make([]string, 0, 3)
-	if len(argv) > 2 {
-		list = append(list, bin+" "+argv[1]+" "+argv[2])
-	}
-	if len(argv) > 1 {
-		list = append(list, bin+" "+argv[1])
-	}
-	return append(list, bin)
-}
-
-func isReadOnlyRunCommand(toolArgs string) bool {
-	var p struct {
-		Argv    []string `json:"argv"`
-		Network bool     `json:"network"`
-	}
-	if json.Unmarshal([]byte(toolArgs), &p) != nil || len(p.Argv) == 0 || p.Network {
-		return false
-	}
-	argv := p.Argv
-	bin := filepath.Base(argv[0])
-	if bin == "git" {
-		argv = stripSafeGitGlobalFlags(argv)
-	}
-
-	matched := false
-	for _, candidate := range readOnlyCandidates(bin, argv) {
-		if slices.Contains(filesystem.ReadOnlyCommand, candidate) {
-			matched = true
-			break
-		}
-	}
-	if !matched {
-		return false
-	}
-	if slices.ContainsFunc(argv[1:], boundary.IsSensitivePath) {
-		return false
-	}
-	if bin == "git" {
-		return !hasDangerousGitFlag(argv[2:])
-	}
-	return true
 }
 
 func invalidateReadFileCache(alreadyCall map[string]string, writeArgsJSON string) {
@@ -496,6 +423,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 				if agenttypes.OriginFrom(ctx) != foregroundOrigin {
 					askCtx, cancelAsk = context.WithTimeout(ctx, configs.CONFIRM_TIMEOUT)
 				}
+				explanation := explain.Command(ctx, sessionData.ID, exec.Objective, toolName, toolArg)
 				reply, err := runtime.Ask(askCtx, runtime.Request{
 					Kind:       runtime.KindToolConfirm,
 					SessionID:  sessionData.ID,
@@ -504,6 +432,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 					ToolName:   toolName,
 					ToolArgs:   toolArg,
 					Restricted: restrictedList,
+					Explain:    explanation,
 				})
 				cancelAsk()
 				if errors.Is(err, context.DeadlineExceeded) {
@@ -571,9 +500,9 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 				reason = "running outside the sandbox needs the user's system password, and it was not verified"
 			}
 			if !proceed {
-				message := "The user declined this call. Retrying it, or reissuing it with different arguments, produces the same prompt and the same refusal. Continue without it, or use ask_user to agree on another approach."
+				message := "The user declined this call; move on to the next step."
 				if reason != "" {
-					message = fmt.Sprintf("The user declined this call: %s. Retrying it, or reissuing it with different arguments, produces the same prompt and the same refusal. Continue without it, or use ask_user to agree on another approach.", reason)
+					message = fmt.Sprintf("The user declined this call: %s; move on to the next step.", reason)
 				}
 				events <- agenttypes.Event{
 					Type:     agenttypes.EventToolSkipped,
@@ -642,7 +571,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			s.state = slotDispatched
 			continue
 		}
-		if toolregister.IsConcurrent(s.name) {
+		if toolregister.IsConcurrent(s.name) || (s.name == "run_command" && readonly.IsRunCommand(s.args)) {
 			wg.Add(1)
 			go func(s *toolSlot) {
 				defer wg.Done()

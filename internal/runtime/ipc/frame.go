@@ -47,6 +47,7 @@ type Ask struct {
 	ToolName     string             `json:"tool_name,omitempty"`
 	ToolArgs     string             `json:"tool_args,omitempty"`
 	Restricted   []string           `json:"restricted,omitempty"`
+	Explain      string             `json:"explain,omitempty"`
 	NeedPassword bool               `json:"need_password,omitempty"`
 	Questions    []runtime.Question `json:"questions,omitempty"`
 }
@@ -58,6 +59,7 @@ type Reply struct {
 	AllowTurn bool   `json:"allow_turn,omitempty"`
 	Skip      bool   `json:"skip,omitempty"`
 	Abort     bool   `json:"abort,omitempty"`
+	Keep      bool   `json:"keep,omitempty"`
 	Reason    string `json:"reason,omitempty"`
 	Answers   []any  `json:"answers,omitempty"`
 	Password  string `json:"password,omitempty"`

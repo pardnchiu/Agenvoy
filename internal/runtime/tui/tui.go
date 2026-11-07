@@ -66,6 +66,7 @@ func Run(ctx context.Context) error {
 				ToolName:   f.Ask.ToolName,
 				ToolArgs:   f.Ask.ToolArgs,
 				Restricted: f.Ask.Restricted,
+				Explain:    f.Ask.Explain,
 				AskUser:    &runtime.UserPayload{Questions: f.Ask.Questions},
 				Inline:     true,
 			},
