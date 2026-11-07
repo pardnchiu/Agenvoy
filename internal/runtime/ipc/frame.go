@@ -47,6 +47,7 @@ type Ask struct {
 	ToolName     string             `json:"tool_name,omitempty"`
 	ToolArgs     string             `json:"tool_args,omitempty"`
 	Restricted   []string           `json:"restricted,omitempty"`
+	Explain      string             `json:"explain,omitempty"`
 	NeedPassword bool               `json:"need_password,omitempty"`
 	Questions    []runtime.Question `json:"questions,omitempty"`
 }

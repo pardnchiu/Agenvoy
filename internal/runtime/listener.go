@@ -24,7 +24,7 @@ const (
 
 type Transport[CID comparable, MID comparable] interface {
 	LookupChatID(sessionID string) (CID, error)
-	SendConfirm(ctx context.Context, chatID CID, toolName, toolArgs string, multiline bool) (MID, error)
+	SendConfirm(ctx context.Context, chatID CID, toolName, toolArgs, explain string, multiline bool) (MID, error)
 	SendAskText(ctx context.Context, chatID CID, header string, secret bool) (MID, error)
 	SendAskSingle(ctx context.Context, chatID CID, header string, options []string) (MID, error)
 	SendAskMulti(ctx context.Context, chatID CID, header string, options []string) (MID, error)
@@ -177,7 +177,7 @@ func (l *Listener[CID, MID]) sendPrompt(ctx context.Context, id string, req Requ
 
 func (l *Listener[CID, MID]) startConfirm(ctx context.Context, id string, chatID CID, req Request) {
 	args, multiline := FormatToolArgs(req.ToolName, req.ToolArgs)
-	msgID, err := l.transport.SendConfirm(ctx, chatID, req.ToolName, args, multiline)
+	msgID, err := l.transport.SendConfirm(ctx, chatID, req.ToolName, args, req.Explain, multiline)
 	if err != nil {
 		Resolve(id, Reply{Error: utilsmsg.Wrap(utilsmsg.Upstream, "SendConfirm", "", err)})
 		return

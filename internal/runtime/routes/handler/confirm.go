@@ -105,6 +105,7 @@ func emitWebConfirms() {
 			ToolArgs:    req.ToolArgs,
 			ConfirmHash: id,
 			Restricted:  req.Restricted,
+			Explain:     req.Explain,
 		}
 		if len(req.Restricted) > 0 {
 			event.PasswordCached = sudo.Cached(context.Background())

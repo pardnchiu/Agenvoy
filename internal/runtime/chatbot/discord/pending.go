@@ -41,13 +41,16 @@ func (t *discordTransport) LookupChatID(sessionID string) (string, error) {
 	return channelID, nil
 }
 
-func (t *discordTransport) SendConfirm(ctx context.Context, channelID, toolName, toolArgs string, multiline bool) (string, error) {
+func (t *discordTransport) SendConfirm(ctx context.Context, channelID, toolName, toolArgs, explain string, multiline bool) (string, error) {
 	toolArgs = go_pkg_utils.TruncateString(toolArgs, 1024)
 	var str string
 	if multiline {
 		str = fmt.Sprintf("Run `%s`?\n```\n%s\n```", toolName, toolArgs)
 	} else {
 		str = fmt.Sprintf("Run `%s`?\n`%s`", toolName, toolArgs)
+	}
+	if explain != "" {
+		str += "\n" + explain
 	}
 	msg, err := t.bot.client.SendSelect(ctx, channelID, "", str, runtime.ConfirmOptions)
 	if err != nil {

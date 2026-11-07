@@ -46,10 +46,12 @@ const (
 	RATE_LIMIT_COOLDOWN         = 30 * time.Minute
 
 	// * Tool
-	CONFIRM_TIMEOUT        = 5 * time.Minute
-	DEFAULT_TOOL_TIMEOUT   = 15 * time.Minute
-	RUN_COMMAND_TIMEOUT    = 30 * time.Minute
-	MAX_WATCH_SCRIPT_DEPTH = 4
+	CONFIRM_TIMEOUT         = 5 * time.Minute
+	CONFIRM_EXPLAIN_TIMEOUT = 10 * time.Second
+	CONFIRM_EXPLAIN_RUNES   = 240
+	DEFAULT_TOOL_TIMEOUT    = 15 * time.Minute
+	RUN_COMMAND_TIMEOUT     = 30 * time.Minute
+	MAX_WATCH_SCRIPT_DEPTH  = 4
 
 	// * Followup
 	FOLLOWUP_TIMEOUT        = 30 * time.Second
@@ -141,6 +143,9 @@ var SummaryContext string
 
 //go:embed prompts/system_prompt/followup.md
 var FollowupPrompt string
+
+//go:embed prompts/system_prompt/confirm_explain.md
+var ConfirmExplainPrompt string
 
 //go:embed prompts/system_prompt/voice.md
 var VoicePrompt string

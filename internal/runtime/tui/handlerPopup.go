@@ -708,6 +708,9 @@ func newPopup(pending Pending) *Popup {
 			restricted:   req.Restricted,
 			needPassword: pending.needPassword,
 		}
+		if req.Explain != "" {
+			p.styledLines = append(p.styledLines, hintStyle.Render(req.Explain), "")
+		}
 		if len(req.Restricted) > 0 {
 			p.title = fmt.Sprintf("Run %s outside the allow list?", utils.ToolName(req.ToolName))
 			for _, one := range req.Restricted {

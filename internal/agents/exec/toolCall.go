@@ -15,6 +15,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	agentsexecallowtool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
+	"github.com/pardnchiu/agenvoy/internal/agents/exec/explain"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/readonly"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -422,6 +423,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 				if agenttypes.OriginFrom(ctx) != foregroundOrigin {
 					askCtx, cancelAsk = context.WithTimeout(ctx, configs.CONFIRM_TIMEOUT)
 				}
+				explanation := explain.Command(ctx, sessionData.ID, exec.Objective, toolName, toolArg)
 				reply, err := runtime.Ask(askCtx, runtime.Request{
 					Kind:       runtime.KindToolConfirm,
 					SessionID:  sessionData.ID,
@@ -430,6 +432,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 					ToolName:   toolName,
 					ToolArgs:   toolArg,
 					Restricted: restrictedList,
+					Explain:    explanation,
 				})
 				cancelAsk()
 				if errors.Is(err, context.DeadlineExceeded) {

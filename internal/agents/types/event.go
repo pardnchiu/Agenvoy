@@ -191,6 +191,7 @@ type Event struct {
 	Suggests        []string                 `json:"suggests,omitempty"`
 	Files           []string                 `json:"files,omitempty"`
 	Restricted      []string                 `json:"restricted,omitempty"`
+	Explain         string                   `json:"explain,omitempty"`
 	PasswordCached  bool                     `json:"password_cached,omitempty"`
 	ClientToolCalls []go_llm_router.ToolCall `json:"client_tool_calls,omitempty"`
 	Err             error                    `json:"-"`

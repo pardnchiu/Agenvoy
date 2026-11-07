@@ -74,6 +74,9 @@ function renderToolConfirm(event, sessionId) {
   if (args && args !== "{}") {
     body.push(_("pre.args", args));
   }
+  if (event.explain) {
+    body.push(_("p.explain", event.explain));
+  }
 
   const restricted = event.restricted || [];
   const cached = Boolean(event.password_cached);
