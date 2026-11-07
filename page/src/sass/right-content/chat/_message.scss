@@ -31,8 +31,8 @@
       > p {
         padding: 0.75rem 1rem;
         max-width: 80%;
-        background-color: var(--gray-2);
-        border-radius: 1rem;
+        background-color: var(--hover);
+        border-radius: 1rem 1rem 0.375rem 1rem;
         color: var(--text-color);
         white-space: pre-wrap;
         overflow-wrap: break-word;
@@ -46,7 +46,7 @@
         gap: 0.5rem;
         max-width: 100%;
         opacity: 0;
-        transition: 0.2s;
+        transition: 0.15s var(--ease);
 
         p {
           font-size: small;
@@ -62,7 +62,7 @@
           display: flex;
           align-items: center;
           height: 1rem;
-          transition: 0.2s;
+          transition: 0.15s var(--ease);
 
           @media (hover: hover) {
             &:hover {
@@ -86,11 +86,11 @@
             transform: translateY(calc(-100% - 0.25rem));
             padding: 0 0.5rem;
             line-height: 1.25rem;
-            font-size: x-small;
+            font-size: 0.75rem;
             white-space: nowrap;
-            color: #fff;
+            color: var(--on-black);
             background-color: var(--black);
-            border-radius: 0.625rem;
+            border-radius: 0.5rem;
             opacity: 0;
             pointer-events: none;
           }
@@ -160,7 +160,7 @@
             gap: 0.25rem;
             list-style: none;
             color: var(--gray-3);
-            transition: 0.2s;
+            transition: 0.15s var(--ease);
             cursor: pointer;
 
             user-select: none;
@@ -183,7 +183,7 @@
               height: 1.5rem;
               line-height: 1.5rem;
               font-size: large;
-              transition: 0.2s;
+              transition: 0.15s var(--ease);
             }
           }
 
@@ -247,7 +247,7 @@
           gap: 0.5rem;
           max-width: 100%;
           opacity: 0;
-          transition: 0.2s;
+          transition: 0.15s var(--ease);
 
           div.stats {
             position: relative;
@@ -263,11 +263,11 @@
               transform: translateY(calc(-100% - 0.25rem));
               padding: 0 0.5rem;
               line-height: 1.25rem;
-              font-size: x-small;
+              font-size: 0.75rem;
               white-space: nowrap;
-              color: #fff;
+              color: var(--on-black);
               background-color: var(--black);
-              border-radius: 0.625rem;
+              border-radius: 0.5rem;
               opacity: 0;
               pointer-events: none;
             }
@@ -299,7 +299,7 @@
             display: flex;
             align-items: center;
             height: 1rem;
-            transition: 0.2s;
+            transition: 0.15s var(--ease);
 
             @media (hover: hover) {
               &:hover {
@@ -323,11 +323,11 @@
               transform: translateY(calc(-100% - 0.25rem));
               padding: 0 0.5rem;
               line-height: 1.25rem;
-              font-size: x-small;
+              font-size: 0.75rem;
               white-space: nowrap;
-              color: #fff;
+              color: var(--on-black);
               background-color: var(--black);
-              border-radius: 0.625rem;
+              border-radius: 0.5rem;
               opacity: 0;
               pointer-events: none;
             }
@@ -342,16 +342,17 @@
           width: 100%;
 
           button {
-            padding: 0.375rem 0.75rem;
+            padding: 0.5rem 0.875rem;
             max-width: 100%;
-            font-size: small;
+            font-size: 0.8125rem;
             text-align: left;
-            color: var(--gray-3);
-            background-color: transparent;
-            border: 1px solid var(--gray-3);
-            border-radius: 1rem;
+            color: var(--text-color);
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.625rem;
+            box-shadow: var(--shadow-sm);
             cursor: pointer;
-            transition: 0.2s;
+            transition: 0.15s var(--ease);
 
             overflow: hidden;
             text-overflow: ellipsis;

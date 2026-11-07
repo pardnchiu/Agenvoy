@@ -2,29 +2,37 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
+  gap: 0.375rem;
   box-sizing: border-box;
-  height: 2rem;
-  padding: 0 0.875rem;
-  font-size: small;
-  border-radius: 0.375rem;
-  color: var(--gray-3);
-  background-color: var(--gray);
-  transition: 0.2s;
+  height: 2.25rem;
+  padding: 0 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  color: var(--ink);
+  background-color: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  transition: 0.15s var(--ease);
 
   @media (hover: hover) {
     &:hover {
-      color: var(--ink);
+      background-color: var(--hover);
     }
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 
   &.submit {
     background-color: var(--black);
-    color: #fff;
+    box-shadow: var(--shadow-sm);
+    color: var(--on-black);
 
     @media (hover: hover) {
       &:hover {
-        color: #fff;
-        opacity: 0.85;
+        background-color: var(--black-hover);
+        color: var(--on-black);
       }
     }
   }
