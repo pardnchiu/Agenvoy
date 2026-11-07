@@ -104,6 +104,9 @@ type TUI struct {
 
 	popupOnScreen bool
 
+	renderedWidth int
+	resizeGen     int
+
 	allowAll bool
 }
 
