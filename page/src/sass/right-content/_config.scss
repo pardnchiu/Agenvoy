@@ -24,11 +24,12 @@ body[data-rendered="1"] section.right-content section.config {
 
     section.editor.daemon {
       align-items: stretch;
-      padding-bottom: 1rem;
+      padding-bottom: 0;
       overflow: hidden;
 
       > form {
         min-height: 0;
+        padding-bottom: 0;
       }
 
       div.range {
@@ -58,16 +59,17 @@ body[data-rendered="1"] section.right-content section.config {
         min-height: 0;
         flex: 1 1 0;
         box-sizing: border-box;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: x-small;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
         line-height: 1.5;
-        color: var(--black);
-        background-color: #fff;
-        border: 1px solid var(--gray-2);
+        color: var(--ink);
+        background-color: var(--code-block);
+        border: 1px solid var(--border);
         border-radius: 0.5rem;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         overflow: auto;
+        padding-bottom: 5rem;
 
         @media (max-width: 767px) {
           min-height: 50vh;
@@ -82,6 +84,7 @@ body[data-rendered="1"] section.right-content section.config {
 
       form {
         @include contentForm;
+        padding-bottom: 5rem;
       }
     }
   }
@@ -105,7 +108,7 @@ body section.right-content section.config {
       height: 0.5rem;
       border-radius: 50%;
       background-color: var(--gray-3);
-      transition: 0.2s;
+      transition: 0.15s var(--ease);
     }
 
     &[data-state="on"] > strong::after {
@@ -136,7 +139,7 @@ body section.right-content section.config {
     font-size: small;
     font-weight: 500;
     color: var(--gray-3);
-    transition: 0.2s;
+    transition: 0.15s var(--ease);
 
     &[data-state="okay"] {
       color: var(--okay);
@@ -226,7 +229,7 @@ body section.right-content section.config {
       > p {
         flex-grow: 1;
         font-size: small;
-        font-weight: 300;
+        font-weight: 400;
         color: var(--gray-3);
         overflow: hidden;
         text-overflow: ellipsis;
@@ -236,7 +239,7 @@ body section.right-content section.config {
       > a:not(.submit) {
         flex-grow: 1;
         font-size: small;
-        font-weight: 300;
+        font-weight: 400;
         color: var(--accent);
         overflow: hidden;
         text-overflow: ellipsis;
@@ -248,12 +251,13 @@ body section.right-content section.config {
         align-items: center;
         flex-shrink: 0;
         box-sizing: border-box;
-        height: 2rem;
-        padding: 0 0.875rem;
-        font-size: small;
-        border-radius: 0.375rem;
+        height: 2.25rem;
+        padding: 0 1rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        border-radius: 0.5rem;
         color: var(--gray-3);
-        transition: 0.2s;
+        transition: 0.15s var(--ease);
 
         @media (hover: hover) {
           &:hover {
@@ -267,17 +271,17 @@ body section.right-content section.config {
       flex: 0;
       min-width: 0;
       box-sizing: border-box;
-      height: 2rem;
-      padding: 0 0.75rem;
+      height: 2.25rem;
+      padding: 0 0.875rem;
       font: inherit;
       font-size: small;
       color: var(--text-color);
-      background-color: var(--gray);
-      border: 1px solid var(--gray-2);
+      background-color: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 0.5rem;
       outline: none;
       cursor: pointer;
-      transition: 0.2s;
+      transition: 0.15s var(--ease);
 
       @media (hover: hover) {
         &:hover {
@@ -345,7 +349,7 @@ body section.right-content section.config {
 
         > p {
           font-size: small;
-          font-weight: 300;
+          font-weight: 400;
           line-height: 1.5;
           color: var(--gray-3);
         }
@@ -394,7 +398,7 @@ body section.right-content section.config {
         border: none;
         border-radius: 0.5rem;
         cursor: pointer;
-        transition: 0.2s;
+        transition: 0.15s var(--ease);
 
         @media (hover: hover) {
           &:hover {
@@ -430,8 +434,8 @@ body section.right-content section.config {
       padding: 0.75rem;
       width: 100%;
       box-sizing: border-box;
-      background-color: var(--gray);
-      border: 1px solid var(--gray-2);
+      background-color: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 0.5rem;
 
       &[data-open="1"] {
@@ -447,7 +451,7 @@ body section.right-content section.config {
 
       > p.empty {
         font-size: small;
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.25rem;
         color: var(--ink);
       }
@@ -461,8 +465,8 @@ body section.right-content section.config {
 
       div.field > input,
       div.row > input {
-        height: 2rem;
-        padding: 0 0.75rem;
+        height: 2.25rem;
+        padding: 0 0.875rem;
       }
 
       div.row > input {
@@ -484,19 +488,21 @@ body section.right-content section.config {
         display: inline-flex;
         align-items: center;
         flex: 0 0 auto;
-        height: 2rem;
-        padding: 0 0.875rem;
-        border-radius: 0.375rem;
+        height: 2.25rem;
+        padding: 0 1rem;
+        border-radius: 0.5rem;
         background-color: var(--black);
-        color: #fff;
-        font-size: small;
+        box-shadow: var(--shadow-sm);
+        color: var(--on-black);
+        font-size: 0.8125rem;
+        font-weight: 500;
         text-decoration: none;
-        transition: 0.2s;
+        transition: 0.15s var(--ease);
 
         @media (hover: hover) {
           &:hover {
-            color: #fff;
-            opacity: 0.85;
+            color: var(--on-black);
+            background-color: var(--black-hover);
           }
         }
       }
@@ -519,8 +525,8 @@ body section.right-content section.config {
         width: 100%;
         padding: 0.75rem;
         box-sizing: border-box;
-        background-color: var(--gray);
-        border: 1px solid var(--gray-2);
+        background-color: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 0.5rem;
 
         > div.label {
@@ -538,7 +544,7 @@ body section.right-content section.config {
 
           p {
             font-size: small;
-            font-weight: 300;
+            font-weight: 400;
             color: var(--gray-3);
           }
         }
@@ -567,10 +573,10 @@ body section.right-content section.config {
         width: 100%;
         padding: 0.75rem;
         box-sizing: border-box;
-        background-color: var(--gray);
-        border: 1px solid var(--gray-2);
+        background-color: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 0.5rem;
-        transition: 0.2s;
+        transition: 0.15s var(--ease);
 
         > div.head {
           display: flex;
@@ -585,7 +591,7 @@ body section.right-content section.config {
 
           > p {
             font-size: small;
-            font-weight: 300;
+            font-weight: 400;
             color: var(--gray-3);
 
             > a {
@@ -607,10 +613,10 @@ body section.right-content section.config {
         gap: 0.5rem;
         padding: 0.375rem 0.25rem;
         width: 100%;
-        border-radius: 0.375rem;
+        border-radius: 0.5rem;
         text-align: left;
         cursor: pointer;
-        transition: 0.2s;
+        transition: 0.15s var(--ease);
 
         @media (hover: hover) {
           &:hover {
@@ -628,7 +634,7 @@ body section.right-content section.config {
           flex: 1 1 0;
           min-width: 0;
           font-size: small;
-          font-weight: 300;
+          font-weight: 400;
           color: var(--gray-3);
           text-align: right;
         }
@@ -644,9 +650,9 @@ body section.right-content section.config {
         align-items: flex-start;
         gap: 0.5rem;
         padding: 0.25rem;
-        border-radius: 0.375rem;
+        border-radius: 0.5rem;
         cursor: pointer;
-        transition: 0.2s;
+        transition: 0.15s var(--ease);
 
         @media (hover: hover) {
           &:hover {
@@ -675,7 +681,7 @@ body section.right-content section.config {
           flex: 1 1 0;
           min-width: 0;
           font-size: small;
-          font-weight: 300;
+          font-weight: 400;
           line-height: 1.25rem;
           color: var(--gray-3);
           overflow-wrap: anywhere;
@@ -705,8 +711,8 @@ body section.right-content section.config {
       padding: 0.75rem;
       width: 100%;
       box-sizing: border-box;
-      background-color: var(--gray);
-      border: 1px solid var(--gray-2);
+      background-color: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 0.5rem;
 
       &[data-open="1"] {

@@ -203,6 +203,8 @@ Agenvoy 是由[邱敬幃](https://pardn.io/)開發的台灣自研 AI Agent Harne
 
 在瀏覽器管理 session、工具、排程與記憶。儀表板內建於執行檔中 — 啟動 daemon 後開啟 [http://127.0.0.1:17989](http://127.0.0.1:17989)。由你自己的機器提供服務，資料不離開你的裝置。
 
+v1.3.4 介面改版前後的比較（old / new、淺色 / 深色）請見 [Web UI 介面差異比較](diff/README.zh.md)。
+
 <p align="center">
   <a href="https://youtu.be/oaXxrTNvLaU">
     <img src="https://img.youtube.com/vi/oaXxrTNvLaU/maxresdefault.jpg" alt="Agenvoy Web 儀表板示範" width="640">

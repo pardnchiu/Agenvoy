@@ -5,7 +5,9 @@
   width: auto;
   height: auto;
   padding: 1.5rem 2rem 5rem;
-  background-color: #fff;
+  background:
+    radial-gradient(var(--dot) 1px, transparent 1px) 0 0 / 1.25rem 1.25rem,
+    var(--elevated);
 
   @include md-render.styles;
 }

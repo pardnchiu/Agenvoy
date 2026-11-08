@@ -317,6 +317,8 @@ The backend preserves `[SEND_FILE:...]` markers while events move through result
 
 The web chat renders replies as rich markdown: ```` ```chartjs ```` blocks become charts (bar, line, pie, doughnut, radar, polarArea, scatter, bubble), ```` ```mermaid ```` blocks become diagrams (flowchart, sequenceDiagram, stateDiagram-v2, classDiagram, erDiagram, gantt, timeline), ```` ```math ```` blocks and inline `$...$` render as KaTeX, and other code blocks are syntax-highlighted. A block that fails to parse shows its source instead. Telegram and Discord receive plain markdown only.
 
+The v1.3.4 interface refresh is compared page by page in [Web UI comparison](diff/README.md).
+
 ### Local HTTP API
 
 The daemon listens on `127.0.0.1:17989` and `[::1]:17989`. The port is fixed and not configurable.

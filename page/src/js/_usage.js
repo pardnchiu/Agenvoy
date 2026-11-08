@@ -1,7 +1,7 @@
 const USAGE_SERIES = [
-  { key: "input", label: "input", color: "#005FAF" },
-  { key: "output", label: "output", color: "#2E7D32" },
-  { key: "hit", label: "cache read", color: "#D0D0D0" },
+  { key: "input", label: "input", color: "--chart-input" },
+  { key: "output", label: "output", color: "--chart-output" },
+  { key: "hit", label: "cache read", color: "--chart-cache" },
 ];
 
 const USAGE_BAR_HEIGHT = 22;
@@ -218,6 +218,8 @@ function renderUsageChart(rows) {
     return;
   }
 
+  const style = getComputedStyle(document.documentElement);
+  const color = (name) => style.getPropertyValue(name).trim();
   const models = rows.map((row) => row.model).reverse();
   dom.chart.style.height = Math.max(224, rows.length * USAGE_BAR_HEIGHT + 72) + "px";
   usageChart = echarts.init(dom.chart, null, { renderer: "canvas" });
@@ -230,17 +232,20 @@ function renderUsageChart(rows) {
       icon: "roundRect",
       itemWidth: 10,
       itemHeight: 10,
-      textStyle: { fontSize: 11, color: "#253146" },
+      textStyle: { fontSize: 11, color: color("--chart-text") },
     },
     tooltip: {
       trigger: "axis",
-      axisPointer: { type: "shadow" },
+      axisPointer: { type: "shadow", shadowStyle: { color: color("--chart-pointer") } },
+      backgroundColor: color("--chart-tip-bg"),
+      borderColor: color("--chart-tip-border"),
+      textStyle: { color: color("--chart-tip-text") },
       valueFormatter: (value) => usageNumber(value),
     },
     xAxis: {
       type: "value",
-      axisLabel: { fontSize: 11, color: "#999999", formatter: (value) => compactToken(value) },
-      splitLine: { lineStyle: { color: "#ececec" } },
+      axisLabel: { fontSize: 11, color: color("--chart-muted"), formatter: (value) => compactToken(value) },
+      splitLine: { lineStyle: { color: color("--chart-grid") } },
     },
     yAxis: {
       type: "category",
@@ -248,23 +253,29 @@ function renderUsageChart(rows) {
       axisLabel: {
         interval: 0,
         fontSize: 11,
-        color: "#253146",
+        color: color("--chart-text"),
         width: 220,
         overflow: "truncate",
       },
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: "#ececec" } },
+      axisLine: { lineStyle: { color: color("--chart-axis") } },
     },
     series: USAGE_SERIES.map((one) => ({
       name: one.label,
       type: "bar",
       stack: "token",
-      itemStyle: { color: one.color },
+      itemStyle: { color: color(one.color) },
       barMaxWidth: 14,
       data: rows.map((row) => row[one.key]).reverse(),
     })),
   });
 }
+
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (usageChart) {
+    paintUsage();
+  }
+});
 
 function resizeUsageChart() {
   if (usageChart) {

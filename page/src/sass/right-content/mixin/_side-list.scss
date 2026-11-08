@@ -15,7 +15,7 @@
       gap: 0.5rem;
       flex-grow: 1;
       flex-shrink: 1;
-      padding-bottom: 5rem;
+      padding-bottom: 0;
       min-height: 0;
       overflow-y: scroll;
 
@@ -38,7 +38,7 @@
         line-height: 1.5rem;
         list-style: none;
         font-size: small;
-        font-weight: 300;
+        font-weight: 400;
         color: var(--gray-3);
         cursor: pointer;
         user-select: none;
@@ -49,7 +49,7 @@
 
         > span.material-symbols-outlined {
           font-size: medium;
-          transition: 0.2s;
+          transition: 0.15s var(--ease);
         }
       }
 
@@ -85,14 +85,16 @@
         width: 1.5rem;
         text-align: center;
       }
-      background-color: var(--gray);
+      background-color: transparent;
+      border: 1px dashed var(--border-strong);
       color: var(--gray-3);
-      transition: 0.2s;
+      transition: 0.15s var(--ease);
 
       @media (hover: hover) {
         &:hover {
-          background-color: var(--gray-2);
-          color: var(--ink);
+          background-color: var(--surface);
+          border-color: var(--accent);
+          color: var(--accent);
         }
       }
 
@@ -121,15 +123,18 @@
       display: flex;
       flex-flow: column;
       gap: 0.125rem;
-      padding: 0.625rem 0.75rem;
-      border-radius: 0.5rem;
-      background-color: var(--gray);
+      padding: 0.75rem 0.875rem;
+      border-radius: 0.625rem;
+      background-color: var(--surface);
+      box-shadow: inset 0 0 0 1px var(--border);
       cursor: pointer;
-      transition: 0.2s;
+      transition: 0.15s var(--ease);
 
       @media (hover: hover) {
         &:hover {
-          background-color: var(--gray-2);
+          box-shadow:
+            inset 0 0 0 1px var(--border-strong),
+            var(--shadow-sm);
         }
 
         &:hover > button {
@@ -139,13 +144,13 @@
 
       > strong {
         font-size: small;
-        font-weight: 500;
+        font-weight: 600;
         color: var(--ink);
       }
 
       > p {
         font-size: small;
-        font-weight: 300;
+        font-weight: 400;
         color: var(--gray-3);
         overflow: hidden;
         text-overflow: ellipsis;
@@ -161,7 +166,7 @@
         justify-content: center;
         opacity: 0;
         color: var(--gray-3);
-        transition: 0.2s;
+        transition: 0.15s var(--ease);
 
         @media (hover: hover) {
           &:hover {
@@ -174,6 +179,7 @@
   }
 
   div.list .card[data-selected="1"] {
-    background-color: var(--gray-2);
+    background-color: var(--accent-bg);
+    box-shadow: inset 0 0 0 1.5px var(--accent);
   }
 }

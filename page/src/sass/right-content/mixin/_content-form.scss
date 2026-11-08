@@ -4,7 +4,7 @@
 @mixin contentForm {
   display: flex;
   flex-flow: column;
-  gap: 0.75rem;
+  gap: 1.25rem;
 
   nav.period,
   nav.tab {
@@ -22,9 +22,9 @@
   label > span,
   > span,
   > div.field > span {
-    font-size: small;
-    font-weight: 500;
-    color: var(--gray-3);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink);
   }
   flex-grow: 1;
   flex-shrink: 1;
@@ -33,7 +33,7 @@
   min-width: 0;
   min-height: 0;
   max-width: 100%;
-  padding-bottom: 5rem;
+  padding-bottom: 0;
   overflow: scroll;
 
   @media (max-width: 767px) {
@@ -50,33 +50,45 @@
     max-width: 100%;
     box-sizing: border-box;
     font: inherit;
-    font-size: small;
+    font-size: 0.875rem;
     line-height: 1.5;
-    color: var(--text-color);
-    background-color: var(--gray);
-    border: 1px solid var(--gray-2);
-    border-radius: 0.5rem;
+    color: var(--ink);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+    box-shadow: var(--shadow-sm);
     outline: none;
     resize: none;
-    transition: 0.2s;
+    transition: 0.15s var(--ease);
 
     &::placeholder {
-      color: var(--gray-3);
+      color: var(--placeholder);
+    }
+
+    @media (hover: hover) {
+      &:hover:not(:focus) {
+        border-color: var(--border-strong);
+      }
     }
 
     &:focus {
-      background-color: #fff;
+      background-color: var(--surface);
       border-color: var(--accent);
       box-shadow: 0 0 0 3px var(--accent-light);
     }
   }
 
   input:not([type="checkbox"]):not([type="radio"]) {
-    height: 2rem;
-    padding: 0 0.75rem;
+    height: 2.25rem;
+    padding: 0 0.875rem;
   }
 
   textarea {
+    padding: 0.875rem 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    background-color: var(--surface-2);
     field-sizing: content;
     min-height: 4rem;
     white-space: pre-wrap;
@@ -92,9 +104,12 @@
     caret-color: transparent;
     cursor: default;
 
+    background-color: var(--gray);
+    box-shadow: none;
+
     &:focus {
       background-color: var(--gray);
-      border-color: var(--gray-2);
+      border-color: var(--border);
       box-shadow: none;
     }
   }
@@ -109,14 +124,19 @@
     justify-content: flex-end;
     align-items: center;
     gap: 0.5rem;
+    margin-top: 0.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
 
     > button.remove {
       display: none;
     }
 
     > button:disabled {
-      opacity: 0.3;
+      opacity: 0.45;
+      box-shadow: none;
       cursor: not-allowed;
+      transform: none;
     }
 
     > button {
