@@ -28,8 +28,8 @@
             background-color: var(--gray);
 
             p {
-              font-size: x-small;
-              font-weight: 300;
+              font-size: 0.75rem;
+              font-weight: 400;
               color: var(--gray-3);
               overflow: hidden;
               text-overflow: ellipsis;
@@ -58,7 +58,7 @@
           p.empty {
             padding: 1.5rem 0.75rem;
             font-size: small;
-            font-weight: 300;
+            font-weight: 400;
             color: var(--gray-3);
           }
 
@@ -76,13 +76,13 @@
             }
 
             th {
-              font-size: x-small;
+              font-size: 0.75rem;
               font-weight: 400;
               color: var(--gray-3);
             }
 
             td {
-              font-weight: 300;
+              font-weight: 400;
               color: var(--text-color);
             }
 
@@ -98,7 +98,7 @@
             }
 
             tbody tr {
-              transition: 0.2s;
+              transition: 0.15s var(--ease);
 
               @media (hover: hover) {
                 &:hover {

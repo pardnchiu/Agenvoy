@@ -10,7 +10,6 @@
     section.editor.history,
     section.editor.details {
       overflow: scroll;
-      padding-bottom: 5rem;
 
       section.entries {
         display: flex;
@@ -49,15 +48,17 @@
       display: flex;
       flex-flow: column;
       gap: 0.125rem;
-      padding: 0.625rem 0.75rem;
-      background-color: var(--gray);
-      border-radius: 0.5rem;
+      padding: 0.75rem 0.875rem;
+      background-color: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.625rem;
       text-decoration: none;
-      transition: 0.2s;
+      transition: 0.15s var(--ease);
 
       @media (hover: hover) {
         &:hover {
-          background-color: var(--gray-2);
+          border-color: var(--border-strong);
+          box-shadow: var(--shadow-sm);
         }
       }
 
@@ -71,8 +72,8 @@
       }
 
       > p {
-        font-size: x-small;
-        font-weight: 300;
+        font-size: 0.75rem;
+        font-weight: 400;
         color: var(--gray-3);
       }
     }
@@ -85,18 +86,18 @@
           display: flex;
           flex-flow: column;
           gap: 0.5rem;
-          padding: 0.75rem;
-          background-color: var(--gray);
-          border: 1px solid var(--gray-2);
-          border-radius: 0.5rem;
+          padding: 0.875rem 1rem;
+          background-color: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 0.625rem;
         }
 
         div.head > strong,
         div.head > p,
         div.todo > span,
         div.todo > p {
-          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-          font-size: x-small;
+          font-family: var(--font-mono);
+          font-size: 0.75rem;
           line-height: 1.6;
           letter-spacing: normal;
         }
@@ -145,7 +146,7 @@
           gap: 0.25rem;
 
           > strong {
-            font-size: x-small;
+            font-size: 0.75rem;
             font-weight: 500;
             color: var(--gray-3);
           }
@@ -178,7 +179,7 @@
             border-radius: 0.75rem;
             background-color: var(--gray-2);
             font-size: small;
-            font-weight: 300;
+            font-weight: 400;
             color: var(--gray-3);
           }
         }
@@ -196,10 +197,10 @@
             width: 1.75rem;
             height: 1.75rem;
             color: var(--gray-3);
-            background-color: #fff;
+            background-color: var(--surface);
             border: 1px solid var(--gray-2);
-            border-radius: 0.375rem;
-            transition: 0.2s;
+            border-radius: 0.5rem;
+            transition: 0.15s var(--ease);
 
             > span.material-symbols-outlined {
               font-size: medium;
@@ -216,13 +217,14 @@
         pre {
           margin: 0;
           padding: 0.625rem 2.75rem 0.625rem 0.75rem;
-          font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-family: var(--font-mono);
           font-size: small;
           line-height: 1.6;
           letter-spacing: normal;
           color: var(--ink);
-          background-color: var(--gray);
-          border-radius: 0.375rem;
+          background-color: var(--code-block);
+          border: 1px solid var(--border);
+          border-radius: 0.5rem;
           white-space: pre-wrap;
           overflow-wrap: anywhere;
         }

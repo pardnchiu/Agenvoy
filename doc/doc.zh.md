@@ -329,6 +329,8 @@ printf '%s\n' \
 
 Web 對話以豐富格式渲染回覆：```` ```chartjs ```` 區塊顯示為圖表（bar、line、pie、doughnut、radar、polarArea、scatter、bubble），```` ```mermaid ```` 區塊顯示為圖（flowchart、sequenceDiagram、stateDiagram-v2、classDiagram、erDiagram、gantt、timeline），```` ```math ```` 區塊與行內 `$...$` 以 KaTeX 顯示數學公式，其餘程式碼區塊套用語法高亮；無法解析的區塊改顯示原始碼。Telegram 與 Discord 只收到純 markdown。
 
+v1.3.4 介面改版的逐頁比較見 [Web UI 介面差異比較](diff/README.zh.md)。
+
 ### HTTP API
 
 Daemon 監聽 `127.0.0.1:17989` 與 `[::1]:17989`，連接埠固定不可調整：

@@ -4,6 +4,12 @@
     min-width: 0;
     max-width: 100%;
     padding: 0 0 0.25rem;
+    line-height: 1.7;
+    letter-spacing: 0.005em;
+
+    &.nanomd {
+      letter-spacing: 0.005em;
+    }
 
     &[data-pending] {
       white-space: pre-wrap;
@@ -14,7 +20,73 @@
     font-size: small;
 
     pre.prettyprint code {
-      font-size: x-small;
+      font-size: 0.75rem;
+    }
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .md-render.nanomd {
+    --text: #d6dae1;
+    --text-color: #c4c9d2;
+    --ink: #f3f4f6;
+    --accent: #6ea2ff;
+    --gray: #1d2026;
+    --gray-2: #2c3038;
+    --gray-3: #8a919c;
+    --code-bg: #23272e;
+    --code-border: #ffffff12;
+    --code-hover: #2c3139;
+    --copy-bg: #3a3f48;
+    --mark: #8a6d00;
+    --alert-note: #4493f8;
+    --alert-tip: #3fb950;
+    --alert-important: #ab7df8;
+    --alert-warning: #d29922;
+    --alert-caution: #f85149;
+
+    pre.prettyprint {
+      .pln {
+        color: var(--text);
+      }
+      .kwd,
+      .tag {
+        color: #7aa2f7;
+      }
+      .str,
+      .atv {
+        color: #9ece6a;
+      }
+      .com {
+        color: #8d98a2;
+      }
+      .typ,
+      .atn {
+        color: #c0a3f5;
+      }
+      .lit,
+      .dec {
+        color: #f7a26a;
+      }
+      .pun,
+      .opn,
+      .clo {
+        color: #c8b26a;
+      }
+    }
+  }
+
+  img[src$="logo-min.svg"] {
+    filter: invert(1) hue-rotate(180deg) brightness(1.15);
+  }
+
+  body section.right-content section.chat {
+    > main,
+    > section,
+    > div.subagent-panel > section {
+      &[data-id]:not([data-id=""]) div.logo {
+        opacity: 0.015;
+      }
     }
   }
 }

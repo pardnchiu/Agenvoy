@@ -9,9 +9,10 @@
   min-height: 10rem;
   padding: 0.75rem;
   box-sizing: border-box;
-  background-color: var(--gray);
-  border: 1px solid var(--gray-2);
-  border-radius: 0.5rem;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-sm);
 
   > div.label {
     display: flex;
@@ -22,13 +23,13 @@
 
     > strong {
       font-size: medium;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--ink);
     }
 
     > p {
       font-size: small;
-      font-weight: 300;
+      font-weight: 400;
       color: var(--gray-3);
 
       > a {
@@ -53,7 +54,7 @@
     margin-top: auto;
     flex: 0 0 auto;
     box-sizing: border-box;
-    height: 2rem;
+    height: 2.25rem;
     padding: 0;
     width: 100%;
     max-width: 100%;

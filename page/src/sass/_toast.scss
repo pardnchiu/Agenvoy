@@ -26,8 +26,8 @@
       padding: 0.625rem 0.75rem;
       width: 100%;
       box-sizing: border-box;
-      background-color: var(--gray);
-      border: 1px solid var(--gray-2);
+      background-color: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 0.5rem;
       animation: toast-in 0.2s ease-out;
 
@@ -40,7 +40,7 @@
         > span {
           flex-grow: 1;
           font-size: small;
-          font-weight: 300;
+          font-weight: 400;
           color: var(--gray-3);
         }
 
@@ -51,7 +51,7 @@
           justify-content: center;
           color: var(--gray-3);
           cursor: pointer;
-          transition: 0.2s;
+          transition: 0.15s var(--ease);
 
           @media (hover: hover) {
             &:hover {
@@ -67,7 +67,7 @@
 
       > p {
         font-size: small;
-        font-weight: 300;
+        font-weight: 400;
         line-height: 1.25rem;
         color: var(--ink);
         overflow-wrap: anywhere;
