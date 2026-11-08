@@ -180,6 +180,7 @@ body[data-rendered="1"] section.right-content section.feature {
 
       form {
         @include mixin.contentForm;
+        padding-bottom: 5rem;
       }
     }
   }

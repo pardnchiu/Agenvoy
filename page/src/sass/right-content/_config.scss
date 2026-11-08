@@ -24,11 +24,12 @@ body[data-rendered="1"] section.right-content section.config {
 
     section.editor.daemon {
       align-items: stretch;
-      padding-bottom: 1rem;
+      padding-bottom: 0;
       overflow: hidden;
 
       > form {
         min-height: 0;
+        padding-bottom: 0;
       }
 
       div.range {
@@ -68,6 +69,7 @@ body[data-rendered="1"] section.right-content section.config {
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         overflow: auto;
+        padding-bottom: 5rem;
 
         @media (max-width: 767px) {
           min-height: 50vh;
@@ -82,6 +84,7 @@ body[data-rendered="1"] section.right-content section.config {
 
       form {
         @include contentForm;
+        padding-bottom: 5rem;
       }
     }
   }
