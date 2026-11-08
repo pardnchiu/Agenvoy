@@ -203,6 +203,8 @@ If you want AI to complete work—not merely respond—within an environment you
 
 Manage sessions, tools, schedules, and memory from a browser. The dashboard ships inside the binary — start the daemon and open http://127.0.0.1:17989. It is served by your own machine, so nothing leaves your device.
 
+See the [Web UI comparison (old / new, light / dark)](doc/diff/README.md) for the v1.3.4 interface refresh.
+
 <p align="center">
   <a href="https://youtu.be/oaXxrTNvLaU">
     <img src="https://img.youtube.com/vi/oaXxrTNvLaU/maxresdefault.jpg" alt="Agenvoy Web Dashboard demo" width="640">
