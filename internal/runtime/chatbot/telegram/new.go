@@ -70,6 +70,14 @@ func New() (*Bot, error) {
 		return nil, utilsmsg.Wrap(utilsmsg.Upstream, "go_bot_telegram.Start", "", err)
 	}
 	bot.cancel = cancel
+	cmdCtx, cmdCancel := context.WithTimeout(ctx, 10*time.Second)
+	if err := client.SetCommands(cmdCtx, []go_bot_telegram.Command{
+		{Name: "new", Description: "Start a separate task instead of adding to the running one"},
+	}); err != nil {
+		slog.Warn("[Upstream] telegram commands: register failed",
+			slog.String("error", err.Error()))
+	}
+	cmdCancel()
 	bot.listener = newPendingListener(bot)
 	runtime.RegisterResumeHandler("tg-", bot.resumeFromPending)
 	current.Store(bot)

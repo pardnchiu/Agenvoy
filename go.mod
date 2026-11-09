@@ -11,7 +11,7 @@ require (
 	github.com/go-telegram/bot v1.27.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/muesli/reflow v0.3.0
-	github.com/pardnchiu/go-bot v0.5.0
+	github.com/pardnchiu/go-bot v0.5.1
 	github.com/pardnchiu/go-browser v0.3.3
 	github.com/pardnchiu/go-llm-router v0.10.1
 	github.com/pardnchiu/go-pkg v0.13.17

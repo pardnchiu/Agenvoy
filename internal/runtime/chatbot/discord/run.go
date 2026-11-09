@@ -182,6 +182,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		}
 	}
 
+	content, isNew := chatbot.CutNewCommand(content)
 	if content == "" {
 		return nil
 	}
@@ -189,6 +190,11 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	discordSessionID, err := sessiondiscord.New(in.GuildID, in.ChannelID, in.UserID)
 	if err != nil {
 		return utilsmsg.Trace("session.GetDiscordSession", "", err)
+	}
+
+	if !isNew && exec.IsRunning(discordSessionID) {
+		exec.AppendSteer(discordSessionID, "", content)
+		return nil
 	}
 
 	reply := b.newReply(ctx, in.ChannelID, channelName(in), discordSessionID, in.MessageID)
