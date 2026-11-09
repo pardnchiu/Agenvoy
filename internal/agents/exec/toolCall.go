@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -628,6 +629,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			} else {
 				result = fmt.Sprintf("tool=%s failed: %s", s.name, s.execErr)
 			}
+			result += failureNext(s.execErr)
 		} else if result == "" || result == "no data" {
 			if hint := memory.Search(ctx, s.name, "no data", 3); hint != "" {
 				result = hint
@@ -922,4 +924,13 @@ func appendImageMessage(session *agenttypes.Session, dataURLs []string) {
 		})
 	}
 	session.ToolHistories = append(session.ToolHistories, go_llm_router.Message{Role: "user", Content: parts})
+}
+
+var credentialFailure = regexp.MustCompile(`(?i)\b40[13]\b|unauthori[sz]ed|forbidden|api[ _-]?key|(access|auth|bearer|expired|missing) token|invalid_token|token (expired|missing|revoked)`)
+
+func failureNext(execErr string) string {
+	if credentialFailure.MatchString(execErr) {
+		return "\nnext: credential missing or rejected → store_secret with the key name from this error, then call the failed tool again"
+	}
+	return "\nnext: once a different fix works, record it → error_history(mode=write, outcome=resolved)"
 }

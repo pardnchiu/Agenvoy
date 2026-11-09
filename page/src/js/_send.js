@@ -281,8 +281,6 @@ async function send(content, target) {
     subscribe(sessionId);
     if (fresh) {
       prependChat(sessionId, content);
-      saveSessionModel(sessionId, ensureModel());
-      saveSessionReasoning(sessionId, ensureReasoning());
       adoptChatConfig(sessionId);
     }
   }
@@ -327,7 +325,8 @@ async function send(content, target) {
         sse: false,
         session_id: sessionId,
         persist: true,
-        model: model === "auto" ? "" : model,
+        model: model,
+        reasoning: primary ? ensureReasoning() : "",
         system_prompt: primary ? role : "",
         work_dir: chat.work_dir,
         skill: picked,

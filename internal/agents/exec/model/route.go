@@ -20,6 +20,7 @@ func Route(ctx context.Context, assignModel, requestReasoning, requestTask, skil
 		Task:             requestTask,
 		SkillDescription: skillDesc,
 		SessionID:        sessionID,
+		Reasoning:        requestReasoning,
 	}
 	if assignModel != configbot.DefaultModel {
 		agent, ok := modelSet.Registry[assignModel]
@@ -32,7 +33,10 @@ func Route(ctx context.Context, assignModel, requestReasoning, requestTask, skil
 		}
 
 		// * check reasoning, if auto, then get fit
-		_, reasoning := configbot.GetModel(sessionID)
+		reasoning := requestReasoning
+		if reasoning == "" {
+			_, reasoning = configbot.GetModel(sessionID)
+		}
 		if reasoning == configs.REASONING_AUTO {
 			cfg := loadConfig()
 			req.ModelNames = []string{assignModel}

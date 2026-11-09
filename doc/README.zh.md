@@ -213,7 +213,7 @@ v1.3.4 介面改版前後的比較（old / new、淺色 / 深色）請見 [Web U
 
 ## 聊天機器人整合
 
-目前支援 **Telegram 與 Discord**。Agenvoy 的本機 daemon 會主動連向這些平台，因此你只要設定 bot token：不必開放入站連接埠、不必架反向代理，也不必把自己的主機公開到網路上。
+目前支援 **Telegram 與 Discord**。Agenvoy 的本機 daemon 會主動連向這些平台，因此你只要設定 bot token：不必開放入站連接埠、不必架反向代理，也不必把自己的主機公開到網路上。任務執行中送出的新訊息會 steer 該任務；要另開任務請用 `/new <訊息>`（已列在 Telegram 指令選單）。
 
 自 **v0.34.4** 起，Telegram 與 Discord 暫停「語音輸入後自動以語音回覆」的預設流程；仍可使用 STT／TTS 生成音訊，並將音訊檔傳送到頻道。
 

@@ -100,39 +100,41 @@ func registAskUser() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  false,
-		Description: `Puts one or more questions to the user and stops there — execution pauses, and a new turn resumes automatically once they answer.
-Use when the target, scope, format or timing is not fixed by what they said, by an active Skill's SKILL.md, or by data a tool can fetch (git state, files), or when more than one tool would fit. A bare /<skill> command is fully specified by its SKILL.md: run it, never ask.
-A credential is never asked for here → store_secret.`,
+		Description: `Asks the user one or more questions and stops the run; a new turn resumes automatically with their answers.
+Use when the target, scope, format or timing is not fixed by what they said, an active Skill's SKILL.md, or data a tool can fetch (git state, files), or when more than one tool fits. A bare /<skill> command is fully specified by its SKILL.md: run it without asking.
+Credentials → store_secret.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"questions": map[string]any{
 					"type":        "array",
-					"description": "Questions to ask in order. Each item is either a free-text prompt (no options) or a choice prompt (with options).",
+					"description": "Asked in order; an item with options is a choice, one without is free text.",
 					"minItems":    1,
 					"items": map[string]any{
 						"type": "object",
 						"properties": map[string]any{
 							"question": map[string]any{
 								"type":        "string",
-								"description": "Short prompt shown as the popup title (the actual question, e.g. 'Confirm?').",
+								"description": "The question itself, kept short, e.g. 'Confirm?'.",
 							},
 							"detail": map[string]any{
 								"type":        "string",
-								"description": "Optional multi-line context / details rendered as popup subtitle in hint style above the input. Use this for the supporting info (list of detected items, current values, etc.) — keep `question` short.",
+								"description": "Supporting context shown under the question, such as detected items or current values.",
 							},
 							"options": map[string]any{
 								"type":        "array",
-								"description": "Fixed choices. Omit or empty for free-text input.",
+								"description": "Fixed choices; omit for free text.",
 								"items":       map[string]any{"type": "string"},
 							},
 							"multi_select": map[string]any{
 								"type":        "boolean",
-								"description": "When options is non-empty: true = multi-select (comma-separated indices), false = single-select (arrow keys). Ignored for free-text.",
+								"description": "With options: true allows several picks, false exactly one.",
+								"default":     false,
 							},
 							"secret": map[string]any{
 								"type":        "boolean",
-								"description": "Free-text only: true masks input and excludes the answer from logs. Ignored when options is set.",
+								"description": "Free text only: true masks the input and keeps the answer out of logs.",
+								"default":     false,
 							},
 						},
 						"required": []string{"question"},
@@ -140,21 +142,21 @@ A credential is never asked for here → store_secret.`,
 				},
 				"state": map[string]any{
 					"type":        "object",
-					"description": "Summarize current task state so execution can resume after the user responds.",
+					"description": "What the resumed turn needs to continue, since this run stops here.",
 					"properties": map[string]any{
 						"objective": map[string]any{
 							"type":        "string",
-							"description": "Original user request (verbatim or paraphrased).",
+							"description": "The user's request, verbatim or paraphrased.",
 						},
 						"completed": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "Steps already completed with key results.",
+							"description": "Steps already done, each with its key result.",
 						},
 						"next_steps": map[string]any{
 							"type":        "array",
 							"items":       map[string]any{"type": "string"},
-							"description": "What to do after receiving the user's answers.",
+							"description": "What to do once the answers arrive.",
 						},
 					},
 					"required": []string{"objective", "completed", "next_steps"},
@@ -591,15 +593,11 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 		return "", "", utilsmsg.Trace("readPending", "", err)
 	}
 
-	if meta.Model != "" {
-		model := meta.Model
-		if model != configbot.DefaultModel && !modelAvailable(model) {
-			slog.Info("resume: recorded model is gone, falling back to auto",
-				slog.String("session", sessionID),
-				slog.String("model", meta.Model))
-			model = configbot.DefaultModel
-		}
-		configbot.SetModel(sessionID, model, meta.Reasoning)
+	if current, _ := configbot.GetModel(sessionID); meta.Model == current && current != configbot.DefaultModel && !modelAvailable(current) {
+		slog.Info("[Not found] resume model: removed, session default reset to auto",
+			slog.String("session", sessionID),
+			slog.String("model", current))
+		configbot.SetModel(sessionID, configbot.DefaultModel, "")
 	}
 
 	var msg strings.Builder
