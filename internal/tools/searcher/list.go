@@ -2,7 +2,6 @@ package toolSearcher
 
 import (
 	"encoding/json"
-	"slices"
 	"strings"
 
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -10,23 +9,11 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func isMCPExposed(name string) bool {
-	switch {
-	case strings.HasPrefix(name, "script_"),
-		strings.HasPrefix(name, "ext_"):
-		return true
-	}
-	return slices.Contains(toolregister.BuiltinNames(), name)
-}
-
-func listTools(e *tooltypes.Executor, mcpOnly, system bool) (string, error) {
+func listTools(e *tooltypes.Executor) (string, error) {
 	list := make([]Tool, 0, len(e.AllTools))
 	for _, tool := range e.AllTools {
 		name := tool.Function.Name
-		if mcpOnly && !isMCPExposed(name) {
-			continue
-		}
-		if !system && toolregister.IsSystemUse(name) {
+		if toolregister.IsSystemUse(name) {
 			continue
 		}
 		list = append(list, Tool{

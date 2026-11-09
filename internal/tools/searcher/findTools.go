@@ -28,47 +28,34 @@ func registFindTools() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `The tool registry: what exists (list), and pulling a tool's schema in so it can be called (search).
-Use for 有哪些工具 / 找工具 / 有沒有可以...的工具, and for search_tools / list_tools.
-A capability that seems missing comes from here before anything is built. Building one → edit_tool; running a script tool → test_tool.`,
+		Description: `Returns full parameter schemas for the tools you name or describe (search), or every tool's name and one-line description (list).
+Use before the first run_tool call to a name, and for 有哪些工具 / 找工具 / 有沒有可以...的工具 / search_tools / list_tools; a capability that looks missing is checked here before anything is built.
+Building a tool → edit_tool; testing a script tool → test_tool.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"search", "list"},
-					"description": "search: match the registry and return the matched tools' full parameter schemas. list: names and one-line descriptions only. Omitted: names or query → search, otherwise list.",
-					"default":     "search",
+					"description": "search returns schemas for names or query; list returns names and descriptions only. Omitted: names or query → search, otherwise list.",
 				},
 				"names": map[string]any{
 					"type":        "array",
 					"items":       map[string]any{"type": "string"},
 					"maxItems":    maxSelectNames,
-					"description": "mode=search: exact names from the Tools list, at most 16 per call; more → another call. Prefer unmarked tools (mcp__* > script_*) over [system-default] for the same intent.",
+					"description": "mode=search: exact names from the Tools list, at most 16 per call. When several fit one intent, prefer mcp__* over script_* over [system-default].",
 				},
 				"query": map[string]any{
 					"type":        "string",
-					"description": "mode=search: keywords, all of which must match; only when no listed name fits.",
-				},
-				"mcp": map[string]any{
-					"type":        "boolean",
-					"description": "mode=list: only MCP-exposed tools — builtin + script_/ext_ prefixed.",
-					"default":     false,
-				},
-				"system": map[string]any{
-					"type":        "boolean",
-					"description": "mode=list: also list the system tools used for internal bookkeeping.",
-					"default":     false,
+					"description": "mode=search: keywords that must all match; only when no listed name fits.",
 				},
 			},
 		},
 		Handler: func(_ context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
-				Mode   string   `json:"mode"`
-				Names  []string `json:"names"`
-				Query  string   `json:"query"`
-				MCP    bool     `json:"mcp"`
-				System bool     `json:"system"`
+				Mode  string   `json:"mode"`
+				Names []string `json:"names"`
+				Query string   `json:"query"`
 			}
 			if len(args) > 0 {
 				if err := json.Unmarshal(args, &params); err != nil {
@@ -98,7 +85,7 @@ A capability that seems missing comes from here before anything is built. Buildi
 				}
 				return searchTools(e, params.Query)
 			case "list":
-				return listTools(e, params.MCP, params.System)
+				return listTools(e)
 			}
 			return "", utilsmsg.New(utilsmsg.Invalid, "mode", "unknown mode %q; available: search, list", params.Mode)
 		},

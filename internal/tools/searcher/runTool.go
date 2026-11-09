@@ -13,19 +13,19 @@ func registRunTool() {
 	toolregister.Regist(toolregister.Def{
 		Name:      "run_tool",
 		SystemUse: true,
-		Description: `Runs a tool by name from the Tools list given before the user input, with args matching its schema.
-Every tool other than find_tools goes through here; the list holds names only.
-Before the first call to a name, fetch its schema with find_tools(names=[NAME]), batching only the names the next step calls. Keyword query only when no listed name fits.`,
+		Description: `Calls a tool from the Tools list given before the user input and returns that tool's result.
+Every tool listed there by name only goes through here; tools already in this request's tool definitions are called directly.
+Before the first call to a name, fetch its schema with find_tools(names=[...]), batching only the names the next step needs.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"name": map[string]any{
 					"type":        "string",
-					"description": "Exact tool name from the Tools list.",
+					"description": "Exact name from the Tools list.",
 				},
 				"args": map[string]any{
 					"type":        "object",
-					"description": "Arguments matching that tool's schema; {} when it takes none.",
+					"description": "Arguments matching the schema find_tools returned for that name; {} when it takes none.",
 					"default":     map[string]any{},
 				},
 			},

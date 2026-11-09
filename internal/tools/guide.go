@@ -13,7 +13,7 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-var topicNames = []string{"tool_generate", "tool_error", "web_search", "market_analysis", "targeted_read", "ask_user", "subagent_dispatch", "write_todo", "html_render", "office"}
+var topicNames = []string{"tool_generate", "tool_error", "web_search", "market_analysis", "targeted_read", "ask_user", "subagent_dispatch", "write_todo", "html_render", "office", "figure"}
 
 var topicGuides = map[string]string{
 	"tool_generate":     configs.GuideToolGenerate,
@@ -26,6 +26,7 @@ var topicGuides = map[string]string{
 	"write_todo":        configs.GuideWriteTodo,
 	"html_render":       configs.GuideHtmlRender,
 	"office":            configs.GuideOffice,
+	"figure":            configs.GuideFigure,
 }
 
 func registReasoningGuide() {
@@ -34,8 +35,8 @@ func registReasoningGuide() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `[system-default] Full rules for the listed topics; call before acting on any match, every matching topic in one call:
-- tool_error: a tool call just failed — before retrying, error_history or edit_tool(mode=patch).
+		Description: `[system-default] Returns the full rules for the topics below; call before acting on any match, with every matching topic in one call:
+- tool_error: a tool call just failed, before retrying it.
 - tool_generate: live external data (weather, FX, stock, geocoding, translation...) no script_*/ext_* covers, or the one found fails — before public_api_list, http_request or edit_tool.
 - web_search: non-smalltalk info query (people, orgs, facts, current events, prices).
 - market_analysis: stock / ETF / market analysis or an entry decision.
@@ -44,7 +45,8 @@ func registReasoningGuide() {
 - subagent_dispatch: one lookup across 3+ entities, one question needing 2+ independently searched source classes, a discovered set needing per-entity work, or a named session ("call X" / "呼叫 X") — before subagents(mode=invoke) or background_subagents.
 - write_todo: analysis / research / evaluation, or work needing more than one round of tool calls — before the first tool call; an active Skill follows the Skill Execution Rules.
 - html_render: an HTML deliverable, before writing any markup.
-- office: creating or modifying .docx / .xlsx / .pptx, before writing the file.`,
+- office: creating or modifying .docx / .xlsx / .pptx, before writing the file.
+- figure: an answer that carries a chart, flowchart, diagram or formula, before writing it.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -52,7 +54,7 @@ func registReasoningGuide() {
 					"type":        "array",
 					"items":       map[string]any{"type": "string", "enum": topicNames},
 					"minItems":    1,
-					"description": "Every topic this turn needs, in one call.",
+					"description": "Every topic that matches this turn.",
 				},
 			},
 			"required": []string{"topics"},
