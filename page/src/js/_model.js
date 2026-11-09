@@ -3,8 +3,20 @@ const SESSION_ID = /^((chat|cli|temp)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-
 
 const MODEL_AUTO = "auto";
 
+const MODEL_COOKIE = "agenvoy_model";
+const REASONING_COOKIE = "agenvoy_reasoning";
+
 let modelList = [];
 let currentModel = MODEL_AUTO;
+
+function readCookie(key) {
+  const hit = document.cookie.split("; ").find((one) => one.startsWith(key + "="));
+  return hit ? decodeURIComponent(hit.slice(key.length + 1)) : "";
+}
+
+function writeCookie(key, value) {
+  document.cookie = `${key}=${encodeURIComponent(value)}; path=/; max-age=31536000; samesite=lax`;
+}
 
 function modelLabel(name) {
   return name.slice(name.indexOf("@") + 1) || name;
@@ -62,7 +74,9 @@ async function getModelList(sessionId, preloaded) {
     chat.dataset.model = "1";
   }
 
-  currentModel = (await getSessionModel(sessionId)) || modelList[0];
+  const fallback = (await getSessionModel(sessionId)) || modelList[0];
+  const saved = readCookie(MODEL_COOKIE);
+  currentModel = modelList.includes(saved) ? saved : fallback;
   markModel(currentModel);
 }
 
@@ -83,7 +97,7 @@ function selectModel(name) {
   }
   currentModel = name;
   markModel(name);
-  saveSessionModel(currentSessionId, name);
+  writeCookie(MODEL_COOKIE, name);
 }
 
 function openModelPicker() {
@@ -112,25 +126,6 @@ function openModelPicker() {
   });
 
   document.body.appendChild(root);
-}
-
-async function saveSessionModel(sessionId, model) {
-  if (!SESSION_ID.test(sessionId || "") || !model) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API}/v1/session/${encodeURIComponent(sessionId)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: model }),
-    });
-    if (!response.ok) {
-      console.error("saveSessionModel", response.status);
-    }
-  } catch (err) {
-    console.error("saveSessionModel", err);
-  }
 }
 
 async function getSessionModel(sessionId) {
@@ -204,13 +199,23 @@ async function getReasoningList(sessionId) {
   }
 }
 
+async function loadReasoning(sessionId) {
+  await getReasoningList(sessionId);
+  const saved = readCookie(REASONING_COOKIE);
+  const levels = reasoningList.length > 0 ? reasoningList : Object.keys(REASONING_ICON);
+  if (levels.includes(saved)) {
+    reasoningLevel = saved;
+    markReasoning(saved);
+  }
+}
+
 function selectReasoning(level) {
   if (!level) {
     return;
   }
   reasoningLevel = level;
   markReasoning(level);
-  saveSessionReasoning(currentSessionId, level);
+  writeCookie(REASONING_COOKIE, level);
 }
 
 function openReasoningPicker() {
@@ -239,23 +244,4 @@ function openReasoningPicker() {
   });
 
   document.body.appendChild(root);
-}
-
-async function saveSessionReasoning(sessionId, level) {
-  if (!SESSION_ID.test(sessionId || "") || !level) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API}/v1/session/${encodeURIComponent(sessionId)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reasoning: level }),
-    });
-    if (!response.ok) {
-      console.error("saveSessionReasoning", response.status);
-    }
-  } catch (err) {
-    console.error("saveSessionReasoning", err);
-  }
 }

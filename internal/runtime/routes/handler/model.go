@@ -8,12 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
-
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
@@ -206,17 +203,7 @@ func RemoveModel() gin.HandlerFunc {
 			return
 		}
 
-		if dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir); err == nil {
-			for _, dir := range dirs {
-				sid := dir.Name
-				if strings.HasPrefix(sid, ".") {
-					continue
-				}
-				if model, _ := configbot.GetModel(sid); model == name {
-					configbot.SetModel(sid, configbot.DefaultModel, "")
-				}
-			}
-		}
+		configbot.ResetModel(name)
 
 		agents.Reload()
 

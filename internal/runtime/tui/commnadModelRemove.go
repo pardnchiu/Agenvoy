@@ -9,6 +9,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
+	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 )
 
 type ModelRemovePick struct {
@@ -68,6 +69,7 @@ func (t TUI) runModelRemove(name string) (TUI, tea.Cmd) {
 		return t, notice(msgError(fmt.Sprintf("session.Save: %v", err)) + "\n")
 	}
 
+	configbot.ResetModel(name)
 	agents.Reload()
 
 	slog.Debug("model removed", slog.String("model", label))

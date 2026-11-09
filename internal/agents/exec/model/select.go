@@ -26,6 +26,7 @@ type SelectMeta struct {
 	Task             string
 	SkillDescription string
 	SessionID        string
+	Reasoning        string
 	ModelNames       []string
 }
 
@@ -39,21 +40,14 @@ func selectModel(ctx context.Context, meta SelectMeta) ([]string, map[string]boo
 	// * step 1: load model selection config
 	cfg := loadConfig()
 	deadMap := map[string]bool{}
-	sessModel, sessReasoning := configbot.DefaultModel, configs.REASONING_AUTO
-	if meta.SessionID != "" {
-		sessModel, sessReasoning = configbot.GetModel(meta.SessionID)
-	}
-	isAutoReasoning := sessReasoning == configs.REASONING_AUTO
-
-	if sessModel != configbot.DefaultModel {
-		if _, ok := meta.ModelSet.Registry[sessModel]; ok {
-			if isAutoReasoning {
-				meta.ModelNames = []string{sessModel}
-				_, sessReasoning, _ = runSelect(ctx, meta, cfg, deadMap)
-			}
-			return []string{sessModel}, deadMap, sessReasoning
+	sessReasoning := meta.Reasoning
+	if sessReasoning == "" {
+		sessReasoning = configs.REASONING_AUTO
+		if meta.SessionID != "" {
+			_, sessReasoning = configbot.GetModel(meta.SessionID)
 		}
 	}
+	isAutoReasoning := sessReasoning == configs.REASONING_AUTO
 
 	// * step 2: skip pass and cooling down, if only one model. skip select
 	selectable := make(map[string]struct{}, len(meta.ModelSet.Order))

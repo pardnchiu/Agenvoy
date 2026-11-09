@@ -591,15 +591,11 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 		return "", "", utilsmsg.Trace("readPending", "", err)
 	}
 
-	if meta.Model != "" {
-		model := meta.Model
-		if model != configbot.DefaultModel && !modelAvailable(model) {
-			slog.Info("resume: recorded model is gone, falling back to auto",
-				slog.String("session", sessionID),
-				slog.String("model", meta.Model))
-			model = configbot.DefaultModel
-		}
-		configbot.SetModel(sessionID, model, meta.Reasoning)
+	if current, _ := configbot.GetModel(sessionID); meta.Model == current && current != configbot.DefaultModel && !modelAvailable(current) {
+		slog.Info("[Not found] resume model: removed, session default reset to auto",
+			slog.String("session", sessionID),
+			slog.String("model", current))
+		configbot.SetModel(sessionID, configbot.DefaultModel, "")
 	}
 
 	var msg strings.Builder
