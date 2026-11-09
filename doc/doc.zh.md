@@ -99,6 +99,8 @@ Agenvoy 使用 `~/.config/agenvoy/` 保存執行期資料，並將憑證存放�
 
 Agenvoy 目前支援 Telegram 與 Discord。兩者都由本機 daemon 主動向外連線，因此主機不需要開放入站連接埠或公開端點；設定時只需要提供對應的 bot token；新對話之後須通過驗證碼（5 分鐘內有效），驗證碼會寫入 daemon log、顯示於 TUI，並在有設定時轉發到 `admin` 對話。其他聊天機器人平台除非能帶來明確的安全性改善，否則不在目前規劃內。
 
+對話中有任務正在執行時，新的訊息（群組中須 @bot）會以 steer 方式併入該任務，不另開任務。訊息以 `/new` 開頭（Telegram 也接受 `/new@<bot>`）時，改以其後內容（含附件）另開新任務；沒有任務在執行時，每則訊息照常開新任務。Telegram 會在啟動時把 `/new` 註冊到 bot 的指令選單。
+
 ### Runtime 設定
 
 主要設定檔是 `~/.config/agenvoy/config.json`。`limits` 欄位只能調高上限：每個值取「設定值」與「內建預設值」的較大者，低於預設的設定會被忽略；缺漏欄位直接採用預設值，不會寫回 `config.json`。
@@ -267,11 +269,11 @@ Session persona 現存於 history SQLite 資料庫。`self_id` 會正規化為�
 agen
 ```
 
-直接輸入文字即在當前 session 執行；其餘皆為斜線指令，只打 `/` 會開啟選單，其中也包含已安裝的 skill 與排程項目。
+直接輸入文字即在當前 session 執行；配色依終端的亮／暗背景調整，啟動時偵測一次，每次按 Enter 送出時再檢查。其餘皆為斜線指令，只打 `/` 會開啟選單，其中也包含已安裝的 skill 與排程項目。
 
 | 指令                       | 用途                                                                                                                                                                                                                                                                                                |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/model`                   | 八個分頁，每個路由角色一個：**model** 挑選 session 模型（`auto` 或已註冊模型；`d` 移除游標所在模型、`t` 設定其 tier、`w`／`s` 上下移動調整 fallback 順序，Enter 時儲存）與 `add` 新增 provider（`o` 開啟 provider 主控台），**reasoning** 挑選該 session 的等級（`auto` 或固定等級），**dispatch** 挑選路由模型或 `Decision Model`，**summary** 挑選摘要模型（`auto` 清除），**decision** 挑選 decision model（`disable` 關閉），**image**／**stt**／**tts** 各自挑選該角色的模型或 provider（`disable` 清除）。`/model <分頁名>` 或 `/model add` 可直接開啟對應畫面 |
+| `/model`                   | 八個分頁，每個路由角色一個：**model** 挑選 session 模型（`auto` 或已註冊模型；`d` 移除游標所在模型並把使用它的 session 改回 `auto`、`t` 設定其 tier、`w`／`s` 上下移動調整 fallback 順序，Enter 時儲存）與 `add` 新增 provider（`o` 開啟 provider 主控台），**reasoning** 挑選該 session 的等級（`auto` 或固定等級），**dispatch** 挑選路由模型或 `Decision Model`，**summary** 挑選摘要模型（`auto` 清除），**decision** 挑選 decision model（`disable` 關閉），**image**／**stt**／**tts** 各自挑選該角色的模型或 provider（`disable` 清除）。`/model <分頁名>` 或 `/model add` 可直接開啟對應畫面 |
 | `/mcp`                     | 列出 MCP server（`d` 移除）並 `add` 新增；單一 server 可登入、設定 OAuth client、以 `tools` 多選設定免確認工具（第一列為 `all`）、重連                                                                                                                                                              |
 | `/session` `/new`          | 以 self id 切換 session（`d` 刪除）或建立新的；清單橫跨兩種以上前綴時依 `all`／`cli-`／`tg-`／`dc-`／`chat-`／`temp-` 分頁；`/session` 清單下方可編輯當前 session 的 `name`／`self id`／`role`（`/session name\|id\|role` 直接開啟） |
 | `/compact` `/reset`        | 同一個彈窗含三個分頁：`summary` 唯讀檢視目前滾動摘要；`compact` 以 LLM 分析移除冗餘對話；`reset` 重設 session（需二次確認）：`summary` 先重建摘要並保留，`all` 連摘要一併清除。`/compact` 開在 compact 分頁、`/reset` 開在 reset 分頁 |
@@ -327,7 +329,7 @@ printf '%s\n' \
 
 後端會在 result、SSE、pending 與 multilog handler 間保留 `[SEND_FILE:...]` 標記，讓頻道 consumer 仍可取得檔案傳遞 metadata。Web dashboard 只在顯示訊息文字時移除標記，因此使用者看到的是回應內容，不會看到內部傳輸標記。
 
-Web 對話以豐富格式渲染回覆：```` ```chartjs ```` 區塊顯示為圖表（bar、line、pie、doughnut、radar、polarArea、scatter、bubble），```` ```mermaid ```` 區塊顯示為圖（flowchart、sequenceDiagram、stateDiagram-v2、classDiagram、erDiagram、gantt、timeline），```` ```math ```` 區塊與行內 `$...$` 以 KaTeX 顯示數學公式，其餘程式碼區塊套用語法高亮；無法解析的區塊改顯示原始碼。Telegram 與 Discord 只收到純 markdown。
+Web 對話以豐富格式渲染回覆：```` ```chartjs ```` 區塊顯示為圖表（bar、line、pie、doughnut、radar、polarArea、scatter、bubble），```` ```mermaid ```` 區塊顯示為圖（flowchart、sequenceDiagram、stateDiagram-v2、classDiagram、erDiagram、gantt、timeline），```` ```math ```` 區塊與行內 `$...$` 以 KaTeX 顯示數學公式，其餘程式碼區塊套用語法高亮；無法解析的區塊改顯示原始碼。Telegram 與 Discord 只收到純 markdown。Web 對話的模型與 reasoning 選擇存在瀏覽器 cookie（`agenvoy_model`、`agenvoy_reasoning`），每次 `/v1/send` 隨請求送出，不寫入 session；載入時顯示 session 的預設值，cookie 內的值仍可選時以 cookie 為準。
 
 v1.3.4 介面改版的逐頁比較見 [Web UI 介面差異比較](diff/README.zh.md)。
 
@@ -363,7 +365,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 
 | Method | Path                   | 說明                                                                                                                                                                                                                                                                                         |
 | ------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/v1/send`             | 執行 Agent：`{content, session_id?, sse?, persist?, model?, work_dir?, skill?, system_prompt?, exclude_tools?}`。未帶 `session_id` 時建立 `temp-`（`persist:true` 則 `chat-`）session；該 session 已在執行時改為 steer，回 `{session_id, steer:true}`；`content` 為空回 400 |
+| `POST` | `/v1/send`             | 執行 Agent：`{content, session_id?, sse?, persist?, model?, reasoning?, work_dir?, skill?, system_prompt?, exclude_tools?}`。`model` 與 `reasoning` 只作用於這次請求，不改 session 預設：未帶 `model` 用 session 模型，`auto` 即使 session 已固定模型仍交給 dispatcher，未帶 `reasoning` 用 session 等級。未帶 `session_id` 時建立 `temp-`（`persist:true` 則 `chat-`）session；該 session 已在執行時改為 steer，回 `{session_id, steer:true}`；`content` 為空回 400 |
 | `POST` | `/v1/chat/completions` | OpenAI 相容且 stateless 的 chat completions                                                                                                                                                                                                                                                  |
 | `GET`  | `/v1/info/version`     | 編譯時寫入的版本（`{version, dev}`）；未帶 tag 的建置 `dev` 為 true                                                                                                                                                                                                                          |
 | `GET`  | `/v1/log`              | SSE：不帶參數時只送 daemon `slog`（`EventDaemonLog`，`source` 為層級），與 TUI 標題列同一份來源；內含新對話驗證碼，故 daemon frame 僅對 loopback 來源附加。`?sessions=a,b` 於同一條連線加上該些 session 的事件，`replay=0` 略過回放，`daemon=0` 去掉 daemon frame。遠端來源必須帶 `sessions` |
@@ -540,7 +542,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 |            | `background_command`              | 在背景啟動指令，結束時帶著輸出接續任務，用於 watcher 與長時間工作；輸出行命中錯誤關鍵字（`keywords`，內建預設清單）時，指令執行中也會接續任務。執行期間的輸出寫在 `sessions/<id>/background/<task>.log`，結束後刪除——非 TUI 請求時排除 |
 |            | `background_subagents`            | 在背景啟動 subagent，完成時帶著存好的報告接續任務，用於很可能超過 5 分鐘的子任務；與 `background_command` 共用每個 session 的背景任務上限——非 TUI 請求時排除 |
 
-工具依名稱排序，tool payload 只帶 `find_tools`、`run_tool`、`reasoning_guide` 三個完整 schema，其餘工具只以名稱列在每輪注入的 TurnContext；模型先以 `find_tools` 取得 schema（以工具回傳內容交付，不寫回 tool payload），再經 `run_tool(name, args)` 呼叫。未先取 schema 就呼叫時，執行器會自動回傳該 schema 並要求重新呼叫；直接以名稱呼叫這三個以外的工具會被拒絕。因此整個 session 的工具序列化結果逐位元組不變，prompt 快取得以保留。`claude-code` provider 不使用 `run_tool`：只收到工具名稱與完整的 `find_tools` schema，取得 schema 後直接以名稱呼叫。`edit_file` 的 patch 模式每個 target 只接受 `{old_string, new_string}`（另可帶 `replace_all`）；`new_string` 取代 `old_string`，插入則是在 `new_string` 開頭重複 `old_string`。所有 target 都對寫入前的磁碟原始內容比對，因此列出順序不影響結果；`old_string` 在未帶 `replace_all` 時比對到多處、兩個 target 覆蓋同一段、某個 target 的 `old_string` 出現在先前 target 的 `new_string` 內，或整批套用後會把非空檔案清空，整批都會拒絕且不寫入；`old_string` 與 `new_string` 相同的 target 會略過並在回傳中註明，內容沒有變化時不寫檔。
+工具依名稱排序，tool payload 只帶 `find_tools`、`run_tool`、`reasoning_guide`、`write_todo`、`chat_history`、`ask_user`、`write_result` 七個完整 schema，其餘工具只以名稱列在每輪注入的 TurnContext；模型先以 `find_tools` 取得 schema（以工具回傳內容交付，不寫回 tool payload），再經 `run_tool(name, args)` 呼叫。未先取 schema 就呼叫時，執行器會自動回傳該 schema 並要求重新呼叫；直接以名稱呼叫這七個以外的工具會被拒絕。工具失敗的結果末尾附 `next:` 提示：錯誤指向憑證缺漏或被拒時指向 `store_secret`，其他情況提示改用別的方法成功後以 `error_history(mode=write)` 記錄。因此整個 session 的工具序列化結果逐位元組不變，prompt 快取得以保留。`claude-code` provider 不使用 `run_tool`：只收到工具名稱與完整的 `find_tools` schema，取得 schema 後直接以名稱呼叫。`edit_file` 的 patch 模式每個 target 只接受 `{old_string, new_string}`（另可帶 `replace_all`）；`new_string` 取代 `old_string`，插入則是在 `new_string` 開頭重複 `old_string`。所有 target 都對寫入前的磁碟原始內容比對，因此列出順序不影響結果；`old_string` 在未帶 `replace_all` 時比對到多處、兩個 target 覆蓋同一段、某個 target 的 `old_string` 出現在先前 target 的 `new_string` 內，或整批套用後會把非空檔案清空，整批都會拒絕且不寫入；`old_string` 與 `new_string` 相同的 target 會略過並在回傳中註明，內容沒有變化時不寫檔。
 
 ## 架構
 

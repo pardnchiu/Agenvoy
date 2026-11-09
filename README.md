@@ -215,7 +215,7 @@ See the [Web UI comparison (old / new, light / dark)](doc/diff/README.md) for th
 
 ## Chatbot Integrations
 
-Agenvoy currently supports **Telegram and Discord** as chatbot channels. The local daemon initiates outbound connections to these platforms, so you only need to configure a bot token—without exposing inbound ports, setting up a reverse proxy, or making your host public.
+Agenvoy currently supports **Telegram and Discord** as chatbot channels. The local daemon initiates outbound connections to these platforms, so you only need to configure a bot token—without exposing inbound ports, setting up a reverse proxy, or making your host public. While a task is running, new messages steer it; start a separate task with `/new <message>` (listed in Telegram's command menu).
 
 Since **v0.34.4**, Telegram and Discord have paused the default flow that automatically replies to voice input with voice output. You can still use STT/TTS tools to generate audio and send the resulting audio files to either channel.
 
