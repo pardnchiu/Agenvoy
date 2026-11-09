@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", async function () {
   revealIconsWhenReady();
+  watchListSelection();
   watchServer();
   watchUpdate();
 
