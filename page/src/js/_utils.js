@@ -638,3 +638,34 @@ function insertAtCursor(dom, text) {
   dom.nextElementSibling.textContent = dom.value + "\n";
   dom.focus();
 }
+
+const listSelected = new WeakMap();
+
+function scrollListSelection() {
+  for (const list of document.querySelectorAll("div.list")) {
+    const card = list.querySelector('[data-selected="1"]');
+    if (!card || card.getClientRects().length === 0) {
+      continue;
+    }
+    const key = card.dataset.name || card.getAttribute("name") || card.getAttribute("href") || card.textContent;
+    if (listSelected.get(list) === key) {
+      continue;
+    }
+    listSelected.set(list, key);
+    card.scrollIntoView({ block: "center" });
+  }
+}
+
+function watchListSelection() {
+  let pending = false;
+  new MutationObserver(() => {
+    if (pending) {
+      return;
+    }
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      scrollListSelection();
+    });
+  }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-selected"] });
+}

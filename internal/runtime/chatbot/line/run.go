@@ -246,6 +246,11 @@ func run(ctx context.Context, b *Bot, in go_bot_line.Input, attachInputs []go_bo
 		return nil
 	}
 
+	content, isNew := chatbot.CutNewCommand(content)
+	if content == "" {
+		return nil
+	}
+
 	workDir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("os.UserHomeDir: %w", err)
@@ -254,6 +259,11 @@ func run(ctx context.Context, b *Bot, in go_bot_line.Input, attachInputs []go_bo
 	sessionID, err := sessionManager.GetLineSession(in.UserID, in.GroupID, in.RoomID)
 	if err != nil {
 		return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetLineSession: %w", err)
+	}
+
+	if !isNew && exec.IsRunning(sessionID) {
+		exec.AppendSteer(sessionID, "", content)
+		return nil
 	}
 
 	execData := exec.Prepare(exec.ExecuteMeta{

@@ -8,6 +8,7 @@ import (
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -111,6 +112,21 @@ func SetModel(sessionID, model, reasoning string) {
 		slog.Warn("configBot SetModel",
 			slog.String("session", sessionID),
 			slog.String("error", err.Error()))
+	}
+}
+
+func ResetModel(name string) {
+	dirs, err := go_pkg_filesystem_reader.ListDirs(filesystem.SessionsDir)
+	if err != nil {
+		return
+	}
+	for _, dir := range dirs {
+		if strings.HasPrefix(dir.Name, ".") {
+			continue
+		}
+		if model, _ := GetModel(dir.Name); model == name {
+			SetModel(dir.Name, DefaultModel, "")
+		}
 	}
 }
 

@@ -791,10 +791,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t, nil
 
 	case DiscordTokenSubmit:
-		return t, tea.Sequence(
-			notice(msgLog("discord verifying token (≤10s)")+"\n"),
-			enableDiscord(msg.token),
-		)
+		slog.Debug("tui: discord verifying token")
+		return t, enableDiscord(msg.token)
 
 	case TelegramAction:
 		switch msg.action {
@@ -808,10 +806,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t, nil
 
 	case TelegramTokenSubmit:
-		return t, tea.Sequence(
-			notice(msgLog("telegram verifying token (≤10s)")+"\n"),
-			enableTelegram(msg.token),
-		)
+		slog.Debug("tui: telegram verifying token")
+		return t, enableTelegram(msg.token)
 
 	case LineAction:
 		switch msg.action {
@@ -829,10 +825,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return next, cmd
 
 	case LineTokenSubmit:
-		return t, tea.Sequence(
-			notice(msgLog("line verifying token (≤10s)")+"\n"),
-			enableLine(msg.secret, msg.token),
-		)
+		slog.Debug("tui: line verifying token")
+		return t, enableLine(msg.secret, msg.token)
 
 	case ScheduleTestPick:
 		next, cmd := t.runScheduleTest(msg.skill)

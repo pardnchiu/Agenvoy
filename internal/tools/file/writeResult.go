@@ -21,9 +21,9 @@ func registWriteResult() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  false,
-		Description: `Saves one long-form deliverable as a .md or .html file and returns the write receipt with its path.
-Use for 報告 / 整理 / 分析 / 比較 / 做成網頁 / html — the body the reply summarises instead of reprinting; format=html only after reasoning_guide(topics=[html_render]).
-Any other file, or a change to an existing file → edit_file.`,
+		Description: `Saves one long-form deliverable as a new .md or .html file in the output directory and returns its path.
+Use for 報告 / 整理 / 分析 / 比較 / 做成網頁 / html, or any answer with several sections or tables; the reply then gives its key findings and the path instead of reprinting it, and a short answer stays in the reply. html only after reasoning_guide(topics=[html_render]).
+Any other file, or changing an existing one → edit_file.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -31,11 +31,11 @@ Any other file, or a change to an existing file → edit_file.`,
 					"type":        "string",
 					"enum":        []string{"md", "html"},
 					"default":     "md",
-					"description": "md: markdown report. html: one self-contained HTML page.",
+					"description": "md for a markdown report, html for one self-contained page.",
 				},
 				"content": map[string]any{
 					"type":        "string",
-					"description": "The complete file in the chosen format, not a diff.",
+					"description": "The whole file in that format, never a diff or an elided excerpt.",
 				},
 			},
 			"required": []string{"content"},

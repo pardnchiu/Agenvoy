@@ -147,9 +147,12 @@ func Run(ctx context.Context, data ExecuteMeta, events chan<- agentstypes.Event,
 	if agent == nil {
 		events <- agentstypes.Event{Type: agentstypes.EventAgentSelect, TaskHash: taskHash, WindowHash: windowHash}
 
-		model := sessionconfigbot.DefaultModel
-		if trimModel := strings.TrimSpace(data.Model); trimModel != "" {
-			model = trimModel
+		model := strings.TrimSpace(data.Model)
+		if model == "" {
+			model, _ = sessionconfigbot.GetModel(sessionID)
+			if _, ok := agents.ModelSet().Registry[model]; !ok {
+				model = sessionconfigbot.DefaultModel
+			}
 		}
 		skillDesc := ""
 		if data.Skill != nil {

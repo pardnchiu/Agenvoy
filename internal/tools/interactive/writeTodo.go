@@ -29,31 +29,31 @@ func registWriteTodo() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `A task checklist the user watches update in real time; it records progress and never executes anything.
-Call it before the first tool call whenever the answer takes more than one round of tool calls, or the moment a running task grows past that; 分析 / 研究 / 調查 / 比較 / 評估 / 彙整 / 週報 / 盤前 always get one, however short the plan looks. N fanned-out searches or subagents are N steps.
-Smalltalk, or a single lookup answered straight from one call's result → skip it.`,
+		Description: `Shows the user a live task checklist; it records progress and runs nothing.
+Call it before the first tool call when the answer takes more than one round of tool calls, or as soon as a running task grows past that; 分析 / 研究 / 調查 / 比較 / 評估 / 彙整 / 週報 / 盤前 always get one, and N fanned-out searches or subagents are N steps.
+Smalltalk, or one lookup answered straight from one call → skip it.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"todos": map[string]any{
 					"type":        "array",
-					"description": "The whole ordered list every call (replaced, not merged), exactly one item in_progress. A finished step flips to completed and the next to in_progress in the same call. Changing the remaining steps mid-run is told to the user first; a new objective after a completed list starts a fresh one.",
+					"description": "The full ordered list on every call (it replaces the previous one) with exactly one item in_progress; finishing a step marks it completed and the next in_progress in the same call. Tell the user before changing the remaining steps mid-run; a new objective after a completed list starts a fresh list.",
 					"minItems":    1,
 					"items": map[string]any{
 						"type": "object",
 						"properties": map[string]any{
 							"content": map[string]any{
 								"type":        "string",
-								"description": "Imperative step title (e.g. 'Add lang toggle to nav').",
+								"description": "Imperative step title, e.g. 'Add lang toggle to nav'.",
 							},
 							"status": map[string]any{
 								"type":        "string",
 								"enum":        []string{agenttypes.TodoPending, agenttypes.TodoInProgress, agenttypes.TodoCompleted},
-								"description": "pending = not started, in_progress = working now (only one allowed), completed = done.",
+								"description": "pending, in_progress (the one step being worked on), or completed.",
 							},
 							"active_form": map[string]any{
 								"type":        "string",
-								"description": "Optional label shown while the step runs (e.g. 'Adding lang toggle'); defaults to content.",
+								"description": "Label shown while the step runs, e.g. 'Adding lang toggle'; omitted → content.",
 							},
 						},
 						"required": []string{"content", "status"},

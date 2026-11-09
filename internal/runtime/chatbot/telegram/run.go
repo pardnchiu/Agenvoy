@@ -208,6 +208,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 		}
 	}
 
+	content, isNew := chatbot.CutNewCommand(content)
 	if content == "" {
 		return nil
 	}
@@ -215,6 +216,11 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 	chatSessionID, err := sessiontelegram.New(in.ChatID)
 	if err != nil {
 		return utilsmsg.Trace("session.GetTelegramSession", "", err)
+	}
+
+	if !isNew && exec.IsRunning(chatSessionID) {
+		exec.AppendSteer(chatSessionID, "", content)
+		return nil
 	}
 
 	replyTo := ""

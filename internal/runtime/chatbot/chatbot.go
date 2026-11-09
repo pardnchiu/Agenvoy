@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	go_bot_discord "github.com/pardnchiu/go-bot/core/discord"
 	go_bot_line "github.com/pardnchiu/go-bot/core/line"
@@ -145,4 +146,15 @@ func AppendReplyFooter(ch Channel, text, footer string, hasMedia bool, execError
 		}
 	}
 	return text
+}
+
+func CutNewCommand(content string) (string, bool) {
+	head, rest := content, ""
+	if i := strings.IndexFunc(content, unicode.IsSpace); i >= 0 {
+		head, rest = content[:i], content[i:]
+	}
+	if cmd, _, _ := strings.Cut(head, "@"); cmd != "/new" {
+		return content, false
+	}
+	return strings.TrimSpace(rest), true
 }

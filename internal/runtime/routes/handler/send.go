@@ -25,6 +25,7 @@ type Request struct {
 	SSE          bool     `json:"sse"`
 	SessionID    string   `json:"session_id"`
 	Model        string   `json:"model,omitempty"`
+	Reasoning    string   `json:"reasoning,omitempty"`
 	ExcludeTools []string `json:"exclude_tools,omitempty"`
 	Persist      bool     `json:"persist,omitempty"`
 	SystemPrompt string   `json:"system_prompt,omitempty"`
@@ -76,6 +77,7 @@ func Send() gin.HandlerFunc {
 		data := exec.Prepare(exec.ExecuteMeta{
 			PendingTask:       pendingTask,
 			Model:             req.Model,
+			Reasoning:         req.Reasoning,
 			WorkDir:           workDir,
 			SkillName:         req.Skill,
 			Task:              trimContent,
