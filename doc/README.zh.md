@@ -266,8 +266,7 @@ curl -fsSL https://agenvoy.com/scripts/install.sh | bash
    - GitHub Copilot（$10／月）—— 指定 `gpt-5.6-luna`，額度損耗夠慢、能力也夠日常使用
    - OpenAI ChatGPT Plus（$20／月）
    - SuperGrok（$30／月）
-2. **想免費嚐鮮**，以下方式不需要訂閱：
-   - **[Ollama Cloud](https://ollama.com/settings/keys)**：建立免費 API key，在 `/model add` 選擇 **Ollama Cloud** 後加入 `gemma4:31b`。免費方案有用量上限，可用 `Shift+U` 查看剩餘額度。
+2. **不再推薦免費方案。** Ollama Cloud 自 2026-11-09（PT 下午 5:40）起 Free 方案改為 pay-as-you-go：`gemma4:31b`、`gpt-oss:120b`、`gpt-oss:20b`、`nemotron-3-super`、`nemotron-3-ultra` 等雲端模型需購買 credits，已無法免費試用 Agenvoy。以 Ollama 在本機執行仍然免費，但小型本機模型的 tool calling 不穩定。最低成本的推薦是上方的 GitHub Copilot（$10／月）。
 
 ---
 
