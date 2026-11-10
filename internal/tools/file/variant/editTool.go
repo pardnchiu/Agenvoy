@@ -16,25 +16,25 @@ func registEditTool() {
 		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  false,
-		Description: `The tool definitions themselves: create or overwrite one (write), fix an exact string inside one (patch), trash an obsolete one (remove).
-Use for 建一個工具 / 修工具 / 這個工具壞了, and for write_tool / patch_tool / remove_tool.
-The build flow is write → test_tool → call it. Finding an existing tool → find_tools; skill files → edit_skill.`,
+		Description: `Edits a script tool's files (tool.json schema, script.py runtime): create or overwrite one (write), replace a string inside one (patch), or trash the whole tool (remove); returns the affected path.
+Use for "build a tool for this", "fix this tool", "this tool is broken", "delete that tool", and for write_tool / patch_tool / remove_tool.
+Finding an existing tool → find_tools; after writing tool.json and script.py, check it with test_tool before calling it; skill files → edit_skill; any other file → edit_file.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"write", "patch", "remove"},
-					"description": "write: a first version or a full replacement. patch: fixing a broken tool after test_tool failed. remove: trashes the directory, recoverable from .Trash. Omitted: content → write, old_string → patch; remove is never inferred.",
+					"description": "write: a first version or a full replacement of one file. patch: fixing an existing tool, e.g. after test_tool failed. remove: moves the whole tool directory to .Trash. Omitted: content → write, old_string → patch; remove is never inferred.",
 				},
 				"name": map[string]any{
 					"type":        "string",
-					"description": "Snake_case, no 'script_' prefix — the runtime adds it. e.g. 'ip_geolocation_lookup'.",
+					"description": "Tool directory name in snake_case without the 'script_' prefix the runtime adds, e.g. 'ip_geolocation_lookup'. patch and remove need an existing tool.",
 				},
 				"tag": map[string]any{
 					"type":        "string",
 					"enum":        []string{"json", "script"},
-					"description": "mode=write / mode=patch: which file — json = tool.json (schema), script = script.py (runtime).",
+					"description": "Required for write and patch: which file. json: tool.json (schema). script: script.py (runtime). One file per call, so a new tool takes two writes.",
 				},
 				"content": map[string]any{
 					"type":        "string",
@@ -42,15 +42,15 @@ The build flow is write → test_tool → call it. Finding an existing tool → 
 				},
 				"old_string": map[string]any{
 					"type":        "string",
-					"description": "mode=patch: exact string to replace. Must be unique in the target file.",
+					"description": "mode=patch: exact string to replace. Without replace_all only its first occurrence changes, so include enough surrounding text to make it unique.",
 				},
 				"new_string": map[string]any{
 					"type":        "string",
-					"description": "mode=patch: replacement string. Empty string deletes old_string.",
+					"description": "mode=patch: replacement string; empty deletes old_string.",
 				},
 				"replace_all": map[string]any{
 					"type":        "boolean",
-					"description": "mode=patch: replace every occurrence instead of the single unique one.",
+					"description": "mode=patch: replace every occurrence instead of only the first.",
 					"default":     false,
 				},
 			},

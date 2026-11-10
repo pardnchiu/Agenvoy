@@ -16,20 +16,20 @@ func registEditSkill() {
 		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  false,
-		Description: `The files under the skills directory: create or rewrite one (write), replace an exact string inside one (patch), trash a whole skill (remove).
-Use for 改 skill / 新增 skill / 這個 skill 要調整, and for write_skill / patch_skill / remove_skill.
-Running a skill → run_skill; ordinary files → edit_file; building a new skill from scratch → the skill-creator skill.`,
+		Description: `Edits files under the skills directory: create or rewrite one (write), replace a string inside one (patch), or trash a whole skill (remove); returns the affected path.
+Use for "edit this skill", "add a skill file", "this skill needs adjusting", "delete that skill", and for write_skill / patch_skill / remove_skill.
+Running a skill → run_skill; building a new skill from scratch → the skill-creator skill; script tools → edit_tool; any other file → edit_file.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"write", "patch", "remove"},
-					"description": "write: a first version or a full rewrite. patch: a targeted edit. remove: trashes the whole skill directory, recoverable from .Trash. Omitted: content → write, old_string → patch, name alone → remove.",
+					"description": "write: a first version or a full rewrite of one file (uses path). patch: a targeted edit (uses path). remove: moves the whole skill directory to .Trash (uses name). Omitted: content → write, old_string → patch, name alone → remove.",
 				},
 				"path": map[string]any{
 					"type":        "string",
-					"description": "mode=write / mode=patch: relative path under the skills dir (e.g. 'my-skill/SKILL.md', 'my-skill/scripts/01.md').",
+					"description": "mode=write / mode=patch: path relative to the skills directory, staying inside it, e.g. 'my-skill/SKILL.md', 'my-skill/scripts/01.md'.",
 				},
 				"content": map[string]any{
 					"type":        "string",
@@ -37,20 +37,20 @@ Running a skill → run_skill; ordinary files → edit_file; building a new skil
 				},
 				"old_string": map[string]any{
 					"type":        "string",
-					"description": "mode=patch: exact string to replace, including indentation. Must be unique unless replace_all is true.",
+					"description": "mode=patch: exact string to replace, including indentation. Without replace_all only its first occurrence changes, so include enough surrounding text to make it unique.",
 				},
 				"new_string": map[string]any{
 					"type":        "string",
-					"description": "mode=patch: replacement string. Empty string deletes old_string.",
+					"description": "mode=patch: replacement string; empty deletes old_string.",
 				},
 				"replace_all": map[string]any{
 					"type":        "boolean",
-					"description": "mode=patch: replace every occurrence instead of the single unique one.",
+					"description": "mode=patch: replace every occurrence instead of only the first.",
 					"default":     false,
 				},
 				"name": map[string]any{
 					"type":        "string",
-					"description": "mode=remove: skill directory name, single segment (e.g. 'my-skill').",
+					"description": "mode=remove: skill directory name, a single path segment, e.g. 'my-skill'.",
 				},
 			},
 		},

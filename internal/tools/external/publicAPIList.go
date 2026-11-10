@@ -22,15 +22,15 @@ func registPublicAPIList() {
 		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `Public API directory: without category → category names; with category → each keyless API's name, description, HTTPS flag and docs url.
-Use for 有沒有公開 API / 找天氣、匯率、地理編碼的免費 API, when no existing tool covers a live-data request.
+		Description: `Public API directory: the category names, or the keyless APIs in one category with their docs urls.
+Use for "is there a public API for", "find a free weather / exchange-rate / geocoding API", when no existing tool covers a live-data request.
 Picked one → fetch_page its docs url, then http_request; no fitting API → reasoning_guide(tool_generate).`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"category": map[string]any{
 					"type":        "string",
-					"description": "Category name from the no-category call, case-insensitive (e.g. 'Weather', 'Art & Design'). Omit to list categories first.",
+					"description": "Category name from the no-category call, case-insensitive, e.g. 'Weather', 'Art & Design'; omit to list the categories first.",
 				},
 			},
 		},

@@ -24,11 +24,9 @@ func registReadFiles() {
 		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `Canonical way to read any file — text, PDF, DOCX, PPTX, CSV/TSV, image, or audio/video (returned as a verbatim transcript) — and the step that must precede edit_file on an existing file: an edit is refused unless the file was read in this turn and is unchanged on disk since.
-Use for 讀檔 / 看一下這個檔案 / 這份 PDF 寫什麼 / 這段錄音說了什麼, and for read_file / cat / head / tail.
-Each path maps to its content, or to an error string for that path. Text lines arrive as "<row>\t<line>" — the number is not in the file, so strip it before using a line as an edit_file anchor. Locating a file → find_files; opening it in an app → open_file.
-A file this session produced, or an earlier run of the same recurring task, is not reference input — read it back only to diff, continue or cite that file.
-What went wrong in a background, scheduled or chatbot run is in ~/.config/agenvoy/daemon.log — append-only, newest last, so page from the end with offset/limit.`,
+		Description: `Reads files: text (each line prefixed with its row number, which is not in the file), PDF, DOCX, PPTX, CSV/TSV, images, and audio/video as a verbatim transcript.
+Use for "read this file", "show me this file", "what does this PDF say", "what is said in this recording", "why did the background / scheduled / chatbot run fail" (~/.config/agenvoy/daemon.log), and for read_file / cat / head / tail; also the required step before edit_file on an existing file. A file this session produced, or an earlier run of the same recurring task, is read back only to diff, continue or cite it, not as reference input.
+Locating a file → find_files; opening it in an app → open_file.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -40,26 +38,26 @@ What went wrong in a background, scheduled or chatbot run is in ~/.config/agenvo
 						"properties": map[string]any{
 							"path": map[string]any{
 								"type":        "string",
-								"description": "File to read — '/abs/path/foo.go', '~/notes.md', 'relative/file.md'.",
+								"description": "File to read, absolute or relative to the work directory: '/abs/path/foo.go', '~/notes.md', 'relative/file.md'.",
 							},
 							"offset": map[string]any{
 								"type":        "integer",
-								"description": "1-based line — page for PDF, slide for PPTX, row for CSV.",
+								"description": "1-based start: line for text, page for PDF, slide for PPTX, row for CSV; for an append-only log such as daemon.log, page from the end. Ignored when around is set.",
 								"default":     1,
 							},
 							"limit": map[string]any{
 								"type":        "integer",
-								"description": "How many lines (pages, slides, rows) to read. When find_files(mode=search, output=content) already gave the line numbers, read only that region. A text file cut short ends with a notice naming the next offset.",
+								"description": "How many lines (pages, slides, rows) to read from offset; a text file cut short ends with a notice naming the next offset. When find_files already gave the rows, use around instead of a wide range. Ignored when around is set.",
 								"default":     defaultReadLimit,
 							},
 							"around": map[string]any{
 								"type":        "array",
 								"items":       map[string]any{"type": "integer"},
-								"description": "Plain-text files only: 1-based rows to read around, e.g. the lines find_files returned. Each row gets `context` lines on both sides, overlapping windows merge, and a '...' line marks skipped text. Set → offset and limit are ignored.",
+								"description": "Plain-text files only: 1-based rows to read around, e.g. [42, 180] from find_files. Each row gets `context` lines on both sides, overlapping windows merge, and a '...' line marks skipped text. When set, offset and limit are ignored.",
 							},
 							"context": map[string]any{
 								"type":        "integer",
-								"description": "With around: lines shown before and after each row; 0 shows the rows alone.",
+								"description": "With around only: lines shown before and after each row; 0 shows the rows alone.",
 								"default":     defaultAroundContext,
 							},
 						},

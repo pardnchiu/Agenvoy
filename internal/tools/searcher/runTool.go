@@ -14,7 +14,7 @@ func registRunTool() {
 		Name:      "run_tool",
 		SystemUse: true,
 		Description: `Calls a tool from the Tools list given before the user input and returns that tool's result.
-Every tool listed there by name only goes through here; tools already in this request's tool definitions are called directly.
+Use for every call to a tool that list names only; tools already in this request's tool definitions are called directly, not through here.
 Before the first call to a name, fetch its schema with find_tools(names=[...]), batching only the names the next step needs.`,
 		Parameters: map[string]any{
 			"type": "object",
@@ -25,7 +25,7 @@ Before the first call to a name, fetch its schema with find_tools(names=[...]), 
 				},
 				"args": map[string]any{
 					"type":        "object",
-					"description": "Arguments matching the schema find_tools returned for that name; {} when it takes none.",
+					"description": "Arguments matching the schema find_tools returned for that name.",
 					"default":     map[string]any{},
 				},
 			},

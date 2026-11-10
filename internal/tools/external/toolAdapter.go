@@ -19,46 +19,46 @@ func Register() {
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  true,
-		Description: `Sends one HTTP request to any URL and returns status, headers and body — GET through DELETE, multipart upload included.
-Use for 打 API / 呼叫端點 / POST 一份資料, including a public API found via public_api_list — what an endpoint accepts, returns or rejects is settled here, not by reading a project's source or SDK.
+		Description: `Sends one HTTP request to a public URL and returns the status, headers and text body; private, loopback and link-local hosts are out of reach.
+Use for "call this API", "hit this endpoint", "POST this data", including a public API found via public_api_list — what an endpoint accepts, returns or rejects is settled here, not by reading a project's source or SDK.
 HTML meant to be read → fetch_page; a binary file → download_file; a user-supplied API needing a key → script_* tool via reasoning_guide(tool_generate).`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"url": map[string]any{
 					"type":        "string",
-					"description": "Full URL (e.g. 'https://api.example.com/v1/items').",
+					"description": "Full URL with query string, e.g. 'https://api.example.com/v1/items?limit=10'.",
 				},
 				"method": map[string]any{
 					"type":        "string",
-					"description": "HTTP method.",
+					"description": "HTTP method: GET/DELETE send no body; POST/PUT/PATCH send body encoded per content_type.",
 					"enum":        []string{"GET", "POST", "PUT", "DELETE", "PATCH"},
 					"default":     "GET",
 				},
 				"headers": map[string]any{
 					"type":        "object",
-					"description": "Headers (e.g. {\"Authorization\": \"Bearer ...\"}).",
+					"description": "Extra headers as string values, e.g. {\"Authorization\": \"Bearer ...\"}; Accept defaults to application/json and Content-Type follows content_type unless overridden here.",
 					"default":     map[string]any{},
 				},
 				"body": map[string]any{
 					"type":        "object",
-					"description": "Request body (POST/PUT/PATCH). content_type=json/form: flat key-value object. content_type=multipart: {\"fields\":{key:value,...},\"files\":[{\"name\":\"field\",\"path\":\"/abs/path\",\"content_type\":\"application/gzip\"},...]}. File path must be absolute; binary read from disk.",
+					"description": "Body for POST/PUT/PATCH, ignored for GET/DELETE. json: any object; form: flat key-value object; multipart: {\"fields\":{key:value,...},\"files\":[{\"name\":\"field\",\"path\":\"/abs/path\",\"content_type\":\"application/gzip\"},...]}, each file read from its absolute path.",
 					"default":     map[string]any{},
 				},
 				"content_type": map[string]any{
 					"type":        "string",
-					"description": "Body encoding. multipart for file uploads (binary).",
+					"description": "Body encoding: json (application/json), form (x-www-form-urlencoded), multipart (file uploads).",
 					"enum":        []string{"json", "form", "multipart"},
 					"default":     "json",
 				},
 				"timeout": map[string]any{
 					"type":        "integer",
-					"description": "Timeout seconds (max 300). Use 120+ for compute-heavy APIs.",
+					"description": "Timeout in seconds, capped at 300; 120+ for compute-heavy APIs.",
 					"default":     30,
 				},
 				"force": map[string]any{
 					"type":        "boolean",
-					"description": "Skip the cached-result lookup and re-send even if an identical GET was made in the last 30 minutes. Only GET is ever cached. Set true when the user asks to re-check or refresh.",
+					"description": "true re-sends a GET even if an identical one was made in the last 30 minutes (only GET is cached); use when the user asks to re-check or refresh.",
 					"default":     false,
 				},
 			},

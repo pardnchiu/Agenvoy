@@ -21,19 +21,19 @@ func registTestTool() {
 		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `Runs a script tool's script.py in the sandbox with JSON on stdin and returns what it printed.
-Use for 測試工具 / 驗證 script, and after every edit_tool write or patch before the tool is used for real.
-It fails → edit_tool(mode=patch), then test again.`,
+		Description: `Runs a script tool's script.py in the sandbox (60s limit) with JSON on stdin and returns its stdout, or its stderr as the error; tool.json is not checked.
+Use for "test this tool", "check the script works", and after every edit_tool write or patch before the tool is used for real.
+It fails → edit_tool(mode=patch), then test again; checking tool.json or editing the tool → edit_tool.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"name": map[string]any{
 					"type":        "string",
-					"description": "Snake_case, no 'script_' prefix — e.g. 'ip_geolocation_lookup'.",
+					"description": "Tool directory name in snake_case without the 'script_' prefix, as given to edit_tool, e.g. 'ip_geolocation_lookup'.",
 				},
 				"input": map[string]any{
 					"type":        "string",
-					"description": "JSON fed to script.py on stdin — '{\"ip\":\"8.8.8.8\"}'.",
+					"description": "JSON string fed to script.py on stdin, shaped like the tool's parameters, e.g. '{\"ip\":\"8.8.8.8\"}'.",
 					"default":     "{}",
 				},
 			},

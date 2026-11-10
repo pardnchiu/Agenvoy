@@ -29,7 +29,7 @@ func registFindTools() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `Returns full parameter schemas for the tools you name or describe (search), or every tool's name and one-line description (list).
-Use before the first run_tool call to a name, and for 有哪些工具 / 找工具 / 有沒有可以...的工具 / search_tools / list_tools; a capability that looks missing is checked here before anything is built.
+Use before the first run_tool call to a name, and for "what tools do you have", "find a tool for ...", "is there a tool that can ...", search_tools / list_tools; a capability that looks missing is checked here before anything is built.
 Building a tool → edit_tool; testing a script tool → test_tool.`,
 		Parameters: map[string]any{
 			"type": "object",
@@ -37,17 +37,17 @@ Building a tool → edit_tool; testing a script tool → test_tool.`,
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"search", "list"},
-					"description": "search returns schemas for names or query; list returns names and descriptions only. Omitted: names or query → search, otherwise list.",
+					"description": "search: full schemas for names or query; list: every tool's name and description, no schemas. Omitted: names or query given → search, otherwise list.",
 				},
 				"names": map[string]any{
 					"type":        "array",
 					"items":       map[string]any{"type": "string"},
 					"maxItems":    maxSelectNames,
-					"description": "mode=search: exact names from the Tools list, at most 16 per call. When several fit one intent, prefer mcp__* over script_* over [system-default].",
+					"description": "mode=search: exact names from the Tools list (case-insensitive), at most 16 per call; takes precedence over query. When several fit one intent, prefer mcp__* over script_* over [system-default].",
 				},
 				"query": map[string]any{
 					"type":        "string",
-					"description": "mode=search: keywords that must all match; only when no listed name fits.",
+					"description": "mode=search, only when no listed name fits: space-separated English keywords that must all match a tool's name or description, e.g. 'weather forecast', 'pdf merge'; returns at most 5 tools per source (mcp, script, ext, system).",
 				},
 			},
 		},

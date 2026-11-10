@@ -25,27 +25,27 @@ func registChatHistory() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `Returns this session's past runs: each run's objective, its tool calls with arguments and output, and the messages.
-Use for 最近做了什麼 / 之前處理過這個嗎 / 那次查到什麼 / 剛剛的報告 / 那個工具回了什麼 / 我們之前聊過什麼, and before re-running a fetch, search or report the session may already have, so its output is reused instead.
-Files in the workspace → read_files; file versions → file_history; tool failures → error_history.`,
+		Description: `Returns this session's past runs: each run's objective, its tool calls with arguments and output, its reply, and the conversation messages.
+Use for "what did we just do", "have we handled this before", "what did that search find", "show the report from earlier", "what did that tool return", "what did we talk about yesterday", and before re-running a fetch, search or report this session may already have, so its output is reused instead.
+Files in the workspace → read_files; past versions of a file → file_history; tool failures and their fixes → error_history.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"list", "tool_list", "tool", "read", "search"},
-					"description": "list: recent runs. tool_list: outputs worth reusing (network, subagent, generated media, mcp__/script_/ext_) across recent runs; check it before fetching anything. tool: one call's raw output. read: whole runs. search: past messages. Omitted: task_id + name → tool, task_id → read, keyword → search, otherwise list.",
+					"description": "list: recent runs, newest first. tool_list: reusable outputs across recent runs (fetch_page, search_web, http_request, download_file, generate_image, subagents, mcp__/script_/ext_ tools); check it before fetching anything. tool: one call's raw output. read: whole runs. search: past messages. Omitted: task_id + name → tool, task_id → read, keyword → search, otherwise list.",
 					"default":     "list",
 				},
 				"task_id": map[string]any{
 					"type":        "array",
 					"items":       map[string]any{"type": "string"},
-					"description": "Ids from list or tool_list rows; read takes several, tool exactly one.",
+					"description": "Task ids from list or tool_list rows; mode=read takes several, mode=tool uses only the first.",
 				},
 				"scope": map[string]any{
 					"type":        "string",
 					"enum":        []string{"reference", "full"},
-					"description": "mode=read: reference keeps only the outputs tool_list covers and reduces other calls to names; full keeps every call's arguments and output.",
+					"description": "mode=read: reference keeps the outputs tool_list covers and lists other calls by name only; full keeps every call's arguments and output.",
 					"default":     "reference",
 				},
 				"name": map[string]any{
@@ -54,7 +54,7 @@ Files in the workspace → read_files; file versions → file_history; tool fail
 				},
 				"args": map[string]any{
 					"type":        "string",
-					"description": "mode=tool: that row's arguments string; needed only when the run called the tool more than once.",
+					"description": "mode=tool: that row's arguments string, matched exactly; needed only when the run called the tool more than once.",
 				},
 				"keyword": map[string]any{
 					"type":        "string",
@@ -69,7 +69,7 @@ Files in the workspace → read_files; file versions → file_history; tool fail
 				"time_range": map[string]any{
 					"type":        "string",
 					"enum":        slices.Sorted(maps.Keys(configs.TIME_RANGES)),
-					"description": "mode=search: how far back to look.",
+					"description": "mode=search: how far back to look; an unknown value falls back to the default.",
 					"default":     defaultTimeRange,
 				},
 				"limit": map[string]any{

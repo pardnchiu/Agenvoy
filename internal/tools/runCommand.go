@@ -32,10 +32,9 @@ func registRunCommand() {
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
-		Description: fmt.Sprintf(`Runs one binary in the work directory and returns its combined stdout/stderr once it exits. Networking is off unless network: true; git clone / fetch / pull / push, package installs, go mod download, curl and wget fail to resolve a host without it.
-Use for 跑一下 / 執行 / build / test / lint / format and local git work.
-A watcher (--watch, chokidar, npm run sass/build/dev), a job likely over %d minutes or 背景跑 / 跑完告訴我 → background_command; cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; open in an app → open_file.
-Inspection only (git status / log / diff, du, which, docker ps, git config --list, --version) runs without asking, matched against a read-only allowlist by binary plus up to two subcommands; anything else asks, so never chain one behind && with a command that writes.`, configs.BACKGROUND_THRESHOLD_MIN, systemPackageRoute),
+		Description: fmt.Sprintf(`Runs one binary in the work directory and returns its combined stdout/stderr once it exits; networking is off unless network: true, and rm moves its targets to the trash instead of deleting them.
+Use for "run this", "build it", "run the tests", "lint / format the code", and local git work such as commit, branch or merge.
+A watcher (--watch, chokidar, npm run sass/build/dev), a job likely over %d minutes, or "run it in the background" / "tell me when it's done" → background_command; cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; opening a file or link in an app → open_file.`, configs.BACKGROUND_THRESHOLD_MIN, systemPackageRoute),
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": commandProperties(),
@@ -66,22 +65,22 @@ func commandProperties() map[string]any {
 	return map[string]any{
 		"argv": map[string]any{
 			"type":        "array",
-			"description": "The command as an argv array — ['git','status'], ['go','test','./...']. A single pipeline or redirect needs ['sh','-c','<full command>']; without a shell metacharacter (| && > * ~) it is called directly, never wrapped in sh -c. A multi-line script goes in a file you write first, then run that file. When the request names a capability rather than an exact command, resolve which binary is installed before running one: a single ['sh','-c','command -v <every candidate>'] prints only those that exist. Guessing the most common name costs one round trip per guess and the failure reads as 'command not found', not as 'wrong binary'.",
+			"description": "Keep read-only inspection (git status / log / diff, du, which, docker ps, --version) in its own call, never chained with && to a command that writes, so it matches the read-only allowlist. The command as an argv array whose first item is a bare binary name, not a path: ['git','status'], ['go','test','./...']. A pipeline, redirect, glob, ~ or && (| > * ~ &&) needs ['sh','-c','<full command>']; without one, call the binary directly, never wrapped in sh -c. Inside sh -c every command must be a literal bare name (no $VAR or $(...) in command position), and rm and sudo are refused there. A multi-line script goes in a file you write first, then run that file. cd is refused: pass absolute paths, or ['sh','-c','cd <dir> && <command>'] for one command. Root privileges → ['sudo','<binary>', ...] with no sudo flags, never nested sudo or su; it runs outside the sandbox. When the request names a capability rather than an exact binary, first run ['sh','-c','command -v <every candidate>'], which prints only the installed ones; guessing one name per call costs a round trip each and fails as 'command not found', not 'wrong binary'.",
 			"items":       map[string]any{"type": "string"},
 			"minItems":    1,
 		},
 		"network": map[string]any{
 			"type":        "boolean",
-			"description": "Set true when the command has to reach a host — git clone / fetch / pull / push, npm or pnpm or yarn install, pip install, go mod download, cargo fetch, curl. The sandbox keeps networking off until this is set, so leave it out for anything that only touches local files.",
+			"description": "true when the command has to reach a host: git clone / fetch / pull / push, npm / pnpm / yarn / pip install, go mod download, cargo fetch, curl, wget. Without it these fail to resolve the host; leave it out for anything that only touches local files.",
 		},
 		"write_paths": map[string]any{
 			"type":        "array",
-			"description": "Absolute paths outside $HOME this command has to write to — ['/usr/local'] for a system install. The sandbox only allows writes under $HOME, so a command touching anything else fails with a permission error that looks like a file ownership problem and is not one. Each path needs the user's approval on this call. Paths under $HOME need not be listed. A path still denied after approval is root-owned: re-run with argv ['sudo', ...] instead.",
+			"description": "Absolute paths outside $HOME this command writes to, e.g. ['/usr/local'] for a system install; paths under $HOME are always writable and need not be listed. The sandbox only allows writes under $HOME, so a missing entry fails with a permission error that looks like file ownership and is not one: list the path here instead of running chown or chmod. A path still denied while listed is root-owned → argv ['sudo', ...]. Ignored when sandbox is false or argv starts with sudo.",
 			"items":       map[string]any{"type": "string"},
 		},
 		"sandbox": map[string]any{
 			"type":        "boolean",
-			"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Only after the sandbox has blocked this exact command with a permission error the user cannot fix through network or write_paths (diskutil -69863, operation not permitted on a system service). Every false call asks the user for the system password, and allow rules never skip that prompt. Root privileges → argv ['sudo', '<binary>', ...] (no sudo flags), which asks the same password and runs it outside the sandbox. Homebrew (brew install / upgrade / uninstall) runs its own sandbox, which cannot nest: pass false, never sudo.",
+			"description": "false runs the command outside the sandbox with the user's full permissions; network and write_paths are then ignored. Use it only after the sandbox blocked this exact command with an error network or write_paths cannot fix (diskutil -69863, operation not permitted on a system service); a root-owned target needs argv ['sudo', ...] instead. Homebrew (brew install / upgrade / uninstall) runs its own sandbox, which cannot nest: pass false, never sudo.",
 			"default":     true,
 		},
 	}
