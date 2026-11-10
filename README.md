@@ -269,6 +269,7 @@ A cost-effective model setup to get started:
    - OpenAI ChatGPT Plus ($20/mo)
    - SuperGrok ($30/mo)
 2. **No free plan is recommended.** Since 2026-11-09 (5:40 PM PT), Ollama Cloud's Free plan is pay-as-you-go: hosted models such as `gemma4:31b`, `gpt-oss:120b`, `gpt-oss:20b`, `nemotron-3-super` and `nemotron-3-ultra` need purchased credits, so Ollama Cloud no longer offers a free way to try Agenvoy. Running models locally with Ollama stays free, but small local models call tools unreliably. The lowest-cost recommendation is GitHub Copilot ($10/mo) above.
+3. Add TypeSafe's Jev as the decision model: create a key in the [TypeSafe Console](https://console.typesafe.ai/keys), add it with `/model add` → **API Key** → **TypeSafe**, then pick `typesafe@jev-latest` under `/model` → **decision**. It is billed only on input tokens ($42 per billion, output free, per [TypeSafe's model page](https://docs.typesafe.ai/models) on 2026-11-11) and keeps irrelevant skills, memory entries, search results and page boilerplate out of each turn; on the author's machine it left 95.8% of skill entries out of the turn context. Setup and measurements: [Quickstart](https://agenvoy.com/docs/quickstart).
 
 ---
 
