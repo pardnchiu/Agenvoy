@@ -179,6 +179,8 @@ Once it fans out, the main agent only splits the task, dispatches legs and synth
 
 A decision model answers typed questions — pick one option, with a confidence — in well under a second, so Agenvoy uses it to route requests and to filter what reaches the main model. Two providers serve it: `typesafe` (`TYPESAFE_API_KEY`) and `openrouter` (`OPENROUTER_API_KEY`, the models that output decisions; `cloudflare/clairic`, `respan/span-01*` and `scaledown/classify-1` are left out because they reject Agenvoy's request format). The option list is cached for 15 minutes and dropped when a provider key changes. Pick the model with `/model decision` in the TUI or the **Decision** card under **Config › Model**; it is stored as `decision_model`, and `off` (or empty) turns every use below off. A TypeSafe key is added like any other API key — `/model add` → **API Key** → **TypeSafe** in the TUI, or the TypeSafe card on the web **API Key** tab — and saving it only stores the key; the model is then picked under Decision. TypeSafe models are also kept out of OpenRouter's chat-model list.
 
+The recommended decision model is `typesafe@jev-latest`, TypeSafe's Jev (early access), which follows the newest Jev release; TypeSafe bills it on input tokens only ($42 per billion, output free, per its [model page](https://docs.typesafe.ai/models) on 2026-11-11). The [Quickstart](https://agenvoy.com/docs/quickstart) walks through the key and lists measured effects from a real installation.
+
 Every call times out after 3 seconds. Apart from dispatch and the skill list, an answer acts only at a confidence of 0.7 or above, and a failed call leaves things as they would be without a decision model.
 
 | Use | What it decides | When there is no answer |

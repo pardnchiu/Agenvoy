@@ -179,6 +179,8 @@ session 固定了模型就不排序也不 fallback；但 session reasoning 為 `
 
 decision model 以不到一秒的時間回答型別化的問題（從選項中挑一個並附信心值），Agenvoy 用它分派請求，並過濾送進主模型的內容。提供者有兩個：`typesafe`（`TYPESAFE_API_KEY`）與 `openrouter`（`OPENROUTER_API_KEY`，輸出為 decisions 的模型；`cloudflare/clairic`、`respan/span-01*` 與 `scaledown/classify-1` 不接受 Agenvoy 的請求格式，因此不列入）。可選清單快取 15 分鐘，provider key 變更時清除。在 TUI 以 `/model decision`、或在 **Config › Model** 的 **Decision** 卡片選擇模型；設定存於 `decision_model`，`off`（或空字串）會關閉下列所有用途。TypeSafe key 的新增方式與其他 API key 相同：TUI 為 `/model add` → **API Key** → **TypeSafe**，Web 為 **API Key** 分頁的 TypeSafe 卡片；存檔只會儲存 key，模型再到 Decision 選擇。TypeSafe 的模型也不會出現在 OpenRouter 的聊天模型清單中。
 
+推薦的 decision model 是 `typesafe@jev-latest`，也就是 TypeSafe 的 Jev（early access），會跟著最新的 Jev 版本；TypeSafe 只依輸入 token 計費（每十億 $42，輸出不收費，依 2026-11-11 的[模型頁](https://docs.typesafe.ai/models)）。[新手入門](https://agenvoy.com/zh/docs/quickstart)有金鑰設定步驟與實際安裝環境的實測效果。
+
 每次呼叫逾時 3 秒。除了分派與 skill 清單，回答的信心值須達 0.7 才會採用；呼叫失敗時，行為與沒有 decision model 時相同。
 
 | 用途 | 判斷內容 | 沒有回答時 |
