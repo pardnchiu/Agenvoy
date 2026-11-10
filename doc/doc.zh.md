@@ -187,7 +187,7 @@ decision model 以不到一秒的時間回答型別化的問題（從選項中�
 | 監看（`background_command`） | 命中錯誤關鍵字的輸出是否真的是失敗，以及是否只是重複上次的回報；誤判與重複都不回報 | 照常回報該段輸出並註明檢查失敗。未設定 decision model 時，每次命中關鍵字都會回報：等輸出穩定（靜止 2 秒，最多等 10 秒）、每 30 秒最多一次，附最新至多 8 KiB 輸出 |
 | `search_web` | 哪些結果標題與請求相關，其餘剔除 | 保留全部結果 |
 | `fetch_page`（markdown） | 哪些區塊是頁面雜訊，存快取前移除；頁面是否與請求相關，不相關則不交給模型 | 回傳完整頁面 |
-| Turn context | 現有工具是否涵蓋這個請求，否則提示查閱建工具指南；哪些 skill 相關，其餘不列入清單 | 不提示；列出全部 skill |
+| Turn context | 現有工具是否涵蓋這個請求，否則提示查閱建工具指南；哪些 skill 相關，其餘不列入清單；session 摘要的哪些條目（`key_decisions`／`past_discussions`／`current_discussion`）與請求相關，其餘不帶入，全部無關時不放摘要 | 不提示；列出全部 skill；帶入完整摘要 |
 | Session 摘要 | 哪些對話是雜訊、哪些 `key_decisions`／`past_discussions` 已過時，合併前一併移除 | 保留全部對話與條目 |
 | Context 超長 | 哪些工具步驟對請求已不需要，在依最舊優先刪減前先移除；最新一步與 `write_todo` 一律保留 | 只做最舊優先刪減 |
 
@@ -209,9 +209,25 @@ TUI、Web、Telegram 與 Discord 的回覆 footer 以 `model/reasoning` 顯示�
 
 各介面的選項一致：**Yes**、**Yes, don't ask again**、**Yes, allow this turn**、**No, skip this**（可附選填理由回給 agent，agent 會收到「使用者拒絕了這次呼叫，繼續下一步」）、**Abort task**（停止任務並保留 pending 供接續）與 **Cancel task**（停止任務並刪除 pending）。`run_command` 與 `background_command` 的確認另附一句由 dispatcher model 寫的說明：只在實際跳出確認時呼叫一次（唯讀指令不會詢問），只帶請求與該次呼叫，不寫入 session 歷史；未設定 dispatcher model 或 10 秒內未取得回應時不顯示。
 
+### 權限模式
+
+TUI 的工作目錄是 `$HOME` 底下、且不是 denied 或敏感路徑的子目錄時，啟動即為 `⏵⏵ auto`，其餘情況（`$HOME` 本身、`$HOME` 以外）為 `⏸ safe`；`Shift+Tab` 可切換，auto 只在工作目錄符合條件時生效。
+
+| 呼叫 | `⏸ safe` | `⏵⏵ auto` |
+| --- | --- | --- |
+| 唯讀工具、白名單內的唯讀指令 | 執行 | 執行 |
+| 目標都在工作目錄內的寫入與指令，含 `rm`（移到垃圾桶） | 確認 | 執行 |
+| 其他工具（`http_request` 寫入、MCP 工具、script 工具、下載、生成） | 確認 | 執行 |
+| 寫入、指令或 `rm` 的目標在 `$HOME` 內、工作目錄外 | 確認 | 確認，核准後該路徑在此 session 授權 |
+| `$HOME` 內的敏感路徑 | 確認 | 確認 |
+| `$HOME` 以外的路徑、`sudo`、`sandbox: false` | 密碼 | 密碼 |
+| 不可逆指令 | 確認 | 確認，有符合的 allow rule 也照樣確認 |
+
+不可逆指令對齊 Claude Code auto mode 預設擋的類別：`git reset --hard`、`git clean`、force push 與刪除遠端分支、下載後接直譯器執行、同時連網與讀取密鑰的腳本、上傳敏感檔案、`terraform`／`tofu`／`pulumi`／`cdk`／`kubectl`／`helm` 的套用與刪除、雲端 CLI 的刪除／部署／IAM 變更、部署 CLI（`firebase`、`vercel`、`netlify`、`wrangler`、`fly`、`serverless`）、資料庫 migration、破壞性 SQL、`gh pr merge` 與寫入型 `gh api`。目標取自 `edit_file` 的 path 與 `run_command` 的 argv（絕對路徑、`~`、`..`、`write_paths`、`rm` 的目標），腳本內部的行為看不到。Subagent 以全部放行執行，不受工作目錄限制。
+
 ### 受限路徑與受限指令
 
-`$HOME` 以外的路徑與敏感清單內的路徑（`configs/jsons/sensitive_path.json`，可由 `config.json` 的 `sensitive_path` 擴充）不會直接被拒絕：`boundary.Restricted` 會收集它們並發出確認，且該確認同時要求作業系統密碼（TUI 與 Web 確認框皆為密碼欄，由 daemon 驗證）；`run_command`、`background_command` 以 argv `['sudo', ...]` 或 `sandbox: false` 執行時也走同一道關卡，任何權限模式都一樣；驗證通過後 `sudo` 以 `sudo -n` 沿用驗證留下的授權執行。TUI 的 `!` shell 指令含 `sudo` 且沒有有效授權時，會先跳出密碼框。核准綁定該 session 與該路徑，於 daemon 存續期間有效；密碼欄是否出現依 sudo 自己的 timestamp（`sudo -n -v`），該 ticket 仍有效時彈窗不會再出現密碼欄。密碼錯誤時彈窗保留並顯示錯誤，可重新輸入，驗證成功才關閉。受限確認不提供 **Yes, don't ask again** 與 **Yes, allow this turn**。`config.json` 的 `denied_path` 與 `denied_command` 為硬拒，任何核准都解不開；不在 `denied_command` 的指令一律可執行，但仍會經過 `run_command` 的一般確認。
+`$HOME` 以外的路徑與敏感清單內的路徑（`configs/jsons/sensitive_path.json`，可由 `config.json` 的 `sensitive_path` 擴充；涵蓋金鑰與憑證檔、`.git`、`.claude`、shell 啟動檔與 `.mcp.json`）不會直接被拒絕：`boundary.Restricted` 會收集它們並發出確認。`$HOME` 以外的路徑另要求作業系統密碼（TUI 與 Web 確認框皆為密碼欄，由 daemon 驗證），`$HOME` 內的敏感路徑只需確認；`run_command`、`background_command` 以 argv `['sudo', ...]` 或 `sandbox: false` 執行時也走同一道關卡，任何權限模式都一樣；驗證通過後 `sudo` 以 `sudo -n` 沿用驗證留下的授權執行。TUI 的 `!` shell 指令含 `sudo` 且沒有有效授權時，會先跳出密碼框。核准綁定該 session 與該路徑，於 daemon 存續期間有效；密碼欄是否出現依 sudo 自己的 timestamp（`sudo -n -v`），該 ticket 仍有效時彈窗不會再出現密碼欄。密碼錯誤時彈窗保留並顯示錯誤，可重新輸入，驗證成功才關閉。需要密碼的確認不提供 **Yes, don't ask again** 與 **Yes, allow this turn**。`config.json` 的 `denied_path` 與 `denied_command` 為硬拒，任何核准都解不開；不在 `denied_command` 的指令一律可執行，但仍會經過 `run_command` 的一般確認。
 
 自動化之前要知道的事項：
 
@@ -298,7 +314,7 @@ agen
 | `Shift+F`             | 切換 fast mode              |
 | `Shift+U`             | 查看 provider 額度與餘額    |
 | `Shift+G`             | 切換是否載入工作目錄的 `CLAUDE.md`／`AGENTS.md` 專案指引；開啟時狀態列顯示檔名 |
-| `Shift+Tab`           | 切換 allow-all（略過工具確認）；只要沒有任務在執行且未開啟指令選單即可使用 |
+| `Shift+Tab`           | 切換 `⏵⏵ auto`／`⏸ safe`（見[權限模式](#權限模式)）；只要沒有任務在執行且未開啟指令選單即可使用 |
 
 在彈出視窗中，`esc` 會回到開啟它的上一頁，只有第一頁才會關閉；確認、密碼與 `ask_user` 視窗不理會 `esc`，須選擇選項；`/usage` 這類純列表視窗以 ↑／↓ 捲動而非選取。
 
@@ -520,7 +536,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 |            | `edit_file`                       | 建立、修改、移置或還原檔案（`mode=write\|patch\|remove\|restore`）；覆寫或修改既有檔案前，必須在同一次執行中先以 `read_files` 讀過，且檔案之後未在磁碟上被改動                                                                                                                            |
 |            | `file_history`                    | 工具改過的每個檔案的版本紀錄（`mode=list\|read`）                                                                                                                                                                                                                                         |
 |            | `write_result`                    | 將長篇成果存為 `report-<時間>.md` 或 `.html`（`format=md\|html`），放在輸出資料夾（`output_dir`；預設 `~/Downloads`，不存在時為 `~/.config/agenvoy/download`）；模型只提供內容。`html` 寫入前會先檢查：須掛載 QuickUI（`new QUI(`）、inline script 須可解析、script 不得直接寫 markup（`innerHTML`、`createElement` 等）、`T.init` 目標 id 須存在、`{{ }}` 與 `:if` 不得含運算式；任一不符即不寫入並回傳問題清單（未掛 QuickUI 時另附 `html_render` 規則） |
-| 執行環境   | `run_command`                     | 在工作目錄以沙箱約束執行二進位並等待結束；watcher（`--watch`、`chokidar`，或會啟動 watcher 的 package script，含經 `sh -c` 與 `package.json` 展開者）在啟動前即拒絕，改由 `background_command` 執行。argv 命中唯讀白名單（`configs/jsons/read_only_command.json`，532 條，可用 `read_only_command` 追加）時不需確認，並與其他唯讀呼叫並行執行；`sh -c`／`bash -c` 腳本須每個內層指令都命中，且不含變數賦值、`export`、`printf -v`、算術與參數展開；版本查詢條目（`--version`、`-v`）須整個 argv 相符，git 全域旗標只收明列項；其餘除非命中使用者的 allow 規則或本輪全部允許，否則跳確認。argv 任一參數落在敏感路徑（`sensitive_path.json`）即取消命中，所以 `cat` 雖在清單內，`cat ~/.aws/credentials` 仍會跳確認。條目以 `bin`、`bin sub`、`bin sub sub` 三種形式比對，第四段永不參與比對，更長的形式只能收斂成這三種。沙箱禁網，`git clone`／`fetch`／`push`、`npm install`、`pip install`、`go mod download`、`curl`、`wget` 都會解析不到主機，除非該次呼叫帶 `network: true`；帶了就跳確認，也不再比對唯讀白名單。沙箱只允許寫入 `$HOME`，需寫入其外的絕對路徑時於 `write_paths` 宣告；root 擁有的目標以 argv `['sudo', '<binary>', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），會以 `sudo -n` 在沙箱外執行；`sandbox: false` 以使用者身分在沙箱外執行（Homebrew 需要，且不可加 sudo）。三者都須經使用者以系統密碼核准。權限錯誤找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。`rm` 改為移至垃圾桶（`sudo rm` 會直接刪除）；macOS 的 `open` 改走 `open_file`。單純抓 URL 走 `fetch_page`／`http_request`；裝系統套件用 `sudo` 加 system prompt Host OS 行列出的套件管理器（該行也列出作業系統版本），或以 `sandbox: false` 執行 `brew` |
+| 執行環境   | `run_command`                     | 在工作目錄以沙箱約束執行二進位並等待結束；watcher（`--watch`、`chokidar`，或會啟動 watcher 的 package script，含經 `sh -c` 與 `package.json` 展開者）在啟動前即拒絕，改由 `background_command` 執行。argv 命中唯讀白名單（`configs/jsons/read_only_command.json`，532 條，可用 `read_only_command` 追加）時不需確認，並與其他唯讀呼叫並行執行；`sh -c`／`bash -c` 腳本須每個內層指令都命中，且不含變數賦值、`export`、`printf -v`、算術與參數展開；版本查詢條目（`--version`、`-v`）須整個 argv 相符，git 全域旗標只收明列項；其餘除非命中使用者的 allow 規則、本輪全部允許，或處於 [auto 模式](#權限模式)，否則跳確認。argv 任一參數落在敏感路徑（`sensitive_path.json`）即取消命中，所以 `cat` 雖在清單內，`cat ~/.aws/credentials` 仍會跳確認。條目以 `bin`、`bin sub`、`bin sub sub` 三種形式比對，第四段永不參與比對，更長的形式只能收斂成這三種。沙箱禁網，`git clone`／`fetch`／`push`、`npm install`、`pip install`、`go mod download`、`curl`、`wget` 都會解析不到主機，除非該次呼叫帶 `network: true`；在 `⏸ safe` 下帶了就跳確認，也不再比對唯讀白名單。沙箱只允許寫入 `$HOME`，需寫入其外的絕對路徑時於 `write_paths` 宣告；root 擁有的目標以 argv `['sudo', '<binary>', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），會以 `sudo -n` 在沙箱外執行；`sandbox: false` 以使用者身分在沙箱外執行（Homebrew 需要，且不可加 sudo）。三者都須經使用者以系統密碼核准。權限錯誤找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。`rm` 改為移至垃圾桶（`sudo rm` 會直接刪除）；macOS 的 `open` 改走 `open_file`。單純抓 URL 走 `fetch_page`／`http_request`；裝系統套件用 `sudo` 加 system prompt Host OS 行列出的套件管理器（該行也列出作業系統版本），或以 `sandbox: false` 執行 `brew` |
 |            | `open_file`                       | 以系統預設處理程式開啟檔案、URL 或系統設定（如 `x-apple.systempreferences:`）；本機檔案免確認，URL 一律跳確認 |
 |            | `download_file`                   | 下載二進位資產至磁碟                                                                                                                                                                                                                                                                      |
 | Agent 協調 | `subagents`                       | 將子任務委派到獨立 session（`mode=invoke\|list`）；invoke 必填 `model`（可為 `auto`，未註冊或 `pass` 層級的模型會被拒絕），`reasoning` 預設 `auto`，不合法的值直接報錯；子 session 固定排除 `subagents`、`edit_file`、`write_result`、`html_template`、`generate_*`、`open_file`、`schedules`、`store_secret` 等寫檔或有持久副作用的工具 |

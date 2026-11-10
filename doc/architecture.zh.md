@@ -103,11 +103,11 @@ graph TB
 `internal/agents/exec` 依職責拆成多個子套件，主迴圈只負責組 prompt、送模型與分派工具：
 
 - **`exec/model`**：`Route` 決定指定模型、session 模型或選模器（`selectWithLLM`／`selectWithDecision`，開啟 decision dispatcher 時兩者同時執行），並建立 fallback 清單；`Next` 在失敗時挑下一個候選並以 `CheckAlive` 做健康檢查（compat 端點打 `/models`，其他 provider 走 probe 或 health endpoint）。
-- **`exec/subagent`**：`Exec` 建立或接回子 session（`temp-` session 不讀歷史）、繼承父層工作目錄、allow-all 與 `DeliverTo`，排除寫檔與有持久副作用的工具後以 `exec.Run(..., isSub=true)` 執行，最多 3 條並行；遇到提問時由 `waitResume` 等待回答。
+- **`exec/subagent`**：`Exec` 建立或接回子 session（`temp-` session 不讀歷史）、繼承父層工作目錄、allow-all（不受工作目錄限制）與 `DeliverTo`，排除寫檔與有持久副作用的工具後以 `exec.Run(..., isSub=true)` 執行，最多 3 條並行；遇到提問時由 `waitResume` 等待回答。
 - **`exec/chatbot`**：新對話的驗證碼除了寫入 daemon log，也會轉發到 `config.json` 設定的 admin 對話（`tg@<id>`／`dc@<id>`，須已授權）。
 - **`exec/summary` 與 `exec.Reset`**：daemon 每 15 分鐘產生滾動摘要，優先用 summary 模型，冷卻中或內容過大時退回主模型；有 decision model 時，合併前先移除雜訊對話與過時的 `key_decisions`／`past_discussions`；`Reset(withSummary)` 先重建摘要，產生不了就中止以免遺失 context。
 - **`exec/compact`**：非第一輪且上一輪 input tokens 達上限 80% 時，先萃取舊歷史再壓縮工具歷史；context 超長錯誤走 `TrimRatio`：先由 decision model 移除請求已不需要的工具步驟（保留最新一步與 `write_todo`），再以 `TrimFallback` 依最舊優先刪減；換模型時先試 `RawToolFallback`，不行才清空工具歷史。
-- **Turn context 與 steer**：工作目錄、權限模式、`run_tool` 工具名單、Skill 清單與 `CLAUDE.md`／`AGENTS.md`（開啟 guide 時）每輪以一則 user 訊息注入在使用者輸入之前（模板位於 `configs/prompts/system_prompt/inject/`），system prompt 因此保持穩定；有 decision model 時，Skill 清單只保留與請求相關的 Skill，現有工具都不涵蓋請求時另加一行提示查閱建工具指南；執行中送入的 steer 經 IPC 進入佇列，下一輪以 `inject/steer.md` 注入，session reset 時清除。
+- **Turn context 與 steer**：工作目錄、`run_tool` 工具名單（MCP 工具依 server 前綴分組）、Skill 清單、滾動摘要、同一 task 仍在執行的背景任務與 `CLAUDE.md`／`AGENTS.md`（開啟 guide 時）每輪以一則 user 訊息注入在使用者輸入之前（模板位於 `configs/prompts/system_prompt/inject/`），system prompt 因此保持穩定；有 decision model 時，Skill 清單只保留與請求相關的 Skill，滾動摘要只保留與請求相關的 `key_decisions`／`past_discussions`／`current_discussion` 條目（未設 decision model 或判斷失敗時全數保留，全部無關時不放摘要），現有工具都不涵蓋請求時另加一行提示查閱建工具指南；執行中送入的 steer 經 IPC 進入佇列，下一輪以 `inject/steer.md` 注入，session reset 時清除。
 - **`agents/decision`**：`Ready` 與 `Request` 取得已設定的 decision model 並整理請求文字，`Decide` 以 3 秒逾時呼叫一次，`Batch` 依字數與題數切分大量輸入，`Confident` 在信心值達 0.7 時採用回答；未設定 decision model 或呼叫失敗時，各呼叫端維持原本的行為。
 - **`/v1/chat/completions`**：不經 `Prepare`／`Run`，以 stateless session 直接呼叫 `exec.Execute`，預設排除所有工具，agent 模式 header 才開放。
 - **錯誤訊息**：錯誤一律經 `internal/utils/msg` 的 `New`／`Wrap`／`Trace` 建立，格式為 `[Label] target: reason`；標示限 `Invalid`、`Not found`、`Denied`、`Conflict`、`Limit`、`Unavailable`、`Timeout`、`Upstream`、`Canceled`、`Internal`，包裝層保留最底層的標示，讓 agent 與 log 能直接判斷類別。
@@ -221,9 +221,10 @@ sequenceDiagram
 ## 安全邊界
 
 - Daemon 只監聽 `127.0.0.1` 與 `[::1]`；管理類 endpoint 另有 `localhostOnly()` 守衛。
-- denied path 與 denied command 會直接拒絕；敏感路徑、檔案工具在 `$HOME` 外的讀取與寫入（`read_files`、`find_files`、`file_history`、`edit_file`、`open_file`）及其他受限操作則要求明確確認，支援時再要求系統驗證；核准範圍限於該 session 與所請求的路徑或執行檔。
+- denied path 與 denied command 會直接拒絕；`$HOME` 內的敏感路徑要求確認，檔案工具在 `$HOME` 外的讀取與寫入（`read_files`、`find_files`、`file_history`、`edit_file`、`open_file`）、`sudo` 與 `sandbox: false` 另要求系統密碼；核准範圍限於該 session 與所請求的路徑或執行檔。
+- auto 模式（`⏵⏵ auto`）只在工作目錄是 `$HOME` 底下的非敏感子目錄時生效（`filesystem.WorkDirAllowsAll`，TUI 啟動時也依它決定預設模式）；生效時所有工具直接執行，但目標在 `$HOME` 內、工作目錄外的寫入與指令（`boundary.OutsideWorkDir`）與不可逆指令（`isIrreversibleCommand`，對齊 Claude Code auto mode 預設擋的類別，allow rule 不能略過）仍需確認；subagent 不受工作目錄限制。
 - 透過 `edit_file` 寫入或修改既有檔案前，必須在同一次執行中成功以 `read_files` 讀過該檔，且之後修改時間未變，否則拒絕；新檔案不需事先讀取。這項新鮮度檢查是路徑邊界與權限檢查的補充，不取代它們。
-- 命令執行受 shell AST validation 及 OS 沙箱限制（macOS 的 `sandbox-exec`、Linux 的 `bwrap`），且預設禁網；該次呼叫帶 `network: true` 才開放，且要求確認。需要寫入 `$HOME` 以外的命令，要在該次呼叫以 `write_paths` 宣告路徑；需要 root 的命令以 argv `['sudo', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），以 `sudo -n` 在沙箱外執行；兩者都由使用者輸入系統密碼核准。被沙箱擋住且找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。script 工具的沙箱保持網路開啟，只能寫入 `$HOME`。
+- 命令執行受 shell AST validation 及 OS 沙箱限制（macOS 的 `sandbox-exec`、Linux 的 `bwrap`），且預設禁網；該次呼叫帶 `network: true` 才開放，auto 模式以外要求確認。需要寫入 `$HOME` 以外的命令，要在該次呼叫以 `write_paths` 宣告路徑；需要 root 的命令以 argv `['sudo', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），以 `sudo -n` 在沙箱外執行；兩者都由使用者輸入系統密碼核准。被沙箱擋住且找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。script 工具的沙箱保持網路開啟，只能寫入 `$HOME`。
 - 憑證與 provider、MCP 的 OAuth token 存在作業系統 keychain（macOS Keychain、Linux `secret-tool`），不寫入 repository；`secret-tool` 失敗時改存 `~/.config/agenvoy/.secrets`（權限 0600）；都查無時最後才讀同名環境變數。
 
 ## 持久化結構
