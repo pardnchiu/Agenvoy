@@ -14,18 +14,16 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/guide"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
 
-func assignTurnContext(ctx context.Context, session *agenttypes.Session, workDir string, allowAll bool, skillScanner *runtime.SkillScanner, excludeSkills []string, withSkills bool, toolNames []string, toolGap bool) {
+func assignTurnContext(ctx context.Context, session *agenttypes.Session, workDir string, skillScanner *runtime.SkillScanner, excludeSkills []string, withSkills bool, toolNames []string, toolGap bool, summary string, background []interactive.BackgroundTask) {
 	var parts []string
 	if !session.Stateless {
-		parts = append(parts,
-			strings.ReplaceAll(strings.TrimSpace(configs.InjectWorkDir), "{{.WorkDir}}", workDir),
-			buildPermissionModeSection(allowAll),
-		)
+		parts = append(parts, strings.ReplaceAll(strings.TrimSpace(configs.InjectWorkDir), "{{.WorkDir}}", workDir))
 	}
 	if len(toolNames) > 0 {
-		parts = append(parts, strings.ReplaceAll(strings.TrimSpace(configs.InjectTools), "{{.Tools}}", strings.Join(toolNames, ", ")))
+		parts = append(parts, strings.ReplaceAll(strings.TrimSpace(configs.InjectTools), "{{.Tools}}", groupToolNames(toolNames)))
 	}
 	if toolGap {
 		parts = append(parts, strings.TrimSpace(configs.InjectToolGap))
@@ -34,6 +32,16 @@ func assignTurnContext(ctx context.Context, session *agenttypes.Session, workDir
 		if list := skillListBlock(skillScanner, excludeSkills); list != "" {
 			parts = append(parts, strings.ReplaceAll(strings.TrimSpace(configs.InjectSkills), "{{.Skills}}", list))
 		}
+	}
+	if len(background) > 0 {
+		lines := make([]string, 0, len(background))
+		for _, one := range background {
+			lines = append(lines, "- "+one.ID+": "+one.Description)
+		}
+		parts = append(parts, strings.ReplaceAll(strings.TrimSpace(configs.InjectBackground), "{{.Tasks}}", strings.Join(lines, "\n")))
+	}
+	if summary != "" {
+		parts = append(parts, summary)
 	}
 	if !session.Stateless {
 		if guideText := agentGuideSection(ctx, workDir); guideText != "" {
@@ -75,4 +83,31 @@ func agentGuideSection(ctx context.Context, workDir string) string {
 		).Replace(strings.TrimSpace(configs.InjectAgentGuide))
 	}
 	return ""
+}
+
+func groupToolNames(names []string) string {
+	var order []string
+	serverNames := map[string][]string{}
+	for _, name := range names {
+		rest, ok := strings.CutPrefix(name, "mcp__")
+		server, tool, found := strings.Cut(rest, "__")
+		if !ok || !found || server == "" || tool == "" {
+			order = append(order, name)
+			continue
+		}
+		prefix := "mcp__" + server + "__"
+		if _, seen := serverNames[prefix]; !seen {
+			order = append(order, prefix)
+		}
+		serverNames[prefix] = append(serverNames[prefix], tool)
+	}
+	parts := make([]string, 0, len(order))
+	for _, one := range order {
+		if tools, ok := serverNames[one]; ok {
+			parts = append(parts, one+"{"+strings.Join(tools, ", ")+"}")
+			continue
+		}
+		parts = append(parts, one)
+	}
+	return strings.Join(parts, ", ")
 }

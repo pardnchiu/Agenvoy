@@ -47,9 +47,9 @@ func (t TUI) viewIdle() string {
 
 	var confirmMode string
 	if t.allowAll {
-		confirmMode = errorStyle.Render("[auto]") + guideMode + cwd
+		confirmMode = skillStyle.Render("⏵⏵ auto") + guideMode + cwd
 	} else {
-		confirmMode = okayStyle.Render("[safe]") + guideMode + cwd
+		confirmMode = okayStyle.Render("⏸ safe") + guideMode + cwd
 	}
 
 	var top string

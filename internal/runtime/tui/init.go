@@ -190,6 +190,7 @@ func newModel(ctx context.Context) TUI {
 		textarea:           textArea,
 		spinner:            sp,
 		cwd:                cwd,
+		allowAll:           filesystem.WorkDirAllowsAll(cwd),
 		daemonStatus:       getDaemonStatus(),
 		connecting:         true,
 		httpStatus:         getHttpStatus(),

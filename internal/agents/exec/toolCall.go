@@ -20,6 +20,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/readonly"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
@@ -260,7 +261,7 @@ func isSensitiveReadFile(argsJSON string) bool {
 		return false
 	}
 	for _, f := range p.Files {
-		if f.Path != "" && boundary.IsSensitivePath(f.Path) {
+		if f.Path != "" && filesystem.IsSensitivePath(f.Path) {
 			return true
 		}
 	}
@@ -407,10 +408,19 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)
 		unsandboxed := tools.RestrictedRunCommand(toolName, toolArg)
-		restrictedList := append(append([]string{}, restrictedPaths...), unsandboxed...)
-		restricted := len(restrictedList) > 0
+		restricted := len(restrictedPaths)+len(unsandboxed) > 0
+		restrictedList := append(outsideHome(restrictedPaths), unsandboxed...)
 
-		if (!allowAll || len(unsandboxed) > 0) && (restricted || toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll)) {
+		scoped := allowAll && !agenttypes.SubagentFrom(ctx)
+		autoAllow := allowAll && (!scoped || filesystem.WorkDirAllowsAll(exec.WorkDir))
+		needsConfirm := toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll)
+		irreversible := autoAllow && !*turnAllowAll && len(unsandboxed) == 0 &&
+			isIrreversibleCommand(toolName, toolArg)
+		var outsidePaths []string
+		if autoAllow && scoped && needsConfirm {
+			outsidePaths = boundary.OutsideWorkDir(exec.SessionID, exec.WorkDir, toolName, toolArg)
+		}
+		if irreversible || restricted || len(outsidePaths) > 0 || !autoAllow && needsConfirm {
 			proceed := true
 			approved := false
 			verified := false
@@ -490,7 +500,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 					}
 				}
 			}
-			if approved && restricted && !verified {
+			if approved && len(restrictedList) > 0 && !verified {
 				proceed = false
 				approved = false
 				reason = fmt.Sprintf("this needs system password verification, which this channel cannot collect: %s", strings.Join(restrictedList, ", "))
@@ -518,6 +528,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			}
 			if approved {
 				boundary.Grant(exec.SessionID, restrictedPaths...)
+				boundary.Grant(exec.SessionID, outsidePaths...)
 			}
 		}
 
@@ -933,4 +944,18 @@ func failureNext(execErr string) string {
 		return "\nnext: credential missing or rejected → store_secret with the key name from this error, then call the failed tool again"
 	}
 	return "\nnext: once a different fix works, record it → error_history(mode=write, outcome=resolved)"
+}
+
+func outsideHome(paths []string) []string {
+	home, err := filesystem.RealHome()
+	if err != nil {
+		return slices.Clone(paths)
+	}
+	var list []string
+	for _, one := range paths {
+		if !filesystem.IsWithin(home, one) {
+			list = append(list, one)
+		}
+	}
+	return list
 }

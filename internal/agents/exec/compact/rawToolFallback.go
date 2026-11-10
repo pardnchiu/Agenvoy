@@ -31,7 +31,6 @@ func RawToolFallback(session *agenttypes.Session, taskHash string) bool {
 	}
 
 	session.ContextHistories = nil
-	session.Summary = go_llm_router.Message{}
 	head := []go_llm_router.Message{
 		{
 			Role:    "user",

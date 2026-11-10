@@ -4,7 +4,7 @@ Merge the new conversation into the previous summary and return the updated summ
 
 ## Fields
 
-- `key_decisions`: concluded rules that bind future requests, each starting with an agreed or rejected marker in the output language — `要：` / `不要：`, `Do:` / `Don't:`, `する：` / `しない：`.
+- `key_decisions`: concluded rules that bind future requests, each starting with `Do: ` for an agreed rule or `Don't: ` for a rejected one, in English whatever the output language; an entry from the previous summary that carries any other marker is rewritten to these.
   - Record only outcomes the user locked in for later work: "Never push to master directly", "部署一律走 staging 再上 production", "報告數字一律附資料來源".
   - Keep these out — they belong in the topic's `description` / `direction`:
     - tentative leanings, open debates, options still being weighed;
@@ -39,8 +39,8 @@ Exactly this format:
 <summary>
 {
   "key_decisions": [
-    "<agreed marker>rule the user agreed to for future work",
-    "<rejected marker>rule the user rejected for future work"
+    "Do: rule the user agreed to for future work",
+    "Don't: rule the user rejected for future work"
   ],
   "past_discussions": [
     {
