@@ -43,42 +43,41 @@ func Register() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     90 * time.Second,
-		Description: `[system-default] Live web lookup — DuckDuckGo results and Google News headlines together, returned as {"web":[...],"news":[...]}.
-Use for named entities, post-cutoff facts, versions, prices, 新聞 / 最新消息 / 現在怎麼樣了 / 查一下.
-Results are snippets: a result link worth citing → fetch_page. A URL already in hand → fetch_page directly.
-Several URLs from one domain on one topic → the most relevant, plus any that carries a figure or date the others lack.`,
+		Description: `[system-default] Live web lookup: DuckDuckGo results and Google News headlines together.
+Use for named entities, post-cutoff facts, versions, prices, "any news on", "what's the latest", "what's happening with", "look it up".
+Results are snippets: a result link worth citing → fetch_page; a URL already in hand → fetch_page directly; of several URLs from one domain on one topic, fetch the most relevant plus any that carries a figure or date the others lack.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"query": map[string]any{
 					"type":        "string",
-					"description": "Natural-language keywords, never a URL — 'React 19 release notes', 'TSMC earnings'.",
+					"description": "Natural-language keywords, never a URL, e.g. 'React 19 release notes', 'TSMC earnings'.",
 				},
 				"source": map[string]any{
 					"type":        "string",
 					"enum":        []string{"all", "web", "news"},
-					"description": "Which sources to hit. Keep all unless the question is only about one — web for documentation and general facts, news for headlines.",
+					"description": "Sources to hit: all (both), web (documentation and general facts), news (headlines only); keep all unless the question is only about one.",
 					"default":     "all",
 				},
 				"time_range": map[string]any{
 					"type":        "string",
 					"enum":        timeRanges,
-					"description": "Lookback window, applied to both sources. Use 7d for 最近/近期/本週, 30d for 本月. News caps at 7d.",
+					"description": "Lookback window for both sources: 7d for \"recent\" or \"this week\", 30d for \"this month\"; news never looks back further than 7d.",
 					"default":     "7d",
 				},
 				"ceid": map[string]any{
 					"type":        "string",
-					"description": "News edition (e.g. 'TW:zh-Hant', 'US:en').",
+					"description": "Google News edition as COUNTRY:language, e.g. 'TW:zh-Hant', 'US:en', 'JP:ja'; match the language of the query.",
 					"default":     "TW:zh-Hant",
 				},
 				"cdp": map[string]any{
 					"type":        "boolean",
-					"description": "Force the browser-based web fetch instead of HTTP POST. Slower but bypasses rate-limiting; auto-enabled on HTTP 202.",
+					"description": "true forces the browser-based web search instead of the HTTP request: slower but bypasses rate limiting; switched on automatically after a rate-limit response.",
 					"default":     false,
 				},
 				"force": map[string]any{
 					"type":        "boolean",
-					"description": "Skip the cached-result lookup and search again. Set true when the user asks to re-check or refresh.",
+					"description": "true skips the 30-minute result cache and searches again; use when the user asks to re-check or refresh.",
 					"default":     false,
 				},
 			},

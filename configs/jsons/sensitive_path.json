@@ -1,5 +1,5 @@
 {
-  "dirs": [".ssh", ".aws", ".gcloud", ".gnupg", ".gpg", ".docker"],
+  "dirs": [".ssh", ".aws", ".gcloud", ".gnupg", ".gpg", ".docker", ".git", ".claude"],
   "files": [
     "id_rsa",
     "id_rsa.pub",
@@ -20,7 +20,15 @@
     ".sh_history",
     ".netrc",
     ".git-credentials",
-    ".env"
+    ".env",
+    ".bashrc",
+    ".bash_profile",
+    ".profile",
+    ".zshrc",
+    ".zprofile",
+    ".zshenv",
+    ".zlogin",
+    ".mcp.json"
   ],
   "prefixes": [".env."],
   "extensions": [".pem", ".key", ".p12", ".pfx", ".cer"]

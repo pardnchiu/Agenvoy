@@ -84,47 +84,46 @@ func registFetchPage() {
 		Concurrent:  true,
 		Timeout:     90 * time.Second,
 		Description: `[system-default] Fetches one web page in a browser carrying the user's Chrome login, and returns it as markdown, html or json.
-Use when a URL is in hand — 讀這篇 / 這個連結寫什麼 / 打開這頁 — for each search or RSS result being cited, and for researching a site page by page until complete.
-Before the first page of a site, fetch its /llms.txt; when it lists the page you want, fetch that .md URL instead.
-No URL yet → search_web; saving a page or file to disk → download_file; an API endpoint → http_request.`,
+Use for "read this article", "what does this link say", "open this page", for each search or RSS result being cited, and for researching a site page by page until complete.
+No URL yet → search_web; saving a page or file to disk → download_file; a JSON API endpoint → http_request.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"link": map[string]any{
 					"type":        "string",
-					"description": "Full URL including https://.",
+					"description": "Full URL, e.g. 'https://example.com/post/1'; http:// is upgraded to https://, a #fragment is dropped, max 2048 chars. Before the first page of a site, fetch its /llms.txt; when it lists the page you want, fetch that .md URL instead.",
 				},
 				"keep_links": map[string]any{
 					"type":        "boolean",
-					"description": "true keeps same-domain links in the output, for following subpages of a docs site or multi-page article.",
+					"description": "true keeps same-domain links in the output (and skips the boilerplate filter), for following subpages of a docs site or multi-page article.",
 					"default":     false,
 				},
 				"same_session": map[string]any{
 					"type":        "boolean",
-					"description": "Send the user's Chrome cookies and login state, so login-only pages (social feeds, paywalled news, dashboards) load. false only when the logged-out view is asked for.",
+					"description": "true sends the user's Chrome cookies and login state, so login-only pages (social feeds, paywalled news, dashboards) load; false only when the logged-out view is asked for.",
 					"default":     true,
 				},
 				"headless": map[string]any{
 					"type":        "boolean",
-					"description": "true tries headless first and opens a window only when blocked. false opens a visible window right away: \"open:[url]\" requests, bot checks, JS challenges, pages needing interaction.",
+					"description": "true tries headless first and opens a window only when blocked; false opens a visible window right away, for \"open:[url]\" requests, bot checks, JS challenges and pages needing interaction.",
 					"default":     true,
 				},
 				"type": map[string]any{
 					"type":        "string",
 					"enum":        []string{"markdown", "html", "json"},
-					"description": "markdown for reading and summarising; json for structured extraction, comparing items, or feeding another tool; html only when raw DOM is needed.",
+					"description": "Output format: markdown (reading and summarising), json (structured extraction, comparing items, feeding another tool), html (raw DOM, only when needed).",
 					"default":     "markdown",
 				},
 				"scroll": map[string]any{
 					"type":        "integer",
-					"description": "Scroll passes to load lazy content, stopping early once the page stops changing: 10-20 for feeds, timelines and long comment threads; 0 when only the top of the page is needed.",
+					"description": "Scroll passes to load lazy content, stopping early once the page stops changing: 10-20 for feeds, timelines and long comment threads; 0 when only the top of the page is needed. Values above 20 are clamped.",
 					"minimum":     0,
 					"maximum":     maxScroll,
 					"default":     defaultScroll,
 				},
 				"force": map[string]any{
 					"type":        "boolean",
-					"description": "true skips the recent-result cache and re-fetches, when the user asks to refresh or re-check.",
+					"description": "true skips the 30-minute result cache and re-fetches, also retrying a URL previously marked as failed; use when the user asks to refresh or re-check.",
 					"default":     false,
 				},
 			},

@@ -17,21 +17,20 @@ func registEditFile() {
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
-		Description: `Every change to a file on disk: create or replace (write), edit regions (patch), move aside (remove), put a recorded version back (restore).
-Use for 寫檔 / 改這一段 / 刪掉這個檔 / 還原 / 改回上一版, and for write_file / patch_file / remove_file / restore_file / delete.
-Skill files → edit_skill; tool definitions → edit_tool; past versions → file_history.
-Runs on explicit request or a Skill step, never to park a short answer, a tool result or a calculation. A write returns a receipt and drops its content from history: check the receipt, never read the file back to confirm it, never rewrite it to restore text that only looks missing.`,
+		Description: `Changes one file on disk: create or replace it (write), edit regions of it (patch), move it aside (remove), or put a recorded version back (restore); a write drops its content from history, so check the returned receipt and never read the file back or rewrite it to restore text that only looks missing.
+Use for "write this to a file", "change this part", "delete this file", "undo that", "revert to the previous version", and for write_file / patch_file / remove_file / restore_file / delete; only on explicit request or a Skill step, never to park a short answer, a tool result or a calculation.
+Skill files → edit_skill; script tool definitions → edit_tool; a long report or page for the user → write_result; listing past versions → file_history.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"write", "patch", "remove", "restore"},
-					"description": "write: a first version or a deliberate full replacement. patch: everything else — a whole-file rewrite throws away text that was already correct. remove: moves the file aside, still restorable. restore: put a recorded version back. Omitted: content → write, targets → patch; remove and restore are never inferred.",
+					"description": "write: a first version or a deliberate full replacement. patch: every other change, since a whole-file rewrite throws away text that was already correct. remove: moves the file aside, restorable with mode=restore. restore: put a recorded version back. write and patch on an existing file need a read_files of it in this turn, unchanged on disk since. Omitted: targets → patch, content → write; remove and restore are never inferred.",
 				},
 				"path": map[string]any{
 					"type":        "string",
-					"description": "The file this call acts on — '/abs/path/foo.go', '~/notes.md', 'relative/file.md'. One file per call. Required for write, patch and remove; on restore it narrows a task_id undo to that one file. A file made for the user with no location asked for belongs in the output directory, which is where a blank path on write lands.",
+					"description": "The one file this call acts on, absolute or relative to the work directory: '/abs/path/foo.go', '~/notes.md', 'relative/file.md'. Required for write, patch and remove; on restore it narrows a task_id undo to that file. A file made for the user with no location asked for goes under the output directory named in the system prompt; give its full path.",
 					"default":     "",
 				},
 				"content": map[string]any{
@@ -40,13 +39,13 @@ Runs on explicit request or a Skill step, never to park a short answer, a tool r
 				},
 				"targets": map[string]any{
 					"type":        "array",
-					"description": "mode=patch: the edits to that file — read_files it first so every old_string matches the current bytes, minus the \"12\\t\" line-number prefix that read_files adds. Each item is {old_string, new_string}: new_string takes the place of old_string, empty deletes it, and to add lines you repeat old_string at the start of new_string. Items apply in the order listed, so sequence overlapping edits yourself.",
+					"description": "mode=patch: the edits to that file, each {old_string, new_string}. Every old_string resolves against the bytes on disk before any edit applies, so targets must not overlap and one target cannot anchor on text another inserts; merge such edits into one target.",
 					"items": map[string]any{
 						"type": "object",
 						"properties": map[string]any{
 							"old_string": map[string]any{
 								"type":        "string",
-								"description": "Exact text to replace, indentation included — copy it from the file bytes, never with the line-number prefix. Must match once unless replace_all is set; extend it with surrounding lines until it does.",
+								"description": "Exact text to replace, indentation included, copied from read_files output without the \"12\\t\" row prefix. Must match once unless replace_all is set; extend it with surrounding lines until it does.",
 							},
 							"new_string": map[string]any{
 								"type":        "string",
@@ -54,7 +53,7 @@ Runs on explicit request or a Skill step, never to park a short answer, a tool r
 							},
 							"replace_all": map[string]any{
 								"type":        "boolean",
-								"description": "Replace every occurrence instead of the single unique one — for renames.",
+								"description": "Replace every occurrence instead of requiring a unique match, e.g. for renames.",
 								"default":     false,
 							},
 						},
@@ -63,11 +62,11 @@ Runs on explicit request or a Skill step, never to park a short answer, a tool r
 				},
 				"version": map[string]any{
 					"type":        "integer",
-					"description": "mode=restore: version id from a file_history row — enough on its own, it names both the file and the state.",
+					"description": "mode=restore: version id from a file_history row; enough on its own, since it names both the file and the state. Takes precedence over task_id.",
 				},
 				"task_id": map[string]any{
 					"type":        "string",
-					"description": "mode=restore: undo a whole task instead — every file it touched, back to before it ran. 'current' = the task running now. Either this or version is required.",
+					"description": "mode=restore: undo a whole task instead, returning every file it touched (or only path, when set) to before it ran; 'current' means the task running now. Either this or version is required.",
 				},
 			},
 		},

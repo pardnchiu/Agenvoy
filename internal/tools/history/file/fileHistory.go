@@ -21,8 +21,8 @@ func registFileHistory() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `Recorded versions of files the tools changed: when each changed, what the task was after, and what the content was.
-Use for 這個檔案動過幾次 / 上一版是什麼 / 跟之前差在哪 / 誤刪的內容是什麼.
+		Description: `Recorded versions of files the tools changed: when each changed, which task changed it and its objective, and the stored content diffed against the file on disk.
+Use for "how many times has this file changed", "what was the previous version", "what changed since then", "what was in the part that got deleted".
 Putting a version back → edit_file(mode=restore); what a whole run did → chat_history.`,
 		Parameters: map[string]any{
 			"type": "object",
@@ -30,35 +30,35 @@ Putting a version back → edit_file(mode=restore); what a whole run did → cha
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"list", "read"},
-					"description": "list: every recorded version with its time and objective, newest first. read: the newest version of each file, diffed against what is on disk now. Omitted: paths selects read, otherwise list.",
+					"description": "list: recorded versions with version id, time, task and objective, newest first. read: only the newest recorded version of each file, diffed against what is on disk now. Omitted: paths → read, otherwise list.",
 					"default":     "list",
 				},
 				"path": map[string]any{
 					"type":        "string",
-					"description": "mode=list: the file to look back over (e.g. '/Users/me/notes.md', '~/notes.md', 'src/main.go'). Omit with task_id to see every file that task changed.",
+					"description": "mode=list: one file to look back over; relative paths resolve against the work directory, e.g. '/Users/me/notes.md', '~/notes.md', 'src/main.go'. Omit to list changes to every file, narrowed by task_id / from / to.",
 				},
 				"paths": map[string]any{
 					"type":        "array",
-					"description": "mode=read: files to compare. Batch every path into one call.",
+					"description": "mode=read: files to compare, every path batched into one call; mode=list accepts a single entry here as path.",
 					"items": map[string]any{
 						"type": "string",
 					},
 				},
 				"task_id": map[string]any{
 					"type":        "string",
-					"description": "mode=list: only what one task changed, from chat_history. 'current' for the task running now.",
+					"description": "mode=list: only what one task changed; a task id from chat_history, or 'current' for the task running now.",
 				},
 				"from": map[string]any{
 					"type":        "string",
-					"description": "mode=list: local time to start from: '2026-08-13' (that day at 00:00), '2026-08-13 15:04', '2026-08-13 15:04:05'.",
+					"description": "mode=list: inclusive local start time: '2026-08-13' (that day at 00:00), '2026-08-13 15:04', '2026-08-13 15:04:05', or RFC3339.",
 				},
 				"to": map[string]any{
 					"type":        "string",
-					"description": "mode=list: local time to stop at, same formats as from.",
+					"description": "mode=list: exclusive local end time, same formats as from; '2026-08-14' ends just before that day starts.",
 				},
 				"limit": map[string]any{
 					"type":        "integer",
-					"description": "mode=list: rows to return, newest first. Never above 24.",
+					"description": "mode=list: rows to return, newest first; values above 24 are capped at 24.",
 					"default":     defaultRows,
 				},
 			},

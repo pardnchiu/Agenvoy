@@ -353,6 +353,9 @@ func joinArgv(raw string) string {
 	if json.Unmarshal([]byte(raw), &params) != nil || len(params.Argv) == 0 {
 		return ""
 	}
+	if script, ok := shellScript(params.Argv); ok {
+		return script
+	}
 	parts := make([]string, len(params.Argv))
 	for i, one := range params.Argv {
 		if one == "" || strings.ContainsAny(one, " \t\n\"'\\") {
@@ -362,6 +365,17 @@ func joinArgv(raw string) string {
 		parts[i] = one
 	}
 	return strings.Join(parts, " ")
+}
+
+func shellScript(argv []string) (string, bool) {
+	if len(argv) != 3 || argv[1] != "-c" {
+		return "", false
+	}
+	switch filepath.Base(argv[0]) {
+	case "sh", "bash", "zsh":
+		return strings.TrimSpace(argv[2]), true
+	}
+	return "", false
 }
 
 func FormatEventFooter(duration, outputElapsed time.Duration, model, reasoning string, usage *go_llm_router.Usage) string {

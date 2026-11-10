@@ -28,44 +28,44 @@ func registErrorHistory() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `Tool failures kept across sessions, each paired with the fix that resolved it.
-Search it before a second retry when no error hint was injected, read one by hash when a tool answers "no data: {hash}", write once a non-trivial fix is confirmed working.
-Only outcome=resolved is stored; failed and abandoned are discarded. A past run's own steps → chat_history; the full recovery loop → reasoning_guide(topic=tool_error).`,
+Use for "this tool keeps failing", "how did we fix this error last time", before a second retry when no error hint was injected, when a tool answers "no data: {hash}" (read that hash), and once a non-trivial fix is confirmed working (write it).
+A past run's own steps → chat_history; the full recovery loop → reasoning_guide(topics=[tool_error]).`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"search", "read", "write"},
-					"description": "search: past records by keyword — each carries the fix that worked, so apply it. read: one record by hash. write: persist an error and the fix that resolved it. Omitted: hash → read, outcome → write, otherwise search.",
+					"description": "search: past records matching keyword, each with the fix that worked; apply it. read: one record by hash. write: store an error and the fix that resolved it (needs tool_name, keywords, symptom, action, outcome). Omitted: hash → read, outcome → write, otherwise search.",
 					"default":     "search",
 				},
 				"keyword": map[string]any{
 					"type":        "string",
-					"description": "mode=search: tool name, error symptom, or parameter trait.",
+					"description": "mode=search, required: tool name, error symptom or parameter trait, e.g. 'fetch_page 403', 'run_command network'.",
 				},
 				"limit": map[string]any{
 					"type":        "integer",
-					"description": "mode=search: max records to return. Never above 16.",
+					"description": "mode=search: max records to return; values above 16 are capped at 16.",
 					"default":     defaultSearchLimit,
 				},
 				"hash": map[string]any{
 					"type":        "string",
-					"description": "mode=read: error hash, 8-char hex (e.g. 'a1b2c3d4').",
+					"description": "mode=read: error hash, 8-char hex from a search row or a \"no data: {hash}\" reply, e.g. 'a1b2c3d4'.",
 				},
 				"tool_name": map[string]any{
 					"type":        "string",
-					"description": "mode=write: the tool that produced the error (e.g. 'fetch_page').",
+					"description": "mode=write, required: the tool that produced the error, e.g. 'fetch_page'.",
 				},
 				"keywords": map[string]any{
 					"type": "array",
 					"items": map[string]any{
 						"type": "string",
 					},
-					"description": "mode=write: lookup keywords — tool name, error type, parameter traits.",
+					"description": "mode=write, required: lookup keywords a later search would use, e.g. ['fetch_page', '403', 'cloudflare'].",
 				},
 				"symptom": map[string]any{
 					"type":        "string",
-					"description": "mode=write: observed behavior — what the tool returned or failed on.",
+					"description": "mode=write, required: what the tool returned or failed on.",
 				},
 				"cause": map[string]any{
 					"type":        "string",
@@ -74,12 +74,12 @@ Only outcome=resolved is stored; failed and abandoned are discarded. A past run'
 				},
 				"action": map[string]any{
 					"type":        "string",
-					"description": "mode=write: what was done (e.g. 'retried with English keyword', 'fell back to search_web').",
+					"description": "mode=write, required: what was done, e.g. 'retried with English keyword', 'fell back to search_web'.",
 				},
 				"outcome": map[string]any{
 					"type":        "string",
 					"enum":        []string{"resolved", "failed", "abandoned"},
-					"description": "mode=write: resolved = the fix worked and is stored; failed and abandoned are discarded.",
+					"description": "mode=write, required. resolved: the fix worked, the record is stored. failed / abandoned: accepted but discarded, nothing is stored.",
 				},
 			},
 		},

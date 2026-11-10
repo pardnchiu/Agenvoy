@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 )
 
 func IsRunCommand(toolArgs string) bool {
@@ -46,7 +45,7 @@ func isReadOnlyArgv(argv []string) bool {
 	if matched == "" {
 		return false
 	}
-	if slices.ContainsFunc(argv[1:], boundary.IsSensitivePath) {
+	if slices.ContainsFunc(argv[1:], filesystem.IsSensitivePath) {
 		return false
 	}
 	if bin == "git" {

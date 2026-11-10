@@ -169,6 +169,23 @@ func BackgroundState(sessionID, taskHash string) (running, unreported int) {
 	return running, len(finished)
 }
 
+func RunningBackground(sessionID, taskHash string) []BackgroundTask {
+	if taskHash == "" {
+		return nil
+	}
+	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+	if err != nil {
+		return nil
+	}
+	var list []BackgroundTask
+	for _, one := range meta.Background {
+		if !one.Done {
+			list = append(list, one)
+		}
+	}
+	return list
+}
+
 func LoadPendingWindow(sessionID, taskHash string) string {
 	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
 	if err != nil {

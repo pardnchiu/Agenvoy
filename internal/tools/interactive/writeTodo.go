@@ -30,14 +30,14 @@ func registWriteTodo() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `Shows the user a live task checklist; it records progress and runs nothing.
-Call it before the first tool call when the answer takes more than one round of tool calls, or as soon as a running task grows past that; 分析 / 研究 / 調查 / 比較 / 評估 / 彙整 / 週報 / 盤前 always get one, and N fanned-out searches or subagents are N steps.
+Use for "analyze ...", "research ...", "investigate ...", "compare ...", "evaluate ...", "summarize all ...", a weekly report or a pre-market brief, and any answer that takes more than one round of tool calls: call it before the first tool call, or as soon as a running task grows past one round; N fanned-out searches or subagents are N steps.
 Smalltalk, or one lookup answered straight from one call → skip it.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"todos": map[string]any{
 					"type":        "array",
-					"description": "The full ordered list on every call (it replaces the previous one) with exactly one item in_progress; finishing a step marks it completed and the next in_progress in the same call. Tell the user before changing the remaining steps mid-run; a new objective after a completed list starts a fresh list.",
+					"description": "The full ordered list on every call (it replaces the previous one) with one item in_progress, or none once every step is completed; finishing a step marks it completed and the next in_progress in the same call. Tell the user before changing the remaining steps mid-run; a new objective after a completed list starts a fresh list.",
 					"minItems":    1,
 					"items": map[string]any{
 						"type": "object",

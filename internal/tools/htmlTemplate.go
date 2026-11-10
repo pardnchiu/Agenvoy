@@ -29,20 +29,20 @@ func registHTMLTemplate() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `Gallery of worked HTML page examples: list them, or read one's full HTML to copy.
-Use while building an HTML deliverable (report, dashboard, chart, diagram) after reasoning_guide(topic=html_render).
-Fetching any other web page → fetch_page.`,
+		Description: `Gallery of worked HTML page examples: lists them (list), or returns one's full HTML to copy from (read).
+Use while building an HTML deliverable such as "make this a web page", "build a dashboard", "draw a chart or diagram in html", after reasoning_guide(topics=[html_render]).
+Saving the finished page → write_result; fetching any other web page → fetch_page.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"list", "read"},
-					"description": "list: every template's name, category, title, desc. read: one template's full HTML.",
+					"description": "list: every template's name, category, title and desc; call it first. read: one template's full HTML, needs name.",
 				},
 				"name": map[string]any{
 					"type":        "string",
-					"description": "Template name exactly as mode=list returns it (e.g. '11-status-report', 'unknowns/06-interview'). Required for mode=read.",
+					"description": "mode=read: template name exactly as mode=list returns it, e.g. '11-status-report', 'unknowns/06-interview'.",
 				},
 			},
 			"required": []string{"mode"},

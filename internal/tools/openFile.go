@@ -24,15 +24,15 @@ func registOpenFile() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  false,
-		Description: `Hands a file or URL to the OS default handler — plays a video, shows an image, opens a PDF viewer, opens a system settings pane or a link.
-Use for 打開 / 播放 / 看一下這個檔案 / 打開設定, and for open / xdg-open / start.
+		Description: `Hands a file or URL to the OS default handler and returns the opened path: plays a video, shows an image, opens a PDF viewer, a system settings pane or a link.
+Use for "open this file", "play the video", "show me the image", "open settings", and for open / xdg-open / start.
 run_command cannot do this: its sandbox has no route to the app-launch service. Reading the contents instead → read_files.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"path": map[string]any{
 					"type":        "string",
-					"description": "File path or URL to open (e.g. '/abs/path/video.mp4', '~/Downloads/report.pdf', 'relative/file.png', 'x-apple.systempreferences:com.apple.Desktop-Settings.extension', 'https://example.com'). A URL always asks the user to confirm.",
+					"description": "Absolute, ~ or work-directory-relative file path, or any scheme: URL passed through as is, e.g. '~/Downloads/report.pdf', 'relative/file.png', 'x-apple.systempreferences:com.apple.Desktop-Settings.extension', 'https://example.com'.",
 				},
 			},
 			"required": []string{"path"},

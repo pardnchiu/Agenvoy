@@ -4,11 +4,11 @@ Merge the new conversation into the previous summary and return the updated summ
 
 ## Fields
 
-- `key_decisions`: concluded rules that bind future requests, each starting with an agreed or rejected marker in the output language — `要：` / `不要：`, `Do:` / `Don't:`, `する：` / `しない：`.
-  - Record only outcomes the user locked in for later work: "Never push to master directly", "部署一律走 staging 再上 production", "報告數字一律附資料來源".
+- `key_decisions`: concluded rules that bind future requests, each starting with `Do: ` for an agreed rule or `Don't: ` for a rejected one, in English whatever the output language; an entry from the previous summary that carries any other marker is rewritten to these.
+  - Record only outcomes the user locked in for later work: "Never push to master directly", "Always deploy to staging before production", "Every figure in a report cites its source".
   - Keep these out — they belong in the topic's `description` / `direction`:
     - tentative leanings, open debates, options still being weighed;
-    - answers that settled one request — a reply to a clarifying question (format, file name, which option this time) or a parameter of a single task: picking `md` for this report, "use the second draft", "存到 Downloads";
+    - answers that settled one request — a reply to a clarifying question (format, file name, which option this time) or a parameter of a single task: picking `md` for this report, "use the second draft", "save it to Downloads";
     - the findings or conclusions of one task, such as a report's verdict or a lookup result;
     - requests about the reply language — the configured output language governs that.
   - A reversed decision replaces the old entry. Merge entries with the same meaning and keep the latest wording.
@@ -39,8 +39,8 @@ Exactly this format:
 <summary>
 {
   "key_decisions": [
-    "<agreed marker>rule the user agreed to for future work",
-    "<rejected marker>rule the user rejected for future work"
+    "Do: rule the user agreed to for future work",
+    "Don't: rule the user rejected for future work"
   ],
   "past_discussions": [
     {

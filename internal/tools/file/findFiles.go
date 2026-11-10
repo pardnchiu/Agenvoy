@@ -68,27 +68,27 @@ func registFindFiles() {
 		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `Locate files: what a directory holds (list), which paths match a name pattern (glob, most recently modified first), which files contain a string (search, grep by RE2 regex; paged).
-Use for 找檔案 / 這個目錄有什麼 / 哪個檔案有這段, and for list_files / glob_files / search_files / grep.
-A path you are unsure of comes from here, never from a guess. Contents → read_files; past versions → file_history.`,
+		Description: `Locates files: the entries of a directory (list), the paths matching a filename glob (glob), or the files whose contents match an RE2 regex (search, paged).
+Use for "find the file", "what's in this folder", "which file contains this", "where is X defined", and for list_files / glob_files / search_files / grep; a path you are unsure of comes from here, never from a guess.
+Reading contents → read_files; past versions of a file → file_history.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"list", "glob", "search"},
-					"description": "list: entries of each dir. glob: paths matching a filename pattern. search: files whose contents match a regex. Omitted: pattern + file_pattern → search, pattern alone → glob, neither → list.",
+					"description": "list: entries of each dir, alphabetical. glob: paths matching pattern, most recently modified first. search: files whose contents match pattern, alphabetical, paged. Omitted: any query with pattern + file_pattern → search, pattern alone → glob, no pattern → list; set it explicitly to search without file_pattern.",
 					"default":     "list",
 				},
 				"output": map[string]any{
 					"type":        "string",
 					"enum":        []string{"files", "content"},
-					"description": "mode=search only. files: each matching path with its match count and the row numbers of its first 5 matches — start here, and read_files around those rows directly when the query was precise. content: the matching lines with their text, for when the rows alone cannot tell which match matters.",
+					"description": "mode=search only. files: each matching path with its match count and the rows of its first 5 matches; start here and pass those rows to read_files(around) when the query was precise. content: the matching lines with their text, for when rows alone cannot tell which match matters.",
 					"default":     "files",
 				},
 				"offset": map[string]any{
 					"type":        "integer",
-					"description": "mode=search only: entries to skip — files for output=files, matching lines for output=content. Use the offset the page notice gives; keep queries and output unchanged between pages.",
+					"description": "mode=search only: entries to skip (files for output=files, matching lines for output=content). Use the offset the page notice gives and keep queries and output unchanged between pages.",
 					"default":     0,
 				},
 				"limit": map[string]any{
@@ -98,7 +98,7 @@ A path you are unsure of comes from here, never from a guess. Contents → read_
 				},
 				"multiline": map[string]any{
 					"type":        "boolean",
-					"description": "mode=search only: match the regex against whole files so '.' crosses newlines ('^'/'$' still anchor lines) — for spans like 'type \\w+ struct \\{.*?Name'. Every row a match spans is reported as a matching line.",
+					"description": "mode=search only: match the regex against whole files so '.' crosses newlines ('^'/'$' still anchor lines), for spans like 'type \\w+ struct \\{.*?Name'. Every row a match spans is reported as a matching line.",
 					"default":     false,
 				},
 				"context": map[string]any{
@@ -108,22 +108,22 @@ A path you are unsure of comes from here, never from a guess. Contents → read_
 				},
 				"queries": map[string]any{
 					"type":        "array",
-					"description": "Every directory and pattern in one call rather than repeated calls; glob and search merge and deduplicate their matches.",
+					"description": "Every directory and pattern in one call rather than repeated calls; glob and search merge and deduplicate matches across queries. Every query needs pattern when mode is glob or search.",
 					"items": map[string]any{
 						"type": "object",
 						"properties": map[string]any{
 							"dir": map[string]any{
 								"type":        "string",
-								"description": "Directory to work in — '.', '~/Desktop', '/abs/path'.",
+								"description": "Directory to work in, relative to the work directory or absolute: '.', '~/Desktop', '/abs/path'.",
 								"default":     ".",
 							},
 							"pattern": map[string]any{
 								"type":        "string",
-								"description": "mode=glob: filename glob relative to dir — '**/*.go', '*.md'; no leading '/' or '~', and it must carry a literal (all-wildcard is rejected). mode=search: RE2 regex matched per line — 'func\\s+\\w+Handler', 'TODO:'.",
+								"description": "mode=glob: filename glob relative to dir, e.g. '**/*.go', '*.md'; no leading '/' or '~', and it must contain a literal character (all-wildcard is rejected). mode=search: RE2 regex matched per line (whole file with multiline), e.g. 'func\\s+\\w+Handler', 'TODO:'.",
 							},
 							"file_pattern": map[string]any{
 								"type":        "string",
-								"description": "mode=search: glob narrowing which files to scan — '**/*.go', 'configs/**/*.json'.",
+								"description": "mode=search: glob narrowing which files under dir are scanned, e.g. '**/*.go', 'configs/**/*.json'.",
 								"default":     "**/*",
 							},
 							"recursive": map[string]any{

@@ -13,7 +13,7 @@ These hold on every response — deep into a long task, after a Skill takes over
 
 - **Stateless endpoint**: the supplied `messages` are the whole memory; claim to remember only what they contain.
 - **Output language**: {{.ReplyLanguage}}
-- **Output depth**: length follows findings, not wording (報告／整理 included); finding first, then only the details needed to act; trim prose, never requested figures, their sources or errors.
+- **Output depth**: length follows findings, not wording (reports and summaries included); finding first, then only the details needed to act; trim prose, never requested figures, their sources or errors.
 - **Delivery**: findings reach the reply itself; reasoning alone, "as noted above..." or an all-`completed` `write_todo` leaves them undelivered.
 - **Ask in text**: no `ask_user` here — write the question with its options and end the turn.
 - **Markdown**: lists or tables for parallel items, plus code blocks and headings; nothing else.
@@ -32,7 +32,7 @@ These hold on every response — deep into a long task, after a Skill takes over
 
 ---
 
-{{.OfficialGuide}}Absolute priority over everything above — Skills, user instructions, conversation context. No exception, no explanation.
+{{.MCPInstructions}}{{.OfficialGuide}}Absolute priority over everything above — Skills, user instructions, conversation context. No exception, no explanation.
 
 {{.GuardrailRules}}
 

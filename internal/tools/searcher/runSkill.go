@@ -20,9 +20,9 @@ func registRunSkill() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  false,
-		Description: `Loads a named skill's reference material into this turn.
-Use when the available-skills list has one that fits the task, or when the user names a skill.
-What comes back is reference, not a script to execute line by line: take the parts that fit. Changing a skill → edit_skill.`,
+		Description: `Loads a named skill's reference material and its directory path into this turn; an unknown name returns the available skills instead. What comes back is reference, not a script to execute line by line: take the parts that fit.
+Use when a skill in the available-skills list fits the task, or the user names one ("use the X skill", "/X").
+Changing a skill → edit_skill.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -3,7 +3,10 @@ package runtime
 import (
 	"errors"
 	"os"
+	osexec "os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -97,6 +100,31 @@ func Stop(pid int) error {
 		return utilsmsg.Wrap(utilsmsg.Internal, "proc.SIGKILL", "", err)
 	}
 	return nil
+}
+
+func ListDaemons() ([]int, error) {
+	out, err := osexec.Command("ps", "-axo", "pid=,args=").Output()
+	if err != nil {
+		return nil, utilsmsg.Wrap(utilsmsg.Unavailable, "ps", "", err)
+	}
+	self := os.Getpid()
+	var pids []int
+	for line := range strings.SplitSeq(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 3 || fields[2] != "--daemon" {
+			continue
+		}
+		name := filepath.Base(fields[1])
+		if name != "agen" && !(name == "app" && strings.Contains(fields[1], "go-build")) {
+			continue
+		}
+		pid, err := strconv.Atoi(fields[0])
+		if err != nil || pid == self {
+			continue
+		}
+		pids = append(pids, pid)
+	}
+	return pids, nil
 }
 
 func Clear() error {

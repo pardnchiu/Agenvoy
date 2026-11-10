@@ -26,7 +26,7 @@ func registRunCommandBackground() {
 	maps.Copy(properties, map[string]any{
 		"timeout_min": map[string]any{
 			"type":        "integer",
-			"description": fmt.Sprintf("Minutes before the command is killed and reported as timed out, 1-%d. Set it near the expected run time so a hung command fails early instead of holding the task for the full window; a watcher stops here with its output so far.", configs.MAX_BACKGROUND_TIMEOUT_MIN),
+			"description": fmt.Sprintf("Minutes before the command is killed and reported as timed out, 1-%d. Set it near the expected run time so a hung command fails early instead of holding the task for the full window; a watcher is stopped here and reports its output so far.", configs.MAX_BACKGROUND_TIMEOUT_MIN),
 			"minimum":     1,
 			"maximum":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
 			"default":     configs.MAX_BACKGROUND_TIMEOUT_MIN,
@@ -34,7 +34,7 @@ func registRunCommandBackground() {
 		"keywords": map[string]any{
 			"type":        "array",
 			"items":       map[string]any{"type": "string"},
-			"description": "Case-insensitive words that flag a new output line as a possible problem; a flagged stretch resumes this task with the last output while the command keeps running. Replace the default only when the tool reports failures in other words, e.g. ['warn', 'denied'].",
+			"description": "Case-insensitive words that flag a new output line as a possible problem; a flagged stretch resumes this task with the recent output while the command keeps running. A non-empty list replaces the default set entirely, so pass one only when the tool reports failures in other words, e.g. ['warn', 'denied'].",
 			"default":     configs.WATCH_KEYWORDS,
 		},
 	})
@@ -44,9 +44,9 @@ func registRunCommandBackground() {
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
-		Description: fmt.Sprintf(`Starts one binary in the work directory and returns a task id at once; its output resumes this task when it exits, and also whenever new output hits an error keyword while it keeps running, with the last output to explain. Sandbox, network and confirmation rules match run_command.
-Use for a watcher (--watch, chokidar, npm run sass/build/dev), which only runs here, for a job very likely over %d minutes whose output does not decide your next tool call (full build, large install or download, long data job), or when the user says 跑完告訴我 / 背景跑. Apart from a watcher, use it only for the gathering that opens a request, starting every background command in one go: the resumed task sees only the objective and that output, none of this turn's tool results.
-Anything shorter, or a test or build whose failures you fix next → run_command. 進行到哪了 / 跑到哪 on a running task → read_files the log path its start result gave, never guess from missing reports.`, configs.BACKGROUND_THRESHOLD_MIN),
+		Description: fmt.Sprintf(`Starts one binary in the work directory and returns a task id at once; its output resumes this task when it exits, and also while it keeps running whenever a new line hits an error keyword, with the recent output to explain. argv, network, write_paths and sandbox follow the run_command rules.
+Use for a watcher (--watch, chokidar, npm run sass/build/dev), which only runs here; a job very likely over %d minutes whose output does not decide your next tool call (full build, large install or download, long data job); or "run it in the background" / "let me know when it finishes". Apart from a watcher, start it only in the gathering that opens a request, every background command in one go: the resumed task sees only the objective and that output. At most %d background tasks run per session, background_subagents included.
+Anything shorter, or a test or build whose failures you fix next → run_command. "How far along is it?" on a running task → read_files the log path its start result gave; never guess from missing reports.`, configs.BACKGROUND_THRESHOLD_MIN, configs.MAX_BACKGROUND_TASKS),
 		Parameters: map[string]any{
 			"type":       "object",
 			"properties": properties,

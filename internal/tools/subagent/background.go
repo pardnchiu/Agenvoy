@@ -32,8 +32,8 @@ func registBackgroundSubagents() {
 		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: fmt.Sprintf(`Starts a subtask in its own session in the background and returns a task id at once; the leg's saved report resumes this task when it finishes.
-Use when every leg is very likely to take over %d minutes end to end (multi-source research, broad data gathering), or the user says 慢慢查 / 跑完告訴我 / 背景跑. Use it only for the gathering that opens a request, dispatching every leg in one go: each report resumes this task with only the objective and that report, none of this turn's tool results. At most %d background tasks per session, background_command included.
+		Description: fmt.Sprintf(`Starts a subtask in its own session in the background and returns a task id at once; when the leg finishes, its usage header and saved report path resume this task.
+Use when every leg is very likely to take over %d minutes end to end (multi-source research, broad data gathering), or the user says "take your time", "let me know when it's done", "run it in the background"; only for the gathering that opens a request, every leg in one go, since each report resumes this task with only the objective and that report. At most %d background tasks run per session, background_command included.
 A leg of a few calls, one whose result decides your next tool call, or a named-agent lookup → subagents.`, configs.BACKGROUND_THRESHOLD_MIN, configs.MAX_BACKGROUND_TASKS),
 		Parameters: map[string]any{
 			"type":       "object",
