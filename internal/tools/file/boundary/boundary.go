@@ -103,7 +103,7 @@ func Restricted(sessionID, workDir, toolName, toolArgs string) []string {
 		return nil
 	}
 
-	base := baseDir(toolName, workDir)
+	base := baseDir(workDir)
 	seen := map[string]bool{}
 	var out []string
 	for _, one := range list {
@@ -165,8 +165,8 @@ func WriteBinds(sessionID, baseDir string, list []string) ([]string, error) {
 	return out, nil
 }
 
-func baseDir(toolName, workDir string) string {
-	if toolName == "fetch_page" || strings.TrimSpace(workDir) == "" {
+func baseDir(workDir string) string {
+	if strings.TrimSpace(workDir) == "" {
 		return filesystem.DownloadDir
 	}
 	return workDir
@@ -232,15 +232,6 @@ func rawPaths(toolName, toolArgs string) []string {
 		}
 		return p.WritePaths
 
-	case "fetch_page":
-		var p struct {
-			Save   bool   `json:"save"`
-			SaveTo string `json:"save_to"`
-		}
-		if json.Unmarshal([]byte(toolArgs), &p) != nil || !p.Save {
-			return nil
-		}
-		return []string{p.SaveTo}
 	}
 	return nil
 }

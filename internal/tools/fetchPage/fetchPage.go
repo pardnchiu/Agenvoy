@@ -17,8 +17,6 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -31,6 +29,7 @@ const (
 	skip4xxExpired    = 90 * 24 * time.Hour
 	maxMarkdownLength = 100 << 10
 	defaultScroll     = 3
+	maxScroll         = 20
 )
 
 func currentProfile() string {
@@ -64,7 +63,7 @@ func currentProfile() string {
 	return "Default"
 }
 
-func parseOutputType(s string) (int, error) {
+func ParseOutputType(s string) (int, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "", "markdown":
 		return go_browser.TypeMarkdown, nil
@@ -79,56 +78,53 @@ func parseOutputType(s string) (int, error) {
 
 func registFetchPage() {
 	toolregister.Regist(toolregister.Def{
-
 		Name:        "fetch_page",
 		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Timeout:     90 * time.Second,
-		Description: `[system-default] Fetches one web page in a browser and returns it as markdown, html or json, or saves it to a file.
-Use when a URL is in hand — 讀這篇 / 這個連結寫什麼 / 下載網頁 / 存到本地 — for any search or RSS result being cited, and for researching a site, product or library page by page until complete.
-Before the first page of a site, fetch its /llms.txt: when it lists the page you want, fetch that listed .md URL instead of the HTML page; no /llms.txt → fetch the page as usual.
-No URL yet → search_web; a binary file → download_file; an API endpoint → http_request.`,
+		Description: `[system-default] Fetches one web page in a browser carrying the user's Chrome login, and returns it as markdown, html or json.
+Use when a URL is in hand — 讀這篇 / 這個連結寫什麼 / 打開這頁 — for each search or RSS result being cited, and for researching a site page by page until complete.
+Before the first page of a site, fetch its /llms.txt; when it lists the page you want, fetch that .md URL instead.
+No URL yet → search_web; saving a page or file to disk → download_file; an API endpoint → http_request.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"link": map[string]any{
 					"type":        "string",
-					"description": "The full URL of the page to fetch (must include https://).",
+					"description": "Full URL including https://.",
 				},
 				"keep_links": map[string]any{
 					"type":        "boolean",
-					"description": "Keep hyperlinks from the same domain. Set true for document research tasks that require recursively following subpages (docs sites, multi-page articles).",
+					"description": "true keeps same-domain links in the output, for following subpages of a docs site or multi-page article.",
 					"default":     false,
 				},
 				"same_session": map[string]any{
 					"type":        "boolean",
-					"description": "Reuse the persistent Chrome profile so cookies and login state are sent. Default true, so login-required sites (x.com / twitter / threads / facebook / instagram / linkedin / weibo / xiaohongshu / bloomberg / wsj / ft / dashboards) work transparently. Set false only when explicitly testing the anonymous / logged-out view of a page.",
+					"description": "Send the user's Chrome cookies and login state, so login-only pages (social feeds, paywalled news, dashboards) load. false only when the logged-out view is asked for.",
 					"default":     true,
 				},
 				"headless": map[string]any{
 					"type":        "boolean",
-					"description": "Default true — attempt headless fetch first, retrying non-headless only on failure. Set false to open a visible browser window immediately, skipping the headless attempt (bot checks, JS challenges, sites requiring visible interaction). Request in the form \"open:[url]\" → always set false.",
+					"description": "true tries headless first and opens a window only when blocked. false opens a visible window right away: \"open:[url]\" requests, bot checks, JS challenges, pages needing interaction.",
 					"default":     true,
 				},
 				"type": map[string]any{
 					"type":        "string",
 					"enum":        []string{"markdown", "html", "json"},
-					"description": "Output format. Default \"markdown\" (best for natural reading and summarisation). Switch to \"json\" when the user asks for structured analysis, data extraction, comparison across multiple items, or when feeding the output to another tool. Switch to \"html\" only when raw DOM is needed for downstream parsing.",
+					"description": "markdown for reading and summarising; json for structured extraction, comparing items, or feeding another tool; html only when raw DOM is needed.",
 					"default":     "markdown",
 				},
-				"save": map[string]any{
-					"type":        "boolean",
-					"description": "Save fetched content to a local file instead of returning it. Default false. Set true when user wants to download/export a page.",
-					"default":     false,
-				},
-				"save_to": map[string]any{
-					"type":        "string",
-					"description": "Target file path when save=true. Absolute path used directly; relative paths resolve against the output directory. Omit for auto-generated filename in the output directory.",
+				"scroll": map[string]any{
+					"type":        "integer",
+					"description": "Scroll passes to load lazy content, stopping early once the page stops changing: 10-20 for feeds, timelines and long comment threads; 0 when only the top of the page is needed.",
+					"minimum":     0,
+					"maximum":     maxScroll,
+					"default":     defaultScroll,
 				},
 				"force": map[string]any{
 					"type":        "boolean",
-					"description": "Skip the cached-result lookup and re-fetch even if an identical call was made recently. Set true when the user explicitly asks to re-check/refresh a page.",
+					"description": "true skips the recent-result cache and re-fetches, when the user asks to refresh or re-check.",
 					"default":     false,
 				},
 			},
@@ -143,9 +139,8 @@ No URL yet → search_web; a binary file → download_file; an API endpoint → 
 				SameSession *bool  `json:"same_session"`
 				Headless    *bool  `json:"headless"`
 				Type        string `json:"type"`
-				Save        bool   `json:"save"`
-				SaveTo      string `json:"save_to"`
 				Force       bool   `json:"force"`
+				Scroll      *int   `json:"scroll"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
@@ -155,7 +150,7 @@ No URL yet → search_web; a binary file → download_file; an API endpoint → 
 			if link == "" {
 				return "", utilsmsg.New(utilsmsg.Invalid, "link", "required")
 			}
-			outType, err := parseOutputType(params.Type)
+			outType, err := ParseOutputType(params.Type)
 			if err != nil {
 				return "", err
 			}
@@ -166,7 +161,7 @@ No URL yet → search_web; a binary file → download_file; an API endpoint → 
 				return checkRelevance(ctx, e.Objective, link, result)
 			}
 
-			if !params.Save && !params.Force {
+			if !params.Force {
 				if cached, ok := toolcache.FindRecent(e.SessionID, "fetch_page", string(args)); ok {
 					return deliver(cached), nil
 				}
@@ -179,24 +174,14 @@ No URL yet → search_web; a binary file → download_file; an API endpoint → 
 			if params.Headless != nil {
 				headless = *params.Headless
 			}
-
-			var saveTo *string
-			if params.Save {
-				p := strings.TrimSpace(params.SaveTo)
-				if p == "" {
-					p = defaultDownloadPath(link)
-				} else {
-					abs, absErr := boundary.Resolve(e.SessionID, filesystem.OutputDir(), p)
-					if absErr != nil {
-						return "", utilsmsg.Trace("boundary.Resolve", "", absErr)
-					}
-					p = abs
-				}
-				saveTo = &p
+			scroll := defaultScroll
+			if params.Scroll != nil {
+				scroll = min(max(*params.Scroll, 0), maxScroll)
 			}
-			result, err := handler(ctx, link, params.KeepLinks, sameSession, headless, outType, saveTo, params.Force)
-			if err != nil || saveTo != nil {
-				return result, err
+
+			result, err := handler(ctx, link, params.KeepLinks, sameSession, headless, outType, scroll, nil, params.Force)
+			if err != nil {
+				return "", err
 			}
 			toolcache.Store(e.SessionID, go_pkg_utils.UUID(), "fetch_page", string(args), result)
 			return deliver(result), nil
@@ -204,7 +189,7 @@ No URL yet → search_web; a binary file → download_file; an API endpoint → 
 	})
 }
 
-func handler(ctx context.Context, link string, keepLinks, sameSession, headless bool, outType int, saveTo *string, force bool) (string, error) {
+func handler(ctx context.Context, link string, keepLinks, sameSession, headless bool, outType, scroll int, saveTo *string, force bool) (string, error) {
 	parsed, err := url.Parse(link)
 	if err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Invalid, "url.Parse", "", err)
@@ -231,28 +216,42 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 		SameSession: sameSession,
 		Visible:     !headless,
 		Type:        outType,
-		ScrollCount: defaultScroll,
+		ScrollCount: scroll,
+	}
+	if scroll == 0 {
+		opt.ScrollCount = -1
 	}
 	if sameSession || !headless {
 		opt.Profile = currentProfile()
 	}
 	result, err := go_browser.Fetch(ctx, link, 30*time.Second, opt)
 	if err != nil {
-		status := 503
-		title := ""
 		var fe *go_browser.Error
-		if errors.As(err, &fe) {
-			status = fe.Status
-		} else {
-			slog.Debug("go_browser.Fetch",
+		if !errors.As(err, &fe) {
+			slog.Error("go_browser.Fetch",
 				slog.String("url", link),
 				slog.String("error", err.Error()))
+			return "", utilsmsg.Trace("fetch_page "+link, "", err)
 		}
+		title := ""
 		if result != nil {
 			title = result.Title
 		}
-		addToSkippedMap(link, status, title)
-		return "", utilsmsg.New(utilsmsg.Upstream, link, "fetch failed [%d]", status)
+		addToSkippedMap(link, fe.Status, title)
+		return "", utilsmsg.New(utilsmsg.Upstream, link, "fetch failed [%d]", fe.Status)
+	}
+
+	var tree []json.RawMessage
+	if outType == go_browser.TypeJSON {
+		var serialized struct {
+			Title string
+			Tree  []json.RawMessage
+		}
+		if err := json.Unmarshal([]byte(result.Content), &serialized); err != nil {
+			return "", utilsmsg.Wrap(utilsmsg.Upstream, "json.Unmarshal", link, err)
+		}
+		result.Title = serialized.Title
+		tree = serialized.Tree
 	}
 
 	if isPage4xx(result.Title, result.FinalURL) {
@@ -272,11 +271,11 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 		}
 		full = buildFrontmatter(result)
 	case go_browser.TypeJSON:
-		if len(result.Tree) == 0 {
+		if len(tree) == 0 {
 			addToSkippedMap(link, 0, result.Title)
 			return "", utilsmsg.New(utilsmsg.Upstream, link, "empty content")
 		}
-		raw, err := json.Marshal(result.Tree)
+		raw, err := json.Marshal(tree)
 		if err != nil {
 			return "", utilsmsg.Wrap(utilsmsg.Internal, "json.Marshal", "tree", err)
 		}
@@ -301,20 +300,8 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 	return truncateResult(full), nil
 }
 
-func defaultDownloadPath(href string) string {
-	name := "page"
-	if u, err := url.Parse(href); err == nil {
-		seg := strings.TrimSuffix(filepath.Base(u.Path), "/")
-		if seg != "" && seg != "." {
-			name = seg
-		} else if u.Host != "" {
-			name = u.Host
-		}
-	}
-	if !strings.HasSuffix(name, ".md") {
-		name += ".md"
-	}
-	return filepath.Join(filesystem.OutputDir(), name)
+func SavePage(ctx context.Context, link string, outType int, path string) (string, error) {
+	return handler(ctx, link, false, true, true, outType, defaultScroll, &path, false)
 }
 
 func validateURL(href string) error {
