@@ -320,7 +320,7 @@ agen
 
 在彈出視窗中，`esc` 會回到開啟它的上一頁，只有第一頁才會關閉；確認、密碼與 `ask_user` 視窗不理會 `esc`，須選擇選項；`/usage` 這類純列表視窗以 ↑／↓ 捲動而非選取。
 
-任務執行中按 `esc`：尚未輸出任何內容時直接取消，否則詢問 **No**／**Yes cancel**／**Pause keep pending**。取消（含 `ctrl+c`、確認框中的 **Cancel task**，以及 `POST /v1/session/:id/cancel/:task_hash`）會一併移除該任務的 pending；暫停、確認框中的 **Abort task** 與其他中斷（逾時、視窗關閉等）只停止執行並保留 pending，可從 `/pending` 恢復。任務執行中只能送一般文字作為 steer，`/` 指令不會列出也不會送出。非彈窗狀態下 `esc` 依序為：先關閉 `/` 指令選單，再關閉 notice 區塊，再取消任務，最後清空輸入。狀態列顯示 `Connecting` 時，一般訊息、Skill、`/pending` 與 cron 派發都不會送出；本機 `/` 指令照常可用。
+任務執行中按 `esc`：尚未輸出任何內容時直接取消，否則詢問 **No**／**Yes cancel**／**Pause keep pending**。取消（含 `ctrl+c`、確認框中的 **Cancel task**，以及 `POST /v1/session/:id/cancel/:task_hash`）會一併移除該任務的 pending；暫停、確認框中的 **Abort task** 與其他中斷（逾時、視窗關閉等）只停止執行並保留 pending，可從 `/pending` 恢復。任務執行中只能送一般文字作為 steer，`/` 指令不會列出也不會送出。非彈窗狀態下 `esc` 依序為：先關閉 `/` 指令選單，再關閉 notice 區塊，再取消任務，再清空輸入，最後開啟背景任務選單。本 session 有背景任務在跑時，輸入框上方顯示 `N background task(s) running`；輸入框為空且沒有任務執行時按 `esc` 會列出 **No**、各背景任務與 **All**（兩個以上才有），選定後再確認一次即取消，其輸出不再回報。狀態列顯示 `Connecting` 時，一般訊息、Skill、`/pending` 與 cron 派發都不會送出；本機 `/` 指令照常可用。
 
 ### 管理 daemon
 
@@ -386,7 +386,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | `POST` | `/v1/send`             | 執行 Agent：`{content, session_id?, sse?, persist?, model?, reasoning?, work_dir?, skill?, system_prompt?, exclude_tools?}`。`model` 與 `reasoning` 只作用於這次請求，不改 session 預設：未帶 `model` 用 session 模型，`auto` 即使 session 已固定模型仍交給 dispatcher，未帶 `reasoning` 用 session 等級。未帶 `session_id` 時建立 `temp-`（`persist:true` 則 `chat-`）session；該 session 已在執行時改為 steer，回 `{session_id, steer:true}`；`content` 為空回 400 |
 | `POST` | `/v1/chat/completions` | OpenAI 相容且 stateless 的 chat completions                                                                                                                                                                                                                                                  |
 | `GET`  | `/v1/info/version`     | 編譯時寫入的版本（`{version, dev}`）；未帶 tag 的建置 `dev` 為 true                                                                                                                                                                                                                          |
-| `GET`  | `/v1/log`              | SSE：不帶參數時只送 daemon `slog`（`EventDaemonLog`，`source` 為層級），與 TUI 標題列同一份來源；內含新對話驗證碼，故 daemon frame 僅對 loopback 來源附加。`?sessions=a,b` 於同一條連線加上該些 session 的事件，`replay=0` 略過回放，`daemon=0` 去掉 daemon frame。遠端來源必須帶 `sessions` |
+| `GET`  | `/v1/log`              | SSE：不帶參數時只送 daemon `slog`（`EventDaemonLog`，`source` 為層級），與 TUI 標題列同一份來源；內含新對話驗證碼，故 daemon frame 僅對 loopback 來源附加。`?sessions=a,b` 於同一條連線加上該些 session 的事件，`replay=0` 略過回放，`daemon=0` 去掉 daemon frame。遠端來源必須帶 `sessions`。session 事件附後端格式化好的文字：`trace`（思考或工具呼叫行）、`tool_display`（工具呼叫與確認），確認事件另附 `confirm_title`、`restricted_lines`、`restricted_note`，各介面顯示的用詞一致 |
 | `GET`  | `/v1/voice/live`       | **local** — WebSocket，轉接 Gemini Live 即時語音（需 `GEMINI_API_KEY`，缺少時以 close code 4401 關閉）；模型可透過 `send_to_chat`、`read_history`、`read_task` 與主對話互動 |
 | `GET`  | `/v1/mcp/tools`        | 列出已連線 MCP server 註冊的工具（`mcp__*`）                                                                                                                                                                                                                                                 |
 
@@ -547,7 +547,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | 網路       | `search_web`                      | DuckDuckGo 結果與 Google News 標題一次取得；有 decision model 時剔除與請求無關的結果                                                                                                                                                                                                                                                |
 |            | `fetch_page`                      | 取得完整頁面內容（markdown／html／json）；agent 會先查看網站的 `/llms.txt`，有列出對應的 `.md` 頁面就優先抓取；有 decision model 時，markdown 會去除頁面雜訊，與請求無關的頁面不交給模型                                                                                                                                                                                                                                                  |
 |            | `http_request`                    | 原始 HTTP 呼叫，含 multipart 上傳                                                                                                                                                                                                                                                         |
-|            | `public_api_list`                 | 免金鑰公開 API 目錄：列出分類，或某分類下每個 API 的說明、HTTPS 標記與文件網址；找到合適的就以 `fetch_page` 讀文件、`http_request` 呼叫，不建工具 |
+|            | `public_api_list`                 | 免金鑰公開 API 目錄：列出分類，或某分類下每個 API 的說明、HTTPS 標記與文件網址；找到合適的就以 `fetch_page` 讀文件、`http_request` 呼叫，不建工具。需求明確對應分類時直接查該分類；分類不存在時錯誤附上分類清單 |
 |            | `html_template`                   | HTML 頁面範例庫（`mode=list\|read`）                                                                                                                                                                                                                                                      |
 | 狀態       | `chat_history`                    | 本 session 的執行紀錄與對話（`mode=list\|tool_list\|tool\|read\|search`）                                                                                                                                                                                                                 |
 |            | `error_history`                   | 跨 session 保留的工具失敗紀錄（`mode=search\|read\|write`）                                                                                                                                                                                                                               |
@@ -557,10 +557,22 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | 條件註冊   | `generate_image`                  | 文字生成圖片並存檔——image generator 為 off 時排除                                                                                                                                                                                                                                         |
 |            | `generate_audio`                  | 文字轉語音並存檔——未選 TTS 模型時排除                                                                                                                                                                                                                                                     |
 |            | `list_chatbot`、`send_to_chatbot` | 跨頻道推送——daemon 啟動時有啟用 Telegram 或 Discord 才註冊 |
-|            | `background_command`              | 在背景啟動指令，結束時帶著輸出接續任務，用於 watcher 與長時間工作；輸出行命中錯誤關鍵字（`keywords`，內建預設清單）時，指令執行中也會接續任務。執行期間的輸出寫在 `sessions/<id>/background/<task>.log`，結束後刪除——非 TUI 請求時排除 |
-|            | `background_subagents`            | 在背景啟動 subagent，完成時帶著存好的報告接續任務，用於很可能超過 5 分鐘的子任務；與 `background_command` 共用每個 session 的背景任務上限——非 TUI 請求時排除 |
+|            | `background_command`              | 在背景啟動指令，結束時回報輸出，用於 watcher 與長時間工作；輸出行命中錯誤關鍵字（`keywords`，內建預設清單）時，指令執行中也會回報。回報方式見[背景任務](#背景任務)。執行期間的輸出寫在 `sessions/<id>/background/<task>.log`，結束後刪除——非 TUI 請求時排除 |
+|            | `background_subagents`            | 在背景啟動 subagent，完成時回報存好的報告路徑，用於很可能超過 5 分鐘、或使用者要求晚點再通知的子任務；回報方式見[背景任務](#背景任務)；與 `background_command` 共用每個 session 的背景任務上限——非 TUI 請求時排除 |
 
 工具依名稱排序，tool payload 只帶 `find_tools`、`run_tool`、`reasoning_guide`、`write_todo`、`chat_history`、`ask_user`、`write_result` 七個完整 schema，其餘工具只以名稱列在每輪注入的 TurnContext；模型先以 `find_tools` 取得 schema（以工具回傳內容交付，不寫回 tool payload），再經 `run_tool(name, args)` 呼叫。未先取 schema 就呼叫時，執行器會自動回傳該 schema 並要求重新呼叫；直接以名稱呼叫這七個以外的工具會被拒絕。工具失敗的結果末尾附 `next:` 提示：錯誤指向憑證缺漏或被拒時指向 `store_secret`，其他情況提示改用別的方法成功後以 `error_history(mode=write)` 記錄。因此整個 session 的工具序列化結果逐位元組不變，prompt 快取得以保留。`claude-code` provider 不使用 `run_tool`：只收到工具名稱與完整的 `find_tools` schema，取得 schema 後直接以名稱呼叫。`edit_file` 的 patch 模式每個 target 只接受 `{old_string, new_string}`（另可帶 `replace_all`）；`new_string` 取代 `old_string`，插入則是在 `new_string` 開頭重複 `old_string`。所有 target 都對寫入前的磁碟原始內容比對，因此列出順序不影響結果；`old_string` 在未帶 `replace_all` 時比對到多處、兩個 target 覆蓋同一段、某個 target 的 `old_string` 出現在先前 target 的 `new_string` 內，或整批套用後會把非空檔案清空，整批都會拒絕且不寫入；`old_string` 與 `new_string` 相同的 target 會略過並在回傳中註明，內容沒有變化時不寫檔。
+
+### 背景任務
+
+`background_subagents` 與 `background_command` 只在 TUI 請求時可用。每次呼叫開一條 leg；同一回合開的 leg 自成一組，存於 `sessions/<id>/background/job_*.json`，整組保留第一個非空的 `objective`（這組要達成什麼，需能獨立閱讀）與 `next`（拿到報告後要做什麼）。發起的任務不會等待：照常結束並寫入任務歷史。leg 回報時：
+
+| 發起的任務 | 處理方式 |
+| --- | --- |
+| 仍在執行 | 報告加入它的下一輪；在它即將結束時才送到的報告會讓它多跑一輪 |
+| 暫停或等待 `ask_user` | 報告先保留，任務恢復時一併帶入 |
+| 已結束 | 等整組 leg 全部完成，才以 `objective`、`next`、所有報告與發起任務的 id（可用 `chat_history` 讀取）另開一輪，只執行一次；報告已全部被發起任務收走的組不會執行 |
+
+取消或暫停發起的任務會停止它的 leg；單一 leg 可從 TUI 背景任務選單（`esc`）取消。每個 session 最多同時執行 `MAX_BACKGROUND_TASKS` 條 leg，兩個工具合計。
 
 ## 架構
 
