@@ -34,6 +34,7 @@ var eventLabel = map[string]string{
 	"search_web":            "Search",
 	"fetch_page":            "Fetch",
 	"http_request":          "Send",
+	"public_api_list":       "API",
 	"calculate":             "Calc",
 	"test_tool":             "Test",
 	"send_to_chatbot":       "Push",
@@ -152,6 +153,9 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 			return strings.ToUpper(method) + " " + url
 		}
 		return url
+
+	case "public_api_list":
+		return arg("category")
 
 	case "search_web":
 		query := arg("query", "keyword")
