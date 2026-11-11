@@ -18,41 +18,40 @@ func Register() {
 		Concurrent:  false,
 		Timeout:     15 * time.Minute,
 		Description: `[system-default] Generates an image from a text prompt and writes it to disk.
-Use for 畫一張 / 生成圖片 / make me an image, and for edits when a reference image is given.
-Reading or describing an existing image → read_files; downloading one that already exists → download_file.
-Returns the saved path, not the image data.`,
+Use for "draw a picture of", "generate an image", "make me a logo", and for "edit this image" when a reference image is given.
+Reading or describing an existing image → read_files; downloading one that already exists → download_file.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"prompt": map[string]any{
 					"type":        "string",
-					"description": "What to draw, in English. Describe subject, composition and style; the provider rewrites vague prompts on its own.",
+					"description": "What to draw, in English: subject, composition and style, e.g. 'a red fox in fresh snow, low angle, watercolor'. Some providers rewrite it and return the revised prompt.",
 				},
 				"aspect_ratio": map[string]any{
 					"type":        "string",
-					"description": "Shape of the canvas, e.g. 1:1, 16:9, 4:3, 9:16.",
+					"description": "Canvas shape as W:H, e.g. 1:1, 16:9, 4:3, 9:16; omitted, the provider picks.",
 					"default":     "1:1",
 				},
 				"size": map[string]any{
 					"type":        "string",
-					"description": "Longest-edge resolution: 1k, 2k or 4k.",
+					"description": "Resolution tier: 1k, 2k or 4k (roughly 1024, 2048, 4096 px per edge); higher is slower; omitted, the provider picks.",
 					"enum":        []string{"1k", "2k", "4k"},
 					"default":     "1k",
 				},
 				"quality": map[string]any{
 					"type":        "string",
-					"description": "Render effort; ignored by gemini.",
+					"description": "Render effort: low, medium, high; higher is slower; omitted, the provider picks. Ignored by gemini.",
 					"enum":        []string{"low", "medium", "high"},
 					"default":     "medium",
 				},
 				"reference": map[string]any{
 					"type":        "string",
-					"description": "Absolute path to a png/jpg/webp used as the image to edit or imitate.",
+					"description": "Absolute path to a png/jpg/webp to edit or imitate; blank generates from the prompt alone.",
 					"default":     "",
 				},
 				"output_file": map[string]any{
 					"type":        "string",
-					"description": "Save path. Blank saves into the output directory; absolute is used as-is; relative is joined under the working directory. Extension is added from the returned mime type when omitted.",
+					"description": "Save path: blank auto-names image-<timestamp> in the output directory; absolute is used as-is; relative is joined under the working directory. Extension is added from the returned mime type when omitted.",
 					"default":     "",
 				},
 			},

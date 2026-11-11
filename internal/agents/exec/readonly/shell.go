@@ -7,7 +7,7 @@ import (
 
 	"mvdan.cc/sh/v3/syntax"
 
-	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 var shellWrappers = []string{"sh", "bash"}
@@ -59,7 +59,7 @@ func readOnlyRedirect(r *syntax.Redirect) bool {
 	}
 	switch r.Op {
 	case syntax.RdrIn:
-		return !boundary.IsSensitivePath(target)
+		return !filesystem.IsSensitivePath(target)
 	case syntax.RdrOut, syntax.AppOut, syntax.RdrAll, syntax.AppAll, syntax.ClbOut:
 		return target == "/dev/null"
 	}
@@ -85,7 +85,7 @@ func readOnlyCall(call *syntax.CallExpr) bool {
 		if argv[0] == "printf" && slices.ContainsFunc(argv[1:], func(a string) bool { return strings.HasPrefix(a, "-v") }) {
 			return false
 		}
-		return !slices.ContainsFunc(argv[1:], boundary.IsSensitivePath)
+		return !slices.ContainsFunc(argv[1:], filesystem.IsSensitivePath)
 	}
 	if _, nested := shellScript(argv); nested {
 		return false

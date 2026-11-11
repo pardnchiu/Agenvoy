@@ -52,9 +52,6 @@ func BuildSystemPrompts(workDir, extraSystemPrompt string, sessionID string, mod
 		prompts = append(prompts, go_llm_router.Message{Role: "system", Content: channel})
 	}
 	prompts = append(prompts, go_llm_router.Message{Role: "system", Content: getSystemPrompt(workDir, extraSystemPrompt, sessionID, model)})
-	if section := mcpInstructionsSection(); section != "" {
-		prompts = append(prompts, go_llm_router.Message{Role: "system", Content: section})
-	}
 	return prompts
 }
 
@@ -92,6 +89,7 @@ func mcpInstructionsSection() string {
 		sb.WriteString(instructions[name])
 		sb.WriteString("\n")
 	}
+	sb.WriteString("\n---\n\n")
 	return sb.String()
 }
 
@@ -129,6 +127,7 @@ func getSystemPrompt(workDir string, extraSystemPrompt string, sessionID string,
 		"{{.HostNote}}", hostNoteSection(),
 		"{{.ReplyLanguage}}", replyLanguage(),
 		"{{.BotPersona}}", personaSection,
+		"{{.MCPInstructions}}", mcpInstructionsSection(),
 		"{{.OfficialGuide}}", officialGuideSection(model),
 		"{{.GuardrailRules}}", guardrailRules,
 		"{{.ExtraSystemPrompt}}", extraSection,
@@ -238,30 +237,20 @@ func mergeGuideSections(layers ...string) string {
 	return builder.String()
 }
 
-func buildPermissionModeSection(allowAll bool) string {
-	if allowAll {
-		return strings.TrimRight(configs.PermissionAlwaysAllow, "\n")
-	}
-	return strings.TrimRight(configs.PermissionSingleConfirm, "\n")
-}
-
 func getChatCompletionsSystemPrompt(workDir string, model string) string {
 	return strings.NewReplacer(
 		"{{.SystemOS}}", getSystemInfo().os,
 		"{{.WorkPath}}", workDir,
 		"{{.HostNote}}", hostNoteSection(),
 		"{{.ReplyLanguage}}", replyLanguage(),
+		"{{.MCPInstructions}}", mcpInstructionsSection(),
 		"{{.OfficialGuide}}", officialGuideSection(model),
 		"{{.GuardrailRules}}", guardrailRules,
 	).Replace(configs.ChatCompletionsSystemPrompt)
 }
 
 func BuildChatCompletionsSystemPrompts(workDir string, model string) []go_llm_router.Message {
-	prompts := []go_llm_router.Message{{Role: "system", Content: getChatCompletionsSystemPrompt(workDir, model)}}
-	if section := mcpInstructionsSection(); section != "" {
-		prompts = append(prompts, go_llm_router.Message{Role: "system", Content: section})
-	}
-	return prompts
+	return []go_llm_router.Message{{Role: "system", Content: getChatCompletionsSystemPrompt(workDir, model)}}
 }
 
 func skillListBlock(scanner *runtime.SkillScanner, excludeSkills []string) string {

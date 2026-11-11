@@ -344,6 +344,9 @@ func formatToolArgs(name, raw, cwd string, fullPath bool) string {
 		if err := json.Unmarshal([]byte(raw), &p); err != nil || len(p.Argv) == 0 {
 			return raw
 		}
+		if script, ok := shellScript(p.Argv); ok {
+			return script
+		}
 		parts := make([]string, len(p.Argv))
 		for i, a := range p.Argv {
 			if a == "" || strings.ContainsAny(a, " \t\n\"'\\") {

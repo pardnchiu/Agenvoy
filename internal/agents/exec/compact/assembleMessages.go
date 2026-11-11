@@ -10,16 +10,13 @@ import (
 )
 
 func AssembleMessages(session *agenttypes.Session) []go_llm_router.Message {
-	result := make([]go_llm_router.Message, 0, len(session.SystemPrompts)+len(session.ContextHistories)+3+len(session.ToolHistories))
+	result := make([]go_llm_router.Message, 0, len(session.SystemPrompts)+len(session.ContextHistories)+2+len(session.ToolHistories))
 	result = append(result, session.SystemPrompts...)
 	for _, msg := range session.ContextHistories {
 		if content, ok := msg.Content.(string); ok && strings.Contains(content, configs.BAN_TAG) {
 			continue
 		}
 		result = append(result, msg)
-	}
-	if session.Summary.Role != "" {
-		result = append(result, session.Summary)
 	}
 	if session.TurnContext.Role != "" {
 		result = append(result, session.TurnContext)

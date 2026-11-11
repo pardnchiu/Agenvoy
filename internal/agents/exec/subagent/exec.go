@@ -199,7 +199,7 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 				errCh <- utilsmsg.New(utilsmsg.Internal, "subagent", "panic: %v", r)
 			}
 		}()
-		errCh <- exec.Run(subCtx, taskMeta, events, true)
+		errCh <- exec.Run(agentstypes.WithSubagent(subCtx), taskMeta, events, true)
 	}()
 
 	// * step 10: collect events

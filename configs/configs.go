@@ -183,12 +183,6 @@ var ChatCompletionsSystemPrompt string
 //go:embed prompts/system_prompt/default_rule.md
 var DefaultRule string
 
-//go:embed prompts/system_prompt/inject/permission/always_allow.md
-var PermissionAlwaysAllow string
-
-//go:embed prompts/system_prompt/inject/permission/single_confirm.md
-var PermissionSingleConfirm string
-
 //go:embed prompts/system_prompt/subagent.md
 var SubagentPrompt string
 
@@ -231,6 +225,9 @@ var InjectSkills string
 
 //go:embed prompts/system_prompt/inject/turn_context/tool_gap.md
 var InjectToolGap string
+
+//go:embed prompts/system_prompt/inject/turn_context/background.md
+var InjectBackground string
 
 //go:embed prompts/system_prompt/inject/turn_context/agent_guide.md
 var InjectAgentGuide string

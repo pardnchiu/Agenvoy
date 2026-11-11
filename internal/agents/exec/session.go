@@ -51,10 +51,7 @@ func session(ctx context.Context, meta ExecuteMeta) (*agentstypes.Session, error
 		ToolHistories:    []go_llm_router.Message{},
 	}
 	if !meta.IgnoreHistory {
-		if summary := sessionsummary.GetPrompt(sessionID, GetOldestMessageTime(maxHistory)); summary != "" {
-			// * if summary not empty, add it
-			session.Summary = go_llm_router.Message{Role: "user", Content: summary}
-		}
+		session.SummaryData = sessionsummary.Load(sessionID, GetOldestMessageTime(maxHistory))
 	}
 
 	// * step2: assemble user input

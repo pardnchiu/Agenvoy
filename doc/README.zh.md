@@ -266,8 +266,8 @@ curl -fsSL https://agenvoy.com/scripts/install.sh | bash
    - GitHub Copilot（$10／月）—— 指定 `gpt-5.6-luna`，額度損耗夠慢、能力也夠日常使用
    - OpenAI ChatGPT Plus（$20／月）
    - SuperGrok（$30／月）
-2. **想免費嚐鮮**，以下方式不需要訂閱：
-   - **[Ollama Cloud](https://ollama.com/settings/keys)**：建立免費 API key，在 `/model add` 選擇 **Ollama Cloud** 後加入 `gemma4:31b`。免費方案有用量上限，可用 `Shift+U` 查看剩餘額度。
+2. **不再推薦免費方案。** Ollama Cloud 自 2026-11-09（PT 下午 5:40）起 Free 方案改為 pay-as-you-go：`gemma4:31b`、`gpt-oss:120b`、`gpt-oss:20b`、`nemotron-3-super`、`nemotron-3-ultra` 等雲端模型需購買 credits，已無法免費試用 Agenvoy。以 Ollama 在本機執行仍然免費，但小型本機模型的 tool calling 不穩定。最低成本的推薦是上方的 GitHub Copilot（$10／月）。
+3. 以 TypeSafe 的 Jev 作為 decision model：在 [TypeSafe Console](https://console.typesafe.ai/keys) 建立金鑰，以 `/model add` → **API Key** → **TypeSafe** 加入，再到 `/model` → **decision** 選 `typesafe@jev-latest`。它只依輸入 token 計費（每十億 $42，輸出不收費，依 2026-11-11 [TypeSafe 模型頁](https://docs.typesafe.ai/models)），能把無關的 skill、記憶條目、搜尋結果與網頁樣板擋在每輪 context 之外；作者本機實測有 95.8% 的 skill 條目不必放進 turn context。設定步驟與實測數據見[新手入門](https://agenvoy.com/zh/docs/quickstart)。
 
 ---
 

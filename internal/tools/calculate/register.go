@@ -16,15 +16,15 @@ func Register() {
 		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `Evaluates mathematical expressions — arithmetic, unit conversions, currency arithmetic — and returns {expression: result}.
-Use for 算一下 / 換算 / 這樣總共多少, and whenever a number would otherwise be worked out in the head.
+		Description: `Evaluates numeric expressions — arithmetic and math functions on literal numbers — and returns each result. No units, variables or dates.
+Use for "calculate", "how much is that in total", "convert this at rate X", and whenever a number would otherwise be worked out in the head.
 It computes, it does not look anything up: a rate, a price or any live figure comes from its own tool first and is passed in as a literal.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"expressions": map[string]any{
 					"type":        "array",
-					"description": "Examples: '(100 + 200) * 3', '10 % 3', '2 ^ 10', 'sqrt(2)', 'pow(2, 10)', 'min(1, 2, 3)', 'max(...)' (variadic).",
+					"description": "Expressions evaluated independently, e.g. '(100 + 200) * 3', '1250 * 32.4', '2 ^ 10'. Operators + - * / % and ^ (power); integer / integer truncates (7 / 2 = 3), so write 7.0 / 2 for a fraction. Functions: sqrt, abs, ceil, floor, round, log (natural), log2, log10, sin, cos, tan (radians), pow(x, y), min(...), max(...).",
 					"items":       map[string]any{"type": "string"},
 					"minItems":    1,
 				},

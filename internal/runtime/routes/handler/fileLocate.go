@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
 
 const locateBudget = 8 * time.Second
@@ -83,7 +83,7 @@ func locateIn(root string, skip map[string]bool, name string, size, mtime int64,
 			if !holdsChildren(path, children) {
 				return nil
 			}
-			if !boundary.IsSensitivePath(path) {
+			if !filesystem.IsSensitivePath(path) {
 				paths = append(paths, path)
 			}
 			return filepath.SkipDir
@@ -95,7 +95,7 @@ func locateIn(root string, skip map[string]bool, name string, size, mtime int64,
 		if err != nil || info.Size() != size || !sameMoment(info.ModTime(), mtime) {
 			return nil
 		}
-		if !boundary.IsSensitivePath(path) {
+		if !filesystem.IsSensitivePath(path) {
 			paths = append(paths, path)
 		}
 		return nil

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/tools/fetchPage"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -23,23 +24,34 @@ func registDownloadFile() {
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  true,
-		Description: `Downloads a binary file from a URL onto local disk.
-Use for 下載 / 抓這個檔, and for tar.gz, images, archives, installers — anything not meant to be read as text.
-JSON or an API response → http_request; a web page → fetch_page(save=true).`,
+		Description: `Downloads a URL onto local disk: a binary file as-is, or a web page rendered in a browser and saved as markdown, html or json.
+Use for "download this", "grab this file", "save it locally", "export this page" — tar.gz, images, archives, installers, or a page to keep as a file.
+Reading a page without saving → fetch_page; JSON or an API response → http_request.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"url": map[string]any{
 					"type":        "string",
-					"description": "Full URL to download (must include http:// or https://).",
+					"description": "Full URL including http:// or https://; fetched with a plain GET, no custom headers.",
 				},
 				"output_file": map[string]any{
 					"type":        "string",
-					"description": "Save path. Absolute path used as-is. Relative path joined under the output directory. Parent dir auto-created.",
+					"description": "Save path: absolute is used as-is; relative is joined under the output directory (not the working directory). Parent directories are created; an existing file is overwritten.",
+				},
+				"render": map[string]any{
+					"type":        "boolean",
+					"description": "true renders a web page in a browser with the user's Chrome login and saves its content; false saves the raw HTTP response, for binaries and direct file links.",
+					"default":     false,
+				},
+				"type": map[string]any{
+					"type":        "string",
+					"enum":        []string{"markdown", "html", "json"},
+					"description": "Saved format, only with render=true: markdown (readable text), html (raw DOM), json (structured data).",
+					"default":     "markdown",
 				},
 				"timeout": map[string]any{
 					"type":        "integer",
-					"description": "Timeout seconds (max 600). Use 300+ for large archives.",
+					"description": "Timeout in seconds for render=false, capped at 600; 300+ for large archives. Ignored with render=true.",
 					"default":     120,
 				},
 			},
@@ -55,6 +67,8 @@ func handleDownloadFile(ctx context.Context, _ *tooltypes.Executor, args json.Ra
 		URL        string `json:"url"`
 		OutputFile string `json:"output_file"`
 		Timeout    int    `json:"timeout"`
+		Render     bool   `json:"render"`
+		Type       string `json:"type"`
 	}
 	if err := json.Unmarshal(args, &p); err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
@@ -73,6 +87,14 @@ func handleDownloadFile(ctx context.Context, _ *tooltypes.Executor, args json.Ra
 	}
 	if err := os.MkdirAll(filepath.Dir(out), 0755); err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "os.MkdirAll", filepath.Dir(out), err)
+	}
+
+	if p.Render {
+		outType, err := fetchPage.ParseOutputType(p.Type)
+		if err != nil {
+			return "", err
+		}
+		return fetchPage.SavePage(ctx, url, outType, out)
 	}
 
 	timeout := p.Timeout

@@ -4,15 +4,15 @@
     "code": "zh-TW",
     "name": "繁體中文",
     "label": "繁體中文（台灣）",
-    "note": " Taiwan vocabulary and phrasing; never Simplified characters, never mainland or Hong Kong wording."
+    "note": "Taiwan vocabulary in Traditional characters"
   },
   {
     "code": "zh-HK",
     "name": "繁體中文",
     "label": "繁體中文（香港）",
-    "note": " Hong Kong vocabulary and phrasing; never Simplified characters, never Taiwan or mainland wording."
+    "note": "Hong Kong vocabulary in Traditional characters"
   },
-  { "code": "zh-CN", "name": "简体中文", "note": " Mainland China vocabulary and phrasing." },
+  { "code": "zh-CN", "name": "简体中文", "note": "Mainland China vocabulary" },
   { "code": "ja", "name": "日本語" },
   { "code": "ko", "name": "한국어" },
   { "code": "es", "name": "Español" },

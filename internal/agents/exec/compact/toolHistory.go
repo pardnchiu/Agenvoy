@@ -71,7 +71,6 @@ func ToolHistory(ctx context.Context, agent agenttypes.Agent, session *agenttype
 	}
 
 	session.ContextHistories = nil
-	session.Summary = go_llm_router.Message{}
 	head := []go_llm_router.Message{
 		{
 			Role:    "user",

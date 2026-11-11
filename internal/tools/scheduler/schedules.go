@@ -16,8 +16,8 @@ func registSchedules() {
 		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  false,
-		Description: `Scheduled runs bound to a scheduler skill: what is queued (list), moving one to a new time (patch), cancelling one (remove).
-Use for 有哪些排程 / 改時間 / 取消排程 / 那個定時任務還在嗎.
+		Description: `This session's scheduled runs, each bound to a scheduler skill: list what is queued, move one to a new time (patch), or cancel one (remove).
+Use for "what's scheduled", "move my reminder to 9am", "cancel that schedule", "is that recurring job still on".
 Creating a schedule → the scheduler-skill-creator skill, never mode=write. A dry-run request → find the name with mode=list, read its SKILL.md and run the steps now; never answer "run /sched-X in the TUI".`,
 		Parameters: map[string]any{
 			"type": "object",
@@ -25,22 +25,22 @@ Creating a schedule → the scheduler-skill-creator skill, never mode=write. A d
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"list", "patch", "remove", "write"},
-					"description": "list: what this session has queued. patch: move an entry to a new time. remove: cancel it and trash its skill. write: the internal binding step of scheduler-skill-creator — its skill_name carries a hash only that flow produces, so a hand-made one always fails. Omitted: list.",
+					"description": "list: what this session has queued. patch: move an entry to a new time. remove: cancel it and move its skill to .Trash. write: the internal binding step of scheduler-skill-creator; its skill_name carries a hash only that flow produces, so a hand-made one always fails.",
 					"default":     "list",
 				},
 				"target": map[string]any{
 					"type":        "string",
 					"enum":        []string{"task", "cron", "all"},
-					"description": "Which kind of entry. task: one-shot fire time. cron: recurring 5-field expression. all: mode=list only.",
+					"description": "Which kind of entry. task: one-shot fire time. cron: recurring schedule. all: both, mode=list only and what list uses when omitted. mode=patch / remove / write must pass task or cron explicitly.",
 					"default":     "all",
 				},
 				"skill_name": map[string]any{
 					"type":        "string",
-					"description": "mode=write / mode=patch / mode=remove: scheduler skill full name including its hash suffix (e.g. 'meeting-reminder-a3f9b2c1'), no 'scheduler-' prefix. Required.",
+					"description": "mode=patch / remove / write, required: the scheduler skill's full name as mode=list shows it, hash suffix included and no 'scheduler-' prefix, e.g. 'meeting-reminder-a3f9b2c1'.",
 				},
 				"time": map[string]any{
 					"type":        "string",
-					"description": "mode=write / mode=patch: required. target=task: '+5m' / '+1h30m' (relative), '15:04' (today clock), '2006-01-02 15:04' (local datetime), or RFC3339. target=cron: 5-field expression '{min} {hour} {dom} {mon} {dow}', a descriptor (@yearly @annually @monthly @weekly @daily @midnight @hourly), or '@every {duration}' (minimum 30s).",
+					"description": "mode=patch / write, required. target=task, a future time: '+5m' / '+1h30m' (relative), '15:04' (later today only; no rollover to tomorrow), '2006-01-02 15:04' (local datetime), or RFC3339. target=cron: 5-field '{min} {hour} {dom} {mon} {dow}' e.g. '0 9 * * 1-5', a descriptor (@yearly @annually @monthly @weekly @daily @midnight @hourly), or '@every {duration}' (minimum 30s).",
 				},
 			},
 		},

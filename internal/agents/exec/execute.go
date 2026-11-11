@@ -385,8 +385,10 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	if withSkills {
 		decideWG.Go(func() { hiddenSkills = unrelatedSkills(ctx, session.ID, exec.Objective, scanner, data.ExcludeSkills) })
 	}
+	var summary string
+	decideWG.Go(func() { summary = relevantSummary(ctx, session.ID, exec.Objective, session.SummaryData) })
 	decideWG.Wait()
-	assignTurnContext(ctx, session, data.WorkDir, allowAll, scanner, append(slices.Clone(data.ExcludeSkills), hiddenSkills...), withSkills, toolNames, toolGap)
+	assignTurnContext(ctx, session, data.WorkDir, scanner, append(slices.Clone(data.ExcludeSkills), hiddenSkills...), withSkills, toolNames, toolGap, summary, interactive.RunningBackground(session.ID, exec.PendingTask))
 	if data.Skill != nil {
 		assignSkill(session, data.Skill)
 	}

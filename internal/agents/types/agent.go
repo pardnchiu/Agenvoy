@@ -54,6 +54,17 @@ func DeliverToFrom(ctx context.Context) string {
 	return sid
 }
 
+type subagentCtxKey struct{}
+
+func WithSubagent(ctx context.Context) context.Context {
+	return context.WithValue(ctx, subagentCtxKey{}, true)
+}
+
+func SubagentFrom(ctx context.Context) bool {
+	v, _ := ctx.Value(subagentCtxKey{}).(bool)
+	return v
+}
+
 type noPromptCtxKey struct{}
 
 func WithNoPrompt(ctx context.Context) context.Context {
@@ -94,7 +105,7 @@ func (a *ModelEntry) UnmarshalJSON(raw []byte) error {
 type Session struct {
 	ID               string
 	SystemPrompts    []go_llm_router.Message
-	Summary          go_llm_router.Message
+	SummaryData      map[string]any
 	TurnContext      go_llm_router.Message
 	UserMessage      go_llm_router.Message
 	ToolHistories    []go_llm_router.Message

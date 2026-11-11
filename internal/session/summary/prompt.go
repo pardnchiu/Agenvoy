@@ -8,20 +8,26 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 )
 
-func GetPrompt(sessionID string, cutoff time.Time) string {
+func Load(sessionID string, cutoff time.Time) map[string]any {
 	raw, summaryMap := Get(sessionID)
-	if raw == nil {
-		return ""
+	if raw == nil || summaryMap == nil {
+		return nil
 	}
-
-	if !cutoff.IsZero() && summaryMap != nil {
+	if !cutoff.IsZero() {
 		filter(summaryMap, "past_discussions", "last_discussed", cutoff)
 		filter(summaryMap, "discussion_log", "time", cutoff)
-		if b, err := json.Marshal(summaryMap); err == nil {
-			raw = b
-		}
 	}
+	return summaryMap
+}
 
+func Prompt(dic map[string]any) string {
+	if len(dic) == 0 {
+		return ""
+	}
+	raw, err := json.Marshal(dic)
+	if err != nil {
+		return ""
+	}
 	return strings.NewReplacer(
 		"{{.Summary}}", string(raw),
 	).Replace(strings.TrimSpace(configs.SummaryContext))

@@ -21,20 +21,20 @@ func registStoreSecret() {
 		SystemUse:   true,
 		AlwaysAllow: false,
 		Concurrent:  false,
-		Description: `Asks the user for a secret with masked input and stores it in the keychain.
-Fires on an auth failure — missing key, 401, 403, expired token: take the key name from the error, call this, then re-invoke the tool that failed.
-Every API key, token and password already lives in the OS keychain under service ` + "`agenvoy`" + `, account = the key name (OPENAI_API_KEY, POLYGON_API_KEY, ...): macOS ` + "`security find-generic-password -s agenvoy -a <KEY> -w`" + `, Linux ` + "`secret-tool lookup service agenvoy account <KEY>`" + ` then ` + "`~/.config/agenvoy/.secrets`" + `, and only after all of those the environment variable of that name. Nothing is exported into the process environment, so an empty ` + "`printenv`" + ` is no reason to ask the user or call the task blocked. Read from there when a call needs credentials; this tool is for the key that is not there yet.
-Credentials travel only through this tool's masked input; the value stays out of messages, tool arguments and files. At most two rounds per tool per turn.`,
+		Description: `Asks the user for a secret with masked input and stores it in the OS keychain; returns only the key name, never the value.
+Use for "set my OpenAI key", "update my API token", and on an auth failure (missing key, 401, 403, expired token): take the key name from the error, call this, then re-invoke the tool that failed. Other questions to the user → ask_user.
+Stored keys already live in the OS keychain under service ` + "`agenvoy`" + `, account = the key name (OPENAI_API_KEY, POLYGON_API_KEY, ...): macOS ` + "`security find-generic-password -s agenvoy -a <KEY> -w`" + `, Linux ` + "`secret-tool lookup service agenvoy account <KEY>`" + ` then ` + "`~/.config/agenvoy/.secrets`" + `, and only after those the environment variable of that name. Nothing is exported into the process environment, so an empty ` + "`printenv`" + ` is no reason to ask the user or call the task blocked; read from there when a call needs credentials, and use this tool only for a key that is not there yet.
+Credentials travel only through this tool's masked input; keep the value out of messages, tool arguments and files. At most two rounds per tool per turn.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"key": map[string]any{
 					"type":        "string",
-					"description": "Keychain entry name (e.g. OPENAI_API_KEY).",
+					"description": "Keychain entry name, usually the environment-variable name from the error, e.g. 'OPENAI_API_KEY', 'POLYGON_API_KEY'.",
 				},
 				"question": map[string]any{
 					"type":        "string",
-					"description": "Optional question text shown to the user. Defaults to a generic prompt referencing the key.",
+					"description": "Prompt shown to the user, e.g. 'Paste your Polygon API key (polygon.io/dashboard)'; omitted → '<key> is required'.",
 				},
 			},
 			"required": []string{"key"},
