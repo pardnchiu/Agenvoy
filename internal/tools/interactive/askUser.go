@@ -81,7 +81,6 @@ type pendingMeta struct {
 	Files        []string              `json:"files,omitempty"`
 	Reply        string                `json:"reply,omitempty"`
 	AllowAll     bool                  `json:"allow_all,omitempty"`
-	Background   []BackgroundTask      `json:"background,omitempty"`
 	WindowHash   string                `json:"window_hash,omitempty"`
 }
 
@@ -295,25 +294,9 @@ func DeletePending(sessionID, taskHash string) {
 		return
 	}
 	pendingMu.Lock()
-	path := filesystem.PendingMetaPath(sessionID, taskHash)
-	if running, unreported := BackgroundState(sessionID, taskHash); running+unreported > 0 {
-		meta, err := readPending(path)
-		pendingMu.Unlock()
-		if err == nil {
-			resumeUnreported(sessionID, taskHash, meta.Background)
-		}
-		return
-	}
-	os.Remove(path)
+	os.Remove(filesystem.PendingMetaPath(sessionID, taskHash))
 	pendingMu.Unlock()
-}
-
-func resumeUnreported(sessionID, taskHash string, list []BackgroundTask) {
-	finished, running := backgroundToReport(list)
-	if running > 0 || len(finished) == 0 || backgroundResume == nil {
-		return
-	}
-	backgroundResume(sessionID, taskHash, finished[0].WorkDir)
+	SettleBackground(sessionID, taskHash)
 }
 
 func CompactPending(sessionID, taskHash string) {
@@ -355,23 +338,7 @@ func CleanupPending(sessionID, taskHash string) {
 		return
 	}
 	src := filesystem.PendingMetaPath(sessionID, taskHash)
-	if running, unreported := BackgroundState(sessionID, taskHash); running+unreported > 0 {
-		pendingMu.Lock()
-		meta, err := readPending(src)
-		if err == nil && len(meta.Questions) > 0 {
-			meta.Questions = nil
-			if err := writePending(sessionID, taskHash, &meta); err != nil {
-				slog.Warn("CleanupPending writePending",
-					slog.String("file", src),
-					slog.String("error", err.Error()))
-			}
-		}
-		pendingMu.Unlock()
-		if err == nil {
-			resumeUnreported(sessionID, taskHash, meta.Background)
-		}
-		return
-	}
+	defer SettleBackground(sessionID, taskHash)
 	CompactPending(sessionID, taskHash)
 
 	if !go_pkg_filesystem_reader.Exists(src) {
@@ -602,13 +569,9 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 
 	var msg strings.Builder
 
-	finished, running := backgroundToReport(meta.Background)
-	backgroundOnly := len(meta.Questions) == 0 && len(finished) > 0
+	finished, running := backgroundToReport(parentLegs(sessionID, taskHash))
 	if len(meta.Questions) > 0 {
 		msg.WriteString("[Resumed Task — ask_user response received]\n\n")
-	} else if len(finished) > 0 {
-		msg.WriteString(backgroundResumeHeader(finished))
-		msg.WriteString("\n\n")
 	} else {
 		msg.WriteString("[Resumed Task — interrupted execution recovered]\n\n")
 	}
@@ -761,11 +724,6 @@ func LoadResumeMessage(sessionID, taskHash string, answers []any) (full string, 
 	}
 
 	stageBackgroundReport(sessionID, taskHash, sb.String(), finished)
-	if backgroundOnly {
-		report := strings.TrimSpace(sb.String())
-		header, section, _ := strings.Cut(report, "\n")
-		return header + "\n\n## Objective\n" + strings.TrimSpace(meta.Objective) + "\n" + section, report, nil
-	}
 	return msg.String(), sb.String(), nil
 }
 
@@ -793,13 +751,11 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 	var allResults []ToolResult
 	var messageID, model, reasoning string
 	var allowAll bool
-	var background []BackgroundTask
 	var windowHash string
 	taskObjective := objective
 	allFiles := files
 	if existing, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash)); err == nil {
 		allowAll = existing.AllowAll
-		background = existing.Background
 		windowHash = existing.WindowHash
 		if strings.TrimSpace(existing.Objective) != "" {
 			taskObjective = existing.Objective
@@ -837,7 +793,6 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 		Files:        allFiles,
 		ToolResults:  allResults,
 		AllowAll:     allowAll,
-		Background:   background,
 		WindowHash:   windowHash,
 	}); err != nil {
 		slog.Warn("SaveAndEnqueueAskUser: writePending", slog.String("error", err.Error()))

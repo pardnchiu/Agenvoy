@@ -1,4 +1,3 @@
-const CHAT_ID = /^(chat-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|(tg|dc)-[0-9a-f]{64})$/i;
 const SESSION_ID = /^((chat|cli|temp)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|(tg|dc)-[0-9a-f]{64})$/i;
 
 const MODEL_AUTO = "auto";

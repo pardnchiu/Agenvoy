@@ -163,6 +163,10 @@ func BackgroundLogPath(sessionID, id string) string {
 	return filepath.Join(BackgroundDir(sessionID), id+".log")
 }
 
+func BackgroundJobPath(sessionID, jobID string) string {
+	return filepath.Join(BackgroundDir(sessionID), jobID+".json")
+}
+
 func PendingDir(sessionID string) string {
 	return filepath.Join(SessionDir(sessionID), "pending")
 }

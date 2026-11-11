@@ -149,6 +149,12 @@ func (c *Client) Cancel(sessionID, taskHash string, pause bool) error {
 	return c.send(Frame{Type: FrameCancel, SessionID: sessionID, TaskHash: taskHash, Pause: pause})
 }
 
+func (c *Client) CancelBackground(sessionID, jobID, legID string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.send(Frame{Type: FrameBackgroundCancel, SessionID: sessionID, TaskHash: jobID, LegID: legID})
+}
+
 func (c *Client) Steer(sessionID, windowHash, text string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()

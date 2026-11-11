@@ -21,7 +21,6 @@ type pendingTaskInfo struct {
 	TaskHash     string `json:"task_hash"`
 	Objective    string `json:"objective"`
 	HasQuestions bool   `json:"has_questions"`
-	Background   int    `json:"background"`
 }
 
 func ListSessionPending() gin.HandlerFunc {
@@ -42,12 +41,10 @@ func ListSessionPending() gin.HandlerFunc {
 			if !ok {
 				continue
 			}
-			running, unreported := interactive.BackgroundState(sid, h)
 			list = append(list, pendingTaskInfo{
 				TaskHash:     info.TaskHash,
 				Objective:    info.Objective,
 				HasQuestions: info.HasQuestions,
-				Background:   running + unreported,
 			})
 		}
 		c.JSON(http.StatusOK, gin.H{"pending": list})

@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	agentsexecallowtool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
@@ -280,6 +281,7 @@ func isGet(argsJSON string) bool {
 
 func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_router.OutputChoices, sessionData *agenttypes.Session, events chan<- agenttypes.Event, allowAll bool, alreadyCall map[string]string, turnAllowAll *bool) (*agenttypes.Session, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
+	exec.BackgroundGroup = go_pkg_utils.UUID()
 
 	calls := choice.Message.ToolCalls
 	slots := make([]toolSlot, len(calls))

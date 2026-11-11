@@ -63,8 +63,12 @@ func (t TUI) viewIdle() string {
 		top += renderCmdSelector(t.selector) + "\n"
 	}
 
-	if t.waitingBackground != "" && t.waitingBackground == t.currentSessionID {
-		top += warnStyle.Render(t.spinner.View()+" Waiting for background tasks") + " " + hintStyle.Render("(the reply continues here)") + "\n"
+	if t.backgroundRunning > 0 {
+		line := warnStyle.Render(fmt.Sprintf("%s %d background task(s) running", t.spinner.View(), t.backgroundRunning))
+		if !t.running {
+			line += " " + hintStyle.Render("(esc to cancel)")
+		}
+		top += line + "\n"
 	}
 
 	if t.notice != "" {

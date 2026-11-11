@@ -45,7 +45,7 @@ A watcher (--watch, chokidar, npm run sass/build/dev), a job likely over %d minu
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.unsandboxed(), false, 0, nil)
+			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.unsandboxed(), nil)
 		},
 	})
 }
@@ -117,7 +117,7 @@ var errOpenCommand = utilsmsg.New(utilsmsg.Denied, "open", "the sandbox has no r
 
 const systemPackageRoute = "a system package → the package manager named on the Host OS line: argv ['sudo', '<manager>', ...] (e.g. ['sudo', 'apt-get', 'install', '-y', '<pkg>']), or ['brew', 'install', '<pkg>'] with sandbox: false and never sudo; only when Host OS names none, find it with command -v"
 
-func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, unsandboxed, background bool, timeoutMin int, watch *watchSpec) (string, error) {
+func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, unsandboxed bool, background *backgroundSpec) (string, error) {
 	if len(argv) == 0 {
 		return "", utilsmsg.New(utilsmsg.Invalid, "argv", "requires a non-empty array, e.g. [\"git\", \"status\"]")
 	}
@@ -162,7 +162,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 		}
 	}
 
-	if !background {
+	if background == nil {
 		if err := checkWatchArgs(argv, e.WorkDir, 0, map[string]bool{}); err != nil {
 			return "", err
 		}
@@ -186,8 +186,8 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 		sandboxOpt = &go_pkg_sandbox.Option{AllowAll: true}
 	}
 
-	if background {
-		return startBackgroundCommand(ctx, e, argv, binds, sandboxOpt, timeoutMin, watch)
+	if background != nil {
+		return startBackgroundCommand(ctx, e, argv, binds, sandboxOpt, background)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, configs.RUN_COMMAND_TIMEOUT)

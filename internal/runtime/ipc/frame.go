@@ -17,6 +17,8 @@ const (
 	FrameSteer   = "steer"
 	FrameVerify  = "verify"
 	FrameMCP     = "mcp"
+
+	FrameBackgroundCancel = "background_cancel"
 )
 
 type Frame struct {
@@ -24,6 +26,7 @@ type Frame struct {
 	UUID      string            `json:"uuid,omitempty"`
 	SessionID string            `json:"session_id,omitempty"`
 	TaskHash  string            `json:"task_hash,omitempty"`
+	LegID     string            `json:"leg_id,omitempty"`
 	Error     string            `json:"error,omitempty"`
 	Canceled  bool              `json:"canceled,omitempty"`
 	Pause     bool              `json:"pause,omitempty"`

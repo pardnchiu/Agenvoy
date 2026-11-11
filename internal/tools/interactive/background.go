@@ -4,18 +4,21 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 
+	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
-
-const BackgroundTool = "subagents"
 
 var (
 	updateNumberRegex = regexp.MustCompile(`report #(\d+)`)
@@ -49,67 +52,151 @@ func ReleaseBackgroundSlot(sessionID string) {
 	backgroundSlotCounts[sessionID]--
 }
 
+type BackgroundGoal struct {
+	Objective string
+	Next      string
+}
+
 type BackgroundTask struct {
 	ID          string   `json:"id"`
 	Description string   `json:"description"`
-	WorkDir     string   `json:"work_dir,omitempty"`
 	Done        bool     `json:"done,omitempty"`
 	Reported    bool     `json:"reported,omitempty"`
 	Result      string   `json:"result,omitempty"`
 	Updates     []string `json:"updates,omitempty"`
+	job         string
 }
 
-func AddBackground(sessionID, taskHash, workDir, id, description string) error {
-	pendingMu.Lock()
-	defer pendingMu.Unlock()
+type BackgroundJob struct {
+	ID         string           `json:"id"`
+	SessionID  string           `json:"session_id"`
+	ParentTask string           `json:"parent_task"`
+	Group      string           `json:"group,omitempty"`
+	WorkDir    string           `json:"work_dir,omitempty"`
+	WindowHash string           `json:"window_hash,omitempty"`
+	AllowAll   bool             `json:"allow_all,omitempty"`
+	Objective  string           `json:"objective,omitempty"`
+	Next       string           `json:"next,omitempty"`
+	Legs       []BackgroundTask `json:"legs,omitempty"`
+}
 
-	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+var jobMu sync.Mutex
+
+func readJob(path string) (BackgroundJob, error) {
+	job, err := go_pkg_filesystem.ReadJSON[BackgroundJob](path)
 	if err != nil {
-		return utilsmsg.Trace("readPending", taskHash, err)
+		return BackgroundJob{}, utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.ReadJSON", path, err)
 	}
-	meta.Background = append(meta.Background, BackgroundTask{ID: id, Description: description, WorkDir: workDir})
-	return writePending(sessionID, taskHash, &meta)
+	return job, nil
 }
 
-func FinishBackground(sessionID, taskHash, id, result string) error {
-	unregisterBackgroundCancel(sessionID, taskHash, id)
-	if takeBackgroundCanceled(sessionID, taskHash) {
-		return ErrBackgroundCanceled
+func writeJob(job *BackgroundJob) error {
+	dir := filesystem.BackgroundDir(job.SessionID)
+	if err := go_pkg_filesystem.CheckDir(dir, true); err != nil {
+		return utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.CheckDir", dir, err)
 	}
-	return finishBackground(sessionID, taskHash, id, result)
+	if err := go_pkg_filesystem.WriteJSON(filesystem.BackgroundJobPath(job.SessionID, job.ID), job, false); err != nil {
+		return utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.WriteJSON", job.ID, err)
+	}
+	return nil
 }
 
-func finishBackground(sessionID, taskHash, id, result string) error {
-	pendingMu.Lock()
-	defer pendingMu.Unlock()
-
-	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+func parentJobs(sessionID, parentTask string) []BackgroundJob {
+	if parentTask == "" {
+		return nil
+	}
+	paths, err := filepath.Glob(filepath.Join(filesystem.BackgroundDir(sessionID), "job_*.json"))
 	if err != nil {
-		return utilsmsg.Trace("readPending", taskHash, err)
+		return nil
 	}
-	i := slices.IndexFunc(meta.Background, func(b BackgroundTask) bool { return b.ID == id })
-	if i < 0 {
-		return utilsmsg.New(utilsmsg.NotFound, "background task", "%q in pending %q", id, taskHash)
+	var list []BackgroundJob
+	for _, path := range paths {
+		job, err := readJob(path)
+		if err != nil || job.ParentTask != parentTask {
+			continue
+		}
+		list = append(list, job)
 	}
-	meta.Background[i].Done = true
-	meta.Background[i].Result = clampPendingText(result, configs.MAX_PENDING_RESULT_BYTES)
-	return writePending(sessionID, taskHash, &meta)
+	return list
 }
 
-func UpdateBackground(sessionID, taskHash, id, text string) error {
-	pendingMu.Lock()
-	defer pendingMu.Unlock()
+func addLeg(sessionID, parentTask, group, workDir, windowHash string, goal BackgroundGoal, id, description string) (string, error) {
+	jobMu.Lock()
+	defer jobMu.Unlock()
 
-	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+	jobs := parentJobs(sessionID, parentTask)
+	i := slices.IndexFunc(jobs, func(job BackgroundJob) bool { return group != "" && job.Group == group })
+	var job BackgroundJob
+	if i >= 0 {
+		job = jobs[i]
+	} else {
+		job = BackgroundJob{
+			ID:         "job_" + strings.ReplaceAll(go_pkg_utils.UUID(), "-", "")[:8],
+			SessionID:  sessionID,
+			ParentTask: parentTask,
+			Group:      group,
+			WorkDir:    workDir,
+			WindowHash: windowHash,
+			AllowAll:   LoadPendingAllowAll(sessionID, parentTask),
+		}
+	}
+	if job.Objective == "" {
+		job.Objective = strings.TrimSpace(goal.Objective)
+	}
+	if job.Next == "" {
+		job.Next = strings.TrimSpace(goal.Next)
+	}
+	job.Legs = append(job.Legs, BackgroundTask{ID: id, Description: description})
+	if err := writeJob(&job); err != nil {
+		return "", err
+	}
+	return job.ID, nil
+}
+
+func FinishBackground(sessionID, jobID, id, result string) (string, error) {
+	if takeLegCanceled(id) {
+		return "", ErrBackgroundCanceled
+	}
+	jobMu.Lock()
+	job, err := readJob(filesystem.BackgroundJobPath(sessionID, jobID))
+	jobMu.Unlock()
 	if err != nil {
-		return utilsmsg.Trace("readPending", taskHash, err)
+		return "", utilsmsg.Trace("readJob", jobID, err)
 	}
-	i := slices.IndexFunc(meta.Background, func(b BackgroundTask) bool { return b.ID == id })
-	if i < 0 || meta.Background[i].Done {
-		return utilsmsg.New(utilsmsg.NotFound, "background task", "%q running in pending %q", id, taskHash)
+	unregisterBackgroundCancel(sessionID, job.ParentTask, id)
+	if takeBackgroundCanceled(sessionID, job.ParentTask) {
+		return job.ParentTask, ErrBackgroundCanceled
 	}
-	meta.Background[i].Updates = trimUpdates(append(meta.Background[i].Updates, clampPendingText(text, configs.MAX_PENDING_RESULT_BYTES/4)), configs.MAX_PENDING_RESULT_BYTES)
-	return writePending(sessionID, taskHash, &meta)
+	return updateLeg(sessionID, jobID, id, func(leg *BackgroundTask) bool {
+		leg.Done = true
+		leg.Result = clampPendingText(result, configs.MAX_PENDING_RESULT_BYTES)
+		return true
+	})
+}
+
+func UpdateBackground(sessionID, jobID, id, text string) (string, error) {
+	return updateLeg(sessionID, jobID, id, func(leg *BackgroundTask) bool {
+		if leg.Done {
+			return false
+		}
+		leg.Updates = trimUpdates(append(leg.Updates, clampPendingText(text, configs.MAX_PENDING_RESULT_BYTES/4)), configs.MAX_PENDING_RESULT_BYTES)
+		return true
+	})
+}
+
+func updateLeg(sessionID, jobID, id string, apply func(*BackgroundTask) bool) (string, error) {
+	jobMu.Lock()
+	defer jobMu.Unlock()
+
+	job, err := readJob(filesystem.BackgroundJobPath(sessionID, jobID))
+	if err != nil {
+		return "", utilsmsg.Trace("readJob", jobID, err)
+	}
+	i := slices.IndexFunc(job.Legs, func(b BackgroundTask) bool { return b.ID == id })
+	if i < 0 || !apply(&job.Legs[i]) {
+		return job.ParentTask, utilsmsg.New(utilsmsg.NotFound, "background task", "%q running in job %q", id, jobID)
+	}
+	return job.ParentTask, writeJob(&job)
 }
 
 func trimUpdates(list []string, budget int) []string {
@@ -157,30 +244,22 @@ func trimUpdates(list []string, budget int) []string {
 	return append([]string{first, marker}, rest[cut:]...)
 }
 
-func BackgroundState(sessionID, taskHash string) (running, unreported int) {
-	if taskHash == "" {
-		return 0, 0
-	}
-	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
-	if err != nil {
-		return 0, 0
-	}
-	finished, running := backgroundToReport(meta.Background)
-	return running, len(finished)
-}
-
-func RunningBackground(sessionID, taskHash string) []BackgroundTask {
-	if taskHash == "" {
-		return nil
-	}
-	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
-	if err != nil {
-		return nil
-	}
+func RunningBackground(sessionID, parentTask string) []BackgroundTask {
 	var list []BackgroundTask
-	for _, one := range meta.Background {
+	for _, one := range parentLegs(sessionID, parentTask) {
 		if !one.Done {
 			list = append(list, one)
+		}
+	}
+	return list
+}
+
+func parentLegs(sessionID, parentTask string) []BackgroundTask {
+	var list []BackgroundTask
+	for _, job := range parentJobs(sessionID, parentTask) {
+		for _, leg := range job.Legs {
+			leg.job = job.ID
+			list = append(list, leg)
 		}
 	}
 	return list
@@ -202,32 +281,10 @@ func ClaimFollowUp(sessionID, taskHash string) (string, bool) {
 }
 
 func HasBackground(sessionID, taskHash string) bool {
-	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
-	return err == nil && len(meta.Background) > 0
-}
-
-func SaveToolResults(sessionID, taskHash, windowHash string, results []ToolResult, files []string) {
-	pendingMu.Lock()
-	defer pendingMu.Unlock()
-
-	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
-	if err != nil {
-		return
+	if taskHash == "" || !go_pkg_filesystem_reader.Exists(filesystem.PendingMetaPath(sessionID, taskHash)) {
+		return false
 	}
-	meta.Files = mergeFiles(meta.Files, files)
-	for _, r := range results {
-		if r.ID == "" || slices.ContainsFunc(meta.ToolResults, func(e ToolResult) bool { return e.ID == r.ID }) {
-			continue
-		}
-		meta.ToolResults = append(meta.ToolResults, r)
-	}
-	meta.ToolAttempts = nil
-	meta.WindowHash = windowHash
-	if err := writePending(sessionID, taskHash, &meta); err != nil {
-		slog.Debug("SaveToolResults",
-			slog.String("session", sessionID),
-			slog.String("error", err.Error()))
-	}
+	return len(parentJobs(sessionID, taskHash)) > 0
 }
 
 func backgroundToReport(list []BackgroundTask) (finished []BackgroundTask, running int) {
@@ -247,9 +304,9 @@ func backgroundToReport(list []BackgroundTask) (finished []BackgroundTask, runni
 
 func backgroundResumeHeader(finished []BackgroundTask) string {
 	if slices.ContainsFunc(finished, func(b BackgroundTask) bool { return b.Done }) {
-		return "[Resumed Task — background task finished]"
+		return "[Background Report — background task finished]"
 	}
-	return "[Resumed Task — background task update]"
+	return "[Background Report — background task update]"
 }
 
 func formatBackgroundSection(finished []BackgroundTask, running int) string {
@@ -267,11 +324,23 @@ func formatBackgroundSection(finished []BackgroundTask, running int) string {
 		fmt.Fprintf(&sb, "\n### %s · %s\n%s\n", b.ID, b.Description, b.Result)
 	}
 	if running > 0 {
-		fmt.Fprintf(&sb, "\n%d background task(s) still running. Handle the finished results above; this task stays pending and resumes again as each remaining one finishes.\n", running)
+		fmt.Fprintf(&sb, "\n%d background task(s) still running. Their reports arrive here while this task is open; once it has ended, each group runs its next step as its own task when all of its legs finish.\n", running)
 	} else {
 		sb.WriteString("\nAll background tasks of this task have finished.\n")
 	}
 	return sb.String()
+}
+
+func TakeBackgroundReport(sessionID, parentTask string) string {
+	if parentTask == "" {
+		return ""
+	}
+	finished, running := backgroundToReport(unstagedLegs(sessionID, parentTask))
+	if len(finished) == 0 {
+		return ""
+	}
+	markBackgroundReported(sessionID, finished)
+	return backgroundResumeHeader(finished) + "\n" + formatBackgroundSection(finished, running)
 }
 
 type stagedReport struct {
@@ -283,6 +352,16 @@ var (
 	stagedMu      sync.Mutex
 	stagedReports = map[string]stagedReport{}
 )
+
+func unstagedLegs(sessionID, parentTask string) []BackgroundTask {
+	list := parentLegs(sessionID, parentTask)
+	stagedMu.Lock()
+	staged := stagedReports[sessionID+":"+parentTask].finished
+	stagedMu.Unlock()
+	return slices.DeleteFunc(list, func(leg BackgroundTask) bool {
+		return slices.ContainsFunc(staged, func(one BackgroundTask) bool { return one.job == leg.job && one.ID == leg.ID })
+	})
+}
 
 func stageBackgroundReport(sessionID, taskHash, history string, finished []BackgroundTask) {
 	stagedMu.Lock()
@@ -306,35 +385,85 @@ func CommitBackgroundReport(sessionID, taskHash, history string) {
 	}
 	stagedMu.Unlock()
 	if ok {
-		markBackgroundReported(sessionID, taskHash, staged.finished)
+		markBackgroundReported(sessionID, staged.finished)
 	}
 }
 
-func markBackgroundReported(sessionID, taskHash string, finished []BackgroundTask) {
-	pendingMu.Lock()
-	defer pendingMu.Unlock()
+func markBackgroundReported(sessionID string, finished []BackgroundTask) {
+	jobMu.Lock()
+	defer jobMu.Unlock()
 
-	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
-	if err != nil {
-		return
+	jobIDs := map[string]bool{}
+	for _, one := range finished {
+		jobIDs[one.job] = true
 	}
-	for i, b := range meta.Background {
-		j := slices.IndexFunc(finished, func(f BackgroundTask) bool { return f.ID == b.ID })
-		if j < 0 {
+	for jobID := range jobIDs {
+		job, err := readJob(filesystem.BackgroundJobPath(sessionID, jobID))
+		if err != nil {
 			continue
 		}
-		if finished[j].Done {
-			meta.Background[i].Reported = true
+		for i, b := range job.Legs {
+			j := slices.IndexFunc(finished, func(f BackgroundTask) bool { return f.job == jobID && f.ID == b.ID })
+			if j < 0 {
+				continue
+			}
+			if finished[j].Done {
+				job.Legs[i].Reported = true
+			}
+			job.Legs[i].Updates = slices.DeleteFunc(job.Legs[i].Updates, func(one string) bool {
+				return slices.Contains(finished[j].Updates, one)
+			})
 		}
-		meta.Background[i].Updates = slices.DeleteFunc(meta.Background[i].Updates, func(one string) bool {
-			return slices.Contains(finished[j].Updates, one)
-		})
+		if err := writeJob(&job); err != nil {
+			slog.Debug("markBackgroundReported",
+				slog.String("session", sessionID),
+				slog.String("error", err.Error()))
+		}
 	}
-	if err := writePending(sessionID, taskHash, &meta); err != nil {
-		slog.Debug("markBackgroundReported",
-			slog.String("session", sessionID),
-			slog.String("error", err.Error()))
+}
+
+func SettleBackground(sessionID, parentTask string) {
+	if parentTask == "" || go_pkg_filesystem_reader.Exists(filesystem.PendingMetaPath(sessionID, parentTask)) {
+		return
 	}
+	jobMu.Lock()
+	var ready []BackgroundJob
+	for _, job := range parentJobs(sessionID, parentTask) {
+		if slices.ContainsFunc(job.Legs, func(leg BackgroundTask) bool { return !leg.Done }) {
+			continue
+		}
+		os.Remove(filesystem.BackgroundJobPath(sessionID, job.ID))
+		if slices.ContainsFunc(job.Legs, func(leg BackgroundTask) bool { return !leg.Reported || len(leg.Updates) > 0 }) {
+			ready = append(ready, job)
+		}
+	}
+	jobMu.Unlock()
+
+	if backgroundTrigger == nil {
+		return
+	}
+	for _, job := range ready {
+		backgroundTrigger(job)
+	}
+}
+
+func BackgroundJobInput(job BackgroundJob) string {
+	var sb strings.Builder
+	sb.WriteString("[Resumed Task — background group finished]\n\n## Objective\n")
+	if job.Objective != "" {
+		sb.WriteString(job.Objective)
+	} else {
+		sb.WriteString("Not given; take it from the origin task below.")
+	}
+	sb.WriteString("\n\n## Next Step\n")
+	if job.Next != "" {
+		sb.WriteString(job.Next)
+	} else {
+		sb.WriteString("Use the reports below to carry the objective forward and reply with the outcome.")
+	}
+	fmt.Fprintf(&sb, "\n\n## Origin Task\nStarted by task %s, which has already ended. When the reports need its context, read it with chat_history(mode=read, task_id=[%q]).\n", job.ParentTask, job.ParentTask)
+	sb.WriteString(formatBackgroundSection(job.Legs, 0))
+	return sb.String()
 }
 
 func ClearAllBackground() {
@@ -342,8 +471,8 @@ func ClearAllBackground() {
 	if err != nil {
 		return
 	}
-	pendingMu.Lock()
-	defer pendingMu.Unlock()
+	jobMu.Lock()
+	defer jobMu.Unlock()
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -352,19 +481,6 @@ func ClearAllBackground() {
 			slog.Warn("ClearAllBackground",
 				slog.String("session", entry.Name()),
 				slog.String("error", err.Error()))
-		}
-		for _, taskHash := range listPendingTasks(entry.Name()) {
-			meta, err := readPending(filesystem.PendingMetaPath(entry.Name(), taskHash))
-			if err != nil || len(meta.Background) == 0 {
-				continue
-			}
-			meta.Background = nil
-			if err := writePending(entry.Name(), taskHash, &meta); err != nil {
-				slog.Warn("ClearAllBackground",
-					slog.String("session", entry.Name()),
-					slog.String("task", taskHash),
-					slog.String("error", err.Error()))
-			}
 		}
 	}
 }
