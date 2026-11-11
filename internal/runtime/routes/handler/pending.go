@@ -14,6 +14,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
+	internalutils "github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 type pendingTaskInfo struct {
@@ -74,7 +75,9 @@ func DeleteSessionPending() gin.HandlerFunc {
 
 type pendingQuestionInfo struct {
 	Question    string   `json:"question"`
+	Title       string   `json:"title"`
 	Detail      string   `json:"detail,omitempty"`
+	Progress    string   `json:"progress,omitempty"`
 	Options     []string `json:"options,omitempty"`
 	MultiSelect bool     `json:"multi_select,omitempty"`
 	Secret      bool     `json:"secret,omitempty"`
@@ -96,10 +99,13 @@ func GetSessionPendingQuestions() gin.HandlerFunc {
 		}
 
 		list := make([]pendingQuestionInfo, 0, len(questions))
-		for _, q := range questions {
+		for i, q := range questions {
+			ask := internalutils.FormatAskUser(q.Question, q.Detail, i, len(questions))
 			list = append(list, pendingQuestionInfo{
 				Question:    q.Question,
-				Detail:      q.Detail,
+				Title:       ask.Title,
+				Detail:      ask.Detail,
+				Progress:    ask.Progress,
 				Options:     q.Options,
 				MultiSelect: q.MultiSelect,
 				Secret:      q.Secret,

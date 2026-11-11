@@ -2,7 +2,6 @@ package tui
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os/exec"
 	goruntime "runtime"
@@ -63,6 +62,7 @@ type Popup struct {
 	multiline      bool
 	skipWithReason bool
 	restricted     []string
+	restrictedMsg  []string
 	needPassword   bool
 	passwordPrompt bool
 	explain        string
@@ -72,6 +72,7 @@ type Popup struct {
 
 	questions   []runtime.Question
 	questionIdx int
+	progress    string
 	answers     []any
 
 	onConfirm func(chosen string) any
@@ -215,8 +216,8 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				p.passwordPrompt = true
 				p.title = "System password:"
 				p.styledLines = nil
-				for _, one := range p.restricted {
-					p.styledLines = append(p.styledLines, warnStyle.Render("⚠ "+one))
+				for _, one := range p.restrictedMsg {
+					p.styledLines = append(p.styledLines, warnStyle.Render(one))
 				}
 				p.input = newPopupInput("", false)
 				return t, nil
@@ -686,10 +687,7 @@ func newPopup(pending Pending) *Popup {
 	id, req := pending.id, pending.request
 	switch req.Kind {
 	case runtime.KindToolConfirm:
-		display := utils.FormatToolEvent(req.ToolName, req.ToolArgs)
-		if display == "" {
-			display = req.ToolArgs
-		}
+		msg := utils.FormatConfirm(req.ToolName, req.ToolArgs, req.Restricted, !pending.needPassword)
 		options := []string{
 			"Yes",
 			"Yes  don't ask again",
@@ -709,8 +707,8 @@ func newPopup(pending Pending) *Popup {
 		p := &Popup{
 			pendingId:    id,
 			kind:         popupConfirm,
-			title:        fmt.Sprintf("Run %s?", utils.ToolName(req.ToolName)),
-			subtitle:     display,
+			title:        msg.Title,
+			subtitle:     msg.Display,
 			options:      options,
 			restricted:   req.Restricted,
 			needPassword: pending.needPassword,
@@ -718,15 +716,15 @@ func newPopup(pending Pending) *Popup {
 		p.explain = req.Explain
 		p.commandLine = true
 		if len(req.Restricted) > 0 {
-			p.title = fmt.Sprintf("Run %s outside the allow list?", utils.ToolName(req.ToolName))
-			for _, one := range req.Restricted {
-				p.styledLines = append(p.styledLines, warnStyle.Render("⚠ "+one))
+			p.restrictedMsg = msg.RestrictedLines
+			for _, one := range msg.RestrictedLines {
+				p.styledLines = append(p.styledLines, warnStyle.Render(one))
 			}
 			p.styledLines = append(p.styledLines, "")
 			if !pending.needPassword {
-				p.styledLines = append(p.styledLines, okayStyle.Render("sudo credentials still valid — no password needed"))
+				p.styledLines = append(p.styledLines, okayStyle.Render(msg.RestrictedNote))
 			} else {
-				p.styledLines = append(p.styledLines, userStyle.Render("system password required — you will be prompted after Yes"))
+				p.styledLines = append(p.styledLines, userStyle.Render(msg.RestrictedNote))
 			}
 		}
 		switch req.ToolName {
@@ -777,8 +775,10 @@ func newPopup(pending Pending) *Popup {
 
 func (p *Popup) loadCurrentQuestion() {
 	q := p.questions[p.questionIdx]
-	p.title = q.Question
-	p.subtitle = q.Detail
+	ask := utils.FormatAskUser(q.Question, q.Detail, p.questionIdx, len(p.questions))
+	p.title = ask.Title
+	p.subtitle = ask.Detail
+	p.progress = ask.Progress
 	p.input = newPopupInput("", false)
 	p.multi = nil
 

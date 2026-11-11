@@ -101,12 +101,8 @@ func (t *TUI) trackSubagent(name, activity string) *subagentLive {
 	return block
 }
 
-func toolActivity(ev agenttypes.Event, cwd string) string {
-	label := utils.ToolName(ev.ToolName)
-	if arg := utils.FormatToolArgs(ev.ToolName, ev.ToolArgs, cwd); arg != "" {
-		label += "(" + arg + ")"
-	}
-	return oneLine(label)
+func toolActivity(ev agenttypes.Event) string {
+	return oneLine(utils.FormatToolEvent(ev.ToolName, ev.ToolArgs))
 }
 
 func (t *TUI) dropSubagent(name string) {
@@ -268,7 +264,7 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		}
 		if ev.ToolName != "" {
 			if ev.Source != "" {
-				t.trackSubagent(ev.Source, toolActivity(ev, t.cwd)).tools++
+				t.trackSubagent(ev.Source, toolActivity(ev)).tools++
 				return t, nil
 			}
 			t.activity = "tool: " + ev.ToolName

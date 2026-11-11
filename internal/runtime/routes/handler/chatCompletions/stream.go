@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	internalutils "github.com/pardnchiu/agenvoy/internal/utils"
@@ -83,9 +82,6 @@ func stream(c *gin.Context, id string, created int64, model string, events <-cha
 		lastReasoning = line
 		return emitReasoningLine(line)
 	}
-	formatToolLine := func(name, args string) string {
-		return go_pkg_utils.TruncateString(internalutils.FormatToolEvent(name, args), 128)
-	}
 
 	for ev := range events {
 		select {
@@ -106,7 +102,7 @@ func stream(c *gin.Context, id string, created int64, model string, events <-cha
 			if internalutils.HideToolEvent(ev.ToolName, ev.ToolArgs) {
 				break
 			}
-			line := formatToolLine(ev.ToolName, ev.ToolArgs)
+			line := internalutils.FormatToolEvent(ev.ToolName, ev.ToolArgs)
 			if line == "" {
 				break
 			}

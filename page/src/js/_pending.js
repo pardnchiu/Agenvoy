@@ -74,10 +74,13 @@ function closePendingTask(sessionId, taskHash) {
 }
 
 function pendingCard(question, index, total) {
-  const body = [_("strong", question.question || "")];
+  const body = [_("strong", question.title || "")];
 
   if (question.detail) {
     body.push(_("p", { textContent: question.detail }));
+  }
+  if (question.progress) {
+    body.push(_("p", { textContent: question.progress }));
   }
 
   const options = question.options || [];
