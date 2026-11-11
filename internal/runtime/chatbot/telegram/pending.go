@@ -2,13 +2,10 @@ package telegram
 
 import (
 	"context"
-	"fmt"
-	"html"
 	"strconv"
 	"strings"
 
 	go_bot_telegram "github.com/pardnchiu/go-bot/core/telegram"
-	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
@@ -44,27 +41,10 @@ func (t *telegramTransport) LookupChatID(sessionID string) (int64, error) {
 	return chatID, nil
 }
 
-func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolName, toolArgs, explain string, options []string, multiline bool) (int, error) {
-	const limit = 3200
-	var str string
+func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, confirm utils.ConfirmMessage, explain string, options []string) (int, error) {
+	str, isHTML := utils.FormatTelegramConfirm(confirm, explain)
 	var modes []go_bot_telegram.MessageOption
-	truncated := go_pkg_utils.TruncateString(toolArgs, limit)
-	if truncated != toolArgs {
-		str = fmt.Sprintf("Run %s?\n\n%s", toolName, truncated)
-		if explain != "" {
-			str += "\n\n" + explain
-		}
-	} else {
-		var body string
-		if multiline {
-			body = fmt.Sprintf("<pre><code>%s</code></pre>", html.EscapeString(toolArgs))
-		} else {
-			body = fmt.Sprintf("<code>%s</code>", html.EscapeString(toolArgs))
-		}
-		str = fmt.Sprintf("Run %s?\n\n%s", html.EscapeString(toolName), body)
-		if explain != "" {
-			str += "\n\n" + html.EscapeString(explain)
-		}
+	if isHTML {
 		modes = append(modes, go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
 	}
 	msg, err := t.bot.client.SendSelect(ctx, chatID, 0, str, options, modes...)
@@ -75,11 +55,7 @@ func (t *telegramTransport) SendConfirm(ctx context.Context, chatID int64, toolN
 }
 
 func (t *telegramTransport) SendAskText(ctx context.Context, chatID int64, header string, secret bool) (int, error) {
-	prompt := header
-	if secret {
-		prompt += "\n\n🔒 Your reply will be deleted from chat after capture."
-	}
-	msg, err := t.bot.client.SendInput(ctx, chatID, 0, prompt)
+	msg, err := t.bot.client.SendInput(ctx, chatID, 0, utils.FormatTelegramAskText(header, secret))
 	if err != nil {
 		return 0, err
 	}

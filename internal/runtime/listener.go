@@ -1,14 +1,12 @@
 package runtime
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
 
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -26,7 +24,7 @@ const (
 
 type Transport[CID comparable, MID comparable] interface {
 	LookupChatID(sessionID string) (CID, error)
-	SendConfirm(ctx context.Context, chatID CID, toolName, toolArgs, explain string, options []string, multiline bool) (MID, error)
+	SendConfirm(ctx context.Context, chatID CID, msg utils.ConfirmMessage, explain string, options []string) (MID, error)
 	SendAskText(ctx context.Context, chatID CID, header string, secret bool) (MID, error)
 	SendAskSingle(ctx context.Context, chatID CID, header string, options []string) (MID, error)
 	SendAskMulti(ctx context.Context, chatID CID, header string, options []string) (MID, error)
@@ -178,13 +176,12 @@ func (l *Listener[CID, MID]) sendPrompt(ctx context.Context, id string, req Requ
 }
 
 func (l *Listener[CID, MID]) startConfirm(ctx context.Context, id string, chatID CID, req Request) {
-	args, multiline := FormatToolArgs(req.ToolName, req.ToolArgs)
-	options, explain := ConfirmOptions, req.Explain
+	options := ConfirmOptions
 	if len(req.Restricted) > 0 {
 		options = RestrictedConfirmOptions
-		explain = strings.TrimSpace(explain + "\n" + restrictedChatNote + strings.Join(req.Restricted, ", "))
 	}
-	msgID, err := l.transport.SendConfirm(ctx, chatID, req.ToolName, args, explain, options, multiline)
+	msg := utils.FormatConfirm(req.ToolName, req.ToolArgs, req.Restricted, false)
+	msgID, err := l.transport.SendConfirm(ctx, chatID, msg, req.Explain, options)
 	if err != nil {
 		Resolve(id, Reply{Error: utilsmsg.Wrap(utilsmsg.Upstream, "SendConfirm", "", err)})
 		return
@@ -223,11 +220,11 @@ func (l *Listener[CID, MID]) startAskUser(ctx context.Context, id string, chatID
 
 func (l *Listener[CID, MID]) askNext(ctx context.Context, state *active[CID, MID]) error {
 	q := state.questions[state.selected]
-	question := strings.TrimSpace(q.Question)
-	if question == "" {
+	ask := utils.FormatAskUser(q.Question, q.Detail, state.selected, len(state.questions))
+	if ask.Title == "" {
 		return utilsmsg.New(utilsmsg.Invalid, "question", "#%d is empty", state.selected+1)
 	}
-	header := fmt.Sprintf("(%d/%d) %s", state.selected+1, len(state.questions), question)
+	header := utils.FormatChatAsk(ask)
 
 	switch {
 	case len(q.Options) == 0 && q.Secret:
@@ -449,8 +446,6 @@ func (l *Listener[CID, MID]) askSkipReason(ctx context.Context, state *active[CI
 	state.message = msgID
 }
 
-const restrictedChatNote = "needs your system password, which chat cannot collect: approve it from the TUI or Web UI on this machine. "
-
 func confirmReplyFor(data string) (reply Reply, finalize bool) {
 	switch data {
 	case "✅ Yes":
@@ -468,21 +463,4 @@ func confirmReplyFor(data string) (reply Reply, finalize bool) {
 	default:
 		return Reply{}, false
 	}
-}
-
-func FormatToolArgs(name, raw string) (formatted string, multiline bool) {
-	if name == "run_command" || name == "background_command" {
-		var parsed struct {
-			Argv []string `json:"argv"`
-		}
-		if err := json.Unmarshal([]byte(raw), &parsed); err == nil && len(parsed.Argv) > 0 {
-			return strings.Join(parsed.Argv, " "), false
-		}
-	}
-	args := strings.ReplaceAll(raw, "\r", "")
-	var pretty bytes.Buffer
-	if err := json.Indent(&pretty, []byte(args), "", "  "); err == nil {
-		return pretty.String(), true
-	}
-	return args, true
 }

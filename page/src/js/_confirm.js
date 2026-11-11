@@ -70,10 +70,9 @@ function renderToolConfirm(event, sessionId) {
     return;
   }
 
-  const body = [_("p.name", event.tool_name || "tool")];
-  const args = (event.tool_display || event.tool_args || "").trim();
-  if (args && args !== "{}") {
-    body.push(_("pre.args", args));
+  const body = [_("p.name", event.confirm_title || "")];
+  if (event.tool_display) {
+    body.push(_("pre.args", event.tool_display));
   }
   if (event.explain) {
     body.push(_("p.explain", event.explain));
@@ -83,13 +82,17 @@ function renderToolConfirm(event, sessionId) {
   const cached = Boolean(event.password_cached);
   let password = null;
   let note = null;
+  for (const line of event.restricted_lines || []) {
+    body.push(_("p.restricted", line));
+  }
+  if (event.restricted_note) {
+    body.push(_("p.restricted", event.restricted_note));
+  }
   if (restricted.length > 0 && cached) {
-    body.push(_("p.restricted", `outside the allow list · ${restricted.join(", ")} · sudo still valid, no password needed`));
     note = _("p.note", "");
     body.push(note);
   }
   if (restricted.length > 0 && !cached) {
-    body.push(_("p.restricted", `needs your system password · ${restricted.join(", ")}`));
     password = _("input", {
       type: "password",
       autocomplete: "off",

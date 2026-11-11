@@ -44,6 +44,8 @@ type invokeParams struct {
 	New          *bool    `json:"new,omitempty"`
 	ExcludeTools []string `json:"exclude_tools,omitempty"`
 	TimeoutMin   int      `json:"timeout_min,omitempty"`
+	Objective    string   `json:"objective,omitempty"`
+	Next         string   `json:"next,omitempty"`
 }
 
 func invokeSubagent(ctx context.Context, e *tooltypes.Executor, params invokeParams, background bool) (string, error) {

@@ -24,7 +24,7 @@ func FormatChatbotEvent(events <-chan agenttypes.Event, tag, sessionID string, s
 		switch e.Type {
 		case agenttypes.EventReasoning:
 			if t := strings.TrimSpace(e.Text); t != "" {
-				status("[think] " + go_pkg_utils.TruncateString(t, 256))
+				status("[think] " + t)
 			}
 
 		case agenttypes.EventToolCall:
@@ -56,16 +56,7 @@ func FormatChatbotEvent(events <-chan agenttypes.Event, tag, sessionID string, s
 }
 
 func formatChatbotToolEvent(count int, event agenttypes.Event) string {
-	name := ToolName(event.ToolName)
-	arg := FormatToolArgs(event.ToolName, event.ToolArgs, "")
-	if arg == "" || arg == event.ToolArgs {
-		arg = go_pkg_utils.TruncateString(event.ToolArgs, 256)
-	}
-	body := name
-	if arg != "" {
-		body += "(" + arg + ")"
-	}
-	return fmt.Sprintf("[tool #%d] %s", count, body)
+	return fmt.Sprintf("[tool #%d] %s", count, FormatToolEvent(event.ToolName, event.ToolArgs))
 }
 
 func EventLog(tag string, event agenttypes.Event, sessionID string, _ string) {

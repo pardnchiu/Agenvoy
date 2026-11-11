@@ -59,7 +59,7 @@ func registReasoningGuide() {
 			},
 			"required": []string{"topics"},
 		},
-		Handler: func(_ context.Context, _ *tooltypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(_ context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Topics []string `json:"topics"`
 			}
@@ -78,6 +78,11 @@ func registReasoningGuide() {
 				guide, ok := topicGuides[topic]
 				if !ok {
 					return "", utilsmsg.New(utilsmsg.Invalid, "topics", "unknown topic %q; available: %s", topic, strings.Join(topicNames, ", "))
+				}
+				if topic == "subagent_dispatch" && e != nil && e.ExcludeTools["subagents"] {
+					seen[topic] = true
+					guides = append(guides, "## "+topic+"\n\nThis session cannot dispatch: subagents and background_subagents are unavailable here. Run every lookup yourself with the tools you have, batching independent calls in one response.")
+					continue
 				}
 				if strings.Contains(guide, "{{.ModelSelection}}") {
 					if selection == "" {

@@ -37,13 +37,14 @@ type TUI struct {
 	textarea textarea.Model
 	spinner  spinner.Model
 
-	running      bool
-	emitted      bool
-	cancelExec   context.CancelCauseFunc
-	interruptAt  time.Time
-	runStartedAt time.Time
-	lastInput    string
-	connecting   bool
+	running           bool
+	emitted           bool
+	backgroundRunning int
+	cancelExec        context.CancelCauseFunc
+	interruptAt       time.Time
+	runStartedAt      time.Time
+	lastInput         string
+	connecting        bool
 
 	popup         *Popup
 	popupQueue    []Pending
@@ -88,18 +89,16 @@ type TUI struct {
 	streaming      bool
 	tableBuf       []string
 
-	toolBuf           []string
-	toolCount         int
-	subCount          int
-	subActive         int
-	subBuf            map[string]*subagentLive
-	subOrder          []string
-	todos             []agenttypes.TodoItem
-	pendingSteer      []string
-	waitingBackground string
-	waitingTask       string
-	inputHistory      []string
-	inputHistoryIdx   int
+	toolBuf         []string
+	toolCount       int
+	subCount        int
+	subActive       int
+	subBuf          map[string]*subagentLive
+	subOrder        []string
+	todos           []agenttypes.TodoItem
+	pendingSteer    []string
+	inputHistory    []string
+	inputHistoryIdx int
 
 	quitting bool
 
@@ -127,7 +126,13 @@ func (t TUI) Init() tea.Cmd {
 	} else {
 		seq = append(seq, func() tea.Msg { return StartupSelectSession{} })
 	}
-	return tea.Batch(tea.Sequence(seq...), t.spinner.Tick)
+	return tea.Batch(tea.Sequence(seq...), t.spinner.Tick, pollBackground())
+}
+
+type BackgroundCancelPick struct {
+	session   string
+	legs      []interactive.RunningLeg
+	confirmed bool
 }
 
 type CancelRunConfirm struct {

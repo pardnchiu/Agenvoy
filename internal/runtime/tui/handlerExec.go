@@ -21,7 +21,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/ipc"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
-	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -101,12 +100,8 @@ func (t *TUI) trackSubagent(name, activity string) *subagentLive {
 	return block
 }
 
-func toolActivity(ev agenttypes.Event, cwd string) string {
-	label := utils.ToolName(ev.ToolName)
-	if arg := utils.FormatToolArgs(ev.ToolName, ev.ToolArgs, cwd); arg != "" {
-		label += "(" + arg + ")"
-	}
-	return oneLine(label)
+func toolActivity(ev agenttypes.Event) string {
+	return oneLine(utils.FormatToolEvent(ev.ToolName, ev.ToolArgs))
 }
 
 func (t *TUI) dropSubagent(name string) {
@@ -240,13 +235,7 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		return t, nil
 
 	case agenttypes.EventPending:
-		if ev.Source != "" || ev.ToolName != interactive.BackgroundTool {
-			return t, nil
-		}
-		t.waitingBackground = t.currentSessionID
-		t.waitingTask = ev.TaskHash
-		t.todos = nil
-		return t, t.collapseToolBuf()
+		return t, nil
 
 	case agenttypes.EventUserInjected:
 		if ev.Source == "" {
@@ -268,7 +257,7 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		}
 		if ev.ToolName != "" {
 			if ev.Source != "" {
-				t.trackSubagent(ev.Source, toolActivity(ev, t.cwd)).tools++
+				t.trackSubagent(ev.Source, toolActivity(ev)).tools++
 				return t, nil
 			}
 			t.activity = "tool: " + ev.ToolName
@@ -422,7 +411,6 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 			t.dropSubagent(ev.Source)
 			return t, nil
 		}
-		t.waitingBackground, t.waitingTask = "", ""
 		t.toolLog = nil
 		collapse := t.collapseToolBuf()
 		t.todos = nil

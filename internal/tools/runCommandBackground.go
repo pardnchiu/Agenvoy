@@ -23,6 +23,7 @@ import (
 
 func registRunCommandBackground() {
 	properties := commandProperties()
+	maps.Copy(properties, interactive.BackgroundGoalProperties())
 	maps.Copy(properties, map[string]any{
 		"timeout_min": map[string]any{
 			"type":        "integer",
@@ -34,7 +35,7 @@ func registRunCommandBackground() {
 		"keywords": map[string]any{
 			"type":        "array",
 			"items":       map[string]any{"type": "string"},
-			"description": "Case-insensitive words that flag a new output line as a possible problem; a flagged stretch resumes this task with the recent output while the command keeps running. A non-empty list replaces the default set entirely, so pass one only when the tool reports failures in other words, e.g. ['warn', 'denied'].",
+			"description": "Case-insensitive words that flag a new output line as a possible problem; a flagged stretch is reported with the recent output while the command keeps running. A non-empty list replaces the default set entirely, so pass one only when the tool reports failures in other words, e.g. ['warn', 'denied'].",
 			"default":     configs.WATCH_KEYWORDS,
 		},
 	})
@@ -44,8 +45,8 @@ func registRunCommandBackground() {
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
-		Description: fmt.Sprintf(`Starts one binary in the work directory and returns a task id at once; its output resumes this task when it exits, and also while it keeps running whenever a new line hits an error keyword, with the recent output to explain. argv, network, write_paths and sandbox follow the run_command rules.
-Use for a watcher (--watch, chokidar, npm run sass/build/dev), which only runs here; a job very likely over %d minutes whose output does not decide your next tool call (full build, large install or download, long data job); or "run it in the background" / "let me know when it finishes". Apart from a watcher, start it only in the gathering that opens a request, every background command in one go: the resumed task sees only the objective and that output. At most %d background tasks run per session, background_subagents included.
+		Description: fmt.Sprintf(`Starts one binary in the work directory and returns a task id at once; its output is reported when it exits, and also while it keeps running whenever a new line hits an error keyword, with the recent output to explain. Background legs started in the same turn form one group: while this task is open each report arrives here; once it has ended, the group runs objective + next as its own task when all of its legs finish. argv, network, write_paths and sandbox follow the run_command rules.
+Use for a watcher (--watch, chokidar, npm run sass/build/dev), which only runs here; a job very likely over %d minutes whose output does not decide your next tool call (full build, large install or download, long data job); "run it in the background" / "let me know when it finishes". When the user's ask continues after the job ("then deploy", "unpack and summarize it"), put that action in next. Start every leg of a group in the same turn so they share one objective and next. At most %d background tasks run per session, background_subagents included.
 Anything shorter, or a test or build whose failures you fix next → run_command. "How far along is it?" on a running task → read_files the log path its start result gave; never guess from missing reports.`, configs.BACKGROUND_THRESHOLD_MIN, configs.MAX_BACKGROUND_TASKS),
 		Parameters: map[string]any{
 			"type":       "object",
@@ -57,22 +58,34 @@ Anything shorter, or a test or build whose failures you fix next → run_command
 				commandParams
 				TimeoutMin int      `json:"timeout_min"`
 				Keywords   []string `json:"keywords"`
+				Objective  string   `json:"objective"`
+				Next       string   `json:"next"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			watch := newWatch(params.Keywords)
-			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.unsandboxed(), true, params.TimeoutMin, &watch)
+			return runCommand(ctx, e, params.Argv, params.WritePaths, params.Network, params.unsandboxed(), &backgroundSpec{
+				timeoutMin: params.TimeoutMin,
+				watch:      newWatch(params.Keywords),
+				goal:       interactive.BackgroundGoal{Objective: params.Objective, Next: params.Next},
+			})
 		},
 	})
 }
 
-func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, binds []string, sandboxOpt *go_pkg_sandbox.Option, timeoutMin int, watch *watchSpec) (string, error) {
+type backgroundSpec struct {
+	timeoutMin int
+	watch      watchSpec
+	goal       interactive.BackgroundGoal
+}
+
+func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, binds []string, sandboxOpt *go_pkg_sandbox.Option, spec *backgroundSpec) (string, error) {
+	timeoutMin, watch := spec.timeoutMin, &spec.watch
 	if timeoutMin <= 0 || timeoutMin > configs.MAX_BACKGROUND_TIMEOUT_MIN {
 		timeoutMin = configs.MAX_BACKGROUND_TIMEOUT_MIN
 	}
 	description := go_pkg_utils.TruncateString(strings.Join(argv, " "), 48)
-	id, err := interactive.StartBackground(ctx, e.SessionID, e.PendingTask, e.WorkDir, "cmd", description, func(ctx context.Context, report func(string), log io.Writer) string {
+	id, err := interactive.StartBackground(ctx, e.SessionID, e.PendingTask, e.BackgroundGroup, e.WorkDir, spec.goal, "cmd", description, func(ctx context.Context, report func(string), log io.Writer) string {
 		ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMin)*time.Minute)
 		defer cancel()
 
@@ -110,7 +123,7 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("background command %s started. Keep working on this turn; if it ends first, the task stays open and resumes with this command's output as soon as it finishes, without waiting for other background tasks. Output lines that hit an error keyword also resume this task with the last output while the command keeps running. Live output is appended to %s until the command ends (then the file is removed): when asked how far it got, read its tail with read_files before answering.", id, filesystem.BackgroundLogPath(e.SessionID, id)), nil
+	return fmt.Sprintf("background command %s started. Keep working; its output arrives in this task while it is open, including output lines that hit an error keyword while the command keeps running. If this task ends first, the group runs its objective and next step on its own once every leg finishes. Live output is appended to %s until the command ends (then the file is removed): when asked how far it got, read its tail with read_files before answering.", id, filesystem.BackgroundLogPath(e.SessionID, id)), nil
 }
 
 const tailHeadroom = 1 << 10

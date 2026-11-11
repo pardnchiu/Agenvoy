@@ -26,7 +26,6 @@ import (
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	historystore "github.com/pardnchiu/agenvoy/internal/runtime/store"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	sessionmanager "github.com/pardnchiu/agenvoy/internal/session"
@@ -285,15 +284,6 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				}
 				return
 			}
-			if running, unreported := interactive.BackgroundState(session.ID, exec.PendingTask); running+unreported > 0 {
-				interactive.SaveToolResults(session.ID, exec.PendingTask, windowHash, nil, exec.EditedFiles())
-				event := agenttypes.Event{Type: agenttypes.EventPending, Text: exec.PendingTask, TaskHash: exec.PendingTask, PendingSession: session.ID, ToolName: interactive.BackgroundTool}
-				events <- event
-				if deliverTo := deliverFor(ctx, session.ID); deliverTo != session.ID {
-					pubsub.Pub(deliverTo, event)
-				}
-				return
-			}
 			interactive.CleanupPending(session.ID, exec.PendingTask)
 		}()
 		defer historystore.ClearTaskOrigin(exec.PendingTask)
@@ -471,6 +461,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			session.ToolHistories = append(session.ToolHistories, go_llm_router.Message{Role: "user", Content: formatSteerInjection(pending)})
 			events <- agenttypes.Event{Type: agenttypes.EventUserInjected, Text: raw}
 		}
+		injectBackgroundReport(session, exec.PendingTask, events)
 		if firstAttempt {
 			firstAttempt = false
 		} else if !compactFailed && lastInputTokens >= compact.CheckThreshold(data.Agent.Name()) {
@@ -824,6 +815,9 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			if pending := getSteer(session.ID); len(pending) > 0 {
 				session.ToolHistories = append(session.ToolHistories, go_llm_router.Message{Role: "user", Content: formatSteerInjection(pending)})
 				events <- agenttypes.Event{Type: agenttypes.EventUserInjected, Text: strings.Join(pending, "\n")}
+				continue
+			}
+			if injectBackgroundReport(session, exec.PendingTask, events) {
 				continue
 			}
 

@@ -22,7 +22,6 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
-	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -77,6 +76,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	_, resizing := msg.(tea.WindowSizeMsg)
 	_, settled := msg.(resizeSettled)
 	_, verified := msg.(restrictedVerified)
+	if _, ok := msg.(backgroundPoll); ok {
+		return t.refreshBackground()
+	}
 	if t.popup != nil && !resizing && !settled && !verified {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
@@ -175,10 +177,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				t.notice, t.noticeOffset = "", 0
 				return t, nil
 			}
-			running := t.running && t.cancelExec != nil
-			waiting := t.waitingBackground != "" && t.waitingBackground == t.currentSessionID && t.waitingTask != ""
-			if running || waiting {
-				if running && !t.emitted {
+			if t.running && t.cancelExec != nil {
+				if !t.emitted {
 					return t.update(CancelRunConfirm{yes: true})
 				}
 				t.popup = &Popup{
@@ -196,6 +196,10 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				t.textarea.Reset()
 				t.textarea.SetHeight(1)
 				t.inputHistoryIdx = -1
+				return t, nil
+			}
+			if popup := backgroundCancelPopup(t.currentSessionID); popup != nil {
+				t.popup = popup
 				return t, nil
 			}
 
@@ -344,9 +348,6 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			payload := &ipc.Payload{Input: raw, WorkDir: t.cwd, AllowAll: t.allowAll}
-			if t.waitingBackground == t.currentSessionID {
-				payload.PendingTask = t.waitingTask
-			}
 			go runExec(ipc.Frame{Type: ipc.FrameRun, SessionID: t.currentSessionID, Rayload: payload})
 
 			cmds = append(cmds,
@@ -825,6 +826,15 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		next, cmd := t.runScheduleRemove(msg.kind, msg.skill)
 		return next, cmd
 
+	case BackgroundCancelPick:
+		if len(msg.legs) == 0 {
+			return t, nil
+		}
+		if !msg.confirmed {
+			return t.openBackgroundCancelConfirm(msg)
+		}
+		return t, cancelBackground(msg)
+
 	case CancelRunConfirm:
 		if !msg.yes && !msg.pause {
 			return t, nil
@@ -837,17 +847,6 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return t, nil
 		}
-		if t.waitingTask == "" {
-			return t, nil
-		}
-		client := ipcClient.Load()
-		if client == nil {
-			return t, notice(msgWarn("daemon offline") + "\n")
-		}
-		if err := client.Cancel(t.waitingBackground, t.waitingTask, msg.pause); err != nil {
-			return t, notice(msgError(err.Error()) + "\n")
-		}
-		t.waitingBackground, t.waitingTask = "", ""
 		return t, nil
 
 	case PendingDeletePick:
@@ -1126,15 +1125,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tailLine:
 		if !msg.foreign {
 			switch msg.kind {
-			case "done", "error":
-				t.waitingBackground, t.waitingTask = "", ""
 			case "canceled":
-				t.waitingBackground, t.waitingTask = "", ""
 				return t, cancelNotice()
-			case "pending":
-				if running, unreported := interactive.BackgroundState(t.currentSessionID, msg.body); running+unreported > 0 {
-					t.waitingBackground, t.waitingTask = t.currentSessionID, msg.body
-				}
 			}
 		}
 		if msg.line == "" {
@@ -1154,7 +1146,7 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return t.restartTailer(), nil
 
 	case spinner.TickMsg:
-		if t.running || t.connecting || t.waitingBackground != "" {
+		if t.running || t.connecting || t.backgroundRunning > 0 {
 			var cmd tea.Cmd
 			t.spinner, cmd = t.spinner.Update(msg)
 			cmds = append(cmds, cmd)

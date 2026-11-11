@@ -33,6 +33,7 @@ type Executor struct {
 	SkillScanner    *runtime.SkillScanner
 	CancelExecution context.CancelFunc
 	PendingTask     string
+	BackgroundGroup string
 	Objective       string
 	IgnoreHistory   bool
 	filesMu         sync.Mutex

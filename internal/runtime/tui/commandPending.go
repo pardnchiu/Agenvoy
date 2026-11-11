@@ -48,8 +48,6 @@ func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 
 	options := make([]string, 0, len(hashes))
 	values := make([]string, 0, len(hashes))
-	tails := make([]string, 0, len(hashes))
-	locked := make(map[string]bool, len(hashes))
 	for _, h := range hashes {
 		info, ok := interactive.LoadPendingInfo(sid, h)
 		if !ok {
@@ -65,13 +63,7 @@ func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 		if info.HasQuestions {
 			label += " (awaiting answer)"
 		}
-		tail := ""
-		if running, _ := interactive.BackgroundState(sid, h); running > 0 {
-			tail = okayStyle.Render("[Active]")
-			locked[h] = true
-		}
 		options = append(options, label)
-		tails = append(tails, tail)
 		values = append(values, h)
 	}
 
@@ -91,15 +83,11 @@ func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 		subtitle:   fmt.Sprintf("%d pending task(s)", len(options)),
 		options:    options,
 		values:     values,
-		optionTail: tails,
 		maxVisible: cmdSelectorMaxVisible,
 		onConfirm: func(chosen string) any {
 			return PendingSelect{id: sessionID, taskHash: chosen}
 		},
 		onDelete: func(chosen string) any {
-			if locked[chosen] {
-				return nil
-			}
 			return PendingDeletePick{id: sessionID, taskHash: chosen, label: labels[chosen]}
 		},
 	}

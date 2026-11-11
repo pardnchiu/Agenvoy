@@ -77,7 +77,7 @@ function trackTasking(hash, event) {
     return;
   }
 
-  const line = (type === "EventReasoning" ? event.text || "" : formatEvent(event)).trim();
+  const line = (event.trace || "").trim();
   if (!line) {
     return;
   }
@@ -336,13 +336,13 @@ async function send(content, target) {
     if (!response.ok) {
       const view = streamOf(sessionId);
       if (view) {
-        renderEvent(view, { type: "EventError", text: `HTTP ${response.status}` });
+        renderEvent(view, { type: "EventError", trace: `⚠ HTTP ${response.status}` });
       }
     }
   } catch (err) {
     const view = streamOf(sessionId);
     if (view) {
-      renderEvent(view, { type: "EventError", text: err.message });
+      renderEvent(view, { type: "EventError", trace: `⚠ ${err.message || "unknown error"}` });
     }
   }
 }

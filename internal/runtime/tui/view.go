@@ -63,8 +63,12 @@ func (t TUI) viewIdle() string {
 		top += renderCmdSelector(t.selector) + "\n"
 	}
 
-	if t.waitingBackground != "" && t.waitingBackground == t.currentSessionID {
-		top += warnStyle.Render(t.spinner.View()+" Waiting for background tasks") + " " + hintStyle.Render("(the reply continues here)") + "\n"
+	if t.backgroundRunning > 0 {
+		line := warnStyle.Render(fmt.Sprintf("%s %d background task(s) running", t.spinner.View(), t.backgroundRunning))
+		if !t.running {
+			line += " " + hintStyle.Render("(esc to cancel)")
+		}
+		top += line + "\n"
 	}
 
 	if t.notice != "" {
@@ -94,13 +98,13 @@ func (t TUI) viewIdle() string {
 	}
 
 	if t.connecting {
-		return top + box + "\n" + bottom + "\n " + systemStyle.Render(t.spinner.View()+" Connecting")
+		return top + box + "\n" + bottom + "\n  " + systemStyle.Render(t.spinner.View()+" Connecting")
 	}
 
-	status := " " + fastMode + confirmMode
+	status := "  " + fastMode + confirmMode
 	var right string
 	if t.quotaText != "" {
-		right = hintStyle.Render(t.quotaModel+" ") + renderQuotaBadge(t.quotaText) + " "
+		right = hintStyle.Render(t.quotaModel+" ") + renderQuotaBadge(t.quotaText)
 	}
 	if right != "" {
 		if gap := boxWidth - lipgloss.Width(status) - lipgloss.Width(right); gap >= 1 {
@@ -485,9 +489,8 @@ func (t TUI) viewPopup() string {
 		}
 	}
 
-	if len(p.questions) > 1 {
-		footer := hintStyle.Render(fmt.Sprintf("question %d/%d", p.questionIdx+1, len(p.questions)))
-		tail = append(tail, footer)
+	if p.progress != "" {
+		tail = append(tail, hintStyle.Render(p.progress))
 	}
 
 	content := popupStyle.Width(width).Render(strings.Join(body, "\n"))
