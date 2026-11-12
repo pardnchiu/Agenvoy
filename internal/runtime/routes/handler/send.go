@@ -14,6 +14,7 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 	"github.com/pardnchiu/go-pkg/utils"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
@@ -24,24 +25,25 @@ import (
 )
 
 type Request struct {
-	Content       string   `json:"content"`
-	Stream        bool     `json:"stream,omitempty"`
-	SessionID     string   `json:"session_id,omitempty"`
-	Model         string   `json:"model,omitempty"`
-	Reasoning     string   `json:"reasoning,omitempty"`
-	ExcludeTools  []string `json:"exclude_tools,omitempty"`
-	Persist       bool     `json:"persist,omitempty"`
-	Rule          string   `json:"rule,omitempty"`
-	WorkDir       string   `json:"work_dir,omitempty"`
-	Skill         string   `json:"skill,omitempty"`
-	TaskHash      string   `json:"task_hash,omitempty"`
-	EnableEdit    *bool    `json:"enable_edit,omitempty"`    // NOTE: 改為預設唯讀模式
-	EnableSandbox *bool    `json:"enable_sandbox,omitempty"` // NOTE: 增加關閉沙盒模式
+	Content        string   `json:"content"`
+	Stream         bool     `json:"stream,omitempty"`
+	SessionID      string   `json:"session_id,omitempty"`
+	Model          string   `json:"model,omitempty"`
+	Reasoning      string   `json:"reasoning,omitempty"`
+	ExcludeTools   []string `json:"exclude_tools,omitempty"`
+	Persist        bool     `json:"persist,omitempty"`
+	Rule           string   `json:"rule,omitempty"`
+	WorkDir        string   `json:"work_dir,omitempty"`
+	Skill          string   `json:"skill,omitempty"`
+	TaskHash       string   `json:"task_hash,omitempty"`
+	EnableEdit     *bool    `json:"enable_edit,omitempty"`     // NOTE: 改為預設唯讀模式
+	EnableSandbox  *bool    `json:"enable_sandbox,omitempty"`  // NOTE: 增加關閉沙盒模式
+	EnableMarkdown *bool    `json:"enable_markdown,omitempty"` // NOTE: 增加關閉 Markdown
 
 	// WARN: 即將棄用
 	SSE          bool   `json:"sse,omitempty"`           // NOTE: 改用 Stream
 	SystemPrompt string `json:"system_prompt,omitempty"` // NOTE: 改用 Rule
-	PendingTask  string `json:"pending_task,omitempty"`
+	PendingTask  string `json:"pending_task,omitempty"`  // NOTE: 改用 TaskHash
 }
 
 func Send() gin.HandlerFunc {
@@ -84,6 +86,10 @@ func Send() gin.HandlerFunc {
 		}
 
 		trimContent := strings.TrimSpace(req.Content)
+		rule := cmp.Or(req.Rule, req.SystemPrompt) // NOTE: SystemPrompt 棄用時要記得改
+		if req.EnableMarkdown != nil && !*req.EnableMarkdown {
+			rule = strings.TrimSpace(rule + "\n\n" + configs.PlainTextRule)
+		}
 		data := exec.Prepare(exec.ExecuteMeta{
 			PendingTask:       taskHash,
 			Model:             req.Model,
@@ -94,7 +100,7 @@ func Send() gin.HandlerFunc {
 			Input:             trimContent,
 			SessionID:         sessionID,
 			ExcludeTools:      req.ExcludeTools,
-			ExtraSystemPrompt: cmp.Or(req.Rule, req.SystemPrompt), // NOTE: SystemPrompt 棄用時要記得改
+			ExtraSystemPrompt: rule,
 		})
 
 		// NOTE: 如果已經在執行中，則直接將內容加入到執行中

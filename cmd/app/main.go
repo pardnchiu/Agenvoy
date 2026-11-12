@@ -8,6 +8,7 @@ import (
 	osexec "os/exec"
 	"os/signal"
 	"slices"
+	"strings"
 	"syscall"
 
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
@@ -34,6 +35,10 @@ func main() {
 			return
 
 		default:
+			if strings.HasPrefix(os.Args[1], "-") {
+				prompt(os.Args[1:])
+				return
+			}
 			usage()
 			os.Exit(1)
 		}
@@ -51,6 +56,13 @@ func usage() {
 	fmt.Println("Usage:")
 	fmt.Println("  agen                                            Attach TUI; spawn server daemon if not running")
 	fmt.Println("  agen stop                                       Stop the running server daemon")
+	fmt.Println("  agen -p <prompt> [flags]                        Send one prompt to the daemon and print the reply")
+	fmt.Println("      -m, --model <name>                          Model (default: auto)")
+	fmt.Println("      -r, --reasoning <level>                     Reasoning level (default: medium)")
+	fmt.Println("      --stream                                    Print the reply as it streams")
+	fmt.Println("      --work-dir <dir>                            Working directory (default: current directory)")
+	fmt.Println("      --allow-edit                                Allow writes and non-read-only commands")
+	fmt.Println("      --skip-sandbox                              Allow paths outside $HOME, sudo and sandbox: false")
 	fmt.Println("  agen update                                     Update agen to the latest release")
 }
 
