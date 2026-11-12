@@ -196,6 +196,10 @@ API keys, tokens and passwords → store_secret.`,
 				})
 			}
 
+			if agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff {
+				return "No user is available in auto mode, so the question was not asked. Decide with your best judgment, state the assumption you made in the reply, and continue.", nil
+			}
+
 			answers, err := AskPrompt(ctx, e.SessionID, questions)
 			if err != nil {
 				return "", err

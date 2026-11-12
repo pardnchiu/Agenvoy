@@ -322,15 +322,15 @@ async function send(content, target) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         content: content,
-        sse: false,
+        stream: false,
         session_id: sessionId,
         persist: true,
         model: model,
         reasoning: primary ? ensureReasoning() : "",
-        system_prompt: primary ? role : "",
+        rule: primary ? role : "",
         work_dir: chat.work_dir,
         skill: picked,
-        pending_task: waiting,
+        task_hash: waiting,
       }),
     });
     if (!response.ok) {

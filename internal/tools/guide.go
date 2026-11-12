@@ -84,6 +84,11 @@ func registReasoningGuide() {
 					guides = append(guides, "## "+topic+"\n\nThis session cannot dispatch: subagents and background_subagents are unavailable here. Run every lookup yourself with the tools you have, batching independent calls in one response.")
 					continue
 				}
+				if topic == "ask_user" && e != nil && e.ExcludeTools["ask_user"] {
+					seen[topic] = true
+					guides = append(guides, "## "+topic+"\n\nThis session has no user to ask: ask_user is unavailable here. Pick the most reasonable reading, proceed, and state the assumption in the reply.")
+					continue
+				}
 				if strings.Contains(guide, "{{.ModelSelection}}") {
 					if selection == "" {
 						selection = config.SelectionPrompt(&config.Config{}, true)

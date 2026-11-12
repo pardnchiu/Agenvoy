@@ -49,7 +49,7 @@ type ExecuteMeta struct {
 	Skill             *skill.Skill
 	SkillName         string
 	SkillScanner      *runtime.SkillScanner
-	Task              string
+	InputNoRecord     string // NOTE: 不紀錄呼叫，給 completion 使用
 	Input             string
 	SessionID         string
 	ImageInputs       []string
@@ -255,7 +255,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	exec.IgnoreHistory = data.IgnoreHistory
 	exec.Objective = strings.TrimSpace(data.Input)
 	if exec.Objective == "" {
-		exec.Objective = strings.TrimSpace(data.Task)
+		exec.Objective = strings.TrimSpace(data.InputNoRecord)
 	}
 
 	keepPending := true
@@ -267,7 +267,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				exec.Objective = strings.TrimSpace(info.Objective)
 			}
 		} else {
-			objective := data.Task
+			objective := data.InputNoRecord
 			if objective == "" {
 				if s, ok := session.UserMessage.Content.(string); ok {
 					objective = s
@@ -306,8 +306,12 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	if !audiotool.TTSEnabled() {
 		data.ExcludeTools = append(data.ExcludeTools, "generate_audio")
 	}
-	if !interactive.BackgroundAllowed(ctx) {
+	autoMode := agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff
+	if !interactive.BackgroundAllowed(ctx) || autoMode {
 		data.ExcludeTools = append(data.ExcludeTools, "background_command", "background_subagents")
+	}
+	if autoMode {
+		data.ExcludeTools = append(data.ExcludeTools, "ask_user", "store_secret")
 	}
 	if (cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "") &&
 		(cfg == nil || !cfg.DiscordEnabled || go_pkg_keychain.Get("DISCORD_TOKEN") == "") {

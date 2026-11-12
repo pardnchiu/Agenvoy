@@ -41,12 +41,12 @@ func RunBackgroundJob(job interactive.BackgroundJob) {
 		origin := runtime.OriginOf(job.SessionID)
 		ctx := agentstypes.WithWindowHash(agentstypes.WithOrigin(context.Background(), origin), job.WindowHash)
 		data := exec.Prepare(exec.ExecuteMeta{
-			WorkDir:   job.WorkDir,
-			Task:      input,
-			Input:     input,
-			SessionID: job.SessionID,
-			AllowAll:  job.AllowAll,
-			TUI:       origin == "cli-",
+			WorkDir:       job.WorkDir,
+			InputNoRecord: input,
+			Input:         input,
+			SessionID:     job.SessionID,
+			AllowAll:      job.AllowAll,
+			TUI:           origin == "cli-",
 		})
 		events, wait := exec.Stream(ctx, job.SessionID, 64, func(stream chan<- agentstypes.Event) error {
 			return exec.Run(ctx, data, stream, false)

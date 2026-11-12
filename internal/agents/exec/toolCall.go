@@ -431,6 +431,21 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			if agenttypes.NoPromptFrom(ctx) {
 				proceed = false
 				reason = "a background subagent leg cannot ask the user for confirmation; return what you gathered and state that this call still needs the user's approval"
+			} else if mode := agenttypes.AutoModeFrom(ctx); mode != agenttypes.AutoModeOff {
+				var missing []string
+				if (needsConfirm || irreversible || len(outsidePaths) > 0) && mode&agenttypes.AutoModeAllowEdit == 0 {
+					missing = append(missing, "enable_edit: true (this run is read-only: writes and non-read-only commands are refused)")
+				}
+				if len(restrictedList) > 0 && mode&agenttypes.AutoModeSkipSandbox == 0 {
+					missing = append(missing, "enable_sandbox: false (paths outside $HOME, sudo, sandbox: false)")
+				}
+				if len(missing) == 0 {
+					approved = true
+					verified = len(restrictedList) > 0
+				} else {
+					proceed = false
+					reason = "this auto-mode run cannot approve this call; rerun with " + strings.Join(missing, " and ")
+				}
 			} else if runtime.HasListener(ctx, origin) {
 				askCtx, cancelAsk := context.WithCancel(ctx)
 				if agenttypes.OriginFrom(ctx) != foregroundOrigin {

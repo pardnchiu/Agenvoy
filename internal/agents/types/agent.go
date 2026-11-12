@@ -76,6 +76,26 @@ func NoPromptFrom(ctx context.Context) bool {
 	return v
 }
 
+type AutoMode int
+
+const (
+	AutoModeOff AutoMode = 0
+	AutoModeOn  AutoMode = 1 << (iota - 1)
+	AutoModeAllowEdit
+	AutoModeSkipSandbox
+)
+
+type autoModeCtxKey struct{}
+
+func WithAutoMode(ctx context.Context, mode AutoMode) context.Context {
+	return context.WithValue(ctx, autoModeCtxKey{}, mode)
+}
+
+func AutoModeFrom(ctx context.Context) AutoMode {
+	v, _ := ctx.Value(autoModeCtxKey{}).(AutoMode)
+	return v
+}
+
 type ModelSet struct {
 	Registry map[string]Agent
 	Order    []ModelEntry
