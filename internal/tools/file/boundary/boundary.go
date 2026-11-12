@@ -45,6 +45,10 @@ func Grant(sessionID string, list ...string) {
 	}
 }
 
+func Revoke(sessionID string) {
+	cache.Delete(sessionID)
+}
+
 func isGranted(sessionID, absPath string) bool {
 	v, ok := cache.Load(sessionID)
 	if !ok {

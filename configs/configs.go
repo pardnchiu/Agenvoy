@@ -189,6 +189,9 @@ var SubagentPrompt string
 //go:embed prompts/system_prompt/component/wsl_host.md
 var WSLHost string
 
+//go:embed prompts/system_prompt/component/plain_text.md
+var PlainTextRule string
+
 // * Prompts > systemPrompt > Chatbot
 
 //go:embed prompts/system_prompt/chatbot/telegram.md

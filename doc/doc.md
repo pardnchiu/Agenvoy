@@ -320,7 +320,7 @@ Shortcuts work while the input area is empty:
 
 Inside a popup, `esc` returns to the page that opened it and closes only the first page; confirmation, password and `ask_user` popups ignore `esc`, so pick an option instead; list-only popups such as `/usage` scroll instead of selecting.
 
-While a run is in progress, `esc` cancels it at once if it has not produced output yet; otherwise it asks **No**, **Yes cancel** or **Pause keep pending**. Cancelling — also `ctrl+c`, **Cancel task** in a confirmation popup, and `POST /v1/session/:id/cancel/:task_hash` — discards the task's pending entry. Pausing, **Abort task** in a confirmation popup, and any other interruption such as a timeout or a closed window, stops the run but keeps the entry so `/pending` can resume it. While a run is in progress only plain text can be sent, as steer; `/` commands are neither listed nor sent. Outside a popup `esc` first closes the `/` command picker, then the notice box, then cancels the run, then clears the input, then opens the background-task menu. While this session has background tasks running, the line above the input shows `N background task(s) running`; with the input empty and no run in progress, `esc` lists them as **No**, each task and **All** (two or more), and the pick is cancelled after one more confirmation, discarding its output. While the status line shows `Connecting`, plain messages, Skills, `/pending` and cron dispatch are held; local `/` commands still work.
+While a run is in progress, `esc` cancels it at once if it has not produced output yet; otherwise it asks **No**, **Yes cancel** or **Pause keep pending**. Cancelling — also `ctrl+c`, **Cancel task** in a confirmation popup, and `POST /v1/session/:id/cancel/:task_hash` — ends the task and keeps it in chat history with a `[Canceled]` reply (plus the last error when it had failed); canceling a background job leaves a parent task that is still running untouched. Pausing, **Abort task** in a confirmation popup, and any other interruption such as a timeout or a closed window, stops the run but keeps the entry so `/pending` can resume it. While a run is in progress only plain text can be sent, as steer; `/` commands are neither listed nor sent. Outside a popup `esc` first closes the `/` command picker, then the notice box, then cancels the run, then clears the input, then opens the background-task menu. While this session has background tasks running, the line above the input shows `N background task(s) running`; with the input empty and no run in progress, `esc` lists them as **No**, each task and **All** (two or more), and the pick is cancelled after one more confirmation, discarding its output. While the status line shows `Connecting`, plain messages, Skills, `/pending` and cron dispatch are held; local `/` commands still work.
 
 ### Managing the daemon
 
@@ -330,6 +330,26 @@ agen update
 ```
 
 Running `agen` starts the local daemon when it is not already running.
+
+### One-shot prompt
+
+```bash
+agen -p "Summarize the diff" --stream
+git diff | agen -p "" --allow-edit -m auto -r high
+```
+
+`agen -p` sends one prompt to `/v1/send` in a fresh `temp-` session, starting the daemon when needed, and prints the reply. With an empty `-p` the prompt is read from stdin. It always runs in auto mode, so nothing prompts.
+
+| Flag | `/v1/send` field | Default |
+| --- | --- | --- |
+| `-m`, `--model` | `model` | `auto` |
+| `-r`, `--reasoning` | `reasoning` | `medium` |
+| `--stream` | `stream` | off |
+| `--work-dir` | `work_dir` | current directory (relative paths resolve from it) |
+| `--allow-edit` | `enable_edit` | off (read-only) |
+| `--skip-sandbox` | `enable_sandbox` (inverted) | off (sandboxed) |
+
+With `--stream`, the model, tool calls and thinking go to stderr as `⏵ Model(...)`, `⏵ Tool(...)` and `✻ ...`, while the reply streams to stdout. Errors exit 1, a canceled run exits 130 (the daemon still finishes the task), and arguments left after `-p <prompt>` are rejected, so quote the prompt.
 
 ### Web and file-response rendering
 
@@ -372,8 +392,8 @@ Supported methods: `initialize`, `notifications/initialized`, `notifications/can
 | TUI        | `agen`                    | Open the interactive TUI and attach to the local daemon. |
 | Stop       | `agen stop`               | Stop the daemon.                                         |
 | Update     | `agen update`             | Execute the official updater.                            |
-| Daemon     | `agen --daemon [--enable-claude-code]` | Start the daemon directly (optionally enabling claude-code). |
-| Claude Code | `agen --enable-claude-code` | Enable the claude-code provider and open the TUI; stop the daemon first with `agen stop`. |
+| Prompt     | `agen -p <prompt> [flags]` | Send one prompt through `/v1/send` and print the reply (see [One-shot prompt](#one-shot-prompt)). |
+| Daemon     | `agen --daemon`           | Start the daemon directly.                               |
 | MCP server | `agen` with non-TTY stdin | Serve MCP JSON-RPC over standard I/O.                    |
 
 ## HTTP API Reference
@@ -384,7 +404,7 @@ The daemon binds to loopback only (`127.0.0.1` and `[::1]`). Endpoints marked **
 
 | Method | Path                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/v1/send`             | Run an agent request: `{content, session_id?, sse?, persist?, model?, reasoning?, work_dir?, skill?, system_prompt?, exclude_tools?}`. `model` and `reasoning` apply to this request only and never change the session default: an omitted `model` uses the session model, `auto` runs the dispatcher even when the session is pinned, and an omitted `reasoning` uses the session level. Without `session_id` it creates a `temp-` session (`chat-` with `persist:true`); when that session is already running, the content is sent as steer and the response is `{session_id, steer:true}`; an empty `content` returns 400.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `POST` | `/v1/send`             | Run an agent request: `{content, stream?, session_id?, persist?, model?, reasoning?, work_dir?, skill?, rule?, task_hash?, exclude_tools?, enable_edit?, enable_sandbox?, enable_markdown?}`. `model` and `reasoning` apply to this request only and never change the session default: an omitted `model` uses the session model, `auto` runs the dispatcher even when the session is pinned, and an omitted `reasoning` uses the session level. `stream:true` returns SSE events; `rule` adds extra system instructions; `task_hash` resumes that pending task while it still has background jobs. Without `session_id` it creates a `temp-` session (`chat-` with `persist:true`); when that session is already running, the content is sent as steer and the response is `{session_id}`; an empty `content` returns 400. A request that sets `enable_edit` or `enable_sandbox`, or that has no web confirmation listener, runs in auto mode: nothing prompts, the run is read-only unless `enable_edit:true` (writes and non-read-only commands), stays in the sandbox unless `enable_sandbox:false` (paths outside `$HOME`, `sudo`, `sandbox:false`), has no `ask_user`, `store_secret` or background tools, and starts with the session's path grants cleared; a blocked call returns the flag that would allow it. `enable_markdown:false` (default `true`) asks for a plain-text reply without markdown syntax. The older `sse`, `system_prompt` and `pending_task` are still accepted as aliases of `stream`, `rule` and `task_hash` and will be removed later. |
 | `POST` | `/v1/chat/completions` | Stateless OpenAI-compatible chat completion.                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `GET`  | `/v1/info/version`     | Build version stamped at compile time (`{version, dev}`); `dev` is true for an untagged build.                                                                                                                                                                                                                                                                                                                                               |
 | `GET`  | `/v1/log`              | SSE stream. With no query it carries daemon `slog` records only (`EventDaemonLog` frames with `source` as the level) — the same feed the TUI header shows, and it includes new-chat verification codes, so daemon frames are attached only for loopback callers. `?sessions=a,b` adds those sessions' events on the same connection; `replay=0` skips the backlog, `daemon=0` drops the daemon frames. A remote caller must pass `sessions`. Session events carry backend-formatted text: `trace` (the thinking or tool-call line), `tool_display` (for tool calls and confirmations) and, for confirmations, `confirm_title`, `restricted_lines` and `restricted_note`, so every surface shows the same wording. |

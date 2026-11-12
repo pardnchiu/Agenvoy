@@ -216,15 +216,13 @@ func Save(sessionID, name, body string, force bool) error {
 	}
 
 	row, exists := read(sessionID)
-	if !force && exists {
-		return nil
-	}
-
-	row.SessionID = sessionID
-	row.Name = name
-	row.Role = body
-	if err := write(row); err != nil {
-		return err
+	if force || !exists {
+		row.SessionID = sessionID
+		row.Name = name
+		row.Role = body
+		if err := write(row); err != nil {
+			return err
+		}
 	}
 
 	dir := filesystem.SessionDir(sessionID)

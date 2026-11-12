@@ -1,0 +1,1 @@
+Reply in plain text: no markdown syntax such as **bold**, backtick code, # headings, - or * bullets, [text](url) links, fenced blocks or | tables. Use line breaks and numbered lines like 1. for structure, and write URLs as-is.

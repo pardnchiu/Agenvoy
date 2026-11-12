@@ -43,7 +43,7 @@ func (b *Bot) resumeFromPending(sessionID, taskHash string, answers []any) {
 	}
 
 	if err := reply.Run(ctx, exec.ExecuteMeta{
-		Task:           full,
+		InputNoRecord:  full,
 		Input:          full,
 		Sender:         "user",
 		SessionID:      sessionID,

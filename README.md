@@ -260,6 +260,14 @@ curl -fsSL https://agenvoy.com/scripts/install.sh | bash
 
 </details>
 
+### Run one prompt from the shell
+
+```bash
+agen -p "Summarize today's commits" --stream
+```
+
+`agen -p` sends one prompt to the local daemon and prints the reply. It is read-only and sandboxed by default; add `--allow-edit` to let it write and `--skip-sandbox` to let it leave `$HOME`. See the [docs](doc/doc.md#one-shot-prompt) for every flag.
+
 ## Developer Recommendations
 
 A cost-effective model setup to get started:

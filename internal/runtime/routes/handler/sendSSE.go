@@ -43,6 +43,9 @@ func sendSSE(c *gin.Context, sessionID string, input string, events <-chan agent
 			continue
 		}
 
+		if event.Err != nil && event.Text == "" {
+			event.Text = event.Err.Error()
+		}
 		raw, err := json.Marshal(event)
 		if err != nil {
 			continue

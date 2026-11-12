@@ -196,6 +196,10 @@ API keys, tokens and passwords → store_secret.`,
 				})
 			}
 
+			if agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff {
+				return "No user is available in auto mode, so the question was not asked. Decide with your best judgment, state the assumption you made in the reply, and continue.", nil
+			}
+
 			answers, err := AskPrompt(ctx, e.SessionID, questions)
 			if err != nil {
 				return "", err
@@ -297,6 +301,39 @@ func DeletePending(sessionID, taskHash string) {
 	os.Remove(filesystem.PendingMetaPath(sessionID, taskHash))
 	pendingMu.Unlock()
 	SettleBackground(sessionID, taskHash)
+}
+
+const (
+	canceledReply = "[Canceled]: canceled by user before it finished"
+	PendingFlag   = "[Saved to /pending]:"
+)
+
+func CancelPending(sessionID, taskHash string) {
+	if taskHash == "" {
+		return
+	}
+	pendingMu.Lock()
+
+	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+	if err != nil {
+		pendingMu.Unlock()
+		return
+	}
+
+	reply := strings.TrimSpace(meta.Reply)
+	if rest, failed := strings.CutPrefix(reply, PendingFlag); failed || reply == "" {
+		meta.Reply = canceledReply
+		if failed {
+			meta.Reply += "; last error: " + strings.TrimSpace(rest)
+		}
+		if writeErr := writePending(sessionID, taskHash, &meta); writeErr != nil {
+			slog.Debug("CancelPending",
+				slog.String("session", sessionID),
+				slog.String("error", writeErr.Error()))
+		}
+	}
+	pendingMu.Unlock()
+	CleanupPending(sessionID, taskHash)
 }
 
 func CompactPending(sessionID, taskHash string) {

@@ -151,7 +151,7 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 		TaskHash:          hash,
 		KeepPending:       true,
 		IgnoreHistory:     ignoreHistory,
-		Task:              trimTask,
+		InputNoRecord:     trimTask,
 		Input:             trimTask,
 		ExcludeTools:      toolExclude,
 		ExcludeSkills:     tools.TUIOnlySkills,
