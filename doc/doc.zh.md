@@ -320,7 +320,7 @@ agen
 
 在彈出視窗中，`esc` 會回到開啟它的上一頁，只有第一頁才會關閉；確認、密碼與 `ask_user` 視窗不理會 `esc`，須選擇選項；`/usage` 這類純列表視窗以 ↑／↓ 捲動而非選取。
 
-任務執行中按 `esc`：尚未輸出任何內容時直接取消，否則詢問 **No**／**Yes cancel**／**Pause keep pending**。取消（含 `ctrl+c`、確認框中的 **Cancel task**，以及 `POST /v1/session/:id/cancel/:task_hash`）會一併移除該任務的 pending；暫停、確認框中的 **Abort task** 與其他中斷（逾時、視窗關閉等）只停止執行並保留 pending，可從 `/pending` 恢復。任務執行中只能送一般文字作為 steer，`/` 指令不會列出也不會送出。非彈窗狀態下 `esc` 依序為：先關閉 `/` 指令選單，再關閉 notice 區塊，再取消任務，再清空輸入，最後開啟背景任務選單。本 session 有背景任務在跑時，輸入框上方顯示 `N background task(s) running`；輸入框為空且沒有任務執行時按 `esc` 會列出 **No**、各背景任務與 **All**（兩個以上才有），選定後再確認一次即取消，其輸出不再回報。狀態列顯示 `Connecting` 時，一般訊息、Skill、`/pending` 與 cron 派發都不會送出；本機 `/` 指令照常可用。
+任務執行中按 `esc`：尚未輸出任何內容時直接取消，否則詢問 **No**／**Yes cancel**／**Pause keep pending**。取消（含 `ctrl+c`、確認框中的 **Cancel task**，以及 `POST /v1/session/:id/cancel/:task_hash`）會結束任務，並以 `[Canceled]` 回覆保留在對話歷史中（任務原本失敗時附上最後的錯誤）；取消背景 job 不會影響仍在執行的母任務；暫停、確認框中的 **Abort task** 與其他中斷（逾時、視窗關閉等）只停止執行並保留 pending，可從 `/pending` 恢復。任務執行中只能送一般文字作為 steer，`/` 指令不會列出也不會送出。非彈窗狀態下 `esc` 依序為：先關閉 `/` 指令選單，再關閉 notice 區塊，再取消任務，再清空輸入，最後開啟背景任務選單。本 session 有背景任務在跑時，輸入框上方顯示 `N background task(s) running`；輸入框為空且沒有任務執行時按 `esc` 會列出 **No**、各背景任務與 **All**（兩個以上才有），選定後再確認一次即取消，其輸出不再回報。狀態列顯示 `Connecting` 時，一般訊息、Skill、`/pending` 與 cron 派發都不會送出；本機 `/` 指令照常可用。
 
 ### 管理 daemon
 
@@ -330,6 +330,26 @@ agen update
 ```
 
 執行 `agen` 時，若本機 daemon 尚未執行會自動啟動。
+
+### 單次執行
+
+```bash
+agen -p "摘要這次 diff" --stream
+git diff | agen -p "" --allow-edit -m auto -r high
+```
+
+`agen -p` 以新的 `temp-` session 把一則 prompt 送到 `/v1/send`（必要時自動啟動 daemon）並印出回覆；`-p` 為空時從 stdin 讀取。一律以 auto mode 執行，不會跳出確認。
+
+| 旗標 | `/v1/send` 欄位 | 預設 |
+| --- | --- | --- |
+| `-m`, `--model` | `model` | `auto` |
+| `-r`, `--reasoning` | `reasoning` | `medium` |
+| `--stream` | `stream` | 關閉 |
+| `--work-dir` | `work_dir` | 當前目錄（相對路徑以此解析） |
+| `--allow-edit` | `enable_edit` | 關閉（唯讀） |
+| `--skip-sandbox` | `enable_sandbox`（取反） | 關閉（留在沙箱） |
+
+加上 `--stream` 時，model、工具呼叫與 thinking 以 `⏵ Model(...)`、`⏵ Tool(...)`、`✻ ...` 印到 stderr，回覆串流到 stdout。錯誤 exit 1，取消 exit 130（daemon 端仍會把任務跑完）；`-p <prompt>` 之後若有多餘參數會直接報錯，prompt 請加引號。
 
 ### stdin MCP Server
 
@@ -371,8 +391,8 @@ curl --fail-with-body -sS \
 | TUI    | `agen`                 | 開啟或連接本機 daemon 的互動式 TUI |
 | 停止   | `agen stop`            | 停止 daemon                        |
 | 更新   | `agen update`          | 執行官方更新腳本                   |
-| Daemon | `agen --daemon [--enable-claude-code]` | 直接啟動 daemon（可附帶啟用 claude-code） |
-| Claude Code | `agen --enable-claude-code` | 啟用 claude-code provider 並開啟 TUI；daemon 須先以 `agen stop` 停止 |
+| 單次執行 | `agen -p <prompt> [flags]` | 經 `/v1/send` 送出一則 prompt 並印出回覆（見[單次執行](#單次執行)） |
+| Daemon | `agen --daemon`        | 直接啟動 daemon                    |
 | MCP    | 非 TTY stdin 的 `agen` | 從 stdin 提供 MCP JSON-RPC         |
 
 ## HTTP API 參考
@@ -383,7 +403,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 
 | Method | Path                   | 說明                                                                                                                                                                                                                                                                                         |
 | ------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/v1/send`             | 執行 Agent：`{content, session_id?, sse?, persist?, model?, reasoning?, work_dir?, skill?, system_prompt?, exclude_tools?}`。`model` 與 `reasoning` 只作用於這次請求，不改 session 預設：未帶 `model` 用 session 模型，`auto` 即使 session 已固定模型仍交給 dispatcher，未帶 `reasoning` 用 session 等級。未帶 `session_id` 時建立 `temp-`（`persist:true` 則 `chat-`）session；該 session 已在執行時改為 steer，回 `{session_id, steer:true}`；`content` 為空回 400 |
+| `POST` | `/v1/send`             | 執行 Agent：`{content, stream?, session_id?, persist?, model?, reasoning?, work_dir?, skill?, rule?, task_hash?, exclude_tools?, enable_edit?, enable_sandbox?, enable_markdown?}`。`model` 與 `reasoning` 只作用於這次請求，不改 session 預設：未帶 `model` 用 session 模型，`auto` 即使 session 已固定模型仍交給 dispatcher，未帶 `reasoning` 用 session 等級。`stream:true` 回 SSE 事件；`rule` 附加額外系統指示；`task_hash` 在該 pending 任務仍有背景 job 時接續它。未帶 `session_id` 時建立 `temp-`（`persist:true` 則 `chat-`）session；該 session 已在執行時改為 steer，回 `{session_id}`；`content` 為空回 400。帶 `enable_edit` 或 `enable_sandbox`，或沒有網頁確認 listener 時以 auto mode 執行：一律不跳確認；未設 `enable_edit:true` 時唯讀（擋寫入與非唯讀指令），未設 `enable_sandbox:false` 時留在沙箱（擋 `$HOME` 外路徑、`sudo`、`sandbox:false`）；不提供 `ask_user`、`store_secret` 與背景工具，開始時清除該 session 的路徑授權；被擋的呼叫回傳可放行的參數。`enable_markdown:false`（預設 `true`）要求不含 markdown 語法的純文字回覆。舊參數 `sse`、`system_prompt`、`pending_task` 仍視為 `stream`、`rule`、`task_hash` 的別名，之後會移除 |
 | `POST` | `/v1/chat/completions` | OpenAI 相容且 stateless 的 chat completions                                                                                                                                                                                                                                                  |
 | `GET`  | `/v1/info/version`     | 編譯時寫入的版本（`{version, dev}`）；未帶 tag 的建置 `dev` 為 true                                                                                                                                                                                                                          |
 | `GET`  | `/v1/log`              | SSE：不帶參數時只送 daemon `slog`（`EventDaemonLog`，`source` 為層級），與 TUI 標題列同一份來源；內含新對話驗證碼，故 daemon frame 僅對 loopback 來源附加。`?sessions=a,b` 於同一條連線加上該些 session 的事件，`replay=0` 略過回放，`daemon=0` 去掉 daemon frame。遠端來源必須帶 `sessions`。session 事件附後端格式化好的文字：`trace`（思考或工具呼叫行）、`tool_display`（工具呼叫與確認），確認事件另附 `confirm_title`、`restricted_lines`、`restricted_note`，各介面顯示的用詞一致 |

@@ -29,7 +29,7 @@ graph TB
 
 ## 模組：進入點與執行模式
 
-`cmd/app` 預設開啟 TUI；所有 Agent 都在 daemon 執行，TUI 是它的用戶端：執行、steer、取消、確認與 `ask_user` 的回覆、`/pending` 接續，以及 `/mcp` 的狀態、重新連線與工具列表，都經 Unix socket `~/.config/agenvoy/daemon.sock`（權限 0600，newline-delimited JSON）送給 daemon，TUI 再渲染回傳的事件。TUI 發起的任務綁定該連線：關閉 TUI 即停止，可從 `/pending` 接續。連不上 daemon 時 TUI 仍可開啟，狀態列顯示 `Connecting` 並每 5 秒重連，需要 daemon 的輸入會暫停送出直到連上。TUI 啟動時若 daemon 未執行會自動以 `--daemon` 啟動它。`agen stop` 停止 daemon，`agen update` 執行官方更新器，stdin 非 TTY 時則改為 stdio JSON-RPC MCP server。`agen --enable-claude-code` 啟用 `claude-code` provider（以本機 `claude` CLI 作為模型），daemon 執行中會被拒絕，需先 `agen stop`；由它啟動的 daemon 會帶著這個設定，之後不帶參數啟動的 TUI 沿用執行中 daemon 的狀態。Web 儀表板由 daemon 提供於 `http://127.0.0.1:17989`（同時監聽 `[::1]:17989`）。
+`cmd/app` 預設開啟 TUI；所有 Agent 都在 daemon 執行，TUI 是它的用戶端：執行、steer、取消、確認與 `ask_user` 的回覆、`/pending` 接續，以及 `/mcp` 的狀態、重新連線與工具列表，都經 Unix socket `~/.config/agenvoy/daemon.sock`（權限 0600，newline-delimited JSON）送給 daemon，TUI 再渲染回傳的事件。TUI 發起的任務綁定該連線：關閉 TUI 即停止，可從 `/pending` 接續。連不上 daemon 時 TUI 仍可開啟，狀態列顯示 `Connecting` 並每 5 秒重連，需要 daemon 的輸入會暫停送出直到連上。TUI 啟動時若 daemon 未執行會自動以 `--daemon` 啟動它。`agen stop` 停止 daemon，`agen update` 執行官方更新器，stdin 非 TTY 時則改為 stdio JSON-RPC MCP server。`agen -p <prompt>` 是輕量的 HTTP 用戶端：必要時啟動 daemon，以新的 `temp-` session 對 `/v1/send` 送出一次請求，旗標對應 `model`、`reasoning`、`stream`、`work_dir`、`enable_edit`、`enable_sandbox`，再印出回覆；串流時 model、工具與 thinking 印到 stderr。Web 儀表板由 daemon 提供於 `http://127.0.0.1:17989`（同時監聽 `[::1]:17989`）。
 
 所有使用 session 的入口（TUI、Web `/send`、pending 恢復、Telegram、Discord）都經過相同的兩步進入執行：`exec.Prepare` 重新掃描 Skill、在 TUI 以外排除 TUI 專用的工具與 Skill，並解析開頭的 `/<skill_name>`；接著 `exec.Run` 查找以名稱指定的 Skill、記錄輸入、經 `exec/model.Route` 選擇模型、建立 session 並執行 Agent；subagent 與排程以 `isSub=true` 直接呼叫 `exec.Run`，不經 `Prepare`。各入口只負責自己的傳輸、授權與呈現；Telegram 與 Discord 共用同一套回覆流程（狀態訊息、分段、footer、錯誤提示與附件）。TUI 與 daemon 都會監看 `config.json`，變更時重新載入模型註冊表（daemon 另會重新連線聊天 bot）；TUI 也會訂閱 daemon log，讓 Telegram 與 Discord 的驗證碼顯示在 TUI 的 notice 框；所有 log、警告與錯誤都集中在這個框（顯示最後 4 行、保留 32 行，`Tab` 往上捲，`Esc` 清除）。
 
@@ -226,6 +226,7 @@ sequenceDiagram
 - auto 模式（`⏵⏵ auto`）只在工作目錄是 `$HOME` 底下的非敏感子目錄時生效（`filesystem.WorkDirAllowsAll`，TUI 啟動時也依它決定預設模式）；生效時所有工具直接執行，但目標在 `$HOME` 內、工作目錄外的寫入與指令（`boundary.OutsideWorkDir`）與不可逆指令（`isIrreversibleCommand`，對齊 Claude Code auto mode 預設擋的類別，allow rule 不能略過）仍需確認；subagent 不受工作目錄限制。
 - 透過 `edit_file` 寫入或修改既有檔案前，必須在同一次執行中成功以 `read_files` 讀過該檔，且之後修改時間未變，否則拒絕；新檔案不需事先讀取。這項新鮮度檢查是路徑邊界與權限檢查的補充，不取代它們。
 - 命令執行受 shell AST validation 及 OS 沙箱限制（macOS 的 `sandbox-exec`、Linux 的 `bwrap`），且預設禁網；該次呼叫帶 `network: true` 才開放，auto 模式以外要求確認。需要寫入 `$HOME` 以外的命令，要在該次呼叫以 `write_paths` 宣告路徑；需要 root 的命令以 argv `['sudo', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），以 `sudo -n` 在沙箱外執行；兩者都由使用者輸入系統密碼核准。被沙箱擋住且找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。script 工具的沙箱保持網路開啟，只能寫入 `$HOME`。
+- `/v1/send` 在請求帶 `enable_edit` 或 `enable_sandbox`，或沒有開啟中的網頁確認 listener 時（`agen -p` 一律如此）以 API auto mode 執行：不跳確認；未設 `enable_edit` 為 true 時唯讀；未設 `enable_sandbox` 為 false 時留在沙箱（不得存取 `$HOME` 外路徑、`sudo`、`sandbox: false`）；不提供 `ask_user`、`store_secret` 與背景工具；每次請求開始時清除該 session 的路徑授權，核准不會延續；被擋的呼叫會回傳可放行的參數。
 - 憑證與 provider、MCP 的 OAuth token 存在作業系統 keychain（macOS Keychain、Linux `secret-tool`），不寫入 repository；`secret-tool` 失敗時改存 `~/.config/agenvoy/.secrets`（權限 0600）；都查無時最後才讀同名環境變數。
 
 ## 持久化結構
