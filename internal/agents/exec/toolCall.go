@@ -478,7 +478,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 				}
 				if errors.Is(err, context.Canceled) {
 					if errors.Is(context.Cause(ctx), runtime.ErrUserCanceled) {
-						interactive.DeletePending(sessionData.ID, exec.PendingTask)
+						interactive.CancelPending(sessionData.ID, exec.PendingTask)
 					}
 					return sessionData, alreadyCall, err
 				}
@@ -491,7 +491,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 						Text:     reply.Error.Error(),
 					}
 					if errors.Is(reply.Error, runtime.ErrUserCanceled) {
-						interactive.DeletePending(sessionData.ID, exec.PendingTask)
+						interactive.CancelPending(sessionData.ID, exec.PendingTask)
 					}
 					if exec.CancelExecution != nil {
 						exec.CancelExecution()

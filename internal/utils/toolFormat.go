@@ -59,12 +59,12 @@ var primaryArgKeys = []string{
 }
 
 var eventModeLabel = map[string]map[string]string{
-	"find_files": {"list": "Files", "glob": "Glob Files", "search": "Search Files"},
+	"subagents":  {"list": "Subagents", "invoke": "Subagent"},
+	"find_files": {"list": "Files", "glob": "Search", "search": "Search"},
 	"edit_file":  {"write": "Write", "patch": "Edit", "remove": "Remove", "restore": "Restore"},
-	"schedules":  {"list": "Schedules", "patch": "Edit", "remove": "Remove", "write": "Write"},
-	"subagents":  {"invoke": "Subagents", "list": "Subagents"},
-	"edit_skill": {"write": "Write Skill", "patch": "Edit Skill", "remove": "Remove Skill"},
-	"edit_tool":  {"write": "Write Tool", "patch": "Edit Tool", "remove": "Remove Tool"},
+	"schedules":  {"write": "Write", "patch": "Edit", "remove": "Remove", "list": "Schedules"},
+	"edit_skill": {"write": "Write", "patch": "Edit", "remove": "Remove"},
+	"edit_tool":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
 }
 
 func FormatToolEvent(name, raw string) string {

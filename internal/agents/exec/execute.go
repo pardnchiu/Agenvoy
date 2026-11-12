@@ -456,7 +456,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 		if execCtx.Err() != nil {
 			events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
 			if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
-				interactive.DeletePending(session.ID, exec.PendingTask)
+				interactive.CancelPending(session.ID, exec.PendingTask)
 			}
 			return execCtx.Err()
 		}
@@ -506,7 +506,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				stopSend()
 				events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
 				if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
-					interactive.DeletePending(session.ID, exec.PendingTask)
+					interactive.CancelPending(session.ID, exec.PendingTask)
 				}
 				return execCtx.Err()
 			case out := <-resultCh:
@@ -522,7 +522,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			if execCtx.Err() != nil {
 				events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
 				if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
-					interactive.DeletePending(session.ID, exec.PendingTask)
+					interactive.CancelPending(session.ID, exec.PendingTask)
 				}
 				return execCtx.Err()
 			}
@@ -597,7 +597,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				case <-execCtx.Done():
 					events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
 					if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
-						interactive.DeletePending(session.ID, exec.PendingTask)
+						interactive.CancelPending(session.ID, exec.PendingTask)
 					}
 					return execCtx.Err()
 				case <-time.After(configs.SEND_TIMEOUT_RETRY_INTERVAL):
@@ -616,7 +616,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				case <-execCtx.Done():
 					events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
 					if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
-						interactive.DeletePending(session.ID, exec.PendingTask)
+						interactive.CancelPending(session.ID, exec.PendingTask)
 					}
 					return execCtx.Err()
 				case <-time.After(retryWait):
@@ -654,8 +654,9 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			if isTimeout {
 				userMsg = fmt.Sprintf("upstream %s timed out (%s) and no healthy fallback model is available.", modelName, sendElapsed)
 			} else {
-				userMsg = fmt.Sprintf("upstream %s failed and no healthy fallback model is available: %s", modelName, err.Error())
+				userMsg = fmt.Sprintf("upstream %s failed and no healthy fallback model is available: %s.", modelName, err.Error())
 			}
+			userMsg = interactive.PendingFlag + " " + userMsg
 			slog.Error("data.Agent.Send failed, no fallback",
 				slog.String("session", session.ID),
 				slog.String("error", err.Error()))

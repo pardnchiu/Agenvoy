@@ -303,6 +303,39 @@ func DeletePending(sessionID, taskHash string) {
 	SettleBackground(sessionID, taskHash)
 }
 
+const (
+	canceledReply = "[Canceled]: canceled by user before it finished"
+	PendingFlag   = "[Saved to /pending]:"
+)
+
+func CancelPending(sessionID, taskHash string) {
+	if taskHash == "" {
+		return
+	}
+	pendingMu.Lock()
+
+	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+	if err != nil {
+		pendingMu.Unlock()
+		return
+	}
+
+	reply := strings.TrimSpace(meta.Reply)
+	if rest, failed := strings.CutPrefix(reply, PendingFlag); failed || reply == "" {
+		meta.Reply = canceledReply
+		if failed {
+			meta.Reply += "; last error: " + strings.TrimSpace(rest)
+		}
+		if writeErr := writePending(sessionID, taskHash, &meta); writeErr != nil {
+			slog.Debug("CancelPending",
+				slog.String("session", sessionID),
+				slog.String("error", writeErr.Error()))
+		}
+	}
+	pendingMu.Unlock()
+	CleanupPending(sessionID, taskHash)
+}
+
 func CompactPending(sessionID, taskHash string) {
 	if taskHash == "" {
 		return

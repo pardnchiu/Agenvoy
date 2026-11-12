@@ -49,7 +49,10 @@ func unregisterBackgroundCancel(sessionID, taskHash, id string) {
 
 func CancelTask(sessionID, taskHash string) {
 	StopBackground(sessionID, taskHash)
-	DeletePending(sessionID, taskHash)
+	if IsOnline(sessionID, taskHash) {
+		return
+	}
+	CancelPending(sessionID, taskHash)
 }
 
 func PauseTask(sessionID, taskHash string) {
