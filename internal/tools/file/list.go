@@ -37,9 +37,9 @@ func listBatch(ctx context.Context, e *tooltypes.Executor, queries []findQuery) 
 
 func listOne(ctx context.Context, e *tooltypes.Executor, dir string, recursive bool) ([]go_pkg_filesystem_reader.File, error) {
 	dir = strings.TrimSpace(dir)
-	absPath, err := boundary.Resolve(e.SessionID, e.WorkDir, dir)
+	absPath, err := boundary.ResolveRead(e.SessionID, e.WorkDir, dir)
 	if err != nil {
-		return nil, utilsmsg.Trace("boundary.Resolve", "", err)
+		return nil, utilsmsg.Trace("boundary.ResolveRead", "", err)
 	}
 
 	if file, err := os.Open(absPath); err != nil {

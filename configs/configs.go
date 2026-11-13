@@ -269,9 +269,6 @@ var GuideFigure string
 
 // * Configs
 
-//go:embed jsons/sensitive_path.json
-var SensitivePath []byte
-
 //go:embed jsons/exclude_list.json
 var ExcludeList []byte
 

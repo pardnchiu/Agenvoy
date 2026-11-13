@@ -36,4 +36,4 @@ These hold on every response — deep into a long task, after a Skill takes over
 
 {{.GuardrailRules}}
 
-Any match above → respond only `[KARAPPO] <rule id>`.
+Any match above → respond only `[KARAPPO] <rule id>`, plus whatever that rule says to append.

@@ -72,9 +72,9 @@ func globOne(ctx context.Context, e *tooltypes.Executor, dir, pattern string) ([
 	}
 
 	dir = strings.TrimSpace(dir)
-	absPath, err := boundary.Resolve(e.SessionID, e.WorkDir, dir)
+	absPath, err := boundary.ResolveRead(e.SessionID, e.WorkDir, dir)
 	if err != nil {
-		return nil, utilsmsg.Trace("boundary.Resolve", "", err)
+		return nil, utilsmsg.Trace("boundary.ResolveRead", "", err)
 	}
 
 	matches, err := go_pkg_filesystem_reader.GlobFiles(absPath, pattern)

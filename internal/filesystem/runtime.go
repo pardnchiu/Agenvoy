@@ -15,19 +15,13 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-type SensitiveConfig struct {
-	Dirs       []string `json:"dirs"`
-	Files      []string `json:"files"`
-	Prefixes   []string `json:"prefixes"`
-	Extensions []string `json:"extensions"`
-}
-
 var (
-	SensitivePath   SensitiveConfig
+	SensitivePath   go_pkg_filesystem.SensitiveDic
 	DeniedCommand   []string
 	DeniedPath      []string
 	NetWhiteList    []string
 	ReadOnlyCommand []string
+	ReadablePath    []string
 	ConfigReplyLang = ReplyLangAuto
 	ConfigOutputDir string
 )
@@ -107,18 +101,11 @@ func LoadRuntime() error {
 		changed = true
 	}
 
-	if err := json.Unmarshal(configs.SensitivePath, &SensitivePath); err != nil {
-		return utilsmsg.Wrap(utilsmsg.Internal, "json.Unmarshal", "embedded sensitive_path", err)
-	}
+	SensitivePath = go_pkg_filesystem.SensitiveDic{}
 	if data, ok := raw["sensitive_path"]; ok && len(data) > 0 {
-		var user SensitiveConfig
-		if err := json.Unmarshal(data, &user); err != nil {
+		if err := json.Unmarshal(data, &SensitivePath); err != nil {
 			return utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "sensitive_path", err)
 		}
-		SensitivePath.Dirs = merge(SensitivePath.Dirs, user.Dirs)
-		SensitivePath.Files = merge(SensitivePath.Files, user.Files)
-		SensitivePath.Prefixes = merge(SensitivePath.Prefixes, user.Prefixes)
-		SensitivePath.Extensions = merge(SensitivePath.Extensions, user.Extensions)
 	}
 	if data, ok := raw["denied_command"]; ok && len(data) > 0 {
 		var user []string
@@ -133,7 +120,16 @@ func LoadRuntime() error {
 		if err := json.Unmarshal(data, &user); err != nil {
 			return utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "denied_path", err)
 		}
-		DeniedPath = normalizeDeniedPath(user)
+		DeniedPath = normalizePaths("denied_path", user)
+	}
+
+	ReadablePath = nil
+	if data, ok := raw["readable_path"]; ok && len(data) > 0 {
+		var user []string
+		if err := json.Unmarshal(data, &user); err != nil {
+			return utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "readable_path", err)
+		}
+		ReadablePath = normalizePaths("readable_path", user)
 	}
 
 	if data, ok := raw["net_white_list"]; ok && len(data) > 0 {
@@ -184,7 +180,7 @@ func LoadRuntime() error {
 	return nil
 }
 
-func normalizeDeniedPath(list []string) []string {
+func normalizePaths(field string, list []string) []string {
 	seen := map[string]bool{}
 	out := make([]string, 0, len(list))
 	root := string(filepath.Separator)
@@ -194,18 +190,18 @@ func normalizeDeniedPath(list []string) []string {
 			continue
 		}
 		if !filepath.IsAbs(entry) && entry != "~" && !strings.HasPrefix(entry, "~/") {
-			slog.Warn("denied_path entry dropped: needs an absolute path or ~/",
+			slog.Warn("[Invalid] "+field+": entry dropped, needs an absolute path or ~/",
 				slog.String("entry", entry))
 			continue
 		}
 		one := go_pkg_utils.AbsPath("", entry)
 		if !filepath.IsAbs(one) {
-			slog.Warn("denied_path entry dropped: cannot be resolved",
+			slog.Warn("[Invalid] "+field+": entry dropped, cannot be resolved",
 				slog.String("entry", entry))
 			continue
 		}
 		if one == root {
-			slog.Warn("denied_path entry dropped: refusing to deny the filesystem root",
+			slog.Warn("[Invalid] "+field+": entry dropped, the filesystem root is not allowed",
 				slog.String("entry", entry))
 			continue
 		}
