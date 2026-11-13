@@ -20,27 +20,56 @@ func IsDeniedPath(absPath string) bool {
 	})
 }
 
-func IsSensitivePath(absPath string) bool {
+func IsReadablePath(absPath string) bool {
 	absPath = filepath.Clean(strings.TrimSpace(absPath))
-	if absPath == "" || absPath == "." {
+	if !filepath.IsAbs(absPath) {
 		return false
 	}
-	dic := SensitivePath
-
-	for segment := range strings.SplitSeq(absPath, string(filepath.Separator)) {
-		if slices.Contains(dic.Dirs, segment) {
-			return true
-		}
+	if real, err := go_pkg_filesystem.RealPath(absPath); err == nil {
+		absPath = real
 	}
+	if IsDeniedPath(absPath) || IsSensitivePath(absPath) {
+		return false
+	}
+	return go_pkg_filesystem.IsReadable(absPath) || slices.ContainsFunc(ReadablePath, func(root string) bool {
+		return IsWithin(root, absPath)
+	})
+}
 
-	base := filepath.Base(absPath)
-	if slices.Contains(dic.Files, base) {
+func IsOffLimitsReadArg(arg string) bool {
+	if IsSensitivePath(arg) {
 		return true
 	}
-	if slices.ContainsFunc(dic.Prefixes, func(p string) bool { return strings.HasPrefix(base, p) }) {
+	if _, value, ok := strings.Cut(arg, "="); ok && strings.HasPrefix(arg, "-") {
+		arg = value
+	}
+	if !strings.HasPrefix(arg, "/") {
+		return false
+	}
+	return IsUnreadableOutsideHome(arg)
+}
+
+func IsUnreadableOutsideHome(absPath string) bool {
+	absPath = filepath.Clean(strings.TrimSpace(absPath))
+	if !filepath.IsAbs(absPath) {
+		return false
+	}
+	if _, err := os.Lstat(absPath); err != nil {
+		return false
+	}
+	home, err := RealHome()
+	if err != nil {
 		return true
 	}
-	return slices.Contains(dic.Extensions, strings.ToLower(filepath.Ext(base)))
+	real, err := go_pkg_filesystem.RealPath(absPath)
+	if err != nil {
+		return true
+	}
+	return !IsWithin(home, real) && !IsReadablePath(real)
+}
+
+func IsSensitivePath(absPath string) bool {
+	return go_pkg_filesystem.IsSensitive(absPath, SensitivePath)
 }
 
 func IsWithin(root, path string) bool {

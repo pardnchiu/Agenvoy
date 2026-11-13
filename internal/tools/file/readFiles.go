@@ -119,9 +119,9 @@ Locating a file → find_files; opening it in an app → open_file.`,
 }
 
 func readOne(ctx context.Context, e *tooltypes.Executor, baseDir, path string, offset, limit int, around []int, contextLines int) (string, error) {
-	absPath, err := boundary.Resolve(e.SessionID, baseDir, path)
+	absPath, err := boundary.ResolveRead(e.SessionID, baseDir, path)
 	if err != nil {
-		return "", utilsmsg.Trace("boundary.Resolve", "", err)
+		return "", utilsmsg.Trace("boundary.ResolveRead", "", err)
 	}
 	if absPath == "" {
 		return "", utilsmsg.New(utilsmsg.Invalid, "path", "required")
