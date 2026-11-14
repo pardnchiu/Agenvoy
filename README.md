@@ -277,7 +277,7 @@ A cost-effective model setup to get started:
    - OpenAI ChatGPT Plus ($20/mo)
    - SuperGrok ($30/mo)
 2. **No free plan is recommended.** Since 2026-11-09 (5:40 PM PT), Ollama Cloud's Free plan is pay-as-you-go: hosted models such as `gemma4:31b`, `gpt-oss:120b`, `gpt-oss:20b`, `nemotron-3-super` and `nemotron-3-ultra` need purchased credits, so Ollama Cloud no longer offers a free way to try Agenvoy. Running models locally with Ollama stays free, but small local models call tools unreliably. The lowest-cost recommendation is GitHub Copilot ($10/mo) above.
-3. Add TypeSafe's Jev as the decision model: create a key in the [TypeSafe Console](https://console.typesafe.ai/keys), add it with `/model add` → **API Key** → **TypeSafe**, then pick `typesafe@jev-latest` under `/model` → **decision**. It is billed only on input tokens ($42 per billion, output free, per [TypeSafe's model page](https://docs.typesafe.ai/models) on 2026-11-11) and keeps irrelevant skills, memory entries, search results and page boilerplate out of each turn; on the author's machine it left 95.8% of skill entries out of the turn context. Setup and measurements: [Quickstart](https://agenvoy.com/docs/quickstart).
+3. Add TypeSafe's Jev as the decision model: create a key in the [TypeSafe Console](https://console.typesafe.ai/keys), add it with `/model add` → **API Key** → **TypeSafe**, then pick `typesafe@jev-latest` under `/model` → **decision**. It is billed only on input tokens ($42 per billion, output free, per [TypeSafe's model page](https://docs.typesafe.ai/models) on 2026-11-11) and keeps irrelevant skills, memory entries, search results, page boilerplate, and unrelated file and history reads out of each turn; on the author's machine it left 95.8% of skill entries out of the turn context. Setup and measurements: [Quickstart](https://agenvoy.com/quickstart).
 
 ---
 
@@ -298,6 +298,7 @@ A cost-effective model setup to get started:
 | Live command output  | Stream `run_command` progress to the TUI and Web dashboard               |
 | Rich chat rendering  | Web chat renders charts, Mermaid diagrams, math, and highlighted code    |
 | Secure file boundary | Confirm sensitive paths and out-of-home access before granting them      |
+| Secret masking       | Mask keys and tokens in tool output before the model or logs see them    |
 | Explained prompts    | Command confirmations state in one sentence what the call will do        |
 | MCP OAuth            | Log in to HTTP MCP servers and persist tokens in the OS keychain         |
 | Transcription        | Audio and video to text                                                  |
@@ -307,18 +308,18 @@ A cost-effective model setup to get started:
 
 ## Docs
 
-Full documentation at **[agenvoy.com/docs](https://agenvoy.com/docs/)**
+Full documentation at **[agenvoy.com](https://agenvoy.com/)**
 
-- [Getting Started](https://agenvoy.com/docs/getting-started)
-- [Sessions & Agents](https://agenvoy.com/docs/sessions)
-- [Providers](https://agenvoy.com/docs/providers)
-- [Built-in Tools](https://agenvoy.com/docs/built-in-tools)
-- [MCP Server](https://agenvoy.com/docs/mcp-server)
-- [MCP Client](https://agenvoy.com/docs/mcp-client)
-- [Memory System](https://agenvoy.com/docs/memory-system)
-- [Skill System](https://agenvoy.com/docs/skill-basics)
-- [Sandbox](https://agenvoy.com/docs/sandbox)
-- [Architecture](https://agenvoy.com/docs/architecture)
+- [Getting Started](https://agenvoy.com/getting-started)
+- [Sessions & Agents](https://agenvoy.com/sessions)
+- [Providers](https://agenvoy.com/providers)
+- [Built-in Tools](https://agenvoy.com/built-in-tools)
+- [MCP Server](https://agenvoy.com/mcp-server)
+- [MCP Client](https://agenvoy.com/mcp-client)
+- [Memory System](https://agenvoy.com/memory-system)
+- [Skill System](https://agenvoy.com/skill-basics)
+- [Sandbox](https://agenvoy.com/sandbox)
+- [Architecture](https://agenvoy.com/architecture)
 
 ## License
 

@@ -275,7 +275,7 @@ agen -p "摘要今天的 commit" --stream
    - OpenAI ChatGPT Plus（$20／月）
    - SuperGrok（$30／月）
 2. **不再推薦免費方案。** Ollama Cloud 自 2026-11-09（PT 下午 5:40）起 Free 方案改為 pay-as-you-go：`gemma4:31b`、`gpt-oss:120b`、`gpt-oss:20b`、`nemotron-3-super`、`nemotron-3-ultra` 等雲端模型需購買 credits，已無法免費試用 Agenvoy。以 Ollama 在本機執行仍然免費，但小型本機模型的 tool calling 不穩定。最低成本的推薦是上方的 GitHub Copilot（$10／月）。
-3. 以 TypeSafe 的 Jev 作為 decision model：在 [TypeSafe Console](https://console.typesafe.ai/keys) 建立金鑰，以 `/model add` → **API Key** → **TypeSafe** 加入，再到 `/model` → **decision** 選 `typesafe@jev-latest`。它只依輸入 token 計費（每十億 $42，輸出不收費，依 2026-11-11 [TypeSafe 模型頁](https://docs.typesafe.ai/models)），能把無關的 skill、記憶條目、搜尋結果與網頁樣板擋在每輪 context 之外；作者本機實測有 95.8% 的 skill 條目不必放進 turn context。設定步驟與實測數據見[新手入門](https://agenvoy.com/zh/docs/quickstart)。
+3. 以 TypeSafe 的 Jev 作為 decision model：在 [TypeSafe Console](https://console.typesafe.ai/keys) 建立金鑰，以 `/model add` → **API Key** → **TypeSafe** 加入，再到 `/model` → **decision** 選 `typesafe@jev-latest`。它只依輸入 token 計費（每十億 $42，輸出不收費，依 2026-11-11 [TypeSafe 模型頁](https://docs.typesafe.ai/models)），能把無關的 skill、記憶條目、搜尋結果、網頁樣板，以及無關的檔案與歷史讀取擋在每輪 context 之外；作者本機實測有 95.8% 的 skill 條目不必放進 turn context。設定步驟與實測數據見[新手入門](https://agenvoy.com/zh/quickstart)。
 
 ---
 
@@ -290,6 +290,7 @@ agen -p "摘要今天的 commit" --stream
 | 即時命令輸出 | 將 `run_command` 進度串流至 TUI 與 Web 儀表板            |
 | 豐富回覆顯示 | Web 對話渲染圖表、Mermaid 圖、數學公式與程式碼高亮       |
 | 安全檔案邊界 | 存取敏感路徑或 `$HOME` 外路徑前要求確認                  |
+| 密鑰遮罩     | 工具輸出中的金鑰與 token 在進入模型或 log 前先遮蓋       |
 | 確認說明     | 指令確認以一句話說明該次呼叫會做什麼                     |
 | MCP OAuth    | 登入 HTTP MCP server，並將 token 保存至作業系統 keychain |
 | 檔案搜尋     | 從本機檔案回答問題                                       |
@@ -305,18 +306,18 @@ agen -p "摘要今天的 commit" --stream
 
 ## 文件
 
-完整文件請見 **[agenvoy.com/docs](https://agenvoy.com/docs/)**
+完整文件請見 **[agenvoy.com](https://agenvoy.com/)**
 
-- [Getting Started](https://agenvoy.com/docs/getting-started)
-- [Sessions & Agents](https://agenvoy.com/docs/sessions)
-- [Providers](https://agenvoy.com/docs/providers)
-- [Built-in Tools](https://agenvoy.com/docs/built-in-tools)
-- [MCP Server](https://agenvoy.com/docs/mcp-server)
-- [MCP Client](https://agenvoy.com/docs/mcp-client)
-- [Memory System](https://agenvoy.com/docs/memory-system)
-- [Skill System](https://agenvoy.com/docs/skill-basics)
-- [Sandbox](https://agenvoy.com/docs/sandbox)
-- [Architecture](https://agenvoy.com/docs/architecture)
+- [Getting Started](https://agenvoy.com/getting-started)
+- [Sessions & Agents](https://agenvoy.com/sessions)
+- [Providers](https://agenvoy.com/providers)
+- [Built-in Tools](https://agenvoy.com/built-in-tools)
+- [MCP Server](https://agenvoy.com/mcp-server)
+- [MCP Client](https://agenvoy.com/mcp-client)
+- [Memory System](https://agenvoy.com/memory-system)
+- [Skill System](https://agenvoy.com/skill-basics)
+- [Sandbox](https://agenvoy.com/sandbox)
+- [Architecture](https://agenvoy.com/architecture)
 
 ## License
 
