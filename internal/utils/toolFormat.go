@@ -19,6 +19,8 @@ var eventLabel = map[string]string{
 	"background_command":    "Background",
 	"background_subagents":  "Background Subagents",
 	"open_file":             "Open",
+	"remove_file":           "Remove",
+	"restore_file":          "Restore",
 	"download_file":         "Download",
 	"search_web":            "Search",
 	"fetch_page":            "Fetch",
@@ -61,8 +63,8 @@ var primaryArgKeys = []string{
 var eventModeLabel = map[string]map[string]string{
 	"subagents":  {"list": "Subagents", "invoke": "Subagent"},
 	"find_files": {"list": "Files", "glob": "Search", "search": "Search"},
-	"edit_file":  {"write": "Write", "patch": "Edit", "remove": "Remove", "restore": "Restore"},
-	"schedules":  {"write": "Write", "patch": "Edit", "remove": "Remove", "list": "Schedules"},
+	"schedules":  {"list": "Schedules", "write": "Write", "patch": "Edit", "remove": "Remove"},
+	"edit_file":  {"write": "Write", "patch": "Edit"},
 	"edit_skill": {"write": "Write", "patch": "Edit", "remove": "Remove"},
 	"edit_tool":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
 }
@@ -131,7 +133,7 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 	case "read_files":
 		return joinPaths(argMap)
 
-	case "edit_file":
+	case "edit_file", "remove_file", "restore_file":
 		if path := arg("path"); path != "" {
 			return path
 		}
@@ -464,10 +466,13 @@ var toolDisplayName = map[string]string{
 	"chat_history":         "Find",
 	"file_history":         "Find",
 	"error_history":        "Find",
+	"write_error":          "Write",
 	"list_chatbot":         "List",
 	"read_files":           "Read",
 	"write_result":         "Write",
 	"edit_file":            "Edit",
+	"remove_file":          "Remove",
+	"restore_file":         "Restore",
 	"run_command":          "Run",
 	"run_skill":            "Run",
 	"fetch_page":           "Fetch",

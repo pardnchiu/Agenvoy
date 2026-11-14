@@ -32,6 +32,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
+	"github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
 
 const foregroundOrigin = "cli-"
@@ -142,7 +143,7 @@ func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, 
 	if turnAllowAll {
 		return false
 	}
-	if isDestructiveMode(toolArgs) {
+	if toolName == "remove_file" || toolName == "restore_file" || isDestructiveMode(toolArgs) {
 		return true
 	}
 	if toolName == "open_file" && isOpenFileURL(toolArgs) {
@@ -170,8 +171,7 @@ var readOnlyModes = map[string]bool{
 }
 
 var destructiveModes = map[string]bool{
-	"remove":  true,
-	"restore": true,
+	"remove": true,
 }
 
 func isDestructiveMode(toolArgs string) bool {
@@ -666,7 +666,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			}
 		}
 
-		if s.name == "edit_file" && s.execErr == "" {
+		if (s.name == "edit_file" || s.name == "remove_file" || s.name == "restore_file") && s.execErr == "" {
 			invalidateReadFileCache(alreadyCall, s.args)
 		}
 		if isWriteLikeTool[s.name] && s.execErr == "" {
@@ -753,10 +753,14 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, s *toolSlot, eve
 	}
 	var progressMu sync.Mutex
 	progressDone := false
+	redactChunk := secret.Stream()
 	progressCtx := tooltypes.WithProgress(ctx, func(chunk string) {
 		progressMu.Lock()
 		defer progressMu.Unlock()
 		if progressDone {
+			return
+		}
+		if chunk = redactChunk(chunk); chunk == "" {
 			return
 		}
 		events <- agenttypes.Event{
@@ -960,7 +964,7 @@ func failureNext(execErr string) string {
 	if credentialFailure.MatchString(execErr) {
 		return "\nnext: credential missing or rejected → store_secret with the key name from this error, then call the failed tool again"
 	}
-	return "\nnext: once a different fix works, record it → error_history(mode=write, outcome=resolved)"
+	return "\nnext: once a different fix works, record it → write_error(outcome=resolved)"
 }
 
 func outsideHome(paths []string) []string {

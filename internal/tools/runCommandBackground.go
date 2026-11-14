@@ -93,6 +93,7 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 		if err != nil {
 			return "failed: " + utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox.Wrap", "", err).Error()
 		}
+		relaySudoCancel(cmd, argv)
 		sink := &tailWriter{limit: configs.MAX_PENDING_RESULT_BYTES - tailHeadroom}
 		buf := newWatchBuffer(watch.keywords)
 		out := io.MultiWriter(sink, log, buf)

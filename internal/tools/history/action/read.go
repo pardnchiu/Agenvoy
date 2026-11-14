@@ -1,14 +1,22 @@
 package actionHistory
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"strings"
+	"sync"
 
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
+
+	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func read(e *tooltypes.Executor, taskIDs []string, full bool) (string, error) {
+const withheldObjectiveRunes = 200
+
+func read(ctx context.Context, e *tooltypes.Executor, taskIDs []string, full bool) (string, error) {
 	list, err := entries(e)
 	if err != nil {
 		return "", err
@@ -20,6 +28,8 @@ func read(e *tooltypes.Executor, taskIDs []string, full bool) (string, error) {
 	}
 
 	blocks := make([]string, 0, len(taskIDs))
+	ids := make([]string, 0, len(taskIDs))
+	objectives := make([]string, 0, len(taskIDs))
 	var missing []string
 	for _, id := range taskIDs {
 		item, ok := idEntry[id]
@@ -32,7 +42,20 @@ func read(e *tooltypes.Executor, taskIDs []string, full bool) (string, error) {
 			return "", err
 		}
 		blocks = append(blocks, render(item, r, full))
+		ids = append(ids, id)
+		objectives = append(objectives, r.Objective)
 	}
+
+	var wg sync.WaitGroup
+	for i, id := range ids {
+		wg.Go(func() {
+			if decision.Withhold(ctx, e.SessionID, "task:"+id, e.Objective, blocks[i], slog.String("task", id)) {
+				blocks[i] = fmt.Sprintf("task %s — withheld: this run does not bear on the current request, so its content was not loaded (objective: %q). Read it again only if it is needed after all; a second read returns the content.",
+					id, go_pkg_utils.TruncateString(strings.Join(strings.Fields(objectives[i]), " "), withheldObjectiveRunes))
+			}
+		})
+	}
+	wg.Wait()
 
 	if len(blocks) == 0 {
 		return "", utilsmsg.New(utilsmsg.NotFound, "task", "no finished task with id %s in this session", strings.Join(missing, ", "))

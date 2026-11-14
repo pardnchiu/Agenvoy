@@ -382,6 +382,12 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.activity = ""
 		t.runTarget = ""
 		t.streaming = false
+		t.textTail = false
+		var gapCmd tea.Cmd
+		if t.gap {
+			gapCmd = tea.Println("")
+			t.gap = false
+		}
 		leftoverSteer := t.pendingSteer
 		t.pendingSteer = nil
 		if errors.Is(msg.err, context.Canceled) {
@@ -402,6 +408,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.currentSessionName, _ = configbot.Get(t.currentSessionID)
 		}
 		var doneCmds []tea.Cmd
+		if gapCmd != nil {
+			doneCmds = append(doneCmds, gapCmd)
+		}
 		if msg.err != nil && !errors.Is(msg.err, context.Canceled) {
 			doneCmds = append(doneCmds, notice(msgError(fmt.Sprintf("exec error: %v", msg.err))+"\n"))
 		}

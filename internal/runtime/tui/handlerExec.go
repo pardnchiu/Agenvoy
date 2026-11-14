@@ -51,7 +51,16 @@ func (t *TUI) collapseToolBuf() tea.Cmd {
 		}
 		parts = append(parts, fmt.Sprintf("%d %s", subs, label))
 	}
-	return tea.Println(hintStyle.Render("  Ran "+strings.Join(parts, "  ")) + "\n")
+	return t.printBlock(hintStyle.Render("  Ran " + strings.Join(parts, "  ")))
+}
+
+func (t *TUI) printBlock(block string) tea.Cmd {
+	if t.gap || t.textTail {
+		block = "\n" + block
+	}
+	t.gap = true
+	t.textTail = false
+	return tea.Println(block)
 }
 
 const subagentLogLines = 3
@@ -247,9 +256,9 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		}
 		collapse := t.collapseToolBuf()
 		if collapse != nil {
-			return t, tea.Sequence(collapse, tea.Println(line+"\n"))
+			return t, tea.Sequence(collapse, t.printBlock(line))
 		}
-		return t, tea.Println(line + "\n")
+		return t, t.printBlock(line)
 
 	case agenttypes.EventToolCall:
 		if utils.HideToolEvent(ev.ToolName, ev.ToolArgs) {
@@ -307,9 +316,9 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		t.emitted = true
 		collapse := t.collapseToolBuf()
 		if collapse != nil {
-			return t, tea.Sequence(collapse, tea.Println(line+"\n"))
+			return t, tea.Sequence(collapse, t.printBlock(line))
 		}
-		return t, tea.Println(line + "\n")
+		return t, t.printBlock(line)
 
 	case agenttypes.EventToolResult:
 		if ev.Source != "" {
@@ -429,12 +438,14 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 			if !ok {
 				return t, tea.Batch(collapse, quota)
 			}
+			t.gap, t.textTail = false, false
 			return t, tea.Batch(tea.Sequence(collapse, tea.Println(line)), quota)
 		}
 		line, ok := renderAgentEvent(ev, t.runTarget, t.cwd, t.width, finishedAt)
 		if !ok {
 			return t, quota
 		}
+		t.gap, t.textTail = false, false
 		return t, tea.Batch(tea.Println(line), quota)
 
 	case agenttypes.EventCanceled:
@@ -467,6 +478,10 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 	if !ok {
 		return t, nil
 	}
+	if t.gap {
+		line = "\n" + line
+	}
+	t.gap, t.textTail = false, false
 	return t, tea.Println(line)
 }
 
@@ -481,9 +496,14 @@ func (t *TUI) printStreamLine(line string) tea.Cmd {
 			prefix = warnStyle.Render("⏺ [" + t.runTarget + "] ")
 		}
 		rendered = prefix + line
+		if t.gap || t.textTail {
+			rendered = "\n" + rendered
+		}
+		t.gap = false
 	} else {
 		rendered = "  " + line
 	}
+	t.textTail = true
 	return tea.Println(rendered)
 }
 
@@ -512,7 +532,7 @@ func (t *TUI) flushTableBuf() []tea.Cmd {
 		}
 		sb.WriteString(line)
 	}
-	return []tea.Cmd{tea.Println(sb.String() + "\n")}
+	return []tea.Cmd{t.printBlock(sb.String())}
 }
 
 func (t TUI) handleInterrupt() (tea.Model, tea.Cmd) {

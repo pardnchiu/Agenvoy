@@ -15,6 +15,7 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
+	"github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
 
 type Handler func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error)
@@ -248,7 +249,8 @@ func Dispatch(ctx context.Context, e *tooltypes.Executor, name string, args json
 		return "", utilsmsg.New(utilsmsg.NotFound, "tool", "not exist: %s", name)
 	}
 
-	return runWithDeadline(tctx, run, name, timeout)
+	result, err := runWithDeadline(tctx, run, name, timeout)
+	return secret.Redact(result), secret.RedactError(err)
 }
 
 type dispatchResult struct {

@@ -19,6 +19,6 @@ Repair the tool in place; a workaround leaves it broken for the next call. `ext_
 
 ### Recording
 
-- **Write** `error_history(mode=write, outcome=resolved)` once a non-trivial fix is confirmed. Only `resolved` is stored; `failed` and `abandoned` are discarded, so a dead end is not worth writing up.
+- **Write** `write_error(outcome=resolved)` once a non-trivial fix is confirmed. Only `resolved` is stored; `failed` and `abandoned` are discarded, so a dead end is not worth writing up.
 - **Skip** typos, fixes that worked on the 1st retry, and transient errors (network blip, timeout) that do not generalize.
 - **Batch** the write with the turn's other tool calls; call it alone only when nothing else remains.

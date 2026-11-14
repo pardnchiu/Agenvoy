@@ -23,7 +23,7 @@ func registFileHistory() {
 		Concurrent:  true,
 		Description: `Recorded versions of files the tools changed: when each changed, which task changed it and its objective, and the stored content diffed against the file on disk.
 Use for "how many times has this file changed", "what was the previous version", "what changed since then", "what was in the part that got deleted".
-Putting a version back → edit_file(mode=restore); what a whole run did → chat_history.`,
+Putting a version back → restore_file; what a whole run did → chat_history.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

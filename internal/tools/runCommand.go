@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -12,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
@@ -23,6 +25,7 @@ import (
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
+	"github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
 
 func registRunCommand() {
@@ -65,7 +68,7 @@ func commandProperties() map[string]any {
 	return map[string]any{
 		"argv": map[string]any{
 			"type":        "array",
-			"description": "Keep read-only inspection (git status / log / diff, du, which, docker ps, --version) in its own call, never chained with && to a command that writes, so it matches the read-only allowlist. The command as an argv array whose first item is a bare binary name, not a path: ['git','status'], ['go','test','./...']. A pipeline, redirect, glob, ~ or && (| > * ~ &&) needs ['sh','-c','<full command>']; without one, call the binary directly, never wrapped in sh -c. Inside sh -c every command must be a literal bare name (no $VAR or $(...) in command position), and rm and sudo are refused there. A multi-line script goes in a file you write first, then run that file. cd is refused: pass absolute paths, or ['sh','-c','cd <dir> && <command>'] for one command. Root privileges → ['sudo','<binary>', ...] with no sudo flags, never nested sudo or su; it runs outside the sandbox. When the request names a capability rather than an exact binary, first run ['sh','-c','command -v <every candidate>'], which prints only the installed ones; guessing one name per call costs a round trip each and fails as 'command not found', not 'wrong binary'.",
+			"description": "The command as an argv array; the first item is a bare binary name, not a path: ['git','status'], ['go','test','./...'].\n- Pipe, redirect, glob, ~ or && → ['sh','-c','<full command>']; otherwise call the binary directly. Inside sh -c, command names are literal (no $VAR or $(...) in command position); rm and sudo are refused there.\n- Script file, including a multi-line script you write first → ['sh','<file>'], or sh <file> inside sh -c; ./<file> is refused like any path in command position.\n- cd is refused → absolute paths, or ['sh','-c','cd <dir> && <command>'].\n- Root → ['sudo','<binary>', ...]: no sudo flags, no nested sudo or su; runs outside the sandbox.\n- Read-only inspection (git status / log / diff, du, which, docker ps, --version) goes in its own call, never chained with && to a command that writes, so it matches the read-only allowlist and skips confirmation.\n- A capability rather than an exact binary → first ['sh','-c','command -v <every candidate>'], which prints only the installed ones, instead of guessing one name per call.\n- A key or token in a file or the keychain → read and use it in the same command, never read it out first, since secrets in tool output come back as ********: ['sh','-c','set -a; . ./.env; set +a; curl -H \"Authorization: Bearer $API_TOKEN\" <url>'], or $(security find-generic-password -s agenvoy -a <KEY> -w) as an argument.",
 			"items":       map[string]any{"type": "string"},
 			"minItems":    1,
 		},
@@ -75,7 +78,7 @@ func commandProperties() map[string]any {
 		},
 		"write_paths": map[string]any{
 			"type":        "array",
-			"description": "Absolute paths outside $HOME this command writes to, e.g. ['/usr/local'] for a system install; paths under $HOME are always writable and need not be listed. The sandbox only allows writes under $HOME, so a missing entry fails with a permission error that looks like file ownership and is not one: list the path here instead of running chown or chmod. A path still denied while listed is root-owned → argv ['sudo', ...]. Ignored when sandbox is false or argv starts with sudo.",
+			"description": "Absolute paths outside $HOME this command writes to, e.g. ['/usr/local'] for a system install; paths under $HOME are always writable and need not be listed. The sandbox only allows writes under $HOME, so a missing entry fails with a permission error that looks like file ownership and is not one: list the path here instead of running chown or chmod. A path still denied while listed is root-owned → argv ['sudo', ...]. Ignored when argv starts with sudo.",
 			"items":       map[string]any{"type": "string"},
 		},
 		"sandbox": map[string]any{
@@ -120,6 +123,10 @@ const systemPackageRoute = "a system package → the package manager named on th
 func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, unsandboxed bool, background *backgroundSpec) (string, error) {
 	if len(argv) == 0 {
 		return "", utilsmsg.New(utilsmsg.Invalid, "argv", "requires a non-empty array, e.g. [\"git\", \"status\"]")
+	}
+
+	if masked := secret.FindMasked(strings.Join(argv, "\n")); masked != "" {
+		return "", utilsmsg.New(utilsmsg.Invalid, "argv", "contains %q, a redacted value from a tool result, not the real text; read the original inside this command (e.g. . ./.env, security find-generic-password) instead", masked)
 	}
 
 	binary := filepath.Base(argv[0])
@@ -197,8 +204,9 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 	if err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox.Wrap", "", err)
 	}
+	relaySudoCancel(cmd, argv)
 
-	sink := &progressWriter{send: tooltypes.Progress(ctx)}
+	sink := &progressWriter{send: tooltypes.Progress(ctx), redact: secret.Stream()}
 	cmd.Stdout = sink
 	cmd.Stderr = sink
 
@@ -216,12 +224,23 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 
 const progressInterval = 500 * time.Millisecond
 
+func relaySudoCancel(cmd *exec.Cmd, argv []string) {
+	if argv[0] != "sudo" {
+		return
+	}
+	cmd.Cancel = func() error {
+		return cmd.Process.Signal(syscall.SIGTERM)
+	}
+}
+
 type progressWriter struct {
 	mu      sync.Mutex
 	buf     strings.Builder
 	pending strings.Builder
 	last    time.Time
 	send    func(string)
+	redact  func(string) string
+	carry   string
 }
 
 func (w *progressWriter) Write(raw []byte) (int, error) {
@@ -229,7 +248,10 @@ func (w *progressWriter) Write(raw []byte) (int, error) {
 	defer w.mu.Unlock()
 
 	w.buf.Write(raw)
-	w.pending.Write(raw)
+	data := w.carry + string(raw)
+	cut := strings.LastIndexAny(data, "\r\n") + 1
+	w.carry = data[cut:]
+	w.pending.WriteString(w.redact(data[:cut]))
 
 	if time.Since(w.last) < progressInterval {
 		return len(raw), nil
@@ -262,7 +284,11 @@ const sandboxWriteAdvice = `
 
 const sandboxEscalateAdvice = `
 
-[agenvoy] the sandbox blocked this command (a socket, device, system service or path outside its rules). Re-run this exact command now with sandbox: false; its confirmation asks the user for the system password, and that prompt is the permission request, so do not stop to ask in text first. A root-owned target needs argv ['sudo', ...] instead. Report only if the user declines.`
+[agenvoy] the output reports a permission error; the sandbox may have caused it. Leaving the sandbox is the last resort, not the default retry:
+- a connection or auth failure (e.g. Permission denied (publickey), could not resolve host) → network: true, or report the credential problem; sandbox: false does not fix it
+- a write → a path under the work directory, or write_paths for the path that failed
+- the task genuinely needs a system socket, device or service, or a root-owned target → sandbox: false or argv ['sudo', ...]; the user approves it with the system password
+Otherwise report what was blocked and stop.`
 
 var permissionMarkers = []string{
 	"not writable", "permission denied", "operation not permitted",
