@@ -87,6 +87,8 @@ type TUI struct {
 	telegramStatus string
 	runTarget      string
 	streaming      bool
+	textTail       bool
+	gap            bool
 	tableBuf       []string
 
 	toolBuf         []string
