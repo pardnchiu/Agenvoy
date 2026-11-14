@@ -9,7 +9,16 @@ import (
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
+	"github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
+
+func newStrings(targets []patchTarget) []string {
+	list := make([]string, 0, len(targets))
+	for _, one := range targets {
+		list = append(list, one.NewString)
+	}
+	return list
+}
 
 func registEditFile() {
 	toolregister.Regist(toolregister.Def{
@@ -85,6 +94,9 @@ Skill files → edit_skill; script tool definitions → edit_tool; a long report
 
 			if err := rejectElided(params.Content, params.Targets); err != nil {
 				return "", err
+			}
+			if masked := secret.FindMasked(strings.Join(append([]string{params.Content}, newStrings(params.Targets)...), "\n")); masked != "" {
+				return "", utilsmsg.New(utilsmsg.Invalid, "content", "contains %q, a redacted value from a tool result, not the real text; write the original from inside one run_command (e.g. sh -c with . ./.env) instead", masked)
 			}
 
 			mode := strings.ToLower(strings.TrimSpace(params.Mode))

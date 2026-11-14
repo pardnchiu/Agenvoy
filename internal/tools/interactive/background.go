@@ -18,6 +18,7 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
+	"github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
 
 var (
@@ -169,7 +170,7 @@ func FinishBackground(sessionID, jobID, id, result string) (string, error) {
 	}
 	return updateLeg(sessionID, jobID, id, func(leg *BackgroundTask) bool {
 		leg.Done = true
-		leg.Result = clampPendingText(result, configs.MAX_PENDING_RESULT_BYTES)
+		leg.Result = clampPendingText(secret.Redact(result), configs.MAX_PENDING_RESULT_BYTES)
 		return true
 	})
 }
@@ -179,7 +180,7 @@ func UpdateBackground(sessionID, jobID, id, text string) (string, error) {
 		if leg.Done {
 			return false
 		}
-		leg.Updates = trimUpdates(append(leg.Updates, clampPendingText(text, configs.MAX_PENDING_RESULT_BYTES/4)), configs.MAX_PENDING_RESULT_BYTES)
+		leg.Updates = trimUpdates(append(leg.Updates, clampPendingText(secret.Redact(text), configs.MAX_PENDING_RESULT_BYTES/4)), configs.MAX_PENDING_RESULT_BYTES)
 		return true
 	})
 }

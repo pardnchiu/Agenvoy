@@ -290,6 +290,9 @@ var GuardrailRules []byte
 //go:embed jsons/refusal_messages.json
 var RefusalMessages []byte
 
+//go:embed jsons/secret_patterns.json
+var SecretPatterns []byte
+
 // * Official Guide
 
 //go:embed prompts/system_prompt/official_guides/*.md

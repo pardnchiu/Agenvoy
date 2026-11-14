@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -22,12 +23,12 @@ func New() *gin.Engine {
 	pageIndex := registPage(r)
 
 	// * OpenAI compatible API
-	r.POST("/v1/chat/completions", completionshandler.ChatCompletions())
+	r.POST("/v1/chat/completions", jsonOnly(), completionshandler.ChatCompletions())
 	r.GET("/v1/models", handler.ListModels())
 	r.GET("/v1/models/*id", handler.GetModel())
 
 	// * WebUI API
-	r.POST("/v1/send", handler.Send())
+	r.POST("/v1/send", jsonOnly(), handler.Send())
 	r.GET("/v1/log", handler.StreamMultiLog())
 	r.GET("/v1/info/version", handler.GetVersion())
 	r.GET("/v1/daemon", localhostOnly(), handler.GetDaemonLog())
@@ -165,7 +166,12 @@ func allowOrigin(origin string) bool {
 
 func cors() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if origin := c.GetHeader("Origin"); origin != "" && allowOrigin(origin) {
+		origin := c.GetHeader("Origin")
+		if origin != "" && !allowOrigin(origin) && isWriteMethod(c.Request.Method) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": gin.H{"message": "[Denied] origin: " + strconv.Quote(origin), "type": "forbidden"}})
+			return
+		}
+		if origin != "" && allowOrigin(origin) {
 			c.Header("Access-Control-Allow-Origin", origin)
 			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, "+completionshandler.AgentHeader)
@@ -174,6 +180,24 @@ func cors() gin.HandlerFunc {
 		c.Header("Vary", "Origin")
 		if c.Request.Method == http.MethodOptions {
 			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	}
+}
+
+func isWriteMethod(method string) bool {
+	switch method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+		return true
+	}
+	return false
+}
+
+func jsonOnly() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !strings.HasPrefix(c.ContentType(), "application/json") {
+			c.AbortWithStatusJSON(http.StatusUnsupportedMediaType, gin.H{"error": gin.H{"message": "[Invalid] Content-Type: " + strconv.Quote(c.ContentType()) + " is not application/json", "type": "unsupported_media_type"}})
 			return
 		}
 		c.Next()

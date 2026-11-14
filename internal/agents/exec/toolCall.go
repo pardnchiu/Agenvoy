@@ -32,6 +32,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
+	"github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
 
 const foregroundOrigin = "cli-"
@@ -753,10 +754,14 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, s *toolSlot, eve
 	}
 	var progressMu sync.Mutex
 	progressDone := false
+	redactChunk := secret.Stream()
 	progressCtx := tooltypes.WithProgress(ctx, func(chunk string) {
 		progressMu.Lock()
 		defer progressMu.Unlock()
 		if progressDone {
+			return
+		}
+		if chunk = redactChunk(chunk); chunk == "" {
 			return
 		}
 		events <- agenttypes.Event{

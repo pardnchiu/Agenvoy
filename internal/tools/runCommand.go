@@ -23,6 +23,7 @@ import (
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
+	"github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
 
 func registRunCommand() {
@@ -65,7 +66,7 @@ func commandProperties() map[string]any {
 	return map[string]any{
 		"argv": map[string]any{
 			"type":        "array",
-			"description": "Keep read-only inspection (git status / log / diff, du, which, docker ps, --version) in its own call, never chained with && to a command that writes, so it matches the read-only allowlist. The command as an argv array whose first item is a bare binary name, not a path: ['git','status'], ['go','test','./...']. A pipeline, redirect, glob, ~ or && (| > * ~ &&) needs ['sh','-c','<full command>']; without one, call the binary directly, never wrapped in sh -c. Inside sh -c every command must be a literal bare name (no $VAR or $(...) in command position), and rm and sudo are refused there. A multi-line script goes in a file you write first, then run that file. cd is refused: pass absolute paths, or ['sh','-c','cd <dir> && <command>'] for one command. Root privileges → ['sudo','<binary>', ...] with no sudo flags, never nested sudo or su; it runs outside the sandbox. When the request names a capability rather than an exact binary, first run ['sh','-c','command -v <every candidate>'], which prints only the installed ones; guessing one name per call costs a round trip each and fails as 'command not found', not 'wrong binary'.",
+			"description": "The command as an argv array; the first item is a bare binary name, not a path: ['git','status'], ['go','test','./...'].\n- Pipe, redirect, glob, ~ or && → ['sh','-c','<full command>']; otherwise call the binary directly. Inside sh -c, command names are literal (no $VAR or $(...) in command position); rm and sudo are refused there.\n- Script file, including a multi-line script you write first → ['sh','<file>'], or sh <file> inside sh -c; ./<file> is refused like any path in command position.\n- cd is refused → absolute paths, or ['sh','-c','cd <dir> && <command>'].\n- Root → ['sudo','<binary>', ...]: no sudo flags, no nested sudo or su; runs outside the sandbox.\n- Read-only inspection (git status / log / diff, du, which, docker ps, --version) goes in its own call, never chained with && to a command that writes, so it matches the read-only allowlist and skips confirmation.\n- A capability rather than an exact binary → first ['sh','-c','command -v <every candidate>'], which prints only the installed ones, instead of guessing one name per call.\n- A key or token in a file or the keychain → read and use it in the same command, never read it out first, since secrets in tool output come back as ********: ['sh','-c','set -a; . ./.env; set +a; curl -H \"Authorization: Bearer $API_TOKEN\" <url>'], or $(security find-generic-password -s agenvoy -a <KEY> -w) as an argument.",
 			"items":       map[string]any{"type": "string"},
 			"minItems":    1,
 		},
@@ -120,6 +121,10 @@ const systemPackageRoute = "a system package → the package manager named on th
 func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []string, network, unsandboxed bool, background *backgroundSpec) (string, error) {
 	if len(argv) == 0 {
 		return "", utilsmsg.New(utilsmsg.Invalid, "argv", "requires a non-empty array, e.g. [\"git\", \"status\"]")
+	}
+
+	if masked := secret.FindMasked(strings.Join(argv, "\n")); masked != "" {
+		return "", utilsmsg.New(utilsmsg.Invalid, "argv", "contains %q, a redacted value from a tool result, not the real text; read the original inside this command (e.g. . ./.env, security find-generic-password) instead", masked)
 	}
 
 	binary := filepath.Base(argv[0])
@@ -198,7 +203,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox.Wrap", "", err)
 	}
 
-	sink := &progressWriter{send: tooltypes.Progress(ctx)}
+	sink := &progressWriter{send: tooltypes.Progress(ctx), redact: secret.Stream()}
 	cmd.Stdout = sink
 	cmd.Stderr = sink
 
@@ -222,6 +227,8 @@ type progressWriter struct {
 	pending strings.Builder
 	last    time.Time
 	send    func(string)
+	redact  func(string) string
+	carry   string
 }
 
 func (w *progressWriter) Write(raw []byte) (int, error) {
@@ -229,7 +236,10 @@ func (w *progressWriter) Write(raw []byte) (int, error) {
 	defer w.mu.Unlock()
 
 	w.buf.Write(raw)
-	w.pending.Write(raw)
+	data := w.carry + string(raw)
+	cut := strings.LastIndexAny(data, "\r\n") + 1
+	w.carry = data[cut:]
+	w.pending.WriteString(w.redact(data[:cut]))
 
 	if time.Since(w.last) < progressInterval {
 		return len(raw), nil
