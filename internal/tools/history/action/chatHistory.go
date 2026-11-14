@@ -130,7 +130,7 @@ Files in the workspace → read_files; past versions of a file → file_history;
 				if len(taskIDs) == 0 {
 					return "", utilsmsg.New(utilsmsg.Invalid, "task_id", "required when mode=read")
 				}
-				return read(e, taskIDs, full)
+				return read(ctx, e, taskIDs, full)
 			case "search":
 				return searchMessages(ctx, e, params.Keyword, params.Match, params.TimeRange, params.Limit)
 			}

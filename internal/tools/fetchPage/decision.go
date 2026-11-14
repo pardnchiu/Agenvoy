@@ -15,10 +15,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 )
 
-const (
-	decisionNoise     = "noise"
-	decisionUnrelated = "unrelated"
-)
+const decisionNoise = "noise"
 
 var (
 	blockSplitRegex = regexp.MustCompile(`\n[ \t]*\n`)
@@ -26,10 +23,6 @@ var (
 	noiseCriteria   = map[string]any{
 		"keep":        "Page content a reader could need: article text, data, tables, figures, lists of facts or items that belong to the page's subject.",
 		decisionNoise: "Page chrome that carries no information: ads, sponsored blocks, navigation or breadcrumb menus, share or subscribe prompts, cookie notices, 'read more' links, footers, related-article link lists.",
-	}
-	relatedCriteria = map[string]any{
-		"related":         "Some part of `page` helps answer `request`.",
-		decisionUnrelated: "Nothing in `page` bears on `request`.",
 	}
 )
 
@@ -91,37 +84,7 @@ func removeNoise(ctx context.Context, link, content string) string {
 }
 
 func checkRelevance(ctx context.Context, objective, link, result string) string {
-	request, ok := decision.Request(objective)
-	if !ok {
-		return result
-	}
-	agent, name, ok := decision.Ready(ctx, slog.String("url", link))
-	if !ok {
-		return result
-	}
-
-	page := []rune(result)
-	if limit := configs.MAX_DECISION_STATE_RUNES - utf8.RuneCountInString(request); len(page) > limit {
-		page = page[:max(limit, 0)]
-	}
-	answers, err := decision.Decide(ctx, agent, map[string]any{"request": request, "page": string(page)}, map[string]go_llm_router.DecisionQuestion{
-		"related": {
-			Type: go_llm_router.DecisionChoice,
-			Instructions: map[string]any{
-				"question": "Does `page` contain information that helps answer `request`?",
-				"focus":    "Related when any part of `page` bears on `request`, even partly or as background. Unrelated only when `page` is about a different subject altogether.",
-			},
-			Criteria: relatedCriteria,
-		},
-	})
-	if err != nil {
-		slog.Debug("[Unavailable] fetch_page relevance check: return page",
-			slog.String("url", link),
-			slog.String("model", name),
-			slog.String("error", err.Error()))
-		return result
-	}
-	if !decision.Confident(answers["related"], decisionUnrelated) {
+	if !decision.Unrelated(ctx, objective, result, slog.String("url", link)) {
 		return result
 	}
 
