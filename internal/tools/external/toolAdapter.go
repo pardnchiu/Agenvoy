@@ -42,7 +42,7 @@ HTML meant to be read → fetch_page; a binary file → download_file; a user-su
 				},
 				"body": map[string]any{
 					"type":        "object",
-					"description": "Body for POST/PUT/PATCH, ignored for GET/DELETE. json: any object; form: flat key-value object; multipart: {\"fields\":{key:value,...},\"files\":[{\"name\":\"field\",\"path\":\"/abs/path\",\"content_type\":\"application/gzip\"},...]}, each file read from its absolute path.",
+					"description": "Body for POST/PUT/PATCH. json: any object; form: flat key-value object; multipart: {\"fields\":{key:value,...},\"files\":[{\"name\":\"field\",\"path\":\"/abs/path\",\"content_type\":\"application/gzip\"},...]}, each file read from its absolute path.",
 					"default":     map[string]any{},
 				},
 				"content_type": map[string]any{

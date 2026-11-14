@@ -204,7 +204,7 @@ func rawPaths(toolName, toolArgs string) []string {
 		}
 		return out
 
-	case "edit_file", "open_file":
+	case "edit_file", "remove_file", "restore_file", "open_file":
 		var p struct {
 			Path string `json:"path"`
 		}

@@ -19,7 +19,7 @@ func Restore(ctx context.Context, e *tooltypes.Executor, version int64, taskID0 
 	meta := historystore.Meta{
 		SessionID: e.SessionID,
 		TaskID:    e.PendingTask,
-		Tool:      "edit_file",
+		Tool:      "restore_file",
 	}
 
 	switch {

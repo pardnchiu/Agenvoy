@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	filehistory "github.com/pardnchiu/agenvoy/internal/tools/history/file"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -26,20 +25,20 @@ func registEditFile() {
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
-		Description: `Changes one file on disk: create or replace it (write), edit regions of it (patch), move it aside (remove), or put a recorded version back (restore); a write drops its content from history, so check the returned receipt and never read the file back or rewrite it to restore text that only looks missing.
-Use for "write this to a file", "change this part", "delete this file", "undo that", "revert to the previous version", and for write_file / patch_file / remove_file / restore_file / delete; only on explicit request or a Skill step, never to park a short answer, a tool result or a calculation.
-Skill files → edit_skill; script tool definitions → edit_tool; a long report or page for the user → write_result; listing past versions → file_history.`,
+		Description: `Changes one file on disk: create or replace it (write), or edit regions of it (patch); a write drops its content from history, so check the returned receipt and never read the file back or rewrite it to restore text that only looks missing.
+Use for "write this to a file", "change this part", and for write_file / patch_file; only on explicit request or a Skill step, never to park a short answer, a tool result or a calculation.
+Deleting a file → remove_file; undoing a change or reverting a version → restore_file; skill files → edit_skill; script tool definitions → edit_tool; a long report or page for the user → write_result; listing past versions → file_history.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
-					"enum":        []string{"write", "patch", "remove", "restore"},
-					"description": "write: a first version or a deliberate full replacement. patch: every other change, since a whole-file rewrite throws away text that was already correct. remove: moves the file aside, restorable with mode=restore. restore: put a recorded version back. write and patch on an existing file need a read_files of it in this turn, unchanged on disk since. Omitted: targets → patch, content → write; remove and restore are never inferred.",
+					"enum":        []string{"write", "patch"},
+					"description": "write: a first version or a deliberate full replacement. patch: every other change, since a whole-file rewrite throws away text that was already correct. Both need a read_files of an existing file in this turn, unchanged on disk since. Omitted: targets → patch, content → write.",
 				},
 				"path": map[string]any{
 					"type":        "string",
-					"description": "The one file this call acts on, absolute or relative to the work directory: '/abs/path/foo.go', '~/notes.md', 'relative/file.md'. Required for write, patch and remove; on restore it narrows a task_id undo to that file. A file made for the user with no location asked for goes under the output directory named in the system prompt; give its full path.",
+					"description": "The one file this call acts on, absolute or relative to the work directory: '/abs/path/foo.go', '~/notes.md', 'relative/file.md'. A file made for the user with no location asked for goes under the output directory named in the system prompt; give its full path.",
 					"default":     "",
 				},
 				"content": map[string]any{
@@ -69,15 +68,8 @@ Skill files → edit_skill; script tool definitions → edit_tool; a long report
 						"required": []string{"old_string", "new_string"},
 					},
 				},
-				"version": map[string]any{
-					"type":        "integer",
-					"description": "mode=restore: version id from a file_history row; enough on its own, since it names both the file and the state. Takes precedence over task_id.",
-				},
-				"task_id": map[string]any{
-					"type":        "string",
-					"description": "mode=restore: undo a whole task instead, returning every file it touched (or only path, when set) to before it ran; 'current' means the task running now. Either this or version is required.",
-				},
 			},
+			"required": []string{"path"},
 		},
 		Handler: func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
@@ -85,8 +77,6 @@ Skill files → edit_skill; script tool definitions → edit_tool; a long report
 				Path    string        `json:"path"`
 				Content string        `json:"content"`
 				Targets []patchTarget `json:"targets"`
-				Version int64         `json:"version"`
-				TaskID  string        `json:"task_id"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
@@ -107,7 +97,7 @@ Skill files → edit_skill; script tool definitions → edit_tool; a long report
 				case params.Content != "":
 					mode = "write"
 				default:
-					return "", utilsmsg.New(utilsmsg.Invalid, "mode", "required; available: write, patch, remove, restore")
+					return "", utilsmsg.New(utilsmsg.Invalid, "mode", "required; available: write, patch")
 				}
 			}
 
@@ -116,20 +106,8 @@ Skill files → edit_skill; script tool definitions → edit_tool; a long report
 				return writeFileContent(ctx, e, params.Path, params.Content, "edit_file")
 			case "patch":
 				return patchFileTargets(ctx, e, params.Path, params.Targets)
-			case "remove":
-				path := strings.TrimSpace(params.Path)
-				if path == "" {
-					return "", utilsmsg.New(utilsmsg.Invalid, "path", "required when mode=remove")
-				}
-				return RemoveToTrash(ctx, e, []string{path}, "edit_file")
-			case "restore":
-				var narrow []string
-				if path := strings.TrimSpace(params.Path); path != "" {
-					narrow = []string{path}
-				}
-				return filehistory.Restore(ctx, e, params.Version, params.TaskID, narrow)
 			}
-			return "", utilsmsg.New(utilsmsg.Invalid, "mode", "unknown %q; available: write, patch, remove, restore", mode)
+			return "", utilsmsg.New(utilsmsg.Invalid, "mode", "unknown %q; available: write, patch", mode)
 		},
 	})
 }
