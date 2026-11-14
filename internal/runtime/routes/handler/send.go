@@ -21,6 +21,7 @@ import (
 	sessionconfigbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
+	internalutils "github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -55,6 +56,10 @@ func Send() gin.HandlerFunc {
 		}
 		if strings.TrimSpace(req.Content) == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "[Invalid] content: required"})
+			return
+		}
+		if req.EnableSandbox != nil && !*req.EnableSandbox && !internalutils.IsLoopback(c.Request.RemoteAddr) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "[Denied] enable_sandbox: false is accepted only from this machine"})
 			return
 		}
 

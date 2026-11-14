@@ -62,7 +62,7 @@ func usage() {
 	fmt.Println("      --stream                                    Print the reply as it streams")
 	fmt.Println("      --work-dir <dir>                            Working directory (default: current directory)")
 	fmt.Println("      --allow-edit                                Allow writes and non-read-only commands")
-	fmt.Println("      --skip-sandbox                              Allow paths outside $HOME, sudo and sandbox: false")
+	fmt.Println("      --skip-sandbox                              DANGEROUS: leave the sandbox (paths outside $HOME, sudo, sandbox: false) with no confirmation; local only")
 	fmt.Println("  agen update                                     Update agen to the latest release")
 }
 

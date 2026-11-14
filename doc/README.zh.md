@@ -264,7 +264,7 @@ curl -fsSL https://agenvoy.com/scripts/install.sh | bash
 agen -p "摘要今天的 commit" --stream
 ```
 
-`agen -p` 把一則 prompt 送給本機 daemon 並印出回覆，預設唯讀且留在沙箱；加上 `--allow-edit` 允許寫入、`--skip-sandbox` 允許離開 `$HOME`。完整旗標見[文件](doc.zh.md#單次執行)。
+`agen -p` 把一則 prompt 送給本機 daemon 並印出回覆，預設唯讀且留在沙箱；加上 `--allow-edit` 允許寫入、`--skip-sandbox` 允許離開 `$HOME`。`--skip-sandbox`（`/v1/send` 的 `enable_sandbox:false`）非常危險：不經確認即可使用 `sudo` 與 `$HOME` 外路徑，daemon 只接受本機呼叫。完整旗標見[文件](doc.zh.md#單次執行)。
 
 ## 建議的模型設定
 

@@ -266,7 +266,7 @@ curl -fsSL https://agenvoy.com/scripts/install.sh | bash
 agen -p "Summarize today's commits" --stream
 ```
 
-`agen -p` sends one prompt to the local daemon and prints the reply. It is read-only and sandboxed by default; add `--allow-edit` to let it write and `--skip-sandbox` to let it leave `$HOME`. See the [docs](doc/doc.md#one-shot-prompt) for every flag.
+`agen -p` sends one prompt to the local daemon and prints the reply. It is read-only and sandboxed by default; add `--allow-edit` to let it write and `--skip-sandbox` to let it leave `$HOME`. `--skip-sandbox` (`enable_sandbox:false` on `/v1/send`) is very dangerous: it allows `sudo` and paths outside `$HOME` with no confirmation, and the daemon accepts it only from this machine. See the [docs](doc/doc.md#one-shot-prompt) for every flag.
 
 ## Developer Recommendations
 

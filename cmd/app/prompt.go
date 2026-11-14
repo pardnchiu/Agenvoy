@@ -35,7 +35,7 @@ func prompt(args []string) {
 	stream := fs.Bool("stream", false, "print the reply as it streams")
 	workDir := fs.String("work-dir", "", "working directory (default: current directory)")
 	allowEdit := fs.Bool("allow-edit", false, "allow writes and non-read-only commands")
-	skipSandbox := fs.Bool("skip-sandbox", false, "allow paths outside $HOME, sudo and sandbox: false")
+	skipSandbox := fs.Bool("skip-sandbox", false, "DANGEROUS: run outside the sandbox with paths outside $HOME, sudo and sandbox: false, all without confirmation; local daemon only")
 	_ = fs.Parse(args)
 	if fs.NArg() > 0 {
 		fmt.Fprintf(os.Stderr, "[Invalid] args: unexpected %q; quote the prompt after -p\n", strings.Join(fs.Args(), " "))
