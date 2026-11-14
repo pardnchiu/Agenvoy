@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -12,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
@@ -202,6 +204,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 	if err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox.Wrap", "", err)
 	}
+	relaySudoCancel(cmd, argv)
 
 	sink := &progressWriter{send: tooltypes.Progress(ctx), redact: secret.Stream()}
 	cmd.Stdout = sink
@@ -220,6 +223,15 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 }
 
 const progressInterval = 500 * time.Millisecond
+
+func relaySudoCancel(cmd *exec.Cmd, argv []string) {
+	if argv[0] != "sudo" {
+		return
+	}
+	cmd.Cancel = func() error {
+		return cmd.Process.Signal(syscall.SIGTERM)
+	}
+}
 
 type progressWriter struct {
 	mu      sync.Mutex
@@ -272,7 +284,11 @@ const sandboxWriteAdvice = `
 
 const sandboxEscalateAdvice = `
 
-[agenvoy] the sandbox blocked this command (a socket, device, system service or path outside its rules). Re-run this exact command now with sandbox: false; its confirmation asks the user for the system password, and that prompt is the permission request, so do not stop to ask in text first. A root-owned target needs argv ['sudo', ...] instead. Report only if the user declines.`
+[agenvoy] the output reports a permission error; the sandbox may have caused it. Leaving the sandbox is the last resort, not the default retry:
+- a connection or auth failure (e.g. Permission denied (publickey), could not resolve host) → network: true, or report the credential problem; sandbox: false does not fix it
+- a write → a path under the work directory, or write_paths for the path that failed
+- the task genuinely needs a system socket, device or service, or a root-owned target → sandbox: false or argv ['sudo', ...]; the user approves it with the system password
+Otherwise report what was blocked and stop.`
 
 var permissionMarkers = []string{
 	"not writable", "permission denied", "operation not permitted",
