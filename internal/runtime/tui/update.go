@@ -103,6 +103,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t.runOAuthSuccess(msg)
 		case OAuthFailed:
 			return t.runOAuthFailed(msg)
+		case oauthTick:
+			return t.runOAuthTick()
 		case McpOAuthInfo:
 			return t.runMcpOAuthInfo(msg)
 		case McpOAuthDone:
@@ -772,6 +774,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case OAuthFailed:
 		return t.runOAuthFailed(msg)
+
+	case oauthTick:
+		return t.runOAuthTick()
 
 	case OAuthReLoginPick:
 		return t.runOAuthReLoginPick(msg.replace)
