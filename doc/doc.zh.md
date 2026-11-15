@@ -83,7 +83,7 @@ Agenvoy 使用 `~/.config/agenvoy/` 保存執行期資料，並將憑證存放�
 | `OLLAMA-CLOUD_API_KEY`                               | Ollama Cloud（連字號是名稱的一部分）               |
 | `COMPAT_<NAME>_API_KEY`                              | 名為 `<NAME>` 的本機／自訂 OpenAI 相容端點（選填） |
 
-`copilot`、`codex` 與 `grok-oauth` 不使用 API key，而是從 `/model add` 發起 OAuth 登入；`claude-code` 改用本機 `claude` CLI，同樣不需 API key，且須以 `agen --enable-claude-code` 啟動（daemon 必須先停止）才會出現。
+`copilot`、`codex` 與 `grok-oauth` 不使用 API key，而是從 `/model add` 發起 OAuth 登入。登入視窗會倒數 10 分鐘時限，按 `Esc` 會取消登入並關閉視窗。只有在有圖形介面時才自動開啟瀏覽器（SSH 不開；Linux 需有 `DISPLAY`／`WAYLAND_DISPLAY`，或在 WSL 且有可用的開啟程式），無 GUI 的機器改把連結拿到另一台裝置：`codex` 同時進行瀏覽器登入與 device code 登入，並顯示 device URL 與使用者代碼；`grok-oauth` 可在同一視窗貼回 xAI 顯示的授權碼或 callback URL。`claude-code` 改用本機 `claude` CLI，同樣不需 API key，且須以 `agen --enable-claude-code` 啟動（daemon 必須先停止）才會出現。
 
 憑證依序從作業系統 keychain（service `agenvoy`）、Linux 的 `~/.config/agenvoy/.secrets`（`secret-tool` 不可用時的備援，權限 0600）與同名環境變數讀取，先找到者生效。
 
@@ -205,6 +205,8 @@ decision model 以不到一秒的時間回答型別化的問題（從選項中�
 | `fetch` | 用工具取資料並原樣回傳，不做判斷 | C>B>A>S | `low` |
 | `research` | 從多個來源蒐集並下結論：研究、分析、比較、報告 | S>A>B>C | `high` |
 | `work` | 規劃、review、起草或整理使用者手上的內容，及其他 | A>S>B>C | `medium` |
+
+Grok 文字模型（`imagine` 圖片模型以外的所有 `grok-*`）在帶工具的請求中都會附上 xAI 伺服器端的 `x_search` 工具，可自行搜尋 X 的貼文、帳號與串文（由 xAI 依抓取的貼文與帳號數計費）。有註冊這類、且不是 `pass` 的 `grok` 或 `grok-oauth` 模型時，dispatcher prompt 另會要求：凡是與 X 相關的請求，不論工作類型都優先選這些模型。
 
 tier 取自 `model_tag`，沒設定的依模型名稱判斷；`pass` 模型不參與此排序，也不進入 fallback，請求點名也不選；只有指定給某個 session 時才會使用。預設 dispatcher 的 prompt 使用同樣五種工作類型與 tier 順序：第一行回工作類型、第二行回模型名單，因此不需要 decision model 也能取得上表的 reasoning 等級。三件事各自獨立：**用哪個 selector**（已設定 decision model → decision model 與 dispatcher 模型同時執行，否則只用 dispatcher 模型）、**用哪個模型**（session 模型為 `auto` 時才採用 selector 的排序，指定模型則維持）、**用哪個 reasoning 等級**（session reasoning 為 `auto` 時才採用 selector 的等級，selector 沒給時退回 `medium`，其他等級維持）。請求自帶的等級（例如 `reasoning_effort`）仍優先於兩者。新 session（含 `temp-`）預設 reasoning 為 `medium`，需改為 `auto` 才會採用 selector 的等級。
 
@@ -474,7 +476,8 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | `GET`    | `/v1/providers/quota`            | **local** — `claude-code`（解析 `claude -p /usage`，不打 API）、`codex`、`grok-oauth`、`copilot` 的剩餘額度與 `openrouter`、`deepseek` 的剩餘餘額，回 `{quota:{<id>:{remaining:{five_hour?,week?,total?,balance?}}}}`，平行取得，上限 10 秒。成功的結果在 ToriiDB 快取 3 分鐘並帶 `cached:true`；`?refresh=1` 清除快取重讀，存入 API key 或完成 OAuth 也會自動清掉該 provider 的快取。取不到的 provider 回 `error` 而非 `remaining`，且不進快取 |
 | `GET`    | `/v1/model/quota?model=<name>`   | **local** — 單一模型所屬 provider 的最新剩餘額度，每次呼叫都重新查詢（逾時 15 秒）：`{"quota":"61%/40%"}`（5h／週／總額度百分比以 `/` 串接，餘額型為 `$12.34`），provider 不提供額度時回 `""`。Web 聊天在每次完成後呼叫 |
 | `POST`   | `/v1/provider/:provider/key`     | **local** — 設定 API key。其他 provider 的 body 為 `{api_key}`，存為 `<PROVIDER>_API_KEY`；`cloudflare` 另需 `account_id`（可選 `gateway_id`）；`compat` 的 body 為 `{name, url, api_key?}`：網址記錄到 `compats`，有帶 key 時存為 `COMPAT_<NAME>_API_KEY`；不支援 API key 的 provider 回 400                                                                                                                                                                                                                                     |
-| `GET`    | `/v1/provider/:provider/oauth`   | **local** — SSE OAuth 登入：`copilot` 為 device code（送 `{url, user_code}`），`codex`／`grok-oauth` 送瀏覽器 `{url}`，`claude-code` 只檢查 `claude` 執行檔；結束送 `{done, ok, error?}`，不支援 OAuth 的 provider 回 400 |
+| `GET`    | `/v1/provider/:provider/oauth`   | **local** — SSE OAuth 登入：`copilot` 為 device code（送 `{url, user_code}`）；`codex` 送瀏覽器 `{url}`，並由同時進行的 device code 登入送 `{device_url, user_code}`；`grok-oauth` 送瀏覽器 `{url}`；`claude-code` 只檢查 `claude` 執行檔；結束送 `{done, ok, error?}`，不支援 OAuth 的 provider 回 400 |
+| `POST`   | `/v1/provider/:provider/oauth/code` | **local** — `{code}`，僅 `grok-oauth`。瀏覽器連不到 loopback listener 時，以 xAI 顯示的授權碼或 callback URL 完成等待中的登入；其他 provider、空值或驗證失敗回 400 |
 | `DELETE` | `/v1/provider/:provider/oauth`   | **local** — 清除已儲存的 provider 登入（`codex`、`copilot`、`grok-oauth`）。token 的 keychain 鍵名由 OAuth 套件自己持有（`CODEX_OAUTH_TOKEN` 與各自的舊名）,因此改走它們的 `ClearToken`,而非 `DELETE /v1/key`                                                                                                                                                            |
 | `GET`    | `/v1/provider/:provider/models`  | **local** — 以該 provider 的憑證向其官方端點列出可用模型（`claude-code` 透過本機 `claude` CLI），回 `{models, windows}`；`windows` 為 model id 對 `{in, out}` context 大小的對照，取自 `llm-io.agenvoy.com`，查無資料的模型不會出現。本機／自訂端點名稱（`ollama`、`llama.cpp` 或已記錄的名稱）會向該端點的 `GET /models` 查詢。上游失敗回 502，不支援列模型的 provider 回 400；清單快取 15 分鐘 |
 | `GET`    | `/v1/provider/:provider/console` | **local** — 以 302 導向 provider 的主控台：`?page=key` 為 API key 頁、`plan` 為訂閱方案頁；provider 有方案頁時預設 `plan`，否則 `key`；該頁不存在時回 404                                                                                                                                                                                                                |
