@@ -28,7 +28,7 @@ func OutsideWorkDir(sessionID, workDir, toolName, toolArgs string) []string {
 			continue
 		}
 		seen[abs] = true
-		if filesystem.IsWithin(dir, abs) || !filesystem.IsWithin(home, abs) || filesystem.IsSensitivePath(abs) || filesystem.IsDeniedPath(abs) || isGranted(sessionID, abs) {
+		if filesystem.IsWithin(dir, abs) || !filesystem.IsWithin(home, abs) && !filesystem.IsUnreadableOutsideHome(abs) || filesystem.IsSensitivePath(abs) || filesystem.IsDeniedPath(abs) || isGranted(sessionID, abs) {
 			continue
 		}
 		out = append(out, abs)
@@ -38,7 +38,7 @@ func OutsideWorkDir(sessionID, workDir, toolName, toolArgs string) []string {
 
 func targetPaths(toolName, toolArgs string) []string {
 	switch toolName {
-	case "edit_file":
+	case "edit_file", "remove_file", "restore_file":
 		return rawPaths(toolName, toolArgs)
 	case "run_command", "background_command":
 		var p struct {

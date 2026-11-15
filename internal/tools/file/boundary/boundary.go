@@ -45,6 +45,10 @@ func Grant(sessionID string, list ...string) {
 	}
 }
 
+func Revoke(sessionID string) {
+	cache.Delete(sessionID)
+}
+
 func isGranted(sessionID, absPath string) bool {
 	v, ok := cache.Load(sessionID)
 	if !ok {
@@ -97,6 +101,14 @@ func Resolve(sessionID, baseDir, path string) (string, error) {
 	return "", utilsmsg.New(utilsmsg.Denied, "path", "%s holds credentials or key material; the user was not asked or did not approve this path, so retrying the same path fails the same way", restricted)
 }
 
+// NOTE: 針對唯讀的放行
+func ResolveRead(sessionID, baseDir, path string) (string, error) {
+	if abs, err := resolveRaw(baseDir, path); err == nil && filesystem.IsReadablePath(abs) {
+		return abs, nil
+	}
+	return Resolve(sessionID, baseDir, path)
+}
+
 func Restricted(sessionID, workDir, toolName, toolArgs string) []string {
 	list := rawPaths(toolName, toolArgs)
 	if len(list) == 0 {
@@ -119,6 +131,9 @@ func Restricted(sessionID, workDir, toolName, toolArgs string) []string {
 			continue
 		}
 		if seen[abs] || filesystem.IsDeniedPath(abs) || isGranted(sessionID, abs) {
+			continue
+		}
+		if (toolName == "read_files" || toolName == "find_files") && filesystem.IsReadablePath(abs) {
 			continue
 		}
 
@@ -189,7 +204,7 @@ func rawPaths(toolName, toolArgs string) []string {
 		}
 		return out
 
-	case "edit_file", "open_file":
+	case "edit_file", "remove_file", "restore_file", "open_file":
 		var p struct {
 			Path string `json:"path"`
 		}

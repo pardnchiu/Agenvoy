@@ -189,6 +189,9 @@ var SubagentPrompt string
 //go:embed prompts/system_prompt/component/wsl_host.md
 var WSLHost string
 
+//go:embed prompts/system_prompt/component/plain_text.md
+var PlainTextRule string
+
 // * Prompts > systemPrompt > Chatbot
 
 //go:embed prompts/system_prompt/chatbot/telegram.md
@@ -269,9 +272,6 @@ var GuideFigure string
 
 // * Configs
 
-//go:embed jsons/sensitive_path.json
-var SensitivePath []byte
-
 //go:embed jsons/exclude_list.json
 var ExcludeList []byte
 
@@ -292,6 +292,9 @@ var GuardrailRules []byte
 
 //go:embed jsons/refusal_messages.json
 var RefusalMessages []byte
+
+//go:embed jsons/secret_patterns.json
+var SecretPatterns []byte
 
 // * Official Guide
 

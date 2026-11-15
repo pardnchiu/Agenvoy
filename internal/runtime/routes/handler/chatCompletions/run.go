@@ -55,7 +55,7 @@ func run(ctx context.Context, req Request, userContent string, events chan<- age
 		Agent:          agent,
 		FallbackAgents: fallbacks,
 		WorkDir:        workDir,
-		Task:           trimContent,
+		InputNoRecord:  trimContent,
 		Reasoning:      cmp.Or(req.ReasoningEffort, reasoning, "medium"),
 		ExcludeTools:   excludeTools,
 		ExcludeSkills:  tools.TUIOnlySkills,

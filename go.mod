@@ -13,8 +13,8 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/pardnchiu/go-bot v0.5.1
 	github.com/pardnchiu/go-browser v0.3.4
-	github.com/pardnchiu/go-llm-router v0.10.1
-	github.com/pardnchiu/go-pkg v0.13.17
+	github.com/pardnchiu/go-llm-router v0.10.4
+	github.com/pardnchiu/go-pkg v0.13.19
 	github.com/pardnchiu/go-scheduler v1.2.0
 	github.com/pardnchiu/go-sqlkit v0.1.1
 	golang.org/x/oauth2 v0.37.0

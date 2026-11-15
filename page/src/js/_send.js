@@ -77,7 +77,7 @@ function trackTasking(hash, event) {
     return;
   }
 
-  const line = (type === "EventReasoning" ? event.text || "" : formatEvent(event)).trim();
+  const line = (event.trace || "").trim();
   if (!line) {
     return;
   }
@@ -322,27 +322,27 @@ async function send(content, target) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         content: content,
-        sse: false,
+        stream: false,
         session_id: sessionId,
         persist: true,
         model: model,
         reasoning: primary ? ensureReasoning() : "",
-        system_prompt: primary ? role : "",
+        rule: primary ? role : "",
         work_dir: chat.work_dir,
         skill: picked,
-        pending_task: waiting,
+        task_hash: waiting,
       }),
     });
     if (!response.ok) {
       const view = streamOf(sessionId);
       if (view) {
-        renderEvent(view, { type: "EventError", text: `HTTP ${response.status}` });
+        renderEvent(view, { type: "EventError", trace: `⚠ HTTP ${response.status}` });
       }
     }
   } catch (err) {
     const view = streamOf(sessionId);
     if (view) {
-      renderEvent(view, { type: "EventError", text: err.message });
+      renderEvent(view, { type: "EventError", trace: `⚠ ${err.message || "unknown error"}` });
     }
   }
 }

@@ -35,10 +35,10 @@ func Prepare(data ExecuteMeta) ExecuteMeta {
 	if scanner != nil {
 		scanner.Scan()
 		if data.Skill == nil && data.SkillName == "" {
-			if matched, effective := runtime.MatchSkill(scanner, data.Task, data.ExcludeSkills...); matched != nil {
+			if matched, effective := runtime.MatchSkill(scanner, data.InputNoRecord, data.ExcludeSkills...); matched != nil {
 				data.Skill = matched
-				data.Task = strings.TrimSpace(effective)
-				data.Input = data.Task
+				data.InputNoRecord = strings.TrimSpace(effective)
+				data.Input = data.InputNoRecord
 			}
 		}
 	}
@@ -158,7 +158,7 @@ func Run(ctx context.Context, data ExecuteMeta, events chan<- agentstypes.Event,
 		if data.Skill != nil {
 			skillDesc = data.Skill.Description
 		}
-		routed, routedFallbacks, reasoning, err := agentsexecmodel.Route(ctx, model, data.Reasoning, data.Task, skillDesc, sessionID)
+		routed, routedFallbacks, reasoning, err := agentsexecmodel.Route(ctx, model, data.Reasoning, data.InputNoRecord, skillDesc, sessionID)
 		if err != nil {
 			return utilsmsg.Trace("agentsexecmodel.Route", "", err)
 		}

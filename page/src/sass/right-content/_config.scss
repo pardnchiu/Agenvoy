@@ -79,11 +79,17 @@ body[data-rendered="1"] section.right-content section.config {
 
     section.editor {
       @include contentBody;
+      padding: 0 1.5rem;
 
       @include sideList;
 
+      div.side {
+        padding-top: 1.5rem;
+      }
+
       form {
         @include contentForm;
+        padding-top: 1.5rem;
         padding-bottom: 5rem;
       }
     }

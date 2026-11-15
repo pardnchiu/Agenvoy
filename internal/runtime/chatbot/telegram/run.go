@@ -231,7 +231,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 	reply.Status("thinking...")
 
 	return reply.Run(ctx, exec.ExecuteMeta{
-		Task:           content,
+		InputNoRecord:  content,
 		Input:          content,
 		Sender:         in.Username,
 		SessionID:      chatSessionID,

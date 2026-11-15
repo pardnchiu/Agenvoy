@@ -53,7 +53,7 @@ func (c *conn) run(ctx context.Context, f Frame) {
 		Model:          f.Rayload.Model,
 		Reasoning:      strings.TrimSpace(f.Rayload.Reasoning),
 		WorkDir:        f.Rayload.WorkDir,
-		Task:           content,
+		InputNoRecord:  content,
 		Input:          content,
 		SessionID:      sessionID,
 		AllowAll:       f.Rayload.AllowAll,

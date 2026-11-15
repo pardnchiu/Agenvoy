@@ -497,14 +497,10 @@ func renderAgentEvent(ev agenttypes.Event, sessionLabel, cwd string, width int, 
 		if ev.Source != "" {
 			bullet = "  ⎿"
 		}
-		return buildToolLine(bullet, ev.Source, ev.ToolName, ev.ToolArgs, cwd, width), true
+		return buildToolLine(bullet, ev.Source, ev.ToolName, ev.ToolArgs, width), true
 
 	case agenttypes.EventToolSkipped:
-		line := "  ⎿ " + srcPrefix + "skipped: " + ev.ToolName
-		if arg := utils.FormatToolArgs(ev.ToolName, ev.ToolArgs, cwd); arg != "" {
-			line += "(" + arg + ")"
-		}
-		return hintStyle.Render(line), true
+		return hintStyle.Render("  ⎿ " + srcPrefix + "skipped: " + utils.FormatToolEvent(ev.ToolName, ev.ToolArgs)), true
 
 	case agenttypes.EventText:
 		if ev.Source != "" {
@@ -647,7 +643,7 @@ func optionColumn(keys, details []string) []string {
 	return out
 }
 
-func buildToolLine(bullet, source, name, args, cwd string, width int) string {
+func buildToolLine(bullet, source, name, args string, width int) string {
 	if width <= 0 {
 		width = defaultWrapWidth
 	}
@@ -656,10 +652,7 @@ func buildToolLine(bullet, source, name, args, cwd string, width int) string {
 	if src != "" {
 		srcPrefix = "[" + src + "] "
 	}
-	line := bullet + " " + srcPrefix + utils.ToolName(name)
-	if arg := utils.FormatToolArgs(name, args, cwd); arg != "" {
-		line += "(" + arg + ")"
-	}
+	line := bullet + " " + srcPrefix + utils.FormatToolEvent(name, args)
 	style := hintStyle
 	if utils.IsSubagentInvoke(name, args) {
 		style = okayStyle

@@ -8,6 +8,7 @@ import (
 
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
+	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -85,7 +86,7 @@ Credentials travel only through this tool's masked input; keep the value out of 
 
 func SecretPrompt(ctx context.Context, sessionID, question string) (string, error) {
 	origin := originFor(ctx, sessionID)
-	if !runtime.HasListener(ctx, origin) {
+	if agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff || !runtime.HasListener(ctx, origin) {
 		return "", utilsmsg.New(utilsmsg.Unavailable, "store_secret", "requires an interactive channel (TUI / Telegram / Discord)")
 	}
 

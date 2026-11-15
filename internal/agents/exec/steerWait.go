@@ -4,8 +4,12 @@ import (
 	"strings"
 	"sync"
 
+	go_llm_router "github.com/pardnchiu/go-llm-router/core"
+
 	"github.com/pardnchiu/agenvoy/configs"
+	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
 
 var (
@@ -88,4 +92,15 @@ func ClearSteer(sessionID string) {
 
 func formatSteerInjection(pending []string) string {
 	return strings.ReplaceAll(strings.TrimSpace(configs.InjectSteer), "{{.Messages}}", strings.Join(pending, "\n"))
+}
+
+func injectBackgroundReport(session *agenttypes.Session, parentTask string, events chan<- agenttypes.Event) bool {
+	report := interactive.TakeBackgroundReport(session.ID, parentTask)
+	if report == "" {
+		return false
+	}
+	session.ToolHistories = append(session.ToolHistories, go_llm_router.Message{Role: "user", Content: report})
+	header, _, _ := strings.Cut(report, "\n")
+	events <- agenttypes.Event{Type: agenttypes.EventUserInjected, Text: header}
+	return true
 }

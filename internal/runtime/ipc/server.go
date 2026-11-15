@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"log/slog"
 	"maps"
 	"net"
 	"os"
@@ -92,15 +93,6 @@ func serve(ctx context.Context, raw net.Conn) {
 		}
 		switch f.Type {
 		case FrameRun:
-			if f.Rayload != nil {
-				task, online := interactive.ClaimFollowUp(f.SessionID, f.Rayload.PendingTask)
-				f.Rayload.PendingTask = task
-				if online {
-					exec.AppendSteer(f.SessionID, f.Rayload.WindowHash, f.Rayload.Input)
-					c.write(Frame{Type: FrameDone, UUID: f.UUID, SessionID: f.SessionID})
-					continue
-				}
-			}
 			go c.run(connCtx, f)
 		case FrameCancel:
 			waiting := f.SessionID != "" && interactive.HasBackground(f.SessionID, f.TaskHash)
@@ -136,6 +128,14 @@ func serve(ctx context.Context, raw net.Conn) {
 			go c.pending(connCtx, f)
 		case FrameMCP:
 			go c.mcp(connCtx, f)
+		case FrameBackgroundCancel:
+			if err := interactive.CancelBackgroundLeg(f.SessionID, f.TaskHash, f.LegID); err != nil {
+				slog.Warn("interactive.CancelBackgroundLeg",
+					slog.String("session", f.SessionID),
+					slog.String("job", f.TaskHash),
+					slog.String("leg", f.LegID),
+					slog.String("error", err.Error()))
+			}
 		case FrameReply:
 			if f.Reply != nil {
 				go c.reply(ctx, f.Reply)

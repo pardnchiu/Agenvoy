@@ -83,7 +83,7 @@ Agenvoy 使用 `~/.config/agenvoy/` 保存執行期資料，並將憑證存放�
 | `OLLAMA-CLOUD_API_KEY`                               | Ollama Cloud（連字號是名稱的一部分）               |
 | `COMPAT_<NAME>_API_KEY`                              | 名為 `<NAME>` 的本機／自訂 OpenAI 相容端點（選填） |
 
-`copilot`、`codex` 與 `grok-oauth` 不使用 API key，而是從 `/model add` 發起 OAuth 登入；`claude-code` 改用本機 `claude` CLI，同樣不需 API key，且須以 `agen --enable-claude-code` 啟動（daemon 必須先停止）才會出現。
+`copilot`、`codex` 與 `grok-oauth` 不使用 API key，而是從 `/model add` 發起 OAuth 登入。登入視窗會倒數 10 分鐘時限，按 `Esc` 會取消登入並關閉視窗。只有在有圖形介面時才自動開啟瀏覽器（SSH 不開；Linux 需有 `DISPLAY`／`WAYLAND_DISPLAY`，或在 WSL 且有可用的開啟程式），無 GUI 的機器改把連結拿到另一台裝置：`codex` 同時進行瀏覽器登入與 device code 登入，並顯示 device URL 與使用者代碼；`grok-oauth` 可在同一視窗貼回 xAI 顯示的授權碼或 callback URL。`claude-code` 改用本機 `claude` CLI，同樣不需 API key，且須以 `agen --enable-claude-code` 啟動（daemon 必須先停止）才會出現。
 
 憑證依序從作業系統 keychain（service `agenvoy`）、Linux 的 `~/.config/agenvoy/.secrets`（`secret-tool` 不可用時的備援，權限 0600）與同名環境變數讀取，先找到者生效。
 
@@ -115,6 +115,7 @@ Agenvoy 目前支援 Telegram 與 Discord。兩者都由本機 daemon 主動向�
 | `output_dir`                        |      `""` | 請求沒指定位置時，替使用者產生的檔案放在哪：`write_result` 的輸出，以及 agent 預設要放到這裡的文件、匯出檔與圖片。空值為 `~/Downloads`，該資料夾不存在時為 `~/.config/agenvoy/download` |
 | `model_tag`                         |      `{}` | 各模型的 tier，`{"<model>": "S"\|"A"\|"B"\|"C"\|"pass"}`；見[模型 tier](#模型-tier)                                                                                                     |
 | `net_white_list`                    |      `[]` | 即使解析為 loopback 或私有位址，`http_request` 仍可連線的主機 |
+| `readable_path`                     |      `[]` | `read_files` 與 `find_files` 可免確認讀取的 `$HOME` 外絕對路徑，加進內建的系統與套件位置（`/usr`、`/bin`、`/etc`、`/opt`、`/Library`、`/Applications` 等）；項目須為絕對路徑或以 `~/` 開頭。被拒絕或屬敏感的路徑仍受限 |
 | `decision_model`                    |      `""` | 供分派、監看檢查與內容過濾使用的 decision model，寫成 `typesafe@<model>` 或 `openrouter@<model>`；空字串或 `off` 為關閉。見 [Decision model](#decision-model) |
 | `read_only_command`                 |      `[]` | 追加到內建唯讀白名單的指令，比對 `bin`、`bin subcommand` 或 `bin subcommand subcommand`（最長優先）；`run_command` 執行時不需確認 |
 
@@ -179,7 +180,7 @@ session 固定了模型就不排序也不 fallback；但 session reasoning 為 `
 
 decision model 以不到一秒的時間回答型別化的問題（從選項中挑一個並附信心值），Agenvoy 用它分派請求，並過濾送進主模型的內容。提供者有兩個：`typesafe`（`TYPESAFE_API_KEY`）與 `openrouter`（`OPENROUTER_API_KEY`，輸出為 decisions 的模型；`cloudflare/clairic`、`respan/span-01*` 與 `scaledown/classify-1` 不接受 Agenvoy 的請求格式，因此不列入）。可選清單快取 15 分鐘，provider key 變更時清除。在 TUI 以 `/model decision`、或在 **Config › Model** 的 **Decision** 卡片選擇模型；設定存於 `decision_model`，`off`（或空字串）會關閉下列所有用途。TypeSafe key 的新增方式與其他 API key 相同：TUI 為 `/model add` → **API Key** → **TypeSafe**，Web 為 **API Key** 分頁的 TypeSafe 卡片；存檔只會儲存 key，模型再到 Decision 選擇。TypeSafe 的模型也不會出現在 OpenRouter 的聊天模型清單中。
 
-推薦的 decision model 是 `typesafe@jev-latest`，也就是 TypeSafe 的 Jev（early access），會跟著最新的 Jev 版本；TypeSafe 只依輸入 token 計費（每十億 $42，輸出不收費，依 2026-11-11 的[模型頁](https://docs.typesafe.ai/models)）。[新手入門](https://agenvoy.com/zh/docs/quickstart)有金鑰設定步驟與實際安裝環境的實測效果。
+推薦的 decision model 是 `typesafe@jev-latest`，也就是 TypeSafe 的 Jev（early access），會跟著最新的 Jev 版本；TypeSafe 只依輸入 token 計費（每十億 $42，輸出不收費，依 2026-11-11 的[模型頁](https://docs.typesafe.ai/models)）。[新手入門](https://agenvoy.com/zh/quickstart)有金鑰設定步驟與實際安裝環境的實測效果。
 
 每次呼叫逾時 3 秒。除了分派與 skill 清單，回答的信心值須達 0.7 才會採用；呼叫失敗時，行為與沒有 decision model 時相同。
 
@@ -189,6 +190,8 @@ decision model 以不到一秒的時間回答型別化的問題（從選項中�
 | 監看（`background_command`） | 命中錯誤關鍵字的輸出是否真的是失敗，以及是否只是重複上次的回報；誤判與重複都不回報 | 照常回報該段輸出並註明檢查失敗。未設定 decision model 時，每次命中關鍵字都會回報：等輸出穩定（靜止 2 秒，最多等 10 秒）、每 30 秒最多一次，附最新至多 8 KiB 輸出 |
 | `search_web` | 哪些結果標題與請求相關，其餘剔除 | 保留全部結果 |
 | `fetch_page`（markdown） | 哪些區塊是頁面雜訊，存快取前移除；頁面是否與請求相關，不相關則不交給模型 | 回傳完整頁面 |
+| `read_files` | 4096 字元以上的檔案是否與請求相關，不相關則不交給模型；同一檔案第二次讀取一定回傳。帶 `around` 的讀取不檢查 | 回傳完整檔案 |
+| `chat_history`（`mode=read`） | 4096 字元以上的每個 run 是否與請求相關，不相關則換成附目標的一行說明；同一 task 第二次讀取一定回傳 | 回傳全部 run |
 | Turn context | 現有工具是否涵蓋這個請求，否則提示查閱建工具指南；哪些 skill 相關，其餘不列入清單；session 摘要的哪些條目（`key_decisions`／`past_discussions`／`current_discussion`）與請求相關，其餘不帶入，全部無關時不放摘要 | 不提示；列出全部 skill；帶入完整摘要 |
 | Session 摘要 | 哪些對話是雜訊、哪些 `key_decisions`／`past_discussions` 已過時，合併前一併移除 | 保留全部對話與條目 |
 | Context 超長 | 哪些工具步驟對請求已不需要，在依最舊優先刪減前先移除；最新一步與 `write_todo` 一律保留 | 只做最舊優先刪減 |
@@ -202,6 +205,8 @@ decision model 以不到一秒的時間回答型別化的問題（從選項中�
 | `fetch` | 用工具取資料並原樣回傳，不做判斷 | C>B>A>S | `low` |
 | `research` | 從多個來源蒐集並下結論：研究、分析、比較、報告 | S>A>B>C | `high` |
 | `work` | 規劃、review、起草或整理使用者手上的內容，及其他 | A>S>B>C | `medium` |
+
+Grok 文字模型（`imagine` 圖片模型以外的所有 `grok-*`）在帶工具的請求中都會附上 xAI 伺服器端的 `x_search` 工具，可自行搜尋 X 的貼文、帳號與串文（由 xAI 依抓取的貼文與帳號數計費）。有註冊這類、且不是 `pass` 的 `grok` 或 `grok-oauth` 模型時，dispatcher prompt 另會要求：凡是與 X 相關的請求，不論工作類型都優先選這些模型。
 
 tier 取自 `model_tag`，沒設定的依模型名稱判斷；`pass` 模型不參與此排序，也不進入 fallback，請求點名也不選；只有指定給某個 session 時才會使用。預設 dispatcher 的 prompt 使用同樣五種工作類型與 tier 順序：第一行回工作類型、第二行回模型名單，因此不需要 decision model 也能取得上表的 reasoning 等級。三件事各自獨立：**用哪個 selector**（已設定 decision model → decision model 與 dispatcher 模型同時執行，否則只用 dispatcher 模型）、**用哪個模型**（session 模型為 `auto` 時才採用 selector 的排序，指定模型則維持）、**用哪個 reasoning 等級**（session reasoning 為 `auto` 時才採用 selector 的等級，selector 沒給時退回 `medium`，其他等級維持）。請求自帶的等級（例如 `reasoning_effort`）仍優先於兩者。新 session（含 `temp-`）預設 reasoning 為 `medium`，需改為 `auto` 才會採用 selector 的等級。
 
@@ -229,13 +234,14 @@ TUI 的工作目錄是 `$HOME` 底下、且不是 denied 或敏感路徑的子�
 
 ### 受限路徑與受限指令
 
-`$HOME` 以外的路徑與敏感清單內的路徑（`configs/jsons/sensitive_path.json`，可由 `config.json` 的 `sensitive_path` 擴充；涵蓋金鑰與憑證檔、`.git`、`.claude`、shell 啟動檔與 `.mcp.json`）不會直接被拒絕：`boundary.Restricted` 會收集它們並發出確認。`$HOME` 以外的路徑另要求作業系統密碼（TUI 與 Web 確認框皆為密碼欄，由 daemon 驗證），`$HOME` 內的敏感路徑只需確認；`run_command`、`background_command` 以 argv `['sudo', ...]` 或 `sandbox: false` 執行時也走同一道關卡，任何權限模式都一樣；驗證通過後 `sudo` 以 `sudo -n` 沿用驗證留下的授權執行。TUI 的 `!` shell 指令含 `sudo` 且沒有有效授權時，會先跳出密碼框。核准綁定該 session 與該路徑，於 daemon 存續期間有效；密碼欄是否出現依 sudo 自己的 timestamp（`sudo -n -v`），該 ticket 仍有效時彈窗不會再出現密碼欄。密碼錯誤時彈窗保留並顯示錯誤，可重新輸入，驗證成功才關閉。需要密碼的確認不提供 **Yes, don't ask again** 與 **Yes, allow this turn**。`config.json` 的 `denied_path` 與 `denied_command` 為硬拒，任何核准都解不開；不在 `denied_command` 的指令一律可執行，但仍會經過 `run_command` 的一般確認。
+`$HOME` 以外的路徑與敏感清單內的路徑（go-pkg `filesystem/jsons/sensitive_path.json`，可由 `config.json` 的 `sensitive_path` 擴充；涵蓋金鑰與憑證檔、`.git`、`.claude`、shell 啟動檔與 `.mcp.json`）不會直接被拒絕：`boundary.Restricted` 會收集它們並發出確認。`$HOME` 以外的路徑另要求作業系統密碼（TUI 與 Web 確認框皆為密碼欄，由 daemon 驗證），`$HOME` 內的敏感路徑只需確認；`run_command`、`background_command` 以 argv `['sudo', ...]` 或 `sandbox: false` 執行時也走同一道關卡，任何權限模式都一樣；驗證通過後 `sudo` 以 `sudo -n` 沿用驗證留下的授權執行。TUI 的 `!` shell 指令含 `sudo` 且沒有有效授權時，會先跳出密碼框。核准綁定該 session 與該路徑，於 daemon 存續期間有效；密碼欄是否出現依 sudo 自己的 timestamp（`sudo -n -v`），該 ticket 仍有效時彈窗不會再出現密碼欄。密碼錯誤時彈窗保留並顯示錯誤，可重新輸入，驗證成功才關閉。需要密碼的確認不提供 **Yes, don't ask again** 與 **Yes, allow this turn**。`config.json` 的 `denied_path` 與 `denied_command` 為硬拒，任何核准都解不開；不在 `denied_command` 的指令一律可執行，但仍會經過 `run_command` 的一般確認。
 
 自動化之前要知道的事項：
 
 - 一般工具確認會回到原始 CLI、Web、Telegram 或 Discord 頻道；TUI 只監聽 CLI 來源的請求。
 - Telegram 與 Discord 無法收集系統密碼，受限確認不提供 **Yes**，並引導至本機的 TUI 或 Web UI。Web UI 只接受本機來源的核准，否則保留確認卡片並顯示錯誤。
-- `run_command` 的沙箱只約束寫入不約束讀取，因此指令只有在作業系統本身拒絕時才會在某個路徑上失敗；檔案工具（`read_files`、`find_files`、`open_file`、`file_history`）讀取 `$HOME` 以外或敏感路徑時仍需確認，`denied_path` 讀寫皆拒。
+- `run_command` 的沙箱只約束寫入不約束讀取，因此指令只有在作業系統本身拒絕時才會在某個路徑上失敗；檔案工具（`read_files`、`find_files`、`open_file`、`file_history`）讀取 `$HOME` 以外或敏感路徑時仍需確認，`denied_path` 讀寫皆拒。`read_files` 與 `find_files` 讀取可讀清單內的系統與套件位置及 `readable_path` 項目時不需確認；`run_command` 的 argv 中存在、位於 `$HOME` 外且不在該清單的絕對路徑，會取消唯讀白名單的放行。
+- 工具輸出中的密鑰不會進入模型、log 與歷史：工具結果與錯誤、指令串流輸出與背景報告，都依 `configs/jsons/secret_patterns.json` 的格式規則比對，命中的值保留前後三字元、中間換成 `********`（短於 9 字元只留前三字元；3 字元以內整段遮蓋；私鑰區塊整段視為一個值）。需要金鑰的指令在同一次 `run_command` 內讀取並使用（`set -a; . ./.env; set +a; curl ...`）。`edit_file` 與 `run_command` 的參數含本 daemon 產生過的遮罩值時直接拒絕，避免把遮罩值當成金鑰寫回。
 
 `$HOME` 一律可寫，不需要任何設定。指令要寫到 `$HOME` 以外時，agent 會在**那一次呼叫**自己附上 `write_paths`，你會看到確認框並輸入系統密碼，核准後那幾個路徑才額外綁進沙箱。
 
@@ -320,7 +326,7 @@ agen
 
 在彈出視窗中，`esc` 會回到開啟它的上一頁，只有第一頁才會關閉；確認、密碼與 `ask_user` 視窗不理會 `esc`，須選擇選項；`/usage` 這類純列表視窗以 ↑／↓ 捲動而非選取。
 
-任務執行中按 `esc`：尚未輸出任何內容時直接取消，否則詢問 **No**／**Yes cancel**／**Pause keep pending**。取消（含 `ctrl+c`、確認框中的 **Cancel task**，以及 `POST /v1/session/:id/cancel/:task_hash`）會一併移除該任務的 pending；暫停、確認框中的 **Abort task** 與其他中斷（逾時、視窗關閉等）只停止執行並保留 pending，可從 `/pending` 恢復。任務執行中只能送一般文字作為 steer，`/` 指令不會列出也不會送出。非彈窗狀態下 `esc` 依序為：先關閉 `/` 指令選單，再關閉 notice 區塊，再取消任務，最後清空輸入。狀態列顯示 `Connecting` 時，一般訊息、Skill、`/pending` 與 cron 派發都不會送出；本機 `/` 指令照常可用。
+任務執行中按 `esc`：尚未輸出任何內容時直接取消，否則詢問 **No**／**Yes cancel**／**Pause keep pending**。取消（含 `ctrl+c`、確認框中的 **Cancel task**，以及 `POST /v1/session/:id/cancel/:task_hash`）會結束任務，並以 `[Canceled]` 回覆保留在對話歷史中（任務原本失敗時附上最後的錯誤）；取消背景 job 不會影響仍在執行的母任務；暫停、確認框中的 **Abort task** 與其他中斷（逾時、視窗關閉等）只停止執行並保留 pending，可從 `/pending` 恢復。任務執行中只能送一般文字作為 steer，`/` 指令不會列出也不會送出。非彈窗狀態下 `esc` 依序為：先關閉 `/` 指令選單，再關閉 notice 區塊，再取消任務，再清空輸入，最後開啟背景任務選單。本 session 有背景任務在跑時，輸入框上方顯示 `N background task(s) running`；輸入框為空且沒有任務執行時按 `esc` 會列出 **No**、各背景任務與 **All**（兩個以上才有），選定後再確認一次即取消，其輸出不再回報。狀態列顯示 `Connecting` 時，一般訊息、Skill、`/pending` 與 cron 派發都不會送出；本機 `/` 指令照常可用。
 
 ### 管理 daemon
 
@@ -330,6 +336,26 @@ agen update
 ```
 
 執行 `agen` 時，若本機 daemon 尚未執行會自動啟動。
+
+### 單次執行
+
+```bash
+agen -p "摘要這次 diff" --stream
+git diff | agen -p "" --allow-edit -m auto -r high
+```
+
+`agen -p` 以新的 `temp-` session 把一則 prompt 送到 `/v1/send`（必要時自動啟動 daemon）並印出回覆；`-p` 為空時從 stdin 讀取。一律以 auto mode 執行，不會跳出確認。
+
+| 旗標 | `/v1/send` 欄位 | 預設 |
+| --- | --- | --- |
+| `-m`, `--model` | `model` | `auto` |
+| `-r`, `--reasoning` | `reasoning` | `medium` |
+| `--stream` | `stream` | 關閉 |
+| `--work-dir` | `work_dir` | 當前目錄（相對路徑以此解析） |
+| `--allow-edit` | `enable_edit` | 關閉（唯讀） |
+| `--skip-sandbox` | `enable_sandbox`（取反） | 關閉（留在沙箱）；非常危險，只能呼叫本機 daemon |
+
+加上 `--stream` 時，model、工具呼叫與 thinking 以 `⏵ Model(...)`、`⏵ Tool(...)`、`✻ ...` 印到 stderr，回覆串流到 stdout。錯誤 exit 1，取消 exit 130（daemon 端仍會把任務跑完）；`-p <prompt>` 之後若有多餘參數會直接報錯，prompt 請加引號。
 
 ### stdin MCP Server
 
@@ -371,22 +397,22 @@ curl --fail-with-body -sS \
 | TUI    | `agen`                 | 開啟或連接本機 daemon 的互動式 TUI |
 | 停止   | `agen stop`            | 停止 daemon                        |
 | 更新   | `agen update`          | 執行官方更新腳本                   |
-| Daemon | `agen --daemon [--enable-claude-code]` | 直接啟動 daemon（可附帶啟用 claude-code） |
-| Claude Code | `agen --enable-claude-code` | 啟用 claude-code provider 並開啟 TUI；daemon 須先以 `agen stop` 停止 |
+| 單次執行 | `agen -p <prompt> [flags]` | 經 `/v1/send` 送出一則 prompt 並印出回覆（見[單次執行](#單次執行)） |
+| Daemon | `agen --daemon`        | 直接啟動 daemon                    |
 | MCP    | 非 TTY stdin 的 `agen` | 從 stdin 提供 MCP JSON-RPC         |
 
 ## HTTP API 參考
 
-Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 endpoint 另外要求請求來源必須是 `127.0.0.1`／`::1`（`localhostOnly()` 守衛）——這些會動到 credential、設定檔或行程生命週期，設計上是給同機器的 dashboard 用，不是給遠端 client 呼叫。
+Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 endpoint 另外要求請求來源必須是 `127.0.0.1`／`::1`（`localhostOnly()` 守衛）——這些會動到 credential、設定檔或行程生命週期，設計上是給同機器的 dashboard 用，不是給遠端 client 呼叫。帶非 loopback `Origin` 標頭的 `POST`、`PUT`、`PATCH`、`DELETE` 一律回 403；`/v1/send` 與 `/v1/chat/completions` 只接受 `Content-Type: application/json`（否則回 415），網頁無法用表單或 `text/plain` 請求觸發執行。
 
 **Agent 執行**
 
 | Method | Path                   | 說明                                                                                                                                                                                                                                                                                         |
 | ------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/v1/send`             | 執行 Agent：`{content, session_id?, sse?, persist?, model?, reasoning?, work_dir?, skill?, system_prompt?, exclude_tools?}`。`model` 與 `reasoning` 只作用於這次請求，不改 session 預設：未帶 `model` 用 session 模型，`auto` 即使 session 已固定模型仍交給 dispatcher，未帶 `reasoning` 用 session 等級。未帶 `session_id` 時建立 `temp-`（`persist:true` 則 `chat-`）session；該 session 已在執行時改為 steer，回 `{session_id, steer:true}`；`content` 為空回 400 |
+| `POST` | `/v1/send`             | 執行 Agent：`{content, stream?, session_id?, persist?, model?, reasoning?, work_dir?, skill?, rule?, task_hash?, exclude_tools?, enable_edit?, enable_sandbox?, enable_markdown?}`。`model` 與 `reasoning` 只作用於這次請求，不改 session 預設：未帶 `model` 用 session 模型，`auto` 即使 session 已固定模型仍交給 dispatcher，未帶 `reasoning` 用 session 等級。`stream:true` 回 SSE 事件；`rule` 附加額外系統指示；`task_hash` 在該 pending 任務仍有背景 job 時接續它。未帶 `session_id` 時建立 `temp-`（`persist:true` 則 `chat-`）session；該 session 已在執行時改為 steer，回 `{session_id}`；`content` 為空回 400。帶 `enable_edit` 或 `enable_sandbox`，或沒有網頁確認 listener 時以 auto mode 執行：一律不跳確認；未設 `enable_edit:true` 時唯讀（擋寫入與非唯讀指令），未設 `enable_sandbox:false` 時留在沙箱（擋 `$HOME` 外路徑、`sudo`、`sandbox:false`）；不提供 `ask_user`、`store_secret` 與背景工具，開始時清除該 session 的路徑授權；被擋的呼叫回傳可放行的參數。`enable_sandbox:false` 非常危險：agent 可不經確認使用 `sudo`、`$HOME` 外路徑與 `sandbox:false`，因此只接受本機（loopback）呼叫，其他來源一律 403。`enable_markdown:false`（預設 `true`）要求不含 markdown 語法的純文字回覆。舊參數 `sse`、`system_prompt`、`pending_task` 仍視為 `stream`、`rule`、`task_hash` 的別名，之後會移除 |
 | `POST` | `/v1/chat/completions` | OpenAI 相容且 stateless 的 chat completions                                                                                                                                                                                                                                                  |
 | `GET`  | `/v1/info/version`     | 編譯時寫入的版本（`{version, dev}`）；未帶 tag 的建置 `dev` 為 true                                                                                                                                                                                                                          |
-| `GET`  | `/v1/log`              | SSE：不帶參數時只送 daemon `slog`（`EventDaemonLog`，`source` 為層級），與 TUI 標題列同一份來源；內含新對話驗證碼，故 daemon frame 僅對 loopback 來源附加。`?sessions=a,b` 於同一條連線加上該些 session 的事件，`replay=0` 略過回放，`daemon=0` 去掉 daemon frame。遠端來源必須帶 `sessions` |
+| `GET`  | `/v1/log`              | SSE：不帶參數時只送 daemon `slog`（`EventDaemonLog`，`source` 為層級），與 TUI 標題列同一份來源；內含新對話驗證碼，故 daemon frame 僅對 loopback 來源附加。`?sessions=a,b` 於同一條連線加上該些 session 的事件，`replay=0` 略過回放，`daemon=0` 去掉 daemon frame。遠端來源必須帶 `sessions`。session 事件附後端格式化好的文字：`trace`（思考或工具呼叫行）、`tool_display`（工具呼叫與確認），確認事件另附 `confirm_title`、`restricted_lines`、`restricted_note`，各介面顯示的用詞一致 |
 | `GET`  | `/v1/voice/live`       | **local** — WebSocket，轉接 Gemini Live 即時語音（需 `GEMINI_API_KEY`，缺少時以 close code 4401 關閉）；模型可透過 `send_to_chat`、`read_history`、`read_task` 與主對話互動 |
 | `GET`  | `/v1/mcp/tools`        | 列出已連線 MCP server 註冊的工具（`mcp__*`）                                                                                                                                                                                                                                                 |
 
@@ -450,7 +476,8 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | `GET`    | `/v1/providers/quota`            | **local** — `claude-code`（解析 `claude -p /usage`，不打 API）、`codex`、`grok-oauth`、`copilot` 的剩餘額度與 `openrouter`、`deepseek` 的剩餘餘額，回 `{quota:{<id>:{remaining:{five_hour?,week?,total?,balance?}}}}`，平行取得，上限 10 秒。成功的結果在 ToriiDB 快取 3 分鐘並帶 `cached:true`；`?refresh=1` 清除快取重讀，存入 API key 或完成 OAuth 也會自動清掉該 provider 的快取。取不到的 provider 回 `error` 而非 `remaining`，且不進快取 |
 | `GET`    | `/v1/model/quota?model=<name>`   | **local** — 單一模型所屬 provider 的最新剩餘額度，每次呼叫都重新查詢（逾時 15 秒）：`{"quota":"61%/40%"}`（5h／週／總額度百分比以 `/` 串接，餘額型為 `$12.34`），provider 不提供額度時回 `""`。Web 聊天在每次完成後呼叫 |
 | `POST`   | `/v1/provider/:provider/key`     | **local** — 設定 API key。其他 provider 的 body 為 `{api_key}`，存為 `<PROVIDER>_API_KEY`；`cloudflare` 另需 `account_id`（可選 `gateway_id`）；`compat` 的 body 為 `{name, url, api_key?}`：網址記錄到 `compats`，有帶 key 時存為 `COMPAT_<NAME>_API_KEY`；不支援 API key 的 provider 回 400                                                                                                                                                                                                                                     |
-| `GET`    | `/v1/provider/:provider/oauth`   | **local** — SSE OAuth 登入：`copilot` 為 device code（送 `{url, user_code}`），`codex`／`grok-oauth` 送瀏覽器 `{url}`，`claude-code` 只檢查 `claude` 執行檔；結束送 `{done, ok, error?}`，不支援 OAuth 的 provider 回 400 |
+| `GET`    | `/v1/provider/:provider/oauth`   | **local** — SSE OAuth 登入：`copilot` 為 device code（送 `{url, user_code}`）；`codex` 送瀏覽器 `{url}`，並由同時進行的 device code 登入送 `{device_url, user_code}`；`grok-oauth` 送瀏覽器 `{url}`；`claude-code` 只檢查 `claude` 執行檔；結束送 `{done, ok, error?}`，不支援 OAuth 的 provider 回 400 |
+| `POST`   | `/v1/provider/:provider/oauth/code` | **local** — `{code}`，僅 `grok-oauth`。瀏覽器連不到 loopback listener 時，以 xAI 顯示的授權碼或 callback URL 完成等待中的登入；其他 provider、空值或驗證失敗回 400 |
 | `DELETE` | `/v1/provider/:provider/oauth`   | **local** — 清除已儲存的 provider 登入（`codex`、`copilot`、`grok-oauth`）。token 的 keychain 鍵名由 OAuth 套件自己持有（`CODEX_OAUTH_TOKEN` 與各自的舊名）,因此改走它們的 `ClearToken`,而非 `DELETE /v1/key`                                                                                                                                                            |
 | `GET`    | `/v1/provider/:provider/models`  | **local** — 以該 provider 的憑證向其官方端點列出可用模型（`claude-code` 透過本機 `claude` CLI），回 `{models, windows}`；`windows` 為 model id 對 `{in, out}` context 大小的對照，取自 `llm-io.agenvoy.com`，查無資料的模型不會出現。本機／自訂端點名稱（`ollama`、`llama.cpp` 或已記錄的名稱）會向該端點的 `GET /models` 查詢。上游失敗回 502，不支援列模型的 provider 回 400；清單快取 15 分鐘 |
 | `GET`    | `/v1/provider/:provider/console` | **local** — 以 302 導向 provider 的主控台：`?page=key` 為 API key 頁、`plan` 為訂閱方案頁；provider 有方案頁時預設 `plan`，否則 `key`；該頁不存在時回 404                                                                                                                                                                                                                |
@@ -535,10 +562,12 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | 排程       | `schedules`                       | 查詢、改期或取消定時與週期任務（`mode=list\|patch\|remove\|write`）                                                                                                                                                                                                                       |
 | 檔案       | `find_files`                      | 以目錄、檔名樣式或內容定位（`mode=list\|glob\|search`）；glob 依修改時間由新到舊排列；search 以 `offset`／`limit` 分頁（每頁 256），回傳符合的路徑、次數與前 5 個命中行號（`output=files`），或帶行號的符合行，可加 `context` 前後文（`output=content`）；`multiline` 讓 regex 可跨行比對 |
 |            | `read_files`                      | 批次讀取文字、PDF、DOCX、PPTX、CSV／TSV、圖片與音訊／影片（回傳逐字稿）；預設 2048 行，文字檔被截斷時結尾會標示下一個 `offset`；`around` 讀取文字檔指定行號前後各 `context` 行（預設 20）；同一路徑可在一次呼叫中重複出現 |
-|            | `edit_file`                       | 建立、修改、移置或還原檔案（`mode=write\|patch\|remove\|restore`）；覆寫或修改既有檔案前，必須在同一次執行中先以 `read_files` 讀過，且檔案之後未在磁碟上被改動                                                                                                                            |
+|            | `edit_file`                       | 建立或修改檔案（`mode=write\|patch`）；覆寫或修改既有檔案前，必須在同一次執行中先以 `read_files` 讀過，且檔案之後未在磁碟上被改動 |
+|            | `remove_file`                     | 把單一檔案移到暫存而非直接刪除，可用 `restore_file` 找回；一律要求確認 |
+|            | `restore_file`                    | 還原紀錄中的某個版本（`file_history` 的 `version`），或把某個 task 動過的檔案全部還原到執行前（`task_id`，可用 `path` 限定單檔）；一律要求確認 |
 |            | `file_history`                    | 工具改過的每個檔案的版本紀錄（`mode=list\|read`）                                                                                                                                                                                                                                         |
 |            | `write_result`                    | 將長篇成果存為 `report-<時間>.md` 或 `.html`（`format=md\|html`），放在輸出資料夾（`output_dir`；預設 `~/Downloads`，不存在時為 `~/.config/agenvoy/download`）；模型只提供內容。`html` 寫入前會先檢查：須掛載 QuickUI（`new QUI(`）、inline script 須可解析、script 不得直接寫 markup（`innerHTML`、`createElement` 等）、`T.init` 目標 id 須存在、`{{ }}` 與 `:if` 不得含運算式；任一不符即不寫入並回傳問題清單（未掛 QuickUI 時另附 `html_render` 規則） |
-| 執行環境   | `run_command`                     | 在工作目錄以沙箱約束執行二進位並等待結束；watcher（`--watch`、`chokidar`，或會啟動 watcher 的 package script，含經 `sh -c` 與 `package.json` 展開者）在啟動前即拒絕，改由 `background_command` 執行。argv 命中唯讀白名單（`configs/jsons/read_only_command.json`，532 條，可用 `read_only_command` 追加）時不需確認，並與其他唯讀呼叫並行執行；`sh -c`／`bash -c` 腳本須每個內層指令都命中，且不含變數賦值、`export`、`printf -v`、算術與參數展開；版本查詢條目（`--version`、`-v`）須整個 argv 相符，git 全域旗標只收明列項；其餘除非命中使用者的 allow 規則、本輪全部允許，或處於 [auto 模式](#權限模式)，否則跳確認。argv 任一參數落在敏感路徑（`sensitive_path.json`）即取消命中，所以 `cat` 雖在清單內，`cat ~/.aws/credentials` 仍會跳確認。條目以 `bin`、`bin sub`、`bin sub sub` 三種形式比對，第四段永不參與比對，更長的形式只能收斂成這三種。沙箱禁網，`git clone`／`fetch`／`push`、`npm install`、`pip install`、`go mod download`、`curl`、`wget` 都會解析不到主機，除非該次呼叫帶 `network: true`；在 `⏸ safe` 下帶了就跳確認，也不再比對唯讀白名單。沙箱只允許寫入 `$HOME`，需寫入其外的絕對路徑時於 `write_paths` 宣告；root 擁有的目標以 argv `['sudo', '<binary>', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），會以 `sudo -n` 在沙箱外執行；`sandbox: false` 以使用者身分在沙箱外執行（Homebrew 需要，且不可加 sudo）。三者都須經使用者以系統密碼核准。權限錯誤找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。`rm` 改為移至垃圾桶（`sudo rm` 會直接刪除）；macOS 的 `open` 改走 `open_file`。單純抓 URL 走 `fetch_page`／`http_request`；裝系統套件用 `sudo` 加 system prompt Host OS 行列出的套件管理器（該行也列出作業系統版本），或以 `sandbox: false` 執行 `brew` |
+| 執行環境   | `run_command`                     | 在工作目錄以沙箱約束執行二進位並等待結束；watcher（`--watch`、`chokidar`，或會啟動 watcher 的 package script，含經 `sh -c` 與 `package.json` 展開者）在啟動前即拒絕，改由 `background_command` 執行。argv 命中唯讀白名單（`configs/jsons/read_only_command.json`，532 條，可用 `read_only_command` 追加）時不需確認，並與其他唯讀呼叫並行執行；`sh -c`／`bash -c` 腳本須每個內層指令都命中，且不含變數賦值、`export`、`printf -v`、算術與參數展開；版本查詢條目（`--version`、`-v`）須整個 argv 相符，git 全域旗標只收明列項；其餘除非命中使用者的 allow 規則、本輪全部允許，或處於 [auto 模式](#權限模式)，否則跳確認。argv 任一參數落在敏感路徑（`sensitive_path.json`）即取消命中，所以 `cat` 雖在清單內，`cat ~/.aws/credentials` 仍會跳確認。條目以 `bin`、`bin sub`、`bin sub sub` 三種形式比對，第四段永不參與比對，更長的形式只能收斂成這三種。沙箱禁網，`git clone`／`fetch`／`push`、`npm install`、`pip install`、`go mod download`、`curl`、`wget` 都會解析不到主機，除非該次呼叫帶 `network: true`；在 `⏸ safe` 下帶了就跳確認，也不再比對唯讀白名單。沙箱只允許寫入 `$HOME`，需寫入其外的絕對路徑時於 `write_paths` 宣告；root 擁有的目標以 argv `['sudo', '<binary>', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），會以 `sudo -n` 在沙箱外執行，取消時由 `sudo` 轉送 SIGTERM，root 程序會一併結束；`sandbox: false` 以使用者身分在沙箱外執行（Homebrew 需要，且不可加 sudo）。三者都須經使用者以系統密碼核准。權限錯誤找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。`rm` 改為移至垃圾桶（`sudo rm` 會直接刪除）；macOS 的 `open` 改走 `open_file`。單純抓 URL 走 `fetch_page`／`http_request`；裝系統套件用 `sudo` 加 system prompt Host OS 行列出的套件管理器（該行也列出作業系統版本），或以 `sandbox: false` 執行 `brew` |
 |            | `open_file`                       | 以系統預設處理程式開啟檔案、URL 或系統設定（如 `x-apple.systempreferences:`）；本機檔案免確認，URL 一律跳確認 |
 |            | `download_file`                   | 下載二進位資產至磁碟                                                                                                                                                                                                                                                                      |
 | Agent 協調 | `subagents`                       | 將子任務委派到獨立 session（`mode=invoke\|list`）；invoke 必填 `model`（可為 `auto`，未註冊或 `pass` 層級的模型會被拒絕），`reasoning` 預設 `auto`，不合法的值直接報錯；子 session 固定排除 `subagents`、`edit_file`、`write_result`、`html_template`、`generate_*`、`open_file`、`schedules`、`store_secret` 等寫檔或有持久副作用的工具 |
@@ -547,20 +576,33 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | 網路       | `search_web`                      | DuckDuckGo 結果與 Google News 標題一次取得；有 decision model 時剔除與請求無關的結果                                                                                                                                                                                                                                                |
 |            | `fetch_page`                      | 取得完整頁面內容（markdown／html／json）；agent 會先查看網站的 `/llms.txt`，有列出對應的 `.md` 頁面就優先抓取；有 decision model 時，markdown 會去除頁面雜訊，與請求無關的頁面不交給模型                                                                                                                                                                                                                                                  |
 |            | `http_request`                    | 原始 HTTP 呼叫，含 multipart 上傳                                                                                                                                                                                                                                                         |
-|            | `public_api_list`                 | 免金鑰公開 API 目錄：列出分類，或某分類下每個 API 的說明、HTTPS 標記與文件網址；找到合適的就以 `fetch_page` 讀文件、`http_request` 呼叫，不建工具 |
+|            | `public_api_list`                 | 免金鑰公開 API 目錄：列出分類，或某分類下每個 API 的說明、HTTPS 標記與文件網址；找到合適的就以 `fetch_page` 讀文件、`http_request` 呼叫，不建工具。需求明確對應分類時直接查該分類；分類不存在時錯誤附上分類清單 |
 |            | `html_template`                   | HTML 頁面範例庫（`mode=list\|read`）                                                                                                                                                                                                                                                      |
 | 狀態       | `chat_history`                    | 本 session 的執行紀錄與對話（`mode=list\|tool_list\|tool\|read\|search`）                                                                                                                                                                                                                 |
-|            | `error_history`                   | 跨 session 保留的工具失敗紀錄（`mode=search\|read\|write`）                                                                                                                                                                                                                               |
+|            | `error_history`                   | 跨 session 保留的工具失敗紀錄與對應解法（`mode=search\|read`） |
+|            | `write_error`                     | 儲存工具失敗與解決它的方法；只保留 `outcome=resolved` |
 |            | `reasoning_guide`                 | 依 `topics` 一次取得多個主題的完整推理規則                                                                                                                                                                                                                                                               |
 | 基礎支援   | `calculate`                       | 算術、單位與匯率換算                                                                                                                                                                                                                                                                      |
 |            | `store_secret`                    | 遮蔽輸入並存入 keychain                                                                                                                                                                                                                                                                   |
 | 條件註冊   | `generate_image`                  | 文字生成圖片並存檔——image generator 為 off 時排除                                                                                                                                                                                                                                         |
 |            | `generate_audio`                  | 文字轉語音並存檔——未選 TTS 模型時排除                                                                                                                                                                                                                                                     |
 |            | `list_chatbot`、`send_to_chatbot` | 跨頻道推送——daemon 啟動時有啟用 Telegram 或 Discord 才註冊 |
-|            | `background_command`              | 在背景啟動指令，結束時帶著輸出接續任務，用於 watcher 與長時間工作；輸出行命中錯誤關鍵字（`keywords`，內建預設清單）時，指令執行中也會接續任務。執行期間的輸出寫在 `sessions/<id>/background/<task>.log`，結束後刪除——非 TUI 請求時排除 |
-|            | `background_subagents`            | 在背景啟動 subagent，完成時帶著存好的報告接續任務，用於很可能超過 5 分鐘的子任務；與 `background_command` 共用每個 session 的背景任務上限——非 TUI 請求時排除 |
+|            | `background_command`              | 在背景啟動指令，結束時回報輸出，用於 watcher 與長時間工作；輸出行命中錯誤關鍵字（`keywords`，內建預設清單）時，指令執行中也會回報。回報方式見[背景任務](#背景任務)。執行期間的輸出寫在 `sessions/<id>/background/<task>.log`，結束後刪除——非 TUI 請求時排除 |
+|            | `background_subagents`            | 在背景啟動 subagent，完成時回報存好的報告路徑，用於很可能超過 5 分鐘、或使用者要求晚點再通知的子任務；回報方式見[背景任務](#背景任務)；與 `background_command` 共用每個 session 的背景任務上限——非 TUI 請求時排除 |
 
-工具依名稱排序，tool payload 只帶 `find_tools`、`run_tool`、`reasoning_guide`、`write_todo`、`chat_history`、`ask_user`、`write_result` 七個完整 schema，其餘工具只以名稱列在每輪注入的 TurnContext；模型先以 `find_tools` 取得 schema（以工具回傳內容交付，不寫回 tool payload），再經 `run_tool(name, args)` 呼叫。未先取 schema 就呼叫時，執行器會自動回傳該 schema 並要求重新呼叫；直接以名稱呼叫這七個以外的工具會被拒絕。工具失敗的結果末尾附 `next:` 提示：錯誤指向憑證缺漏或被拒時指向 `store_secret`，其他情況提示改用別的方法成功後以 `error_history(mode=write)` 記錄。因此整個 session 的工具序列化結果逐位元組不變，prompt 快取得以保留。`claude-code` provider 不使用 `run_tool`：只收到工具名稱與完整的 `find_tools` schema，取得 schema 後直接以名稱呼叫。`edit_file` 的 patch 模式每個 target 只接受 `{old_string, new_string}`（另可帶 `replace_all`）；`new_string` 取代 `old_string`，插入則是在 `new_string` 開頭重複 `old_string`。所有 target 都對寫入前的磁碟原始內容比對，因此列出順序不影響結果；`old_string` 在未帶 `replace_all` 時比對到多處、兩個 target 覆蓋同一段、某個 target 的 `old_string` 出現在先前 target 的 `new_string` 內，或整批套用後會把非空檔案清空，整批都會拒絕且不寫入；`old_string` 與 `new_string` 相同的 target 會略過並在回傳中註明，內容沒有變化時不寫檔。
+工具依名稱排序，tool payload 只帶 `find_tools`、`run_tool`、`reasoning_guide`、`write_todo`、`chat_history`、`ask_user`、`write_result` 七個完整 schema，其餘工具只以名稱列在每輪注入的 TurnContext；模型先以 `find_tools` 取得 schema（以工具回傳內容交付，不寫回 tool payload），再經 `run_tool(name, args)` 呼叫。未先取 schema 就呼叫時，執行器會自動回傳該 schema 並要求重新呼叫；直接以名稱呼叫這七個以外的工具會被拒絕。工具失敗的結果末尾附 `next:` 提示：錯誤指向憑證缺漏或被拒時指向 `store_secret`，其他情況提示改用別的方法成功後以 `write_error` 記錄。因此整個 session 的工具序列化結果逐位元組不變，prompt 快取得以保留。`claude-code` provider 不使用 `run_tool`：只收到工具名稱與完整的 `find_tools` schema，取得 schema 後直接以名稱呼叫。`edit_file` 的 patch 模式每個 target 只接受 `{old_string, new_string}`（另可帶 `replace_all`）；`new_string` 取代 `old_string`，插入則是在 `new_string` 開頭重複 `old_string`。所有 target 都對寫入前的磁碟原始內容比對，因此列出順序不影響結果；`old_string` 在未帶 `replace_all` 時比對到多處、兩個 target 覆蓋同一段、某個 target 的 `old_string` 出現在先前 target 的 `new_string` 內，或整批套用後會把非空檔案清空，整批都會拒絕且不寫入；`old_string` 與 `new_string` 相同的 target 會略過並在回傳中註明，內容沒有變化時不寫檔。
+
+### 背景任務
+
+`background_subagents` 與 `background_command` 只在 TUI 請求時可用。每次呼叫開一條 leg；同一回合開的 leg 自成一組，存於 `sessions/<id>/background/job_*.json`，整組保留第一個非空的 `objective`（這組要達成什麼，需能獨立閱讀）與 `next`（拿到報告後要做什麼）。發起的任務不會等待：照常結束並寫入任務歷史。leg 回報時：
+
+| 發起的任務 | 處理方式 |
+| --- | --- |
+| 仍在執行 | 報告加入它的下一輪；在它即將結束時才送到的報告會讓它多跑一輪 |
+| 暫停或等待 `ask_user` | 報告先保留，任務恢復時一併帶入 |
+| 已結束 | 等整組 leg 全部完成，才以 `objective`、`next`、所有報告與發起任務的 id（可用 `chat_history` 讀取）另開一輪，只執行一次；報告已全部被發起任務收走的組不會執行 |
+
+取消或暫停發起的任務會停止它的 leg；單一 leg 可從 TUI 背景任務選單（`esc`）取消。每個 session 最多同時執行 `MAX_BACKGROUND_TASKS` 條 leg，兩個工具合計。
 
 ## 架構
 

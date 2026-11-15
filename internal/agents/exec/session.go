@@ -57,7 +57,7 @@ func session(ctx context.Context, meta ExecuteMeta) (*agentstypes.Session, error
 	// * step2: assemble user input
 	userInput := strings.TrimSpace(meta.Input)
 	if userInput == "" {
-		userInput = strings.TrimSpace(meta.Task)
+		userInput = strings.TrimSpace(meta.InputNoRecord)
 	}
 
 	historyInput := userInput

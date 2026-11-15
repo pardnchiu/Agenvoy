@@ -74,10 +74,13 @@ function closePendingTask(sessionId, taskHash) {
 }
 
 function pendingCard(question, index, total) {
-  const body = [_("strong", question.question || "")];
+  const body = [_("strong", question.title || "")];
 
   if (question.detail) {
     body.push(_("p", { textContent: question.detail }));
+  }
+  if (question.progress) {
+    body.push(_("p", { textContent: question.progress }));
   }
 
   const options = question.options || [];
@@ -270,11 +273,6 @@ async function renderPendingHint(sessionId) {
   const dom = chatPart("pending", sessionId);
   for (const one of tasks) {
     const title = String(one.objective || "").replace(/\s+/g, " ").trim() || one.task_hash;
-    if (one.background > 0) {
-      waitingTasks.set(sessionId, one.task_hash);
-      setInputTask(sessionId, one.task_hash);
-      continue;
-    }
     const open = _("button", { type: "button", class: "open" }, [
       _("span.material-symbols-outlined", "live_help"),
       _("p", title),

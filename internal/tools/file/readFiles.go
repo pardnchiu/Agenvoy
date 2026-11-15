@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"sync"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
@@ -42,12 +43,12 @@ Locating a file → find_files; opening it in an app → open_file.`,
 							},
 							"offset": map[string]any{
 								"type":        "integer",
-								"description": "1-based start: line for text, page for PDF, slide for PPTX, row for CSV; for an append-only log such as daemon.log, page from the end. Ignored when around is set.",
+								"description": "1-based start: line for text, page for PDF, slide for PPTX, row for CSV; for an append-only log such as daemon.log, page from the end.",
 								"default":     1,
 							},
 							"limit": map[string]any{
 								"type":        "integer",
-								"description": "How many lines (pages, slides, rows) to read from offset; a text file cut short ends with a notice naming the next offset. When find_files already gave the rows, use around instead of a wide range. Ignored when around is set.",
+								"description": "How many lines (pages, slides, rows) to read from offset; a text file cut short ends with a notice naming the next offset. When find_files already gave the rows, use around instead of a wide range.",
 								"default":     defaultReadLimit,
 							},
 							"around": map[string]any{
@@ -93,16 +94,30 @@ Locating a file → find_files; opening it in an app → open_file.`,
 				baseDir = filesystem.DownloadDir
 			}
 
-			out := make(map[string]string, len(params.Files))
-			for _, f := range params.Files {
+			contents := make([]string, len(params.Files))
+			var wg sync.WaitGroup
+			for i, f := range params.Files {
 				contextLines := defaultAroundContext
 				if f.Context != nil {
 					contextLines = *f.Context
 				}
 				content, err := readOne(ctx, e, baseDir, f.Path, f.Offset, f.Limit, f.Around, contextLines)
 				if err != nil {
-					content = "error: " + err.Error()
+					contents[i] = "error: " + err.Error()
+					continue
 				}
+				contents[i] = content
+				if len(f.Around) == 0 {
+					wg.Go(func() {
+						contents[i] = checkFileRelevance(ctx, e.SessionID, e.Objective, f.Path, content)
+					})
+				}
+			}
+			wg.Wait()
+
+			out := make(map[string]string, len(params.Files))
+			for i, f := range params.Files {
+				content := contents[i]
 				if prev, ok := out[f.Path]; ok {
 					content = prev + "\n" + content
 				}
@@ -119,9 +134,9 @@ Locating a file → find_files; opening it in an app → open_file.`,
 }
 
 func readOne(ctx context.Context, e *tooltypes.Executor, baseDir, path string, offset, limit int, around []int, contextLines int) (string, error) {
-	absPath, err := boundary.Resolve(e.SessionID, baseDir, path)
+	absPath, err := boundary.ResolveRead(e.SessionID, baseDir, path)
 	if err != nil {
-		return "", utilsmsg.Trace("boundary.Resolve", "", err)
+		return "", utilsmsg.Trace("boundary.ResolveRead", "", err)
 	}
 	if absPath == "" {
 		return "", utilsmsg.New(utilsmsg.Invalid, "path", "required")

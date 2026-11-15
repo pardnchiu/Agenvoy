@@ -45,7 +45,7 @@ func isReadOnlyArgv(argv []string) bool {
 	if matched == "" {
 		return false
 	}
-	if slices.ContainsFunc(argv[1:], filesystem.IsSensitivePath) {
+	if slices.ContainsFunc(argv[1:], filesystem.IsOffLimitsReadArg) {
 		return false
 	}
 	if bin == "git" {

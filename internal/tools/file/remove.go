@@ -47,7 +47,7 @@ func RemoveToTrash(ctx context.Context, e *tooltypes.Executor, paths []string, t
 
 	switch {
 	case len(moved) == 0 && len(failed) == 0:
-		return "", utilsmsg.New(utilsmsg.Invalid, "paths", "required when mode=remove")
+		return "", utilsmsg.New(utilsmsg.Invalid, "paths", "required")
 	case len(moved) == 0:
 		return "", utilsmsg.New(utilsmsg.Internal, "remove", "removed nothing: %s", strings.Join(failed, "; "))
 	}
@@ -57,7 +57,7 @@ func RemoveToTrash(ctx context.Context, e *tooltypes.Executor, paths []string, t
 		report += "\nnot removed: " + strings.Join(failed, "; ")
 	}
 	if len(unrecorded) > 0 {
-		report += "\nnot recorded, so edit_file(mode=restore) will not find these: " + strings.Join(unrecorded, "; ")
+		report += "\nnot recorded, so restore_file will not find these: " + strings.Join(unrecorded, "; ")
 	}
 	return report, nil
 }

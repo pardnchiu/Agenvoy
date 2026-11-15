@@ -268,7 +268,7 @@ func run(ctx context.Context, b *Bot, in go_bot_line.Input, attachInputs []go_bo
 
 	execData := exec.Prepare(exec.ExecuteMeta{
 		WorkDir:       workDir,
-		Task:          content,
+		InputNoRecord: content,
 		Input:         content,
 		SessionID:     sessionID,
 		ExcludeTools:  tools.TUIOnlyTools,

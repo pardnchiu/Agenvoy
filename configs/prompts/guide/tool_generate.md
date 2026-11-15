@@ -1,6 +1,6 @@
 ### Decide the path
 
-1. **Find an API** — `public_api_list()` → pick ≤3 relevant categories → `public_api_list(category)` each. Every listed API is keyless; prefer `https="Yes"`.
+1. **Find an API** — `public_api_list(category)` for each of ≤3 relevant categories, called directly when the request clearly fits one (weather → `Weather`, exchange rates → `Currency Exchange`); `public_api_list()` first only when no category is obvious. Every listed API is keyless; prefer `https="Yes"`.
 2. **A fitting API exists** — `fetch_page` the candidate's `url` for base URL, endpoint, params and response shape → `http_request` (as many calls as the answer needs) → answer. No tool is built; the same flow repeats next time.
 3. **Build a script tool** only outside the public list, when either holds:
    - the user supplies an API that needs a key: a key passed through `http_request` headers lands in the conversation and history, `get_key()` inside the sandbox does not;

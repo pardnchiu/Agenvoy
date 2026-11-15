@@ -63,8 +63,12 @@ func (t TUI) viewIdle() string {
 		top += renderCmdSelector(t.selector) + "\n"
 	}
 
-	if t.waitingBackground != "" && t.waitingBackground == t.currentSessionID {
-		top += warnStyle.Render(t.spinner.View()+" Waiting for background tasks") + " " + hintStyle.Render("(the reply continues here)") + "\n"
+	if t.backgroundRunning > 0 {
+		line := warnStyle.Render(fmt.Sprintf("%s %d background task(s) running", t.spinner.View(), t.backgroundRunning))
+		if !t.running {
+			line += " " + hintStyle.Render("(esc to cancel)")
+		}
+		top += line + "\n"
 	}
 
 	if t.notice != "" {
@@ -94,13 +98,13 @@ func (t TUI) viewIdle() string {
 	}
 
 	if t.connecting {
-		return top + box + "\n" + bottom + "\n " + systemStyle.Render(t.spinner.View()+" Connecting")
+		return top + box + "\n" + bottom + "\n  " + systemStyle.Render(t.spinner.View()+" Connecting")
 	}
 
-	status := " " + fastMode + confirmMode
+	status := "  " + fastMode + confirmMode
 	var right string
 	if t.quotaText != "" {
-		right = hintStyle.Render(t.quotaModel+" ") + renderQuotaBadge(t.quotaText) + " "
+		right = hintStyle.Render(t.quotaModel+" ") + renderQuotaBadge(t.quotaText)
 	}
 	if right != "" {
 		if gap := boxWidth - lipgloss.Width(status) - lipgloss.Width(right); gap >= 1 {
@@ -470,9 +474,16 @@ func (t TUI) viewPopup() string {
 		appendFooter("Enter:confirm  Esc:cancel  (input hidden)")
 
 	case popupOAuth:
+		if p.oauth != nil && !p.oauth.deadline.IsZero() {
+			left := max(time.Until(p.oauth.deadline), 0).Round(time.Second)
+			body = append(body, skillStyle.Render(fmt.Sprintf("expires in %d:%02d", int(left.Minutes()), int(left.Seconds())%60)))
+		}
 		if p.oauth != nil {
 			if p.oauth.url != "" {
 				body = append(body, hintStyle.Render("url:  ")+textStyle.Render(p.oauth.url))
+			}
+			if p.oauth.deviceURL != "" {
+				body = append(body, "", hintStyle.Render("or sign in from another device:"), hintStyle.Render("url:  ")+textStyle.Render(p.oauth.deviceURL))
 			}
 			if p.oauth.userCode != "" {
 				body = append(body, hintStyle.Render("code: ")+systemStyle.Render(p.oauth.userCode))
@@ -480,14 +491,17 @@ func (t TUI) viewPopup() string {
 		}
 		if p.oauth != nil && p.oauth.mcpServer != "" {
 			appendFooter("Enter:re-open browser  p:paste redirect URL  Esc:cancel")
+		} else if p.oauth != nil && p.oauth.codeInput {
+			p.input.SetWidth(max(width-10, 20))
+			body = append(body, hintStyle.Render("paste the code xAI shows, or the callback URL:"), p.input.View())
+			appendFooter("Enter:submit code (empty: re-open browser)  Esc:cancel")
 		} else {
 			appendFooter("Enter:re-open browser  Esc:cancel")
 		}
 	}
 
-	if len(p.questions) > 1 {
-		footer := hintStyle.Render(fmt.Sprintf("question %d/%d", p.questionIdx+1, len(p.questions)))
-		tail = append(tail, footer)
+	if p.progress != "" {
+		tail = append(tail, hintStyle.Render(p.progress))
 	}
 
 	content := popupStyle.Width(width).Render(strings.Join(body, "\n"))

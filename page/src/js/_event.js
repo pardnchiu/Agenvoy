@@ -46,7 +46,7 @@ function renderEvent(view, event) {
   }
 
   if (type === "EventReasoning") {
-    renderReasoning(view, event.text || "");
+    renderReasoning(view, event.trace);
     return;
   }
 
@@ -103,7 +103,7 @@ function renderEvent(view, event) {
     return;
   }
 
-  renderReasoning(view, formatEvent(event));
+  renderReasoning(view, event.trace);
 }
 
 function renderAnswer(view) {
@@ -163,37 +163,6 @@ function renderSuggest(view) {
   }
   view.body.appendChild(dom);
   scrollToBottom(false, view.session);
-}
-
-function formatEvent(event) {
-  const type = event.type;
-
-  if (type === "EventToolCall") {
-    const label = (event.tool_display || "").replace(/\s+/g, " ").slice(0, 120);
-    return label ? `⏵ \`${label}\`` : "";
-  }
-
-  if (type === "EventToolSkipped") {
-    return `⏵ skipped \`${event.tool_name || ""}\``;
-  }
-
-  if (type === "EventCompact") {
-    return "⏵ compacted history";
-  }
-
-  if (type === "EventExecError") {
-    return `⚠ ${event.tool_name || ""} — ${event.text || "unknown error"}`;
-  }
-
-  if (type === "EventError") {
-    return `⚠ ${event.text || "unknown error"}`;
-  }
-
-  if (type === "EventCanceled") {
-    return "⚠ canceled";
-  }
-
-  return event.text || "";
 }
 
 async function loadFollowup(view) {

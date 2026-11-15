@@ -248,6 +248,26 @@ div.popup {
       }
     }
 
+    > input.code {
+      box-sizing: border-box;
+      width: 100%;
+      height: 2.5rem;
+      padding: 0 0.875rem;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      color: var(--ink);
+      background-color: transparent;
+      border: 1px solid var(--border);
+      border-radius: 0.625rem;
+      outline: none;
+      transition: 0.15s var(--ease);
+
+      &:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-light);
+      }
+    }
+
     > label.input {
       position: relative;
       display: block;

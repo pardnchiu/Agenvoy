@@ -308,7 +308,7 @@ function dropModelLines(trace) {
 }
 
 function formatTool(body) {
-  const label = body.replace(/\s+/g, " ").slice(0, 120);
+  const label = body.replace(/\s+/g, " ");
   return label ? `⏵ \`${label}\`` : "";
 }
 

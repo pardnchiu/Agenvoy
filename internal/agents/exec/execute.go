@@ -26,7 +26,6 @@ import (
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	historystore "github.com/pardnchiu/agenvoy/internal/runtime/store"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	sessionmanager "github.com/pardnchiu/agenvoy/internal/session"
@@ -50,7 +49,7 @@ type ExecuteMeta struct {
 	Skill             *skill.Skill
 	SkillName         string
 	SkillScanner      *runtime.SkillScanner
-	Task              string
+	InputNoRecord     string // NOTE: 不紀錄呼叫，給 completion 使用
 	Input             string
 	SessionID         string
 	ImageInputs       []string
@@ -256,7 +255,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	exec.IgnoreHistory = data.IgnoreHistory
 	exec.Objective = strings.TrimSpace(data.Input)
 	if exec.Objective == "" {
-		exec.Objective = strings.TrimSpace(data.Task)
+		exec.Objective = strings.TrimSpace(data.InputNoRecord)
 	}
 
 	keepPending := true
@@ -268,7 +267,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				exec.Objective = strings.TrimSpace(info.Objective)
 			}
 		} else {
-			objective := data.Task
+			objective := data.InputNoRecord
 			if objective == "" {
 				if s, ok := session.UserMessage.Content.(string); ok {
 					objective = s
@@ -282,15 +281,6 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 					slog.Debug("interactive.WriteTodos",
 						slog.String("session", session.ID),
 						slog.String("error", err.Error()))
-				}
-				return
-			}
-			if running, unreported := interactive.BackgroundState(session.ID, exec.PendingTask); running+unreported > 0 {
-				interactive.SaveToolResults(session.ID, exec.PendingTask, windowHash, nil, exec.EditedFiles())
-				event := agenttypes.Event{Type: agenttypes.EventPending, Text: exec.PendingTask, TaskHash: exec.PendingTask, PendingSession: session.ID, ToolName: interactive.BackgroundTool}
-				events <- event
-				if deliverTo := deliverFor(ctx, session.ID); deliverTo != session.ID {
-					pubsub.Pub(deliverTo, event)
 				}
 				return
 			}
@@ -316,8 +306,12 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	if !audiotool.TTSEnabled() {
 		data.ExcludeTools = append(data.ExcludeTools, "generate_audio")
 	}
-	if !interactive.BackgroundAllowed(ctx) {
+	autoMode := agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff
+	if !interactive.BackgroundAllowed(ctx) || autoMode {
 		data.ExcludeTools = append(data.ExcludeTools, "background_command", "background_subagents")
+	}
+	if autoMode {
+		data.ExcludeTools = append(data.ExcludeTools, "ask_user", "store_secret")
 	}
 	if (cfg == nil || !cfg.TelegramEnabled || go_pkg_keychain.Get("TELEGRAM_TOKEN") == "") &&
 		(cfg == nil || !cfg.DiscordEnabled || go_pkg_keychain.Get("DISCORD_TOKEN") == "") {
@@ -466,7 +460,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 		if execCtx.Err() != nil {
 			events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
 			if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
-				interactive.DeletePending(session.ID, exec.PendingTask)
+				interactive.CancelPending(session.ID, exec.PendingTask)
 			}
 			return execCtx.Err()
 		}
@@ -475,6 +469,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			session.ToolHistories = append(session.ToolHistories, go_llm_router.Message{Role: "user", Content: formatSteerInjection(pending)})
 			events <- agenttypes.Event{Type: agenttypes.EventUserInjected, Text: raw}
 		}
+		injectBackgroundReport(session, exec.PendingTask, events)
 		if firstAttempt {
 			firstAttempt = false
 		} else if !compactFailed && lastInputTokens >= compact.CheckThreshold(data.Agent.Name()) {
@@ -515,7 +510,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				stopSend()
 				events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
 				if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
-					interactive.DeletePending(session.ID, exec.PendingTask)
+					interactive.CancelPending(session.ID, exec.PendingTask)
 				}
 				return execCtx.Err()
 			case out := <-resultCh:
@@ -531,7 +526,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			if execCtx.Err() != nil {
 				events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
 				if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
-					interactive.DeletePending(session.ID, exec.PendingTask)
+					interactive.CancelPending(session.ID, exec.PendingTask)
 				}
 				return execCtx.Err()
 			}
@@ -606,7 +601,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				case <-execCtx.Done():
 					events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
 					if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
-						interactive.DeletePending(session.ID, exec.PendingTask)
+						interactive.CancelPending(session.ID, exec.PendingTask)
 					}
 					return execCtx.Err()
 				case <-time.After(configs.SEND_TIMEOUT_RETRY_INTERVAL):
@@ -625,7 +620,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				case <-execCtx.Done():
 					events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
 					if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
-						interactive.DeletePending(session.ID, exec.PendingTask)
+						interactive.CancelPending(session.ID, exec.PendingTask)
 					}
 					return execCtx.Err()
 				case <-time.After(retryWait):
@@ -663,8 +658,9 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			if isTimeout {
 				userMsg = fmt.Sprintf("upstream %s timed out (%s) and no healthy fallback model is available.", modelName, sendElapsed)
 			} else {
-				userMsg = fmt.Sprintf("upstream %s failed and no healthy fallback model is available: %s", modelName, err.Error())
+				userMsg = fmt.Sprintf("upstream %s failed and no healthy fallback model is available: %s.", modelName, err.Error())
 			}
+			userMsg = interactive.PendingFlag + " " + userMsg
 			slog.Error("data.Agent.Send failed, no fallback",
 				slog.String("session", session.ID),
 				slog.String("error", err.Error()))
@@ -828,6 +824,9 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			if pending := getSteer(session.ID); len(pending) > 0 {
 				session.ToolHistories = append(session.ToolHistories, go_llm_router.Message{Role: "user", Content: formatSteerInjection(pending)})
 				events <- agenttypes.Event{Type: agenttypes.EventUserInjected, Text: strings.Join(pending, "\n")}
+				continue
+			}
+			if injectBackgroundReport(session, exec.PendingTask, events) {
 				continue
 			}
 

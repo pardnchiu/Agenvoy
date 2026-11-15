@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
 	agentsexecallowtool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
@@ -31,6 +32,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
+	"github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
 
 const foregroundOrigin = "cli-"
@@ -141,7 +143,7 @@ func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, 
 	if turnAllowAll {
 		return false
 	}
-	if isDestructiveMode(toolArgs) {
+	if toolName == "remove_file" || toolName == "restore_file" || isDestructiveMode(toolArgs) {
 		return true
 	}
 	if toolName == "open_file" && isOpenFileURL(toolArgs) {
@@ -169,8 +171,7 @@ var readOnlyModes = map[string]bool{
 }
 
 var destructiveModes = map[string]bool{
-	"remove":  true,
-	"restore": true,
+	"remove": true,
 }
 
 func isDestructiveMode(toolArgs string) bool {
@@ -280,6 +281,7 @@ func isGet(argsJSON string) bool {
 
 func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_router.OutputChoices, sessionData *agenttypes.Session, events chan<- agenttypes.Event, allowAll bool, alreadyCall map[string]string, turnAllowAll *bool) (*agenttypes.Session, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
+	exec.BackgroundGroup = go_pkg_utils.UUID()
 
 	calls := choice.Message.ToolCalls
 	slots := make([]toolSlot, len(calls))
@@ -429,6 +431,21 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			if agenttypes.NoPromptFrom(ctx) {
 				proceed = false
 				reason = "a background subagent leg cannot ask the user for confirmation; return what you gathered and state that this call still needs the user's approval"
+			} else if mode := agenttypes.AutoModeFrom(ctx); mode != agenttypes.AutoModeOff {
+				var missing []string
+				if (needsConfirm || irreversible || len(outsidePaths) > 0) && mode&agenttypes.AutoModeAllowEdit == 0 {
+					missing = append(missing, "enable_edit: true (this run is read-only: writes and non-read-only commands are refused)")
+				}
+				if len(restrictedList) > 0 && mode&agenttypes.AutoModeSkipSandbox == 0 {
+					missing = append(missing, "enable_sandbox: false (paths outside $HOME, sudo, sandbox: false)")
+				}
+				if len(missing) == 0 {
+					approved = true
+					verified = len(restrictedList) > 0
+				} else {
+					proceed = false
+					reason = "this auto-mode run cannot approve this call; rerun with " + strings.Join(missing, " and ")
+				}
 			} else if runtime.HasListener(ctx, origin) {
 				askCtx, cancelAsk := context.WithCancel(ctx)
 				if agenttypes.OriginFrom(ctx) != foregroundOrigin {
@@ -461,7 +478,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 				}
 				if errors.Is(err, context.Canceled) {
 					if errors.Is(context.Cause(ctx), runtime.ErrUserCanceled) {
-						interactive.DeletePending(sessionData.ID, exec.PendingTask)
+						interactive.CancelPending(sessionData.ID, exec.PendingTask)
 					}
 					return sessionData, alreadyCall, err
 				}
@@ -474,7 +491,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 						Text:     reply.Error.Error(),
 					}
 					if errors.Is(reply.Error, runtime.ErrUserCanceled) {
-						interactive.DeletePending(sessionData.ID, exec.PendingTask)
+						interactive.CancelPending(sessionData.ID, exec.PendingTask)
 					}
 					if exec.CancelExecution != nil {
 						exec.CancelExecution()
@@ -649,7 +666,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			}
 		}
 
-		if s.name == "edit_file" && s.execErr == "" {
+		if (s.name == "edit_file" || s.name == "remove_file" || s.name == "restore_file") && s.execErr == "" {
 			invalidateReadFileCache(alreadyCall, s.args)
 		}
 		if isWriteLikeTool[s.name] && s.execErr == "" {
@@ -736,10 +753,14 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, s *toolSlot, eve
 	}
 	var progressMu sync.Mutex
 	progressDone := false
+	redactChunk := secret.Stream()
 	progressCtx := tooltypes.WithProgress(ctx, func(chunk string) {
 		progressMu.Lock()
 		defer progressMu.Unlock()
 		if progressDone {
+			return
+		}
+		if chunk = redactChunk(chunk); chunk == "" {
 			return
 		}
 		events <- agenttypes.Event{
@@ -943,7 +964,7 @@ func failureNext(execErr string) string {
 	if credentialFailure.MatchString(execErr) {
 		return "\nnext: credential missing or rejected → store_secret with the key name from this error, then call the failed tool again"
 	}
-	return "\nnext: once a different fix works, record it → error_history(mode=write, outcome=resolved)"
+	return "\nnext: once a different fix works, record it → write_error(outcome=resolved)"
 }
 
 func outsideHome(paths []string) []string {

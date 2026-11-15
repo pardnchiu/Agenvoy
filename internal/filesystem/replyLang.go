@@ -128,18 +128,22 @@ func ApplyReplyLang(template string) string {
 
 var langRefusal = getLangRefusal()
 
-func getLangRefusal() map[string]string {
-	var dic map[string]string
+func getLangRefusal() map[string]map[string]string {
+	var dic map[string]map[string]string
 	if err := json.Unmarshal(configs.RefusalMessages, &dic); err != nil {
-		slog.Warn("embedded poison_refusal",
+		slog.Warn("[Internal] refusal_messages: embedded JSON cannot be parsed",
 			slog.String("error", err.Error()))
 	}
 	return dic
 }
 
-func RefusalMessage() string {
-	if text, ok := langRefusal[CanonicalReplyLang(ConfigReplyLang)]; ok {
+func RefusalMessage(rule string) string {
+	dic, ok := langRefusal[rule]
+	if !ok {
+		dic = langRefusal["default"]
+	}
+	if text, ok := dic[CanonicalReplyLang(ConfigReplyLang)]; ok {
 		return text
 	}
-	return langRefusal["en"]
+	return dic["en"]
 }

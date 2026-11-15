@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	goruntime "runtime"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	oauthgrok "github.com/pardnchiu/go-llm-router/core/oauth/grok"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -63,6 +66,7 @@ type Popup struct {
 	multiline      bool
 	skipWithReason bool
 	restricted     []string
+	restrictedMsg  []string
 	needPassword   bool
 	passwordPrompt bool
 	explain        string
@@ -72,6 +76,7 @@ type Popup struct {
 
 	questions   []runtime.Question
 	questionIdx int
+	progress    string
 	answers     []any
 
 	onConfirm func(chosen string) any
@@ -92,6 +97,9 @@ type oauthState struct {
 	mcpServer string
 	url       string
 	userCode  string
+	deviceURL string
+	codeInput bool
+	deadline  time.Time
 	cancel    context.CancelFunc
 }
 
@@ -141,7 +149,22 @@ func (t TUI) updateOAuthPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if p.oauth.cancel != nil {
 			p.oauth.cancel()
 		}
+		if p.oauth.codeInput {
+			t.modelAdd = nil
+			return t.closePopup(), nil
+		}
 	case tea.KeyEnter:
+		if p.oauth.codeInput {
+			if code := strings.TrimSpace(p.input.Value()); code != "" {
+				if err := oauthgrok.Submit(code); err != nil {
+					p.status = errorStyle.Render(fmt.Sprintf("[Invalid] code: %v", err))
+					return t, nil
+				}
+				p.input.Reset()
+				p.status = hintStyle.Render("code submitted, signing in...")
+				return t, nil
+			}
+		}
 		if p.oauth.url != "" {
 			openBrowser(p.oauth.url)
 		}
@@ -149,6 +172,11 @@ func (t TUI) updateOAuthPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if p.oauth.mcpServer != "" && strings.EqualFold(string(msg.Runes), "p") {
 			return t.openMcpOAuthPaste(p.oauth)
 		}
+	}
+	if p.oauth.codeInput && msg.Type != tea.KeyEnter && msg.Type != tea.KeyEsc {
+		var cmd tea.Cmd
+		p.input, cmd = p.input.Update(msg)
+		return t, cmd
 	}
 	return t, nil
 }
@@ -173,6 +201,22 @@ func openBrowser(link string) {
 			slog.String("url", link),
 			slog.String("error", err.Error()))
 	}
+}
+
+func hasGUI() bool {
+	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_TTY") != "" {
+		return false
+	}
+	switch goruntime.GOOS {
+	case "darwin":
+		return true
+	case "linux":
+		if utils.IsWSL() {
+			return linuxOpenCommand("") != nil
+		}
+		return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
+	}
+	return false
 }
 
 func linuxOpenCommand(link string) *exec.Cmd {
@@ -215,8 +259,8 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				p.passwordPrompt = true
 				p.title = "System password:"
 				p.styledLines = nil
-				for _, one := range p.restricted {
-					p.styledLines = append(p.styledLines, warnStyle.Render("⚠ "+one))
+				for _, one := range p.restrictedMsg {
+					p.styledLines = append(p.styledLines, warnStyle.Render(one))
 				}
 				p.input = newPopupInput("", false)
 				return t, nil
@@ -686,10 +730,7 @@ func newPopup(pending Pending) *Popup {
 	id, req := pending.id, pending.request
 	switch req.Kind {
 	case runtime.KindToolConfirm:
-		display := utils.FormatToolEvent(req.ToolName, req.ToolArgs)
-		if display == "" {
-			display = req.ToolArgs
-		}
+		msg := utils.FormatConfirm(req.ToolName, req.ToolArgs, req.Restricted, !pending.needPassword)
 		options := []string{
 			"Yes",
 			"Yes  don't ask again",
@@ -709,8 +750,8 @@ func newPopup(pending Pending) *Popup {
 		p := &Popup{
 			pendingId:    id,
 			kind:         popupConfirm,
-			title:        fmt.Sprintf("Run %s?", utils.ToolName(req.ToolName)),
-			subtitle:     display,
+			title:        msg.Title,
+			subtitle:     msg.Display,
 			options:      options,
 			restricted:   req.Restricted,
 			needPassword: pending.needPassword,
@@ -718,15 +759,15 @@ func newPopup(pending Pending) *Popup {
 		p.explain = req.Explain
 		p.commandLine = true
 		if len(req.Restricted) > 0 {
-			p.title = fmt.Sprintf("Run %s outside the allow list?", utils.ToolName(req.ToolName))
-			for _, one := range req.Restricted {
-				p.styledLines = append(p.styledLines, warnStyle.Render("⚠ "+one))
+			p.restrictedMsg = msg.RestrictedLines
+			for _, one := range msg.RestrictedLines {
+				p.styledLines = append(p.styledLines, warnStyle.Render(one))
 			}
 			p.styledLines = append(p.styledLines, "")
 			if !pending.needPassword {
-				p.styledLines = append(p.styledLines, okayStyle.Render("sudo credentials still valid — no password needed"))
+				p.styledLines = append(p.styledLines, okayStyle.Render(msg.RestrictedNote))
 			} else {
-				p.styledLines = append(p.styledLines, userStyle.Render("system password required — you will be prompted after Yes"))
+				p.styledLines = append(p.styledLines, userStyle.Render(msg.RestrictedNote))
 			}
 		}
 		switch req.ToolName {
@@ -777,8 +818,10 @@ func newPopup(pending Pending) *Popup {
 
 func (p *Popup) loadCurrentQuestion() {
 	q := p.questions[p.questionIdx]
-	p.title = q.Question
-	p.subtitle = q.Detail
+	ask := utils.FormatAskUser(q.Question, q.Detail, p.questionIdx, len(p.questions))
+	p.title = ask.Title
+	p.subtitle = ask.Detail
+	p.progress = ask.Progress
 	p.input = newPopupInput("", false)
 	p.multi = nil
 

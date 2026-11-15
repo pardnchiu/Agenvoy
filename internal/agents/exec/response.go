@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -31,7 +32,7 @@ func extractThinkTag(content string) (think, rest string) {
 }
 
 func guardrailRefusal(sessionID, model, content string) string {
-	rule := guardrailRule(content)
+	rule, command := guardrailRule(content)
 	runes := []rune(content)
 	head := runes[:min(len(runes), configs.LOG_HEAD_RUNES)]
 	slog.Debug("refusal",
@@ -40,22 +41,28 @@ func guardrailRefusal(sessionID, model, content string) string {
 		slog.String("rule", rule),
 		slog.String("head", string(head)))
 
-	refusal := filesystem.RefusalMessage()
+	if rule == "secret-exfil" && command != "" {
+		return fmt.Sprintf(filesystem.RefusalMessage(rule), command)
+	}
+	refusal := filesystem.RefusalMessage("default")
 	if rule == "" {
 		return refusal
 	}
 	return refusal + " (" + rule + ")"
 }
 
-func guardrailRule(content string) string {
+func guardrailRule(content string) (rule, command string) {
 	_, after, ok := strings.Cut(content, configs.BAN_TAG)
 	if !ok {
-		return ""
+		return "", ""
 	}
 
-	rule := strings.TrimSpace(after)
-	if cut := strings.IndexAny(rule, " \t\n\r"); cut > 0 {
-		rule = rule[:cut]
+	line, _, _ := strings.Cut(strings.TrimSpace(after), "\n")
+	rule, rest, _ := strings.Cut(line, " ")
+	rule = strings.Trim(strings.TrimSpace(rule), "[](){}:,.\"'`")
+	rest = strings.Trim(strings.TrimSpace(rest), "`")
+	if runes := []rune(rest); len(runes) > 300 {
+		rest = ""
 	}
-	return strings.Trim(rule, "[](){}:,.\"'`")
+	return rule, strings.ReplaceAll(rest, "`", "'")
 }

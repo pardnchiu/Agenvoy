@@ -201,7 +201,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	reply.Status("thinking...")
 
 	return reply.Run(ctx, exec.ExecuteMeta{
-		Task:           content,
+		InputNoRecord:  content,
 		Input:          content,
 		AllowAll:       false,
 		ReplyMessageID: in.MessageID,

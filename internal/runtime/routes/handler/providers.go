@@ -278,8 +278,10 @@ func ProviderOAuth() gin.HandlerFunc {
 				emit(gin.H{"url": code.VerificationURI, "user_code": code.UserCode})
 			})
 		case "codex":
-			_, err = oauthcodex.LoginWithCallback(ctx, func(url string) {
+			_, err = oauthcodex.Login(ctx, func(url string) {
 				emit(gin.H{"url": url})
+			}, func(code *oauthcodex.DeviceCode) {
+				emit(gin.H{"device_url": code.VerificationURI, "user_code": code.UserCode})
 			})
 		case "grok-oauth":
 			_, err = oauthgrok.LoginWithCallback(ctx, func(url string) {
@@ -296,6 +298,28 @@ func ProviderOAuth() gin.HandlerFunc {
 		audiotool.DropModelsCache(c.Request.Context(), prov)
 		probe.DropModelsCache(c.Request.Context(), prov)
 		emit(gin.H{"done": true, "ok": true})
+	}
+}
+
+// NOTE: 送出
+func SubmitProviderOAuthCode() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Param("provider") != "grok-oauth" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "[Invalid] provider: only grok-oauth accepts a pasted code"})
+			return
+		}
+		var body struct {
+			Code string `json:"code"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil || strings.TrimSpace(body.Code) == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "[Invalid] code: required"})
+			return
+		}
+		if err := oauthgrok.Submit(body.Code); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "[Invalid] code: " + err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"ok": true})
 	}
 }
 

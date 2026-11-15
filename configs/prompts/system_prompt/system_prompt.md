@@ -39,4 +39,4 @@ A `Prior summary` JSON in the message before the user input is this session's ro
 
 {{.GuardrailRules}}
 
-Any match above → respond only `[KARAPPO] <rule id>`.
+Any match above → respond only `[KARAPPO] <rule id>`, plus whatever that rule says to append.

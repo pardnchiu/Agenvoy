@@ -27,12 +27,20 @@ const (
 type taggedEvent struct {
 	Session string `json:"session"`
 	agenttypes.Event
-	Display string `json:"tool_display,omitempty"`
+	Display         string   `json:"tool_display,omitempty"`
+	ConfirmTitle    string   `json:"confirm_title,omitempty"`
+	RestrictedLines []string `json:"restricted_lines,omitempty"`
+	RestrictedNote  string   `json:"restricted_note,omitempty"`
+	Trace           string   `json:"trace,omitempty"`
 }
 
 type wireEvent struct {
 	agenttypes.Event
-	Display string `json:"tool_display,omitempty"`
+	Display         string   `json:"tool_display,omitempty"`
+	ConfirmTitle    string   `json:"confirm_title,omitempty"`
+	RestrictedLines []string `json:"restricted_lines,omitempty"`
+	RestrictedNote  string   `json:"restricted_note,omitempty"`
+	Trace           string   `json:"trace,omitempty"`
 }
 
 func skipEvent(ev agenttypes.Event) bool {
@@ -49,21 +57,30 @@ func skipEvent(ev agenttypes.Event) bool {
 }
 
 func toWire(ev agenttypes.Event) wireEvent {
-	display := ""
+	wire := wireEvent{Event: ev, Trace: internalutils.FormatTraceLine(ev)}
 	switch ev.Type {
 	case agenttypes.EventToolCall:
-		display = internalutils.FormatToolEvent(ev.ToolName, ev.ToolArgs)
+		wire.Display = internalutils.FormatToolEvent(ev.ToolName, ev.ToolArgs)
 	case agenttypes.EventToolConfirm:
-		display = internalutils.FormatToolConfirmArgs(ev.ToolName, ev.ToolArgs)
+		msg := internalutils.FormatConfirm(ev.ToolName, ev.ToolArgs, ev.Restricted, ev.PasswordCached)
+		wire.Display = msg.Display
+		wire.ConfirmTitle = msg.Title
+		wire.RestrictedLines = msg.RestrictedLines
+		wire.RestrictedNote = msg.RestrictedNote
 	}
-	return wireEvent{Event: ev, Display: display}
+	return wire
 }
 
 func toTagged(sessionID string, ev agenttypes.Event) taggedEvent {
+	wire := toWire(ev)
 	return taggedEvent{
-		Session: sessionID,
-		Event:   ev,
-		Display: toWire(ev).Display,
+		Session:         sessionID,
+		Event:           ev,
+		Display:         wire.Display,
+		ConfirmTitle:    wire.ConfirmTitle,
+		RestrictedLines: wire.RestrictedLines,
+		RestrictedNote:  wire.RestrictedNote,
+		Trace:           wire.Trace,
 	}
 }
 

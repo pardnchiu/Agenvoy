@@ -15,25 +15,38 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-type BackgroundDeliver func(sessionID, taskHash, workDir, id, result string)
+type BackgroundDeliver func(sessionID, jobID, id, result string)
 
 var (
 	backgroundDeliver BackgroundDeliver
 	backgroundUpdate  BackgroundDeliver
-	backgroundResume  func(sessionID, taskHash, workDir string)
+	backgroundTrigger func(job BackgroundJob)
 )
 
-func SetBackgroundDeliver(deliver, update BackgroundDeliver, resume func(sessionID, taskHash, workDir string)) {
+func SetBackgroundDeliver(deliver, update BackgroundDeliver, trigger func(job BackgroundJob)) {
 	backgroundDeliver = deliver
 	backgroundUpdate = update
-	backgroundResume = resume
+	backgroundTrigger = trigger
+}
+
+func BackgroundGoalProperties() map[string]any {
+	return map[string]any{
+		"objective": map[string]any{
+			"type":        "string",
+			"description": "What this background group is for, written to stand alone: once this task has ended, the follow-up run sees only objective, next, the leg reports and this task's id. Legs started in the same turn form one group; the first non-empty value wins.",
+		},
+		"next": map[string]any{
+			"type":        "string",
+			"description": "What to do with the reports once every leg of the group has finished after this task has ended, e.g. 'compare the three reports and push a summary to telegram'. While this task is still open, each report arrives here instead.",
+		},
+	}
 }
 
 func BackgroundAllowed(ctx context.Context) bool {
 	return agenttypes.OriginFrom(ctx) == "cli-" && agenttypes.DeliverToFrom(ctx) == ""
 }
 
-func StartBackground(ctx context.Context, sessionID, taskHash, workDir, prefix, description string, run func(ctx context.Context, report func(string), log io.Writer) string) (string, error) {
+func StartBackground(ctx context.Context, sessionID, taskHash, group, workDir string, goal BackgroundGoal, prefix, description string, run func(ctx context.Context, report func(string), log io.Writer) string) (string, error) {
 	if taskHash == "" || backgroundDeliver == nil {
 		return "", utilsmsg.New(utilsmsg.Unavailable, "background", "this request has no session task to resume; run it without background")
 	}
@@ -57,7 +70,8 @@ func StartBackground(ctx context.Context, sessionID, taskHash, workDir, prefix, 
 		logFile.Close()
 		os.Remove(logPath)
 	}
-	if err := AddBackground(sessionID, taskHash, workDir, id, description); err != nil {
+	jobID, err := addLeg(sessionID, taskHash, group, workDir, agenttypes.WindowHash(ctx), goal, id, description)
+	if err != nil {
 		removeLog()
 		ReleaseBackgroundSlot(sessionID)
 		return "", err
@@ -78,11 +92,11 @@ func StartBackground(ctx context.Context, sessionID, taskHash, workDir, prefix, 
 					slog.Any("panic", r))
 				result = fmt.Sprintf("failed: panic: %v", r)
 			}
-			backgroundDeliver(sessionID, taskHash, workDir, id, result)
+			backgroundDeliver(sessionID, jobID, id, result)
 		}()
 		result = run(bgCtx, func(text string) {
 			if backgroundUpdate != nil && bgCtx.Err() == nil {
-				backgroundUpdate(sessionID, taskHash, workDir, id, text)
+				backgroundUpdate(sessionID, jobID, id, text)
 			}
 		}, logFile)
 	}()
