@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/pardnchiu/go-llm-router/core/xai"
+
 	"github.com/pardnchiu/agenvoy/configs"
 )
 
@@ -256,8 +258,20 @@ func SelectionPrompt(cfg *Config, isSubagent bool) string {
 		workLines = append(workLines, fmt.Sprintf("- %s (%s): %s", k.Key, strings.Join(order, " > "), k.What))
 	}
 
+	xSearch := ""
+	var xModels []string
+	for _, m := range cfg.Models {
+		if prov, model, _ := strings.Cut(m.Name, "@"); (prov == "grok-oauth" || prov == "grok") && xai.SupportsXSearch(model) && ModelTier(cfg.ModelTag, m.Name) != ModelTagPass {
+			xModels = append(xModels, m.Name)
+		}
+	}
+	if len(xModels) > 0 {
+		xSearch = fmt.Sprintf("\n\nA request about X (Twitter), its posts, accounts, threads or what people say there, puts these models first whatever the kind of work, since only they search X directly: %s.", strings.Join(xModels, ", "))
+	}
+
 	return strings.NewReplacer(
 		"{{.ModelTier}}", modelTier,
 		"{{.WorkTiers}}", strings.Join(workLines, "\n"),
+		"{{.XSearch}}", xSearch,
 	).Replace(strings.TrimSpace(configs.ModelSelection))
 }
