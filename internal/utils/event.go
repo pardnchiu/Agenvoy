@@ -20,7 +20,7 @@ import (
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
-func FormatEventFooter(duration, outputElapsed time.Duration, model, reasoning string, usage *go_llm_router.Usage) string {
+func FormatEventFooter(duration, outputElapsed time.Duration, usage *go_llm_router.Usage, finishedAt string) string {
 	var parts []string
 	if duration > 0 {
 		elapsed := duration.Round(100 * time.Millisecond).String()
@@ -30,15 +30,12 @@ func FormatEventFooter(duration, outputElapsed time.Duration, model, reasoning s
 		parts = append(parts, elapsed)
 	}
 
-	if model = strings.TrimSpace(model); model != "" {
-		if reasoning != "" {
-			model += "/" + reasoning
-		}
-		parts = append(parts, model)
+	if in := agenttypes.FormatInput(agenttypes.InputTotals(usage)); in != "" {
+		parts = append(parts, "↑ "+in, "↓ "+go_pkg_utils.CompactNumber(usage.Output))
 	}
 
-	if in := agenttypes.FormatInput(agenttypes.InputTotals(usage)); in != "" {
-		parts = append(parts, fmt.Sprintf("↑ %s ↓ %s", in, go_pkg_utils.CompactNumber(usage.Output)))
+	if finishedAt != "" {
+		parts = append(parts, finishedAt)
 	}
 	return strings.Join(parts, "  ")
 }

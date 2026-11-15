@@ -98,8 +98,8 @@ func wrapBlock(ch Channel, text string) string {
 	}
 }
 
-func BuildPushFooter(ch Channel, duration, outputElapsed time.Duration, model, reasoning string, usage *go_llm_router.Usage) string {
-	footer := utils.FormatEventFooter(duration, outputElapsed, model, reasoning, usage)
+func BuildPushFooter(ch Channel, duration, outputElapsed time.Duration, usage *go_llm_router.Usage) string {
+	footer := utils.FormatEventFooter(duration, outputElapsed, usage, time.Now().Format("15:04"))
 	if footer == "" {
 		return ""
 	}

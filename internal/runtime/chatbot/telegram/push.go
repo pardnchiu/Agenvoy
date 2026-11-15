@@ -70,7 +70,7 @@ func PushTelegramResult(ctx context.Context, payload exec.PushPayload) {
 	cleanText, photoPaths, docPaths := extractFileMarkers(str)
 
 	if strings.TrimSpace(cleanText) != "" {
-		message := cleanText + chatbot.BuildPushFooter(chatbot.Telegram, payload.Duration, payload.OutputElapsed, payload.Model, payload.Reasoning, payload.Usage)
+		message := cleanText + chatbot.BuildPushFooter(chatbot.Telegram, payload.Duration, payload.OutputElapsed, payload.Usage)
 		if prefix := strings.TrimSpace(payload.Prefix); prefix != "" {
 			message = fmt.Sprintf("<blockquote>%s</blockquote>\n\n%s", html.EscapeString(prefix), message)
 		}
