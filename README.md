@@ -291,7 +291,7 @@ Eleven model providers behind one interface, plus as many OpenAI-compatible endp
 | Gemini | Pro · Flash |
 | GitHub Copilot | GitHub OAuth |
 | NVIDIA NIM | NIM API |
-| xAI Grok | API key · xAI OAuth |
+| xAI Grok | API key · xAI OAuth · searches X directly |
 | DeepSeek | Flash · Pro |
 | Mistral | API key |
 | Ollama Cloud | API key |

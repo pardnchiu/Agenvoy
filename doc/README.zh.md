@@ -291,7 +291,7 @@ v1.3.4 介面改版前後的比較（old / new、淺色 / 深色）請見 [Web U
 | Gemini | Pro · Flash |
 | GitHub Copilot | GitHub OAuth |
 | NVIDIA NIM | NIM API |
-| xAI Grok | API 金鑰 · xAI OAuth |
+| xAI Grok | API 金鑰 · xAI OAuth · 可直接搜尋 X |
 | DeepSeek | Flash · Pro |
 | Mistral | API 金鑰 |
 | Ollama Cloud | API 金鑰 |
