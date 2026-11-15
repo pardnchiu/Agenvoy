@@ -38,6 +38,16 @@ for (const name of Object.keys(feature)) {
   };
 }
 
+function markLeftTab(params) {
+  const name =
+    params.page === "features" ? params.tab : params.page === "monitor" ? "Monitor" : params.page === "config" ? "Config" : "";
+  document
+    .querySelectorAll("section.left-tab > section:not(.chats) > a[name], section.left-tab > footer > a[name]")
+    .forEach((link) => {
+      link.dataset.selected = name && link.getAttribute("name") === name ? "1" : "0";
+    });
+}
+
 function getLink(params) {
   let path = "?";
   if (params.page) {
