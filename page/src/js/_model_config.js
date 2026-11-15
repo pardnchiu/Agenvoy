@@ -873,7 +873,7 @@ function closeProviderOAuth() {
   $("#oauth-popup")?.remove();
 }
 
-function openOAuthPopup(id) {
+function openOAuthPopup(id, url = modelOAuth.url, hint = "enter this code in the browser") {
   $("#oauth-popup")?.remove();
 
   const cancel = _("button", { type: "button" }, "cancel");
@@ -881,14 +881,14 @@ function openOAuthPopup(id) {
   const root = _("div.popup", [
     _("div.panel", [
       _("strong", `Sign in · ${id}`),
-      _("p", "enter this code in the browser"),
+      _("p", hint),
       codeButton(modelOAuth.code),
       _("footer", [cancel, open]),
     ]),
   ]);
   root.id = "oauth-popup";
 
-  open.addEventListener("click", () => window.open(modelOAuth.url, "_blank", "noreferrer"));
+  open.addEventListener("click", () => window.open(url, "_blank", "noreferrer"));
   cancel.addEventListener("click", () => {
     closeProviderOAuth();
     modelOAuth.id = "";
@@ -897,6 +897,74 @@ function openOAuthPopup(id) {
   });
 
   document.body.appendChild(root);
+}
+
+function openOAuthPastePopup(id) {
+  $("#oauth-popup")?.remove();
+
+  const field = _("input.code", {
+    type: "text",
+    autocomplete: "off",
+    spellcheck: "false",
+    placeholder: "code, or the full callback URL",
+  });
+  const status = _("p", "after signing in, paste the code xAI shows here");
+  const cancel = _("button", { type: "button" }, "cancel");
+  const open = _("button", { type: "button" }, "open website");
+  const send = _("button.submit", { type: "button" }, "submit");
+  const root = _("div.popup", [
+    _("div.panel", [
+      _("strong", `Sign in · ${id}`),
+      status,
+      field,
+      _("footer", [cancel, open, send]),
+    ]),
+  ]);
+  root.id = "oauth-popup";
+
+  const submit = async () => {
+    const code = field.value.trim();
+    if (!code) {
+      return;
+    }
+    send.disabled = true;
+    try {
+      const response = await fetch(`${API}/v1/provider/${encodeURIComponent(id)}/oauth/code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        status.textContent = body.error || "code rejected";
+        send.disabled = false;
+        return;
+      }
+      status.textContent = "signing in...";
+    } catch (err) {
+      console.error("openOAuthPastePopup", err);
+      status.textContent = "request failed";
+      send.disabled = false;
+    }
+  };
+
+  open.addEventListener("click", () => window.open(modelOAuth.url, "_blank", "noreferrer"));
+  send.addEventListener("click", submit);
+  field.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submit();
+    }
+  });
+  cancel.addEventListener("click", () => {
+    closeProviderOAuth();
+    modelOAuth.id = "";
+    modelOAuth.code = "";
+    renderModel();
+  });
+
+  document.body.appendChild(root);
+  field.focus();
 }
 
 function startProviderOAuth(id) {
@@ -917,6 +985,11 @@ function startProviderOAuth(id) {
       return;
     }
 
+    if (event.device_url) {
+      modelOAuth.code = event.user_code || "";
+      openOAuthPopup(id, event.device_url, "browser sign-in opened; or open this page on another device and enter the code");
+      return;
+    }
     if (event.url) {
       modelOAuth.url = event.url;
       modelOAuth.code = event.user_code || "";
@@ -925,6 +998,9 @@ function startProviderOAuth(id) {
         openOAuthPopup(id);
       } else {
         window.open(event.url, "_blank", "noreferrer");
+        if (id === "grok-oauth") {
+          openOAuthPastePopup(id);
+        }
       }
       return;
     }

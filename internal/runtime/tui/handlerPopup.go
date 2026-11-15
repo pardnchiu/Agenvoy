@@ -2,16 +2,20 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	goruntime "runtime"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	oauthgrok "github.com/pardnchiu/go-llm-router/core/oauth/grok"
 
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -93,6 +97,9 @@ type oauthState struct {
 	mcpServer string
 	url       string
 	userCode  string
+	deviceURL string
+	codeInput bool
+	deadline  time.Time
 	cancel    context.CancelFunc
 }
 
@@ -142,7 +149,22 @@ func (t TUI) updateOAuthPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if p.oauth.cancel != nil {
 			p.oauth.cancel()
 		}
+		if p.oauth.codeInput {
+			t.modelAdd = nil
+			return t.closePopup(), nil
+		}
 	case tea.KeyEnter:
+		if p.oauth.codeInput {
+			if code := strings.TrimSpace(p.input.Value()); code != "" {
+				if err := oauthgrok.Submit(code); err != nil {
+					p.status = errorStyle.Render(fmt.Sprintf("[Invalid] code: %v", err))
+					return t, nil
+				}
+				p.input.Reset()
+				p.status = hintStyle.Render("code submitted, signing in...")
+				return t, nil
+			}
+		}
 		if p.oauth.url != "" {
 			openBrowser(p.oauth.url)
 		}
@@ -150,6 +172,11 @@ func (t TUI) updateOAuthPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if p.oauth.mcpServer != "" && strings.EqualFold(string(msg.Runes), "p") {
 			return t.openMcpOAuthPaste(p.oauth)
 		}
+	}
+	if p.oauth.codeInput && msg.Type != tea.KeyEnter && msg.Type != tea.KeyEsc {
+		var cmd tea.Cmd
+		p.input, cmd = p.input.Update(msg)
+		return t, cmd
 	}
 	return t, nil
 }
@@ -174,6 +201,22 @@ func openBrowser(link string) {
 			slog.String("url", link),
 			slog.String("error", err.Error()))
 	}
+}
+
+func hasGUI() bool {
+	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_TTY") != "" {
+		return false
+	}
+	switch goruntime.GOOS {
+	case "darwin":
+		return true
+	case "linux":
+		if utils.IsWSL() {
+			return linuxOpenCommand("") != nil
+		}
+		return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
+	}
+	return false
 }
 
 func linuxOpenCommand(link string) *exec.Cmd {

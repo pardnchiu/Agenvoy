@@ -79,12 +79,28 @@ type RemoteModelsResult struct {
 }
 
 type OAuthInfo struct {
-	url      string
-	userCode string
+	url       string
+	userCode  string
+	deviceURL string
 }
 type OAuthSuccess struct{ provider string }
 type OAuthFailed struct{ err error }
 type OAuthReLoginPick struct{ replace string }
+
+type oauthTick struct{}
+
+const oauthLoginTimeout = 10 * time.Minute
+
+func oauthTickCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(time.Time) tea.Msg { return oauthTick{} })
+}
+
+func (t TUI) runOAuthTick() (TUI, tea.Cmd) {
+	if t.popup == nil || t.popup.kind != popupOAuth || t.popup.oauth == nil || t.popup.oauth.deadline.IsZero() {
+		return t, nil
+	}
+	return t, oauthTickCmd()
+}
 
 type modelAddMethod struct {
 	key    string
@@ -268,20 +284,25 @@ func (t TUI) modelAddViaOAuth() (TUI, tea.Cmd) {
 
 func (t TUI) startOAuthPopup() (TUI, tea.Cmd) {
 	prov := t.modelAdd.provider
-	ctx, cancel := context.WithTimeout(t.ctx, 15*time.Minute)
+	ctx, cancel := context.WithTimeout(t.ctx, oauthLoginTimeout)
 
 	t.popup = &Popup{
 		kind:     popupOAuth,
 		title:    fmt.Sprintf("%s OAuth  waiting for device code...", strings.ToUpper(prov[:1])+prov[1:]),
 		subtitle: "browser will open automatically once the code is ready",
 		oauth: &oauthState{
-			provider: prov,
-			cancel:   cancel,
+			provider:  prov,
+			cancel:    cancel,
+			codeInput: prov == "grok-oauth",
+			deadline:  time.Now().Add(oauthLoginTimeout),
 		},
+	}
+	if prov == "grok-oauth" {
+		t.popup.input = newPopupInput("", false)
 	}
 
 	go runOAuthFlow(ctx, prov)
-	return t, nil
+	return t, oauthTickCmd()
 }
 
 func (t TUI) runOAuthReLoginPick(replace string) (TUI, tea.Cmd) {
@@ -305,8 +326,10 @@ func runOAuthFlow(ctx context.Context, prov string) {
 			})
 		})
 	case "codex":
-		_, err = oauthcodex.LoginWithCallback(ctx, func(url string) {
+		_, err = oauthcodex.Login(ctx, func(url string) {
 			send(OAuthInfo{url: url})
+		}, func(code *oauthcodex.DeviceCode) {
+			send(OAuthInfo{deviceURL: code.VerificationURI, userCode: code.UserCode})
 		})
 	case "grok-oauth":
 		_, err = oauthgrok.LoginWithCallback(ctx, func(url string) {
@@ -326,6 +349,11 @@ func (t TUI) runOAuthInfo(msg OAuthInfo) (TUI, tea.Cmd) {
 	if t.popup == nil || t.popup.kind != popupOAuth || t.popup.oauth == nil {
 		return t, nil
 	}
+	if msg.deviceURL != "" {
+		t.popup.oauth.deviceURL = msg.deviceURL
+		t.popup.oauth.userCode = msg.userCode
+		return t, nil
+	}
 	t.popup.oauth.url = msg.url
 	t.popup.oauth.userCode = msg.userCode
 	title := "OAuth  open browser to authorize"
@@ -335,7 +363,7 @@ func (t TUI) runOAuthInfo(msg OAuthInfo) (TUI, tea.Cmd) {
 	}
 	t.popup.title = title
 	t.popup.subtitle = ""
-	if msg.url != "" && msg.userCode == "" {
+	if msg.url != "" && hasGUI() {
 		openBrowser(msg.url)
 	}
 	return t, nil
@@ -350,13 +378,17 @@ func (t TUI) runOAuthSuccess(msg OAuthSuccess) (TUI, tea.Cmd) {
 }
 
 func (t TUI) runOAuthFailed(msg OAuthFailed) (TUI, tea.Cmd) {
+	if errors.Is(msg.err, context.Canceled) {
+		if t.popup != nil && t.popup.kind == popupOAuth {
+			t.popup = nil
+		}
+		return t, nil
+	}
 	t.modelAdd = nil
 	t.popup = nil
 	switch {
-	case errors.Is(msg.err, context.Canceled):
-		return t, nil
 	case errors.Is(msg.err, context.DeadlineExceeded):
-		return t, notice(msgWarn("oauth timed out  device code expired") + "\n")
+		return t, notice(msgWarn("[Timeout] oauth: no sign-in within 10 minutes") + "\n")
 	}
 	return t, notice(msgError(fmt.Sprintf("oauth: %v", msg.err)) + "\n")
 }
