@@ -99,6 +99,9 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 		if b.listener != nil && b.listener.OnCallback(ctx, in.ChatID, in.MessageID, in.CallbackData, in.CallbackPicks) {
 			return nil
 		}
+		if text, ok := chatbot.ApplyMenu(menuKey(in.ChatID, in.MessageID), in.CallbackData); ok {
+			_, _ = b.client.Send(ctx, in.ChatID, in.MessageID, text)
+		}
 		return nil
 	}
 
@@ -210,12 +213,29 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 
 	content, isNew := chatbot.CutNewCommand(content)
 	if content == "" {
+		if isNew {
+			_, _ = b.client.Send(ctx, in.ChatID, in.MessageID, chatbot.NewUsage)
+		}
 		return nil
 	}
 
 	chatSessionID, err := sessiontelegram.New(in.ChatID)
 	if err != nil {
 		return utilsmsg.Trace("session.GetTelegramSession", "", err)
+	}
+
+	if cmd, ok := chatbot.SessionCommand(chatSessionID, content); ok {
+		if cmd.Menu == "" {
+			_, _ = b.client.Send(ctx, in.ChatID, in.MessageID, cmd.Text)
+			return nil
+		}
+		msg, err := b.client.SendSelect(ctx, in.ChatID, in.MessageID, cmd.Text, cmd.Items)
+		if err != nil || msg == nil {
+			_, _ = b.client.Send(ctx, in.ChatID, in.MessageID, chatbot.MenuFallback(cmd))
+			return nil
+		}
+		chatbot.RegisterMenu(menuKey(in.ChatID, msg.ID), chatSessionID, cmd)
+		return nil
 	}
 
 	if !isNew && exec.IsRunning(chatSessionID) {
@@ -238,4 +258,8 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 		AllowAll:       false,
 		ReplyMessageID: strconv.Itoa(in.MessageID),
 	})
+}
+
+func menuKey(chatID int64, messageID int) string {
+	return fmt.Sprintf("tg:%d:%d", chatID, messageID)
 }

@@ -2,7 +2,6 @@ package chatbot
 
 import (
 	"context"
-	"fmt"
 	"html"
 	"strconv"
 	"strings"
@@ -103,32 +102,16 @@ func BuildPushFooter(ch Channel, duration, outputElapsed time.Duration, usage *g
 	if footer == "" {
 		return ""
 	}
-	switch ch {
-	case Telegram:
-		return "\n\n" + wrapBlock(ch, footer)
-	default:
-		return "\n" + wrapBlock(ch, footer)
-	}
+	return "\n" + wrapBlock(ch, footer)
 }
 
 func AppendReplyFooter(ch Channel, text, footer string, hasMedia bool, execErrors []string) string {
 	if hasMedia {
 		footer = "🔗 " + footer
 	}
-	switch ch {
-	case Telegram:
-		text = fmt.Sprintf("%s\n\n%s", text, wrapBlock(ch, footer))
-	default:
-		text = fmt.Sprintf("%s\n%s", text, wrapBlock(ch, footer))
-	}
+	text = text + "\n" + wrapBlock(ch, footer)
 	if len(execErrors) > 0 {
-		errLine := wrapBlock(ch, "⚠️ "+strings.Join(execErrors, ", "))
-		switch ch {
-		case Telegram:
-			text = fmt.Sprintf("%s\n\n%s", text, errLine)
-		default:
-			text = fmt.Sprintf("%s\n%s", text, errLine)
-		}
+		text = text + "\n" + wrapBlock(ch, "⚠️ "+strings.Join(execErrors, ", "))
 	}
 	return text
 }
