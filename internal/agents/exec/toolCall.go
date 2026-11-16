@@ -137,11 +137,11 @@ type toolSlot struct {
 }
 
 func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, turnAllowAll bool) bool {
-	if toolName == "read_files" && isSensitiveReadFile(toolArgs) {
-		return true
-	}
 	if turnAllowAll {
 		return false
+	}
+	if toolName == "read_files" && isSensitiveReadFile(toolArgs) {
+		return true
 	}
 	if toolName == "remove_file" || toolName == "restore_file" || isDestructiveMode(toolArgs) {
 		return true
@@ -410,12 +410,16 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)
 		unsandboxed := tools.RestrictedRunCommand(toolName, toolArg)
-		restricted := len(restrictedPaths)+len(unsandboxed) > 0
 		restrictedList := append(outsideHome(restrictedPaths), unsandboxed...)
+		allowRead := allowAll && (toolName == "read_files" || toolName == "find_files")
+		restricted := len(restrictedList) > 0 || len(restrictedPaths) > 0 && !*turnAllowAll && !allowRead
+		if !restricted && len(restrictedPaths) > 0 {
+			boundary.Grant(exec.SessionID, restrictedPaths...)
+		}
 
 		scoped := allowAll && !agenttypes.SubagentFrom(ctx)
 		autoAllow := allowAll && (!scoped || filesystem.WorkDirAllowsAll(exec.WorkDir))
-		needsConfirm := toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll)
+		needsConfirm := !allowRead && toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll)
 		irreversible := autoAllow && !*turnAllowAll && len(unsandboxed) == 0 &&
 			isIrreversibleCommand(toolName, toolArg)
 		var outsidePaths []string
@@ -514,6 +518,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 					}
 					if reply.Approve && reply.AllowTurn {
 						*turnAllowAll = true
+						interactive.SetPendingAllowTurn(sessionData.ID, exec.PendingTask)
 					}
 				}
 			}

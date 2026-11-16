@@ -352,8 +352,10 @@ body[data-rendered="1"] section.right-content section.chat {
       @include input.styles;
     }
 
-    &:has(> div.subagent-panel > section) > main {
-      width: 60%;
+    @media (min-width: 1280px) {
+      &:has(> div.subagent-panel > section) > main {
+        width: 60%;
+      }
     }
 
     > div.subagent-panel {
@@ -424,6 +426,17 @@ body[data-rendered="1"] section.right-content section.chat {
       box-shadow: var(--drawer-shadow-l);
       background-color: var(--elevated);
       transition: 0.15s var(--ease);
+
+      @media (max-width: 1279px) {
+        position: fixed;
+        right: 0;
+        width: 100%;
+        max-width: 50rem;
+
+        &:empty {
+          transform: translateX(100%);
+        }
+      }
 
       > article {
         display: flex;
