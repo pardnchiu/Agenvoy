@@ -53,7 +53,7 @@ func PushDiscordResult(ctx context.Context, payload exec.PushPayload) {
 	cleanText, attachmentPaths := utils.ExtractFileMarkers(str)
 
 	if strings.TrimSpace(cleanText) != "" {
-		message := cleanText + chatbot.BuildPushFooter(chatbot.Discord, payload.Duration, payload.OutputElapsed, payload.Model, payload.Reasoning, payload.Usage)
+		message := cleanText + chatbot.BuildPushFooter(chatbot.Discord, payload.Duration, payload.OutputElapsed, payload.Usage)
 		if prefix := strings.TrimSpace(payload.Prefix); prefix != "" {
 			quoted := strings.ReplaceAll(prefix, "\n", "\n> ")
 			message = fmt.Sprintf("> %s\n%s", quoted, message)

@@ -72,7 +72,12 @@ func New() (*Bot, error) {
 	bot.cancel = cancel
 	cmdCtx, cmdCancel := context.WithTimeout(ctx, 10*time.Second)
 	if err := client.SetCommands(cmdCtx, []go_bot_telegram.Command{
-		{Name: "new", Description: "Start a separate task instead of adding to the running one"},
+		{Name: "new", Description: "Start a separate task instead of adding to the running one: /new {input}"},
+		{Name: "model", Description: "Pick the model for this chat, or set it with /model {name}"},
+		{Name: "reasoning", Description: "Pick the reasoning level, or set it with /reasoning {level}"},
+		{Name: "pending", Description: "Pick an interrupted task to resume"},
+		{Name: "stop", Description: "Pick a running task to stop"},
+		{Name: "compact", Description: "Compact this chat history after confirming"},
 	}); err != nil {
 		slog.Warn("[Upstream] telegram commands: register failed",
 			slog.String("error", err.Error()))

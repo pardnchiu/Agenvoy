@@ -246,11 +246,6 @@ func run(ctx context.Context, b *Bot, in go_bot_line.Input, attachInputs []go_bo
 		return nil
 	}
 
-	content, isNew := chatbot.CutNewCommand(content)
-	if content == "" {
-		return nil
-	}
-
 	workDir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("os.UserHomeDir: %w", err)
@@ -261,7 +256,7 @@ func run(ctx context.Context, b *Bot, in go_bot_line.Input, attachInputs []go_bo
 		return fmt.Errorf("github.com/pardnchiu/agenvoy/internal/session GetLineSession: %w", err)
 	}
 
-	if !isNew && exec.IsRunning(sessionID) {
+	if exec.IsRunning(sessionID) {
 		exec.AppendSteer(sessionID, "", content)
 		return nil
 	}
@@ -306,7 +301,7 @@ func run(ctx context.Context, b *Bot, in go_bot_line.Input, attachInputs []go_bo
 		return fmt.Errorf("no reply")
 	}
 
-	if footer := utils.FormatEventFooter(result.Done.Duration, result.Done.OutputElapsed, result.Done.Model, result.Done.Reasoning, result.Done.Usage); footer != "" {
+	if footer := utils.FormatEventFooter(result.Done.Duration, result.Done.OutputElapsed, result.Done.Usage, ""); footer != "" {
 		replyText = replyText + "\n\n" + footer
 	}
 	if len(result.ExecErrors) > 0 {

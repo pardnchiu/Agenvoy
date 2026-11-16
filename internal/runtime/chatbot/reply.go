@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -92,12 +93,9 @@ func (r Reply) deliver(events <-chan agentstypes.Event, wait func() error) error
 	}
 
 	text, paths := utils.ExtractFileMarkers(text)
-	footer := utils.FormatEventFooter(result.Done.Duration, result.Done.OutputElapsed, result.Done.Model, result.Done.Reasoning, result.Done.Usage)
+	footer := utils.FormatEventFooter(result.Done.Duration, result.Done.OutputElapsed, result.Done.Usage, time.Now().Format("15:04"))
 	text = AppendReplyFooter(r.Channel, text, footer, len(paths) > 0, result.ExecErrors)
 	if r.Channel == Telegram {
-		if r.ReplyTo != "" {
-			text = "\u200b\n" + text
-		}
 		text = SanitizeTelegramHTML(text)
 	}
 

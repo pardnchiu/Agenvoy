@@ -418,7 +418,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	var usage go_llm_router.Usage
 	var sendElapsedTotal time.Duration
 	alreadyCall := make(map[string]string)
-	turnAllowAll := false
+	turnAllowAll := !session.Stateless && interactive.LoadPendingAllowTurn(session.ID, exec.PendingTask)
 	emptyCount := 0
 	compactFailed := false
 	lastInputTokens := 0

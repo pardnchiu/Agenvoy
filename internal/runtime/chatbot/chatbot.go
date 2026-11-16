@@ -2,7 +2,6 @@ package chatbot
 
 import (
 	"context"
-	"fmt"
 	"html"
 	"strconv"
 	"strings"
@@ -89,14 +88,14 @@ func SendAdminCode(ctx context.Context, ch Channel, targetID, text string) error
 		secret := strings.TrimSpace(keychain.Get("LINE_SECRET"))
 		token := strings.TrimSpace(keychain.Get("LINE_TOKEN"))
 		if secret == "" || token == "" {
-			return fmt.Errorf("line secret or token missing")
+			return utilsmsg.New(utilsmsg.Denied, "line secret or token", "missing")
 		}
 		client, err := go_bot_line.New(secret, token, filesystem.LinePort)
 		if err != nil {
-			return fmt.Errorf("go-bot/line New: %w", err)
+			return utilsmsg.Wrap(utilsmsg.Upstream, "go_bot_line.New", "", err)
 		}
 		if _, err := client.Send(ctx, strings.TrimSpace(targetID), text); err != nil {
-			return fmt.Errorf("go-bot/line Send: %w", err)
+			return utilsmsg.Wrap(utilsmsg.Upstream, "go_bot_line.Send", "", err)
 		}
 	default:
 		return utilsmsg.New(utilsmsg.Internal, "channel", "unknown %d", ch)
@@ -113,37 +112,21 @@ func wrapBlock(ch Channel, text string) string {
 	}
 }
 
-func BuildPushFooter(ch Channel, duration, outputElapsed time.Duration, model, reasoning string, usage *go_llm_router.Usage) string {
-	footer := utils.FormatEventFooter(duration, outputElapsed, model, reasoning, usage)
+func BuildPushFooter(ch Channel, duration, outputElapsed time.Duration, usage *go_llm_router.Usage) string {
+	footer := utils.FormatEventFooter(duration, outputElapsed, usage, time.Now().Format("15:04"))
 	if footer == "" {
 		return ""
 	}
-	switch ch {
-	case Telegram:
-		return "\n\n" + wrapBlock(ch, footer)
-	default:
-		return "\n" + wrapBlock(ch, footer)
-	}
+	return "\n" + wrapBlock(ch, footer)
 }
 
 func AppendReplyFooter(ch Channel, text, footer string, hasMedia bool, execErrors []string) string {
 	if hasMedia {
 		footer = "🔗 " + footer
 	}
-	switch ch {
-	case Telegram:
-		text = fmt.Sprintf("%s\n\n%s", text, wrapBlock(ch, footer))
-	default:
-		text = fmt.Sprintf("%s\n%s", text, wrapBlock(ch, footer))
-	}
+	text = text + "\n" + wrapBlock(ch, footer)
 	if len(execErrors) > 0 {
-		errLine := wrapBlock(ch, "⚠️ "+strings.Join(execErrors, ", "))
-		switch ch {
-		case Telegram:
-			text = fmt.Sprintf("%s\n\n%s", text, errLine)
-		default:
-			text = fmt.Sprintf("%s\n%s", text, errLine)
-		}
+		text = text + "\n" + wrapBlock(ch, "⚠️ "+strings.Join(execErrors, ", "))
 	}
 	return text
 }

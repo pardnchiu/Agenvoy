@@ -64,6 +64,17 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		}
 	}
 
+	if chatbot.ApplyMenu(menuKey(in.ChannelID, in.MessageID), in.Text, func(text string) func() {
+		msg, err := b.client.Send(ctx, in.ChannelID, in.MessageID, text)
+		return func() {
+			if err == nil && msg != nil {
+				_ = b.client.Delete(ctx, in.ChannelID, msg.ID)
+			}
+		}
+	}) {
+		return nil
+	}
+
 	content := strings.TrimSpace(in.Text)
 	hasAttachment := len(in.Attachments) > 0
 	if content == "" && !hasAttachment {
@@ -184,12 +195,29 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 
 	content, isNew := chatbot.CutNewCommand(content)
 	if content == "" {
+		if isNew {
+			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, chatbot.NewUsage)
+		}
 		return nil
 	}
 
 	discordSessionID, err := sessiondiscord.New(in.GuildID, in.ChannelID, in.UserID)
 	if err != nil {
 		return utilsmsg.Trace("session.GetDiscordSession", "", err)
+	}
+
+	if cmd, ok := chatbot.SessionCommand(discordSessionID, content); ok {
+		if cmd.Menu == "" {
+			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, cmd.Text)
+			return nil
+		}
+		msg, err := b.client.SendSelect(ctx, in.ChannelID, in.MessageID, cmd.Text, cmd.Items)
+		if err != nil || msg == nil {
+			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, chatbot.MenuFallback(cmd))
+			return nil
+		}
+		chatbot.RegisterMenu(menuKey(in.ChannelID, msg.ID), discordSessionID, cmd)
+		return nil
 	}
 
 	if !isNew && exec.IsRunning(discordSessionID) {
@@ -208,4 +236,8 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		Sender:         in.Username,
 		SessionID:      discordSessionID,
 	})
+}
+
+func menuKey(channelID, messageID string) string {
+	return "dc:" + channelID + ":" + messageID
 }
