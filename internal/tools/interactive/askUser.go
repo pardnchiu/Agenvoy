@@ -81,6 +81,7 @@ type pendingMeta struct {
 	Files        []string              `json:"files,omitempty"`
 	Reply        string                `json:"reply,omitempty"`
 	AllowAll     bool                  `json:"allow_all,omitempty"`
+	AllowTurn    bool                  `json:"allow_turn,omitempty"`
 	WindowHash   string                `json:"window_hash,omitempty"`
 }
 
@@ -444,6 +445,33 @@ func LoadPendingAllowAll(sessionID, taskHash string) bool {
 	return meta.AllowAll
 }
 
+func LoadPendingAllowTurn(sessionID, taskHash string) bool {
+	if taskHash == "" {
+		return false
+	}
+	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+	if err != nil {
+		return false
+	}
+	return meta.AllowTurn
+}
+
+func SetPendingAllowTurn(sessionID, taskHash string) {
+	if sessionID == "" || taskHash == "" {
+		return
+	}
+	pendingMu.Lock()
+	defer pendingMu.Unlock()
+	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+	if err != nil || meta.AllowTurn {
+		return
+	}
+	meta.AllowTurn = true
+	if err := writePending(sessionID, taskHash, &meta); err != nil {
+		slog.Warn("SetPendingAllowTurn", slog.String("session", sessionID), slog.String("error", err.Error()))
+	}
+}
+
 func LoadPendingMessageID(sessionID, taskHash string) string {
 	if taskHash == "" {
 		return ""
@@ -787,12 +815,13 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 	pendingMu.Lock()
 	var allResults []ToolResult
 	var messageID, model, reasoning string
-	var allowAll bool
+	var allowAll, allowTurn bool
 	var windowHash string
 	taskObjective := objective
 	allFiles := files
 	if existing, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash)); err == nil {
 		allowAll = existing.AllowAll
+		allowTurn = existing.AllowTurn
 		windowHash = existing.WindowHash
 		if strings.TrimSpace(existing.Objective) != "" {
 			taskObjective = existing.Objective
@@ -830,6 +859,7 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 		Files:        allFiles,
 		ToolResults:  allResults,
 		AllowAll:     allowAll,
+		AllowTurn:    allowTurn,
 		WindowHash:   windowHash,
 	}); err != nil {
 		slog.Warn("SaveAndEnqueueAskUser: writePending", slog.String("error", err.Error()))
