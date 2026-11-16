@@ -65,7 +65,9 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	}
 
 	if text, ok := chatbot.ApplyMenu(menuKey(in.ChannelID, in.MessageID), in.Text); ok {
-		_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, text)
+		if text != "" {
+			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, text)
+		}
 		return nil
 	}
 

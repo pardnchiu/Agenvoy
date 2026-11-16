@@ -866,6 +866,25 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 	}
 	pendingMu.Unlock()
 
+	if err := enqueueAskUser(sessionID, origin, deliverTo, taskHash, questions); err != nil {
+		slog.Warn("SaveAndEnqueueAskUser: AskAsync", slog.String("error", err.Error()))
+	}
+
+	return taskHash
+}
+
+func ReenqueueAskUser(sessionID, origin, taskHash string) error {
+	questions, err := LoadPendingQuestions(sessionID, taskHash)
+	if err != nil {
+		return err
+	}
+	if len(questions) == 0 {
+		return utilsmsg.New(utilsmsg.NotFound, "pending questions", "%q", taskHash)
+	}
+	return enqueueAskUser(sessionID, origin, sessionID, taskHash, questions)
+}
+
+func enqueueAskUser(sessionID, origin, deliverTo, taskHash string, questions []runtime.Question) error {
 	onResolve := func(reply runtime.Reply) {
 		if reply.Error != nil {
 			slog.Warn("ask_user async resolve error",
@@ -881,7 +900,7 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 		runtime.TriggerResume(sessionID, taskHash, reply.Answers)
 	}
 
-	if _, err := runtime.AskUser(runtime.Request{
+	_, err := runtime.AskUser(runtime.Request{
 		Kind:      runtime.KindAskUser,
 		SessionID: sessionID,
 		TaskHash:  taskHash,
@@ -889,11 +908,8 @@ func SaveAndEnqueueAskUser(sessionID, origin, deliverTo string, questions []runt
 		DeliverTo: deliverTo,
 		ToolName:  "ask_user",
 		AskUser:   &runtime.UserPayload{Questions: questions},
-	}, onResolve); err != nil {
-		slog.Warn("SaveAndEnqueueAskUser: AskAsync", slog.String("error", err.Error()))
-	}
-
-	return taskHash
+	}, onResolve)
+	return err
 }
 
 func AskPrompt(ctx context.Context, sessionID string, questions []runtime.Question) ([]any, error) {

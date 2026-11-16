@@ -75,6 +75,7 @@ func New() (*Bot, error) {
 		{Name: "new", Description: "Start a separate task instead of adding to the running one: /new {input}"},
 		{Name: "model", Description: "Pick the model for this chat, or set it with /model {name}"},
 		{Name: "reasoning", Description: "Pick the reasoning level, or set it with /reasoning {level}"},
+		{Name: "pending", Description: "Pick an interrupted task to resume"},
 	}); err != nil {
 		slog.Warn("[Upstream] telegram commands: register failed",
 			slog.String("error", err.Error()))

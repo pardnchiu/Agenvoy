@@ -8,10 +8,13 @@ import (
 	"unicode"
 
 	"github.com/pardnchiu/go-llm-router/core/claudeCode"
+	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
 
 const NewUsage = "[Invalid] /new: input is required, usage: /new {input}"
@@ -19,17 +22,20 @@ const NewUsage = "[Invalid] /new: input is required, usage: /new {input}"
 const (
 	menuModel     = "model"
 	menuReasoning = "reasoning"
+	menuPending   = "pending"
 )
 
 type CommandReply struct {
-	Text  string
-	Menu  string
-	Items []string
+	Text   string
+	Menu   string
+	Items  []string
+	values map[string]string
 }
 
 type menuEntry struct {
 	kind      string
 	sessionID string
+	values    map[string]string
 }
 
 var menus sync.Map
@@ -54,24 +60,77 @@ func SessionCommand(sessionID, content string) (CommandReply, bool) {
 			return CommandReply{Text: "Reasoning (current: " + current + ")", Menu: menuReasoning, Items: configbot.ReasoningLevels()}, true
 		}
 		return CommandReply{Text: setReasoning(sessionID, rest)}, true
+	case "/pending":
+		return pendingMenu(sessionID), true
 	}
 	return CommandReply{}, false
 }
 
-func MenuFallback(reply CommandReply) string {
-	usage := "/model {name}"
-	if reply.Menu == menuReasoning {
-		usage = "/reasoning {level}"
+func pendingMenu(sessionID string) CommandReply {
+	var items []string
+	values := map[string]string{}
+	for _, hash := range interactive.ListResumablePending(sessionID) {
+		info, ok := interactive.LoadPendingInfo(sessionID, hash)
+		if !ok {
+			continue
+		}
+		label := go_pkg_utils.TruncateString(hash, 8)
+		if info.Objective != "" {
+			label = go_pkg_utils.TruncateString(strings.Join(strings.Fields(info.Objective), " "), 12)
+		}
+		if info.HasQuestions {
+			label = "❓ " + label
+		}
+		label = fmt.Sprintf("%d. %s", len(items)+1, label)
+		if !info.UpdatedAt.IsZero() {
+			label += " · " + info.UpdatedAt.Local().Format("01-02 15:04")
+		}
+		items = append(items, label)
+		values[label] = hash
 	}
+	if len(items) == 0 {
+		return CommandReply{Text: "[Not found] pending task: none to resume"}
+	}
+	return CommandReply{Text: fmt.Sprintf("%d pending task(s)", len(items)), Menu: menuPending, Items: items, values: values}
+}
+
+func resumePending(sessionID, taskHash string) string {
+	info, ok := interactive.LoadPendingInfo(sessionID, taskHash)
+	if !ok {
+		return "[Not found] pending task: it may have been resumed or deleted"
+	}
+	if info.HasQuestions {
+		if err := interactive.ReenqueueAskUser(sessionID, runtime.OriginOf(sessionID), taskHash); err != nil {
+			return err.Error()
+		}
+		return ""
+	}
+	if !interactive.ClaimOnline(sessionID, taskHash) {
+		return "[Conflict] pending task: running"
+	}
+	if !runtime.TriggerResume(sessionID, taskHash, nil) {
+		interactive.ReleaseOnline(sessionID, taskHash)
+		return "[Unavailable] pending task: no resume handler"
+	}
+	return ""
+}
+
+func MenuFallback(reply CommandReply) string {
 	lines := []string{reply.Text}
 	for _, item := range reply.Items {
 		lines = append(lines, "• "+item)
 	}
-	return strings.Join(append(lines, "Usage: "+usage), "\n")
+	switch reply.Menu {
+	case menuModel:
+		lines = append(lines, "Usage: /model {name}")
+	case menuReasoning:
+		lines = append(lines, "Usage: /reasoning {level}")
+	}
+	return strings.Join(lines, "\n")
 }
 
 func RegisterMenu(key, sessionID string, reply CommandReply) {
-	menus.Store(key, menuEntry{kind: reply.Menu, sessionID: sessionID})
+	menus.Store(key, menuEntry{kind: reply.Menu, sessionID: sessionID, values: reply.values})
 }
 
 func ApplyMenu(key, value string) (string, bool) {
@@ -80,6 +139,13 @@ func ApplyMenu(key, value string) (string, bool) {
 		return "", false
 	}
 	entry := raw.(menuEntry)
+	if entry.kind == menuPending {
+		hash, ok := entry.values[value]
+		if !ok {
+			return fmt.Sprintf("[Invalid] pending task: %q", value), true
+		}
+		return resumePending(entry.sessionID, hash), true
+	}
 	if entry.kind == menuReasoning {
 		return setReasoning(entry.sessionID, value), true
 	}
