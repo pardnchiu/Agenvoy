@@ -64,10 +64,14 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 		}
 	}
 
-	if text, ok := chatbot.ApplyMenu(menuKey(in.ChannelID, in.MessageID), in.Text); ok {
-		if text != "" {
-			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, text)
+	if chatbot.ApplyMenu(menuKey(in.ChannelID, in.MessageID), in.Text, func(text string) func() {
+		msg, err := b.client.Send(ctx, in.ChannelID, in.MessageID, text)
+		return func() {
+			if err == nil && msg != nil {
+				_ = b.client.Delete(ctx, in.ChannelID, msg.ID)
+			}
 		}
+	}) {
 		return nil
 	}
 

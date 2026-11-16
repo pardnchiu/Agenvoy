@@ -1,6 +1,7 @@
 package chatbot
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
@@ -25,6 +27,12 @@ const (
 	menuReasoning = "reasoning"
 	menuPending   = "pending"
 	menuStop      = "stop"
+	menuCompact   = "compact"
+)
+
+const (
+	compactYes = "Yes"
+	compactNo  = "No"
 )
 
 type CommandReply struct {
@@ -66,6 +74,11 @@ func SessionCommand(sessionID, content string) (CommandReply, bool) {
 		return taskMenu(sessionID, menuPending, interactive.ListResumablePending(sessionID)), true
 	case "/stop":
 		return taskMenu(sessionID, menuStop, interactive.ListOnlinePending(sessionID)), true
+	case "/compact":
+		if exec.IsRunning(sessionID) {
+			return CommandReply{Text: "[Conflict] compact: a task is running, /stop it or wait"}, true
+		}
+		return CommandReply{Text: "Compact history? Redundant and meaningless exchanges are removed by LLM analysis", Menu: menuCompact, Items: []string{compactYes, compactNo}}, true
 	}
 	return CommandReply{}, false
 }
@@ -154,26 +167,35 @@ func RegisterMenu(key, sessionID string, reply CommandReply) {
 	menus.Store(key, menuEntry{kind: reply.Menu, sessionID: sessionID, values: reply.values})
 }
 
-func ApplyMenu(key, value string) (string, bool) {
+func ApplyMenu(key, value string, send func(text string) (remove func())) bool {
 	raw, ok := menus.LoadAndDelete(key)
 	if !ok {
-		return "", false
+		return false
 	}
 	entry := raw.(menuEntry)
-	if entry.kind == menuPending || entry.kind == menuStop {
+	var text string
+	switch entry.kind {
+	case menuPending, menuStop:
 		hash, ok := entry.values[value]
-		if !ok {
-			return fmt.Sprintf("[Invalid] %s task: %q", entry.kind, value), true
+		switch {
+		case !ok:
+			text = fmt.Sprintf("[Invalid] %s task: %q", entry.kind, value)
+		case entry.kind == menuStop:
+			text = stopTask(entry.sessionID, hash)
+		default:
+			text = resumePending(entry.sessionID, hash)
 		}
-		if entry.kind == menuStop {
-			return stopTask(entry.sessionID, hash), true
-		}
-		return resumePending(entry.sessionID, hash), true
+	case menuCompact:
+		text = runCompact(entry.sessionID, value, send)
+	case menuReasoning:
+		text = setReasoning(entry.sessionID, value)
+	default:
+		text = setModel(entry.sessionID, value)
 	}
-	if entry.kind == menuReasoning {
-		return setReasoning(entry.sessionID, value), true
+	if text != "" {
+		send(text)
 	}
-	return setModel(entry.sessionID, value), true
+	return true
 }
 
 func availableModels() []string {
@@ -209,4 +231,20 @@ func setReasoning(sessionID, level string) string {
 	}
 	configbot.SetModel(sessionID, "", level)
 	return "Reasoning set to " + level
+}
+
+func runCompact(sessionID, answer string, send func(text string) (remove func())) string {
+	if answer != compactYes {
+		return "Compact canceled"
+	}
+	if exec.IsRunning(sessionID) {
+		return "[Conflict] compact: a task is running, /stop it or wait"
+	}
+	remove := send("Compacting...")
+	removed, err := compact.SessionHistory(context.Background(), sessionID)
+	remove()
+	if err != nil {
+		return err.Error()
+	}
+	return fmt.Sprintf("Compacted: %d message(s) removed", removed)
 }

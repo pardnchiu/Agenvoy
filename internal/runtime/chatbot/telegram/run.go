@@ -99,9 +99,14 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 		if b.listener != nil && b.listener.OnCallback(ctx, in.ChatID, in.MessageID, in.CallbackData, in.CallbackPicks) {
 			return nil
 		}
-		if text, ok := chatbot.ApplyMenu(menuKey(in.ChatID, in.MessageID), in.CallbackData); ok && text != "" {
-			_, _ = b.client.Send(ctx, in.ChatID, in.MessageID, text)
-		}
+		chatbot.ApplyMenu(menuKey(in.ChatID, in.MessageID), in.CallbackData, func(text string) func() {
+			msg, err := b.client.Send(ctx, in.ChatID, in.MessageID, text)
+			return func() {
+				if err == nil && msg != nil {
+					_ = b.client.Delete(ctx, in.ChatID, msg.ID)
+				}
+			}
+		})
 		return nil
 	}
 
