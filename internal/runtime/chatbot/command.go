@@ -10,6 +10,7 @@ import (
 	"github.com/pardnchiu/go-llm-router/core/claudeCode"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
@@ -23,6 +24,7 @@ const (
 	menuModel     = "model"
 	menuReasoning = "reasoning"
 	menuPending   = "pending"
+	menuStop      = "stop"
 )
 
 type CommandReply struct {
@@ -61,15 +63,17 @@ func SessionCommand(sessionID, content string) (CommandReply, bool) {
 		}
 		return CommandReply{Text: setReasoning(sessionID, rest)}, true
 	case "/pending":
-		return pendingMenu(sessionID), true
+		return taskMenu(sessionID, menuPending, interactive.ListResumablePending(sessionID)), true
+	case "/stop":
+		return taskMenu(sessionID, menuStop, interactive.ListOnlinePending(sessionID)), true
 	}
 	return CommandReply{}, false
 }
 
-func pendingMenu(sessionID string) CommandReply {
+func taskMenu(sessionID, kind string, hashes []string) CommandReply {
 	var items []string
 	values := map[string]string{}
-	for _, hash := range interactive.ListResumablePending(sessionID) {
+	for _, hash := range hashes {
 		info, ok := interactive.LoadPendingInfo(sessionID, hash)
 		if !ok {
 			continue
@@ -88,10 +92,27 @@ func pendingMenu(sessionID string) CommandReply {
 		items = append(items, label)
 		values[label] = hash
 	}
+	if kind == menuStop {
+		if len(items) == 0 {
+			return CommandReply{Text: "[Not found] running task: none to stop"}
+		}
+		return CommandReply{Text: fmt.Sprintf("%d running task(s)", len(items)), Menu: menuStop, Items: items, values: values}
+	}
 	if len(items) == 0 {
 		return CommandReply{Text: "[Not found] pending task: none to resume"}
 	}
 	return CommandReply{Text: fmt.Sprintf("%d pending task(s)", len(items)), Menu: menuPending, Items: items, values: values}
+}
+
+func stopTask(sessionID, taskHash string) string {
+	if !interactive.IsOnline(sessionID, taskHash) {
+		return "[Not found] running task: it may have finished"
+	}
+	interactive.CancelTask(sessionID, taskHash)
+	if !exec.Cancel(taskHash, runtime.ErrUserCanceled) {
+		return "[Not found] running task: not running in this daemon"
+	}
+	return "Stop requested"
 }
 
 func resumePending(sessionID, taskHash string) string {
@@ -139,10 +160,13 @@ func ApplyMenu(key, value string) (string, bool) {
 		return "", false
 	}
 	entry := raw.(menuEntry)
-	if entry.kind == menuPending {
+	if entry.kind == menuPending || entry.kind == menuStop {
 		hash, ok := entry.values[value]
 		if !ok {
-			return fmt.Sprintf("[Invalid] pending task: %q", value), true
+			return fmt.Sprintf("[Invalid] %s task: %q", entry.kind, value), true
+		}
+		if entry.kind == menuStop {
+			return stopTask(entry.sessionID, hash), true
 		}
 		return resumePending(entry.sessionID, hash), true
 	}
