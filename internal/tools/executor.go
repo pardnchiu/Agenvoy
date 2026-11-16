@@ -112,14 +112,19 @@ func normalizeArgs(args json.RawMessage) json.RawMessage {
 func Execute(ctx context.Context, e *tooltypes.Executor, name string, args json.RawMessage) (string, error) {
 	args = normalizeArgs(args)
 
-	if e.UnmarkedTools[name] {
+	e.ToolsMu.Lock()
+	unmarked := e.UnmarkedTools[name]
+	e.ToolsMu.Unlock()
+	if unmarked {
 		activateArgs, _ := json.Marshal(map[string]any{"mode": "search", "names": []string{name}})
 		if _, err := toolregister.Dispatch(ctx, e, "find_tools", activateArgs); err != nil {
 			slog.Warn("tool schema marking failed",
 				slog.String("name", name),
 				slog.String("error", err.Error()))
 		}
+		e.ToolsMu.Lock()
 		delete(e.UnmarkedTools, name)
+		e.ToolsMu.Unlock()
 	}
 
 	return toolregister.Dispatch(ctx, e, name, args)

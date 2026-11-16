@@ -360,9 +360,12 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			continue
 		}
 
-		if exec.UnmarkedTools[toolName] || activatedInBatch[toolName] {
+		exec.ToolsMu.Lock()
+		unmarked := exec.UnmarkedTools[toolName]
+		exec.ToolsMu.Unlock()
+		if unmarked || activatedInBatch[toolName] {
 			schema := ""
-			if exec.UnmarkedTools[toolName] {
+			if unmarked {
 				activateArgs, _ := json.Marshal(map[string]any{"mode": "search", "names": []string{toolName}})
 				out, err := toolregister.Dispatch(ctx, exec, "find_tools", activateArgs)
 				if err != nil {
@@ -371,7 +374,9 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 						slog.String("error", err.Error()))
 				}
 				schema = out
+				exec.ToolsMu.Lock()
 				delete(exec.UnmarkedTools, toolName)
+				exec.ToolsMu.Unlock()
 			}
 			activatedInBatch[toolName] = true
 			reinvoke := toolName
