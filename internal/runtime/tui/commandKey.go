@@ -11,6 +11,7 @@ import (
 
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 )
@@ -94,6 +95,8 @@ func (t TUI) runKeyDelete(key string) (TUI, tea.Cmd) {
 		return t, notice(msgError(fmt.Sprintf("config.DeleteKey %s: %v", key, err)) + "\n")
 	}
 	imagetool.Prune(context.Background())
+	audio.Prune(context.Background(), audio.STT)
+	audio.Prune(context.Background(), audio.TTS)
 
 	next, cmd, _ := t.commandKey(nil)
 	slog.Debug("key deleted", slog.String("key", key))

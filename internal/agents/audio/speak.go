@@ -15,10 +15,22 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
+var mimeExt = map[string]string{
+	"audio/ogg":   ".ogg",
+	"audio/opus":  ".ogg",
+	"audio/wav":   ".wav",
+	"audio/x-wav": ".wav",
+	"audio/mpeg":  ".mp3",
+	"audio/mp3":   ".mp3",
+	"audio/aac":   ".aac",
+	"audio/flac":  ".flac",
+}
+
 type TTSRequest struct {
 	Text       string
 	Voice      string
 	OutputFile string
+	WorkDir    string
 }
 
 func Speak(ctx context.Context, req TTSRequest) (string, error) {
@@ -39,7 +51,7 @@ func Speak(ctx context.Context, req TTSRequest) (string, error) {
 		return "", utilsmsg.New(utilsmsg.Upstream, modelName, "returned empty audio; retry once, then ask the user to switch the text-to-speech model")
 	}
 
-	path := outputPath(req.OutputFile, result.MimeType)
+	path := outputPath(req, result.MimeType)
 	if err := go_pkg_filesystem.CheckDir(filepath.Dir(path), true); err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.CheckDir", filepath.Dir(path), err)
 	}
@@ -73,29 +85,26 @@ func speakSend(ctx context.Context, text string, opts go_llm_router.TTSOptions) 
 	return result, name, nil
 }
 
-var extByMime = map[string]string{
-	"audio/ogg":   ".ogg",
-	"audio/opus":  ".ogg",
-	"audio/wav":   ".wav",
-	"audio/x-wav": ".wav",
-	"audio/mpeg":  ".mp3",
-	"audio/mp3":   ".mp3",
-	"audio/aac":   ".aac",
-	"audio/flac":  ".flac",
-}
+func outputPath(req TTSRequest, mime string) string {
+	ext := audioExt(mime)
 
-func outputPath(file, mime string) string {
-	name := filepath.Base(strings.TrimSpace(file))
-	name = strings.Trim(strings.TrimSuffix(name, filepath.Ext(name)), `./\ `)
-	if name == "" {
-		name = "audio-" + time.Now().Format("20060102-150405")
+	target := strings.TrimSpace(req.OutputFile)
+	if target == "" {
+		return filepath.Join(filesystem.OutputDir(), "audio-"+time.Now().Format("20060102-150405")+ext)
 	}
-	return filepath.Join(filesystem.OutputDir(), name+audioExt(mime))
+	target = strings.TrimSuffix(target, filepath.Ext(target)) + ext
+	if filepath.IsAbs(target) {
+		return target
+	}
+	if dir := strings.TrimSpace(req.WorkDir); dir != "" {
+		return filepath.Join(dir, target)
+	}
+	return filepath.Join(filesystem.OutputDir(), target)
 }
 
 func audioExt(mime string) string {
 	base, _, _ := strings.Cut(mime, ";")
-	if ext, ok := extByMime[strings.ToLower(strings.TrimSpace(base))]; ok {
+	if ext, ok := mimeExt[strings.ToLower(strings.TrimSpace(base))]; ok {
 		return ext
 	}
 	return ".wav"

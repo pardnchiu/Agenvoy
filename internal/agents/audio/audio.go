@@ -2,6 +2,8 @@ package audio
 
 import (
 	"context"
+	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 
@@ -69,18 +71,22 @@ func Options(ctx context.Context, target int) []string {
 			}
 
 			// NOTE: 快取模型結果 15m 減少 delay
+			base := go_llm_router.Config{APIKey: cfg.APIKey}
 			models, err := torii.CachedList(ctx, torii.ModelsCacheKey(kind, name), configs.TTL_MODELS_CACHE_SEC, func() ([]string, error) {
 				switch name {
 				case "openai":
-					return openai.Models(ctx, go_llm_router.Config{APIKey: cfg.APIKey}, filter)
+					return openai.Models(ctx, base, filter)
 				case "gemini":
-					return gemini.Models(ctx, go_llm_router.Config{APIKey: cfg.APIKey}, filter)
+					return gemini.Models(ctx, base, filter)
 				case "openrouter":
-					return openrouter.Models(ctx, go_llm_router.Config{APIKey: cfg.APIKey}, filter)
+					return openrouter.Models(ctx, base, filter)
 				}
 				return nil, nil
 			})
 			if err != nil {
+				slog.Debug("audio.Available",
+					slog.String("provider", name),
+					slog.String("error", err.Error()))
 				return
 			}
 
@@ -99,7 +105,33 @@ func Options(ctx context.Context, target int) []string {
 	return list
 }
 
-func new(ctx context.Context, name string) (any, error) {
+func Prune(ctx context.Context, target int) {
+	name := Model(target)
+	if name == "" {
+		return
+	}
+	if slices.Contains(Options(ctx, target), name) {
+		return
+	}
+
+	cfg, err := config.Load()
+	if err != nil || cfg == nil {
+		return
+	}
+	switch target {
+	case STT:
+		cfg.STTModel = ""
+	case TTS:
+		cfg.TTSModel = ""
+	}
+	if err := config.Save(cfg); err != nil {
+		slog.Warn("audio.Prune config.Save",
+			slog.String("model", name),
+			slog.String("error", err.Error()))
+	}
+}
+
+func new(ctx context.Context, name string) (go_llm_router.Agent, error) {
 	cfg, err := agentkeychain.Config(ctx, name)
 	if err != nil {
 		return nil, utilsmsg.Trace("internal/agents/keychain: Config", name, err)

@@ -16,6 +16,7 @@ import (
 	oauthgrok "github.com/pardnchiu/go-llm-router/core/oauth/grok"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	"github.com/pardnchiu/agenvoy/internal/agents/probe"
@@ -339,6 +340,8 @@ func ClearProviderOAuth() gin.HandlerFunc {
 		DropQuotaCache(prov)
 		torii.DropModelsCache(c.Request.Context(), prov)
 		imagetool.Prune(c.Request.Context())
+		audio.Prune(c.Request.Context(), audio.STT)
+		audio.Prune(c.Request.Context(), audio.TTS)
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	}
 }

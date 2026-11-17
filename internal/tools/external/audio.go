@@ -1,4 +1,4 @@
-package audio
+package external
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func Register() {
+func RegisterAudio() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "generate_audio",
 		SystemUse:   false,
@@ -35,7 +35,7 @@ Transcribing an existing recording → read_files.`,
 				},
 				"output_file": map[string]any{
 					"type":        "string",
-					"description": "File name, e.g. 'greeting'; always saved in the output directory: directory parts are dropped and the extension follows the format the model returns. Blank auto-names it audio-<timestamp>.",
+					"description": "Save path: blank auto-names audio-<timestamp> in the output directory; absolute is used as-is; relative joins under the working directory; the extension always follows the returned format.",
 					"default":     "",
 				},
 			},
@@ -50,10 +50,16 @@ Transcribing an existing recording → read_files.`,
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
+
+			workDir := ""
+			if e != nil {
+				workDir = e.WorkDir
+			}
 			return agentaudio.Speak(ctx, agentaudio.TTSRequest{
 				Text:       params.Text,
 				Voice:      params.Voice,
 				OutputFile: params.OutputFile,
+				WorkDir:    workDir,
 			})
 		},
 	})

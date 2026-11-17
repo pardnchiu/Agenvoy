@@ -239,6 +239,8 @@ func ListAudioModels() gin.HandlerFunc {
 func GetModelRouting() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		imagetool.Prune(c.Request.Context())
+		audio.Prune(c.Request.Context(), audio.STT)
+		audio.Prune(c.Request.Context(), audio.TTS)
 
 		cfg, err := config.Load()
 		if err != nil {

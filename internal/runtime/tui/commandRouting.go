@@ -68,6 +68,12 @@ func routingTabLoad(p *Popup, kind string) tea.Cmd {
 	target := p
 	return func() tea.Msg {
 		ctx := context.Background()
+		switch kind {
+		case "stt":
+			audio.Prune(ctx, audio.STT)
+		case "tts":
+			audio.Prune(ctx, audio.TTS)
+		}
 		cfg, err := config.Load()
 		if err != nil {
 			return RoutingTabLoaded{kind: kind, err: err, target: target}
