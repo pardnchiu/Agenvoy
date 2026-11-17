@@ -38,12 +38,12 @@ import (
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
-	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	"github.com/pardnchiu/agenvoy/internal/agents/probe"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime/daemon"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -472,7 +472,7 @@ func (t TUI) runModelAddAPIKeySubmit(key string) (TUI, tea.Cmd) {
 }
 
 func (t TUI) finishModelAddDecisionKey() (TUI, tea.Cmd) {
-	decision.DropModelsCache(context.Background(), t.modelAdd.provider)
+	torii.DropModelsCache(context.Background(), t.modelAdd.provider)
 	t.modelAdd = nil
 	return t, notice(msgLog("TypeSafe API key saved; pick its model in /model decision") + "\n")
 }

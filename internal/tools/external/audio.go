@@ -1,33 +1,33 @@
-package audio
+// * last modified: 26/11/18
+package external
 
 import (
 	"context"
 	"encoding/json"
 	"time"
 
+	agentaudio "github.com/pardnchiu/agenvoy/internal/agents/audio"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func Register() {
-	InstallTranscriber()
-
+func RegisterAudio() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "generate_audio",
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
 		Timeout:     5 * time.Minute,
-		Description: `[system-default] Speaks text with the configured text-to-speech model and writes the audio to disk.
+		Description: `[system-default] Speaks text with the configured text-to-speech model and saves the audio file.
 Use for "read this aloud", "say this", "turn this into a voice file", "make an audio clip of this".
-Transcribing an existing recording → read_files; drawing an image → generate_image.`,
+Transcribing an existing recording → read_files.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"text": map[string]any{
 					"type":        "string",
-					"description": "Exactly the words to speak, written as they should be read aloud, not a description of them.",
+					"description": "The exact words to speak as they should be read aloud, not a description of them.",
 				},
 				"voice": map[string]any{
 					"type":        "string",
@@ -36,7 +36,7 @@ Transcribing an existing recording → read_files; drawing an image → generate
 				},
 				"output_file": map[string]any{
 					"type":        "string",
-					"description": "File name, e.g. 'greeting'; always saved in the output directory: any directory part is dropped and the extension is replaced by the format the model returns. Blank auto-names it audio-<timestamp>.",
+					"description": "Save path: blank auto-names audio-<timestamp> in the output directory; absolute is used as-is; relative joins under the working directory; the extension always follows the returned format.",
 					"default":     "",
 				},
 			},
@@ -51,10 +51,16 @@ Transcribing an existing recording → read_files; drawing an image → generate
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			return Generate(ctx, Request{
+
+			workDir := ""
+			if e != nil {
+				workDir = e.WorkDir
+			}
+			return agentaudio.Speak(ctx, agentaudio.TTSRequest{
 				Text:       params.Text,
 				Voice:      params.Voice,
 				OutputFile: params.OutputFile,
+				WorkDir:    workDir,
 			})
 		},
 	})

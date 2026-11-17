@@ -9,11 +9,11 @@ import (
 
 	"github.com/pardnchiu/go-llm-router/core/claudeCode"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	"github.com/pardnchiu/agenvoy/internal/agents/decision"
+	agentimage "github.com/pardnchiu/agenvoy/internal/agents/image"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
-	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
-	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 )
 
 const (
@@ -68,20 +68,27 @@ func routingTabLoad(p *Popup, kind string) tea.Cmd {
 	target := p
 	return func() tea.Msg {
 		ctx := context.Background()
+		switch kind {
+		case "image":
+			agentimage.Prune(ctx)
+		case "stt":
+			audio.Prune(ctx, audio.STT)
+		case "tts":
+			audio.Prune(ctx, audio.TTS)
+		}
 		cfg, err := config.Load()
 		if err != nil {
 			return RoutingTabLoaded{kind: kind, err: err, target: target}
 		}
 		switch kind {
 		case "image":
-			imagetool.Prune(ctx)
-			return RoutingTabLoaded{kind: kind, current: cfg.ImageGenerator, available: imagetool.Available(ctx), target: target}
+			return RoutingTabLoaded{kind: kind, current: cfg.ImageGenerator, available: agentimage.Options(ctx), target: target}
 		case "decision":
 			return RoutingTabLoaded{kind: kind, current: cfg.DecisionModel, available: decision.Available(ctx), target: target}
 		case "stt":
-			return RoutingTabLoaded{kind: kind, current: cfg.STTModel, available: audiotool.STTOptions(ctx), target: target}
+			return RoutingTabLoaded{kind: kind, current: cfg.STTModel, available: audio.Options(ctx, audio.STT), target: target}
 		}
-		return RoutingTabLoaded{kind: kind, current: cfg.TTSModel, available: audiotool.TTSOptions(ctx), target: target}
+		return RoutingTabLoaded{kind: kind, current: cfg.TTSModel, available: audio.Options(ctx, audio.TTS), target: target}
 	}
 }
 

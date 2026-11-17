@@ -44,14 +44,6 @@ func Selected() string {
 	return name
 }
 
-func modelsCacheKey(name string) string {
-	return "provider:models:decision:" + name
-}
-
-func DropModelsCache(ctx context.Context, name string) {
-	torii.DropKeys(ctx, modelsCacheKey(name))
-}
-
 func Available(ctx context.Context) []string {
 	found := make([][]string, len(Providers))
 
@@ -63,7 +55,7 @@ func Available(ctx context.Context) []string {
 				return
 			}
 			base := go_llm_router.Config{APIKey: cfg.APIKey}
-			models, err := torii.CachedList(ctx, modelsCacheKey(name), configs.TTL_MODELS_CACHE_SEC, func() ([]string, error) {
+			models, err := torii.CachedList(ctx, torii.ModelsCacheKey("decision", name), configs.TTL_MODELS_CACHE_SEC, func() ([]string, error) {
 				if name == "typesafe" {
 					return typesafe.Models(ctx, base)
 				}
@@ -98,7 +90,7 @@ func Agent(ctx context.Context) (go_llm_router.DecisionAgent, string, error) {
 	}
 	cfg, err := agentkeychain.Config(ctx, name)
 	if err != nil {
-		return nil, name, utilsmsg.Trace(name, "not configured", err)
+		return nil, name, utilsmsg.Trace("internal/agents/keychain: Config", name, err)
 	}
 	agent, err := router.NewDecision(router.Config{Name: name, APIKey: cfg.APIKey})
 	if err != nil {

@@ -14,6 +14,7 @@ import (
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/app"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -32,8 +33,7 @@ import (
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
 	usagelog "github.com/pardnchiu/agenvoy/internal/session/usage"
-	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
-	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
+	"github.com/pardnchiu/agenvoy/internal/tools/external"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	"github.com/pardnchiu/agenvoy/internal/tools/subagent"
 )
@@ -95,8 +95,11 @@ func Daemon() {
 
 	bootPhase("storage")
 
-	imagetool.Register()
-	audiotool.Register()
+	filesystem.SetTranscriber(func(ctx context.Context, raw []byte, mime string) (string, error) {
+		return audio.Transcribe(ctx, audio.STTRequest{Audio: raw, MimeType: mime})
+	})
+	external.RegisterImage()
+	external.RegisterAudio()
 	chatbottool.Register()
 
 	if _, err := runtime.Init(); err != nil {

@@ -3,8 +3,25 @@ package torii
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"strings"
 )
+
+func ModelsCacheKey(target, name string) string {
+	return fmt.Sprintf("provider:models:%s:%s", target, name)
+}
+
+func DropModelsCache(ctx context.Context, name string) {
+	name = strings.TrimSuffix(name, "@")
+	DropKeys(ctx,
+		ModelsCacheKey("list", name),
+		ModelsCacheKey("image", name),
+		ModelsCacheKey("decision", name),
+		ModelsCacheKey("stt", name),
+		ModelsCacheKey("tts", name),
+	)
+}
 
 func CachedList(ctx context.Context, key string, ttl int64, fetch func() ([]string, error)) ([]string, error) {
 	db := DB(DBToolCache)

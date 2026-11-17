@@ -90,6 +90,8 @@ func NameTier(name string) (string, int) {
 		return "S", 1
 	case family("gpt-", "-astra"):
 		return "S", 2
+	case family("gemini-", "-carbon"):
+		return "S", 3
 	case family("gpt-", "-sol"):
 		return "A", 10
 	case hasPrefix("grok-"):
@@ -98,29 +100,35 @@ func NameTier(name string) (string, int) {
 		if version >= 4.5 {
 			return "A", 11
 		}
-		return "B", 23
+		return "B", 24
 	case hasPrefix("claude-sonnet"):
 		return "A", 12
 	case family("gpt-", "-terra"):
 		return "A", 13
-	case family("gemini-", "-pro"):
+	case family("gemini-", "-argon"):
 		return "A", 14
-	case hasPrefix("deepseek-pro"):
+	case family("gemini-", "-pro"):
 		return "A", 15
-	case hasPrefix("glm"):
+	case family("deepseek-", "-pro"):
 		return "A", 16
-	case hasPrefix("kimi"):
+	case hasPrefix("glm"):
 		return "A", 17
+	case hasPrefix("kimi"):
+		return "A", 18
 	case hasPrefix("claude-haiku"):
 		return "B", 20
 	case family("gpt-", "-luna"):
 		return "B", 21
-	case family("gemini-", "-flash"):
+	case family("gemini-", "-hydrogen"):
 		return "B", 22
+	case family("gemini-", "-flash"):
+		return "B", 23
+	case family("deepseek-", "-flash"):
+		return "B", 25
 	case hasPrefix("deepseek"):
-		return "B", 24
+		return "B", 26
 	}
-	return "A", 18
+	return "A", 19
 }
 
 func ModelTier(tags map[string]string, name string) string {

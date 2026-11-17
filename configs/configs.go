@@ -150,6 +150,9 @@ var ConfirmExplainPrompt string
 //go:embed prompts/system_prompt/voice.md
 var VoicePrompt string
 
+//go:embed prompts/system_prompt/transcript.md
+var TranscriptPrompt string
+
 //go:embed prompts/system_prompt/inject/assign_skill.md
 var AssignSkill string
 
