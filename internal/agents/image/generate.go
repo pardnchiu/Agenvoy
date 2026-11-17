@@ -1,3 +1,4 @@
+// * last modified: 26/11/18
 package image
 
 import (
