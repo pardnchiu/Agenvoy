@@ -8,8 +8,8 @@ import (
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/audio"
+	agentimage "github.com/pardnchiu/agenvoy/internal/agents/image"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
-	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 )
 
 func DeleteKey() gin.HandlerFunc {
@@ -27,7 +27,7 @@ func DeleteKey() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		imagetool.Prune(c.Request.Context())
+		agentimage.Prune(c.Request.Context())
 		audio.Prune(c.Request.Context(), audio.STT)
 		audio.Prune(c.Request.Context(), audio.TTS)
 		c.JSON(http.StatusOK, gin.H{"ok": true})

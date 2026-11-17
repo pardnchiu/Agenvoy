@@ -11,10 +11,10 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	"github.com/pardnchiu/agenvoy/internal/agents/decision"
+	agentimage "github.com/pardnchiu/agenvoy/internal/agents/image"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
-	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 )
 
 func modelNames() []string {
@@ -216,8 +216,8 @@ func modelRouting(c *gin.Context, cfg *config.Config) gin.H {
 		"dispatcher":       cfg.DispatcherModel,
 		"summary":          cfg.SummaryModel,
 		"image":            cfg.ImageGenerator,
-		"image_options":    imagetool.Available(c.Request.Context()),
-		"image_providers":  imagetool.Providers,
+		"image_options":    agentimage.Options(c.Request.Context()),
+		"image_providers":  agentimage.Providers,
 		"decision":         cfg.DecisionModel,
 		"decision_options": decision.Available(c.Request.Context()),
 		"stt":              cfg.STTModel,
@@ -238,7 +238,7 @@ func ListAudioModels() gin.HandlerFunc {
 
 func GetModelRouting() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		imagetool.Prune(c.Request.Context())
+		agentimage.Prune(c.Request.Context())
 		audio.Prune(c.Request.Context(), audio.STT)
 		audio.Prune(c.Request.Context(), audio.TTS)
 
@@ -298,8 +298,8 @@ func SetModelRouting() gin.HandlerFunc {
 			if image == "off" {
 				image = ""
 			}
-			if image != "" && !slices.Contains(imagetool.Available(c.Request.Context()), image) {
-				if !slices.Contains(imagetool.Providers, image) {
+			if image != "" && !slices.Contains(agentimage.Options(c.Request.Context()), image) {
+				if !slices.Contains(agentimage.Providers, image) {
 					c.JSON(http.StatusBadRequest, gin.H{"error": "unknown image provider: " + image})
 					return
 				}

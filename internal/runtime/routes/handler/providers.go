@@ -18,12 +18,12 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
+	agentimage "github.com/pardnchiu/agenvoy/internal/agents/image"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	"github.com/pardnchiu/agenvoy/internal/agents/probe"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
-	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 )
 
 type providerInfo struct {
@@ -339,7 +339,7 @@ func ClearProviderOAuth() gin.HandlerFunc {
 
 		DropQuotaCache(prov)
 		torii.DropModelsCache(c.Request.Context(), prov)
-		imagetool.Prune(c.Request.Context())
+		agentimage.Prune(c.Request.Context())
 		audio.Prune(c.Request.Context(), audio.STT)
 		audio.Prune(c.Request.Context(), audio.TTS)
 		c.JSON(http.StatusOK, gin.H{"ok": true})

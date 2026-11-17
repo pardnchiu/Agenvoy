@@ -24,35 +24,33 @@ import (
 
 var Providers = []string{"openai", "codex", "grok", "grok-oauth", "gemini", "openrouter"}
 
-const Off = ""
-
-func Selected() string {
+func Model() string {
 	cfg, err := config.Load()
 	if err != nil || cfg == nil {
-		return Off
+		return ""
 	}
+
 	name := strings.TrimSpace(cfg.ImageGenerator)
 	if name == "off" {
-		return Off
+		return ""
 	}
 	return name
 }
 
-func Enabled() bool {
-	return Selected() != Off
-}
-
-func Available(ctx context.Context) []string {
+func Options(ctx context.Context) []string {
 	filter := go_llm_router.ModelFilter{ImageOnly: true}
 	found := make([][]string, len(Providers))
 
 	var wg sync.WaitGroup
 	for i, name := range Providers {
 		wg.Go(func() {
+			// NOTE: 檢查 keychain 是否存在
 			cfg, err := agentkeychain.Config(ctx, name+"@")
 			if err != nil {
 				return
 			}
+
+			// NOTE: codex 沒有 list
 			if name == "codex" {
 				found[i] = []string{name}
 				return
@@ -80,6 +78,7 @@ func Available(ctx context.Context) []string {
 					slog.String("error", err.Error()))
 				return
 			}
+
 			for _, model := range models {
 				found[i] = append(found[i], name+"@"+model)
 			}
@@ -87,6 +86,7 @@ func Available(ctx context.Context) []string {
 	}
 	wg.Wait()
 
+	// NOTE: 統整並行搜集結果
 	list := []string{}
 	for _, models := range found {
 		list = append(list, models...)
@@ -95,15 +95,15 @@ func Available(ctx context.Context) []string {
 }
 
 func Prune(ctx context.Context) {
-	name := Selected()
-	if name == Off {
+	name := Model()
+	if name == "" {
 		return
 	}
 	if !strings.Contains(name, "@") {
 		if _, err := agentkeychain.Config(ctx, name+"@"); err == nil {
 			return
 		}
-	} else if slices.Contains(Available(ctx), name) {
+	} else if slices.Contains(Options(ctx), name) {
 		return
 	}
 
@@ -111,7 +111,7 @@ func Prune(ctx context.Context) {
 	if err != nil || cfg == nil {
 		return
 	}
-	cfg.ImageGenerator = Off
+	cfg.ImageGenerator = ""
 	if err := config.Save(cfg); err != nil {
 		slog.Warn("image.Prune config.Save",
 			slog.String("provider", name),
@@ -119,21 +119,14 @@ func Prune(ctx context.Context) {
 	}
 }
 
-func agent(ctx context.Context) (go_llm_router.ImageAgent, string, error) {
-	name := Selected()
-	if name == Off {
-		return nil, "", utilsmsg.New(utilsmsg.Unavailable, "image generation model", "not configured; ask the user to select one")
-	}
-	full := name
-	if !strings.Contains(full, "@") {
-		full += "@"
-	}
-	cfg, err := agentkeychain.Config(ctx, full)
+func new(ctx context.Context, name string) (go_llm_router.Agent, error) {
+	cfg, err := agentkeychain.Config(ctx, name)
 	if err != nil {
-		return nil, "", utilsmsg.Trace("internal/agents/keychain: Config", name, err)
+		return nil, utilsmsg.Trace("internal/agents/keychain: Config", name, err)
 	}
-	built, err := router.New(router.Config{
-		Name:      full,
+
+	agent, err := router.New(router.Config{
+		Name:      name,
 		APIKey:    cfg.APIKey,
 		Token:     cfg.Token,
 		BaseURL:   cfg.BaseURL,
@@ -141,11 +134,7 @@ func agent(ctx context.Context) (go_llm_router.ImageAgent, string, error) {
 		GatewayID: cfg.GatewayID,
 	})
 	if err != nil {
-		return nil, "", utilsmsg.Wrap(utilsmsg.Invalid, "router.New", full, err)
+		return nil, utilsmsg.Wrap(utilsmsg.Invalid, "router.New", name, err)
 	}
-	img, ok := built.(go_llm_router.ImageAgent)
-	if !ok {
-		return nil, "", utilsmsg.New(utilsmsg.Invalid, name, "configured but not an image generation model; ask the user to reconfigure it")
-	}
-	return img, full, nil
+	return agent, nil
 }

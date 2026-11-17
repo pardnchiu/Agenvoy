@@ -36,12 +36,7 @@ type Request struct {
 func Generate(ctx context.Context, req Request) (string, error) {
 	prompt := strings.TrimSpace(req.Prompt)
 	if prompt == "" {
-		return "", utilsmsg.New(utilsmsg.Invalid, "prompt", "required")
-	}
-
-	img, agentName, err := agent(ctx)
-	if err != nil {
-		return "", err
+		return "", utilsmsg.New(utilsmsg.Invalid, "prompt", "empty; describe the image to generate")
 	}
 
 	opts := go_llm_router.ImageOptions{
@@ -57,17 +52,17 @@ func Generate(ctx context.Context, req Request) (string, error) {
 		opts.RefImageB64, opts.RefMime = b64, mime
 	}
 
-	result, err := img.GenerateImage(ctx, prompt, opts)
+	result, name, err := generateSend(ctx, prompt, opts)
 	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Upstream, "GenerateImage", agentName, err)
+		return "", err
 	}
 	if result == nil || result.B64 == "" {
-		return "", utilsmsg.New(utilsmsg.Upstream, agentName, "returned no image data")
+		return "", utilsmsg.New(utilsmsg.Upstream, name, "returned empty image; retry once, then ask the user to switch the image generation model")
 	}
 
 	raw, err := base64.StdEncoding.DecodeString(result.B64)
 	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Upstream, "base64.Decode", agentName, err)
+		return "", utilsmsg.Wrap(utilsmsg.Upstream, "base64.Decode", name, err)
 	}
 
 	path := outputPath(req, result.MimeType)
@@ -78,41 +73,19 @@ func Generate(ctx context.Context, req Request) (string, error) {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "os.WriteFile", path, err)
 	}
 
-	out := fmt.Sprintf("saved: %s\nmodel: %s\nbytes: %d", path, agentName, len(raw))
+	out := fmt.Sprintf("saved: %s\nmodel: %s\nbytes: %d", path, name, len(raw))
 	if revised := strings.TrimSpace(result.Revised); revised != "" {
 		out += "\nrevised prompt: " + revised
 	}
 	return out, nil
 }
 
-func outputPath(req Request, mime string) string {
-	ext, ok := mimeExt[strings.ToLower(strings.TrimSpace(mime))]
-	if !ok {
-		ext = ".png"
-	}
-
-	target := strings.TrimSpace(req.OutputFile)
-	if target == "" {
-		return filepath.Join(filesystem.OutputDir(), "image-"+time.Now().Format("20060102-150405")+ext)
-	}
-	if filepath.Ext(target) == "" {
-		target += ext
-	}
-	if filepath.IsAbs(target) {
-		return target
-	}
-	if dir := strings.TrimSpace(req.WorkDir); dir != "" {
-		return filepath.Join(dir, target)
-	}
-	return filepath.Join(filesystem.OutputDir(), target)
-}
-
 func readReference(path string) (string, string, error) {
 	if !filepath.IsAbs(path) {
-		return "", "", utilsmsg.New(utilsmsg.Invalid, "reference", "must be an absolute path")
+		return "", "", utilsmsg.New(utilsmsg.Invalid, "reference", "not an absolute path; pass the full path to the png/jpg/webp file")
 	}
 	if !go_pkg_filesystem_reader.Exists(path) {
-		return "", "", utilsmsg.New(utilsmsg.NotFound, "reference", "%s", path)
+		return "", "", utilsmsg.New(utilsmsg.NotFound, path, "reference image does not exist; check the path, or leave reference blank to generate from the prompt alone")
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -127,4 +100,50 @@ func readReference(path string) (string, string, error) {
 		mime = "image/webp"
 	}
 	return base64.StdEncoding.EncodeToString(raw), mime, nil
+}
+
+func generateSend(ctx context.Context, prompt string, opts go_llm_router.ImageOptions) (*go_llm_router.ImageResult, string, error) {
+	name := Model()
+	if name == "" {
+		return nil, "", utilsmsg.New(utilsmsg.Unavailable, "image generation model", "not configured; ask the user to select one")
+	}
+	if !strings.Contains(name, "@") {
+		name += "@"
+	}
+
+	agent, err := new(ctx, name)
+	if err != nil {
+		return nil, name, err
+	}
+
+	img, ok := agent.(go_llm_router.ImageAgent)
+	if !ok {
+		return nil, name, utilsmsg.New(utilsmsg.Invalid, name, "configured but not an image generation model; ask the user to reconfigure it")
+	}
+
+	result, err := img.GenerateImage(ctx, prompt, opts)
+	if err != nil {
+		return nil, name, utilsmsg.Wrap(utilsmsg.Upstream, "GenerateImage", name, err)
+	}
+	return result, name, nil
+}
+
+func outputPath(req Request, mime string) string {
+	ext, ok := mimeExt[strings.ToLower(strings.TrimSpace(mime))]
+	if !ok {
+		ext = ".png"
+	}
+
+	target := strings.TrimSpace(req.OutputFile)
+	if target == "" {
+		return filepath.Join(filesystem.OutputDir(), "image-"+time.Now().Format("20060102-150405")+ext)
+	}
+	target = strings.TrimSuffix(target, filepath.Ext(target)) + ext
+	if filepath.IsAbs(target) {
+		return target
+	}
+	if dir := strings.TrimSpace(req.WorkDir); dir != "" {
+		return filepath.Join(dir, target)
+	}
+	return filepath.Join(filesystem.OutputDir(), target)
 }
