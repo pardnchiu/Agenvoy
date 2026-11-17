@@ -9,13 +9,13 @@ import (
 
 	go_bot_discord "github.com/pardnchiu/go-bot/core/discord"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	execchatbot "github.com/pardnchiu/agenvoy/internal/agents/exec/chatbot"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime/chatbot"
 	sessiondiscord "github.com/pardnchiu/agenvoy/internal/session/discord"
 	sessionhistory "github.com/pardnchiu/agenvoy/internal/session/history"
-	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -164,7 +164,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 	}
 
 	if hasAttachment {
-		if hasVoiceAttachment(in) && !audiotool.STTEnabled() {
+		if hasVoiceAttachment(in) && audio.Model(audio.STT) == "" {
 			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, "No speech-to-text model selected · pick one with `/model stt` first.")
 			return nil
 		}

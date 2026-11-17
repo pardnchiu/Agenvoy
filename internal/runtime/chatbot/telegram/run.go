@@ -14,13 +14,13 @@ import (
 
 	go_bot_telegram "github.com/pardnchiu/go-bot/core/telegram"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	execchatbot "github.com/pardnchiu/agenvoy/internal/agents/exec/chatbot"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime/chatbot"
 	sessionhistory "github.com/pardnchiu/agenvoy/internal/session/history"
 	sessiontelegram "github.com/pardnchiu/agenvoy/internal/session/telegram"
-	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -184,7 +184,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 	}
 
 	if hasAttachment {
-		if slices.ContainsFunc(attachInputs, inputHasVoice) && !audiotool.STTEnabled() {
+		if slices.ContainsFunc(attachInputs, inputHasVoice) && audio.Model(audio.STT) == "" {
 			_, _ = b.client.Send(ctx, in.ChatID, in.MessageID, "No speech-to-text model selected · pick one with <code>/model stt</code> first.", go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
 			return nil
 		}

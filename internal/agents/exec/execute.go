@@ -18,6 +18,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	agentsexecallowskill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
@@ -35,7 +36,6 @@ import (
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	usagelog "github.com/pardnchiu/agenvoy/internal/session/usage"
 	"github.com/pardnchiu/agenvoy/internal/tools"
-	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
 	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -303,7 +303,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	if !imagetool.Enabled() {
 		data.ExcludeTools = append(data.ExcludeTools, "generate_image")
 	}
-	if !audiotool.TTSEnabled() {
+	if audio.Model(audio.TTS) == "" {
 		data.ExcludeTools = append(data.ExcludeTools, "generate_audio")
 	}
 	autoMode := agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff

@@ -9,10 +9,10 @@ import (
 
 	"github.com/pardnchiu/go-llm-router/core/claudeCode"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
-	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
 	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 )
 
@@ -79,9 +79,9 @@ func routingTabLoad(p *Popup, kind string) tea.Cmd {
 		case "decision":
 			return RoutingTabLoaded{kind: kind, current: cfg.DecisionModel, available: decision.Available(ctx), target: target}
 		case "stt":
-			return RoutingTabLoaded{kind: kind, current: cfg.STTModel, available: audiotool.STTOptions(ctx), target: target}
+			return RoutingTabLoaded{kind: kind, current: cfg.STTModel, available: audio.Options(ctx, audio.STT), target: target}
 		}
-		return RoutingTabLoaded{kind: kind, current: cfg.TTSModel, available: audiotool.TTSOptions(ctx), target: target}
+		return RoutingTabLoaded{kind: kind, current: cfg.TTSModel, available: audio.Options(ctx, audio.TTS), target: target}
 	}
 }
 

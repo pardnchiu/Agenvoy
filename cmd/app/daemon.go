@@ -14,6 +14,7 @@ import (
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/app"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
@@ -95,6 +96,9 @@ func Daemon() {
 
 	bootPhase("storage")
 
+	filesystem.SetTranscriber(func(ctx context.Context, raw []byte, mime string) (string, error) {
+		return audio.Transcribe(ctx, audio.STTRequest{Audio: raw, MimeType: mime})
+	})
 	imagetool.Register()
 	audiotool.Register()
 	chatbottool.Register()

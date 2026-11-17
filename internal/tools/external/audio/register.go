@@ -5,29 +5,28 @@ import (
 	"encoding/json"
 	"time"
 
+	agentaudio "github.com/pardnchiu/agenvoy/internal/agents/audio"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
 func Register() {
-	InstallTranscriber()
-
 	toolregister.Regist(toolregister.Def{
 		Name:        "generate_audio",
 		SystemUse:   false,
 		AlwaysAllow: false,
 		Concurrent:  false,
 		Timeout:     5 * time.Minute,
-		Description: `[system-default] Speaks text with the configured text-to-speech model and writes the audio to disk.
+		Description: `[system-default] Speaks text with the configured text-to-speech model and saves the audio file.
 Use for "read this aloud", "say this", "turn this into a voice file", "make an audio clip of this".
-Transcribing an existing recording → read_files; drawing an image → generate_image.`,
+Transcribing an existing recording → read_files.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"text": map[string]any{
 					"type":        "string",
-					"description": "Exactly the words to speak, written as they should be read aloud, not a description of them.",
+					"description": "The exact words to speak as they should be read aloud, not a description of them.",
 				},
 				"voice": map[string]any{
 					"type":        "string",
@@ -36,7 +35,7 @@ Transcribing an existing recording → read_files; drawing an image → generate
 				},
 				"output_file": map[string]any{
 					"type":        "string",
-					"description": "File name, e.g. 'greeting'; always saved in the output directory: any directory part is dropped and the extension is replaced by the format the model returns. Blank auto-names it audio-<timestamp>.",
+					"description": "File name, e.g. 'greeting'; always saved in the output directory: directory parts are dropped and the extension follows the format the model returns. Blank auto-names it audio-<timestamp>.",
 					"default":     "",
 				},
 			},
@@ -51,7 +50,7 @@ Transcribing an existing recording → read_files; drawing an image → generate
 			if err := json.Unmarshal(args, &params); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
 			}
-			return Generate(ctx, Request{
+			return agentaudio.Speak(ctx, agentaudio.TTSRequest{
 				Text:       params.Text,
 				Voice:      params.Voice,
 				OutputFile: params.OutputFile,

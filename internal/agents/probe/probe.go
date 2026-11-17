@@ -108,21 +108,13 @@ func Models(ctx context.Context, name string) ([]string, error) {
 			return CompatModels(ctx, cfg.BaseURL, cfg.APIKey)
 		}
 	}
-	return torii.CachedList(ctx, modelsCacheKey(name), configs.TTL_MODELS_CACHE_SEC, func() ([]string, error) {
+	return torii.CachedList(ctx, torii.ModelsCacheKey("list", strings.TrimSuffix(name, "@")), configs.TTL_MODELS_CACHE_SEC, func() ([]string, error) {
 		cfg, err := agentkeychain.Config(ctx, name)
 		if err != nil {
 			return nil, err
 		}
 		return fn(ctx, cfg)
 	})
-}
-
-func modelsCacheKey(name string) string {
-	return "provider:models:list:" + strings.TrimSuffix(name, "@")
-}
-
-func DropModelsCache(ctx context.Context, name string) {
-	torii.DropKeys(ctx, modelsCacheKey(name))
 }
 
 func CompatModels(ctx context.Context, baseURL, apiKey string) ([]string, error) {

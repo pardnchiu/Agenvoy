@@ -42,14 +42,6 @@ func Enabled() bool {
 	return Selected() != Off
 }
 
-func modelsCacheKey(name string) string {
-	return "provider:models:image:" + name
-}
-
-func DropModelsCache(ctx context.Context, name string) {
-	torii.DropKeys(ctx, modelsCacheKey(name))
-}
-
 func Available(ctx context.Context) []string {
 	filter := go_llm_router.ModelFilter{ImageOnly: true}
 	found := make([][]string, len(Providers))
@@ -67,7 +59,7 @@ func Available(ctx context.Context) []string {
 			}
 
 			base := go_llm_router.Config{APIKey: cfg.APIKey, AccountID: cfg.AccountID}
-			models, err := torii.CachedList(ctx, modelsCacheKey(name), configs.TTL_MODELS_CACHE_SEC, func() ([]string, error) {
+			models, err := torii.CachedList(ctx, torii.ModelsCacheKey("image", name), configs.TTL_MODELS_CACHE_SEC, func() ([]string, error) {
 				switch name {
 				case "openai":
 					return openai.Models(ctx, base, filter)
@@ -130,7 +122,7 @@ func Prune(ctx context.Context) {
 func agent(ctx context.Context) (go_llm_router.ImageAgent, string, error) {
 	name := Selected()
 	if name == Off {
-		return nil, "", utilsmsg.New(utilsmsg.Unavailable, "image generation", "off; set it in Config → Model → Setting Models")
+		return nil, "", utilsmsg.New(utilsmsg.Unavailable, "image generation model", "not configured; ask the user to select one")
 	}
 	full := name
 	if !strings.Contains(full, "@") {
@@ -138,7 +130,7 @@ func agent(ctx context.Context) (go_llm_router.ImageAgent, string, error) {
 	}
 	cfg, err := agentkeychain.Config(ctx, full)
 	if err != nil {
-		return nil, "", utilsmsg.Trace(name, "not configured", err)
+		return nil, "", utilsmsg.Trace("internal/agents/keychain: Config", name, err)
 	}
 	built, err := router.New(router.Config{
 		Name:      full,
@@ -153,7 +145,7 @@ func agent(ctx context.Context) (go_llm_router.ImageAgent, string, error) {
 	}
 	img, ok := built.(go_llm_router.ImageAgent)
 	if !ok {
-		return nil, "", utilsmsg.New(utilsmsg.Invalid, name, "cannot generate images")
+		return nil, "", utilsmsg.New(utilsmsg.Invalid, name, "configured but not an image generation model; ask the user to reconfigure it")
 	}
 	return img, full, nil
 }

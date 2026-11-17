@@ -9,11 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	"github.com/pardnchiu/agenvoy/internal/agents/decision"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
-	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
 	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 )
 
@@ -222,7 +222,7 @@ func modelRouting(c *gin.Context, cfg *config.Config) gin.H {
 		"decision_options": decision.Available(c.Request.Context()),
 		"stt":              cfg.STTModel,
 		"tts":              cfg.TTSModel,
-		"audio_providers":  audiotool.Providers,
+		"audio_providers":  audio.Providers,
 	}
 }
 
@@ -230,8 +230,8 @@ func ListAudioModels() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 		c.JSON(http.StatusOK, gin.H{
-			"stt_options": audiotool.STTOptions(ctx),
-			"tts_options": audiotool.TTSOptions(ctx),
+			"stt_options": audio.Options(ctx, audio.STT),
+			"tts_options": audio.Options(ctx, audio.TTS),
 		})
 	}
 }
@@ -318,14 +318,14 @@ func SetModelRouting() gin.HandlerFunc {
 		stt, tts := "", ""
 		if body.STT != nil {
 			stt = strings.TrimSpace(*body.STT)
-			if stt != "" && !slices.Contains(audiotool.STTOptions(c.Request.Context()), stt) {
+			if stt != "" && !slices.Contains(audio.Options(c.Request.Context(), audio.STT), stt) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "unknown speech-to-text model: " + stt})
 				return
 			}
 		}
 		if body.TTS != nil {
 			tts = strings.TrimSpace(*body.TTS)
-			if tts != "" && !slices.Contains(audiotool.TTSOptions(c.Request.Context()), tts) {
+			if tts != "" && !slices.Contains(audio.Options(c.Request.Context(), audio.TTS), tts) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "unknown text-to-speech model: " + tts})
 				return
 			}

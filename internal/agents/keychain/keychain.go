@@ -30,81 +30,81 @@ func Config(ctx context.Context, name string) (go_llm_router.Config, error) {
 	case "claude":
 		apiKey := go_pkg_keychain.Get("CLAUDE_API_KEY")
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain CLAUDE_API_KEY", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain CLAUDE_API_KEY", "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
 	case "openai":
 		apiKey := go_pkg_keychain.Get("OPENAI_API_KEY")
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain OPENAI_API_KEY", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain OPENAI_API_KEY", "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
 	case "gemini":
 		apiKey := go_pkg_keychain.Get("GEMINI_API_KEY")
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain GEMINI_API_KEY", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain GEMINI_API_KEY", "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
 	case "grok":
 		apiKey := go_pkg_keychain.Get("GROK_API_KEY")
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain GROK_API_KEY", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain GROK_API_KEY", "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
 	case "deepseek":
 		apiKey := go_pkg_keychain.Get("DEEPSEEK_API_KEY")
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain DEEPSEEK_API_KEY", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain DEEPSEEK_API_KEY", "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
 	case "mistral":
 		apiKey := go_pkg_keychain.Get("MISTRAL_API_KEY")
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain MISTRAL_API_KEY", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain MISTRAL_API_KEY", "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
 	case "nvidia":
 		apiKey := go_pkg_keychain.Get("NVIDIA_API_KEY")
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain NVIDIA_API_KEY", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain NVIDIA_API_KEY", "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
 	case "ollama-cloud":
 		apiKey := go_pkg_keychain.Get("OLLAMA-CLOUD_API_KEY")
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain OLLAMA-CLOUD_API_KEY", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain OLLAMA-CLOUD_API_KEY", "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
 	case "openrouter":
 		apiKey := go_pkg_keychain.Get("OPENROUTER_API_KEY")
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain OPENROUTER_API_KEY", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain OPENROUTER_API_KEY", "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
 	case "typesafe":
 		apiKey := go_pkg_keychain.Get(sessionconfig.TypesafeKey)
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain "+sessionconfig.TypesafeKey, "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain "+sessionconfig.TypesafeKey, "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{APIKey: apiKey}, nil
 
 	case "cloudflare":
 		apiKey := go_pkg_keychain.Get("CLOUDFLARE_API_KEY")
 		if apiKey == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain CLOUDFLARE_API_KEY", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain CLOUDFLARE_API_KEY", "not set; ask the user to add it with `/model add`")
 		}
 		accountID := go_pkg_keychain.Get("CLOUDFLARE_ACCOUNT_ID")
 		if accountID == "" {
-			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain CLOUDFLARE_ACCOUNT_ID", "required")
+			return go_llm_router.Config{}, utilsmsg.New(utilsmsg.Denied, "keychain CLOUDFLARE_ACCOUNT_ID", "not set; ask the user to add it with `/model add`")
 		}
 		return go_llm_router.Config{
 			APIKey:    apiKey,
