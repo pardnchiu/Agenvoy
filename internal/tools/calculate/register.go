@@ -15,15 +15,15 @@ func Register() {
 		Name:        "calculate",
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `Evaluates numeric expressions — arithmetic and math functions on literal numbers — and returns each result. No units, variables or dates.
+		Description: `Evaluates arithmetic and math functions on literal numbers, returning each result; no units, variables or dates.
 Use for "calculate", "how much is that in total", "convert this at rate X", and whenever a number would otherwise be worked out in the head.
-It computes, it does not look anything up: a rate, a price or any live figure comes from its own tool first and is passed in as a literal.`,
+Computes only, never looks up: a rate, price or live figure comes from its own tool first and is passed in as a literal.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"expressions": map[string]any{
 					"type":        "array",
-					"description": "Expressions evaluated independently, e.g. '(100 + 200) * 3', '1250 * 32.4', '2 ^ 10'. Operators + - * / % and ^ (power); integer / integer truncates (7 / 2 = 3), so write 7.0 / 2 for a fraction. Functions: sqrt, abs, ceil, floor, round, log (natural), log2, log10, sin, cos, tan (radians), pow(x, y), min(...), max(...).",
+					"description": "Independent expressions, e.g. '(100 + 200) * 3', '1250 * 32.4', '2 ^ 10'; decimal literals only. Operators + - * / % ^; ^ is power, binds tightest, right-associative (-2^2 = -4, 2^3^2 = 512). Integers stay exact; any float operand makes the result float64 (~16 significant digits); integer / integer truncates (7 / 2 = 3), so write 7.0 / 2 for a fraction. Functions: sqrt, abs, ceil, floor, round, log (natural), log2, log10, sin, cos, tan (radians), pow(x, y), min(...), max(...).",
 					"items":       map[string]any{"type": "string"},
 					"minItems":    1,
 				},
