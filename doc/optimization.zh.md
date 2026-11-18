@@ -8,18 +8,18 @@ Agenvoy 是一人開發的專案，從 2 月到 10 月幾乎每天不間斷地�
 
 同時也會開始盡量補上註解，讓程式碼從「只有我看得懂」轉向方便他人閱讀。
 
-## 檔案（進度 2.5%）
+## 檔案（進度 3.6%）
 
 ### `cmd/app`
 
-- [ ] `cmd/app/daemon.go` (255)
+- [ ] `cmd/app/daemon.go` (252)
 - [ ] `cmd/app/main.go` (165)
 - [ ] `cmd/app/prompt.go` (235)
 - [ ] `cmd/app/tui.go` (105)
 
 ### `configs`
 
-- [ ] `configs/configs.go` (322)
+- [ ] `configs/configs.go` (323)
 
 ### `internal/agents/audio`
 
@@ -66,7 +66,7 @@ Agenvoy 是一人開發的專案，從 2 月到 10 月幾乎每天不間斷地�
 - [ ] `internal/agents/exec/summary_filter.go` (131)
 - [ ] `internal/agents/exec/systemInfo.go` (178)
 - [ ] `internal/agents/exec/systemPrompt.go` (303)
-- [ ] `internal/agents/exec/toolCall.go` (992)
+- [ ] `internal/agents/exec/toolCall.go` (993)
 - [ ] `internal/agents/exec/tool_gap.go` (62)
 
 ### `internal/agents/exec/chatbot`
@@ -255,7 +255,7 @@ Agenvoy 是一人開發的專案，從 2 月到 10 月幾乎每天不間斷地�
 - [ ] `internal/runtime/chatbot/tool/platform.go` (30)
 - [ ] `internal/runtime/chatbot/tool/record.go` (50)
 - [ ] `internal/runtime/chatbot/tool/register.go` (33)
-- [ ] `internal/runtime/chatbot/tool/send.go` (163)
+- [ ] `internal/runtime/chatbot/tool/send.go` (161)
 
 ### `internal/runtime/daemon`
 
@@ -279,7 +279,7 @@ Agenvoy 是一人開發的專案，從 2 月到 10 月幾乎每天不間斷地�
 - [ ] `internal/runtime/mcp/mcp.go` (384)
 - [ ] `internal/runtime/mcp/oauth.go` (693)
 - [ ] `internal/runtime/mcp/poll.go` (120)
-- [ ] `internal/runtime/mcp/register.go` (61)
+- [ ] `internal/runtime/mcp/register.go` (58)
 - [ ] `internal/runtime/mcp/server.go` (204)
 - [ ] `internal/runtime/mcp/watch.go` (108)
 
@@ -510,52 +510,50 @@ Agenvoy 是一人開發的專案，從 2 月到 10 月幾乎每天不間斷地�
 
 - [ ] `internal/sudo/password.go` (54)
 
-### `internal/tools/calculate`
-
-- [ ] `internal/tools/calculate/calculate.go` (259)
-- [ ] `internal/tools/calculate/register.go` (61)
-
 ### `internal/tools`
 
-- [ ] `internal/tools/downloadFile.go` (156)
+- [x] `internal/tools/audio.go` (61)
 - [ ] `internal/tools/executor.go` (131)
 - [ ] `internal/tools/guide.go` (115)
 - [ ] `internal/tools/htmlTemplate.go` (100)
+- [x] `internal/tools/image.go` (96)
 - [ ] `internal/tools/legacyAPITool.go` (36)
-- [ ] `internal/tools/openFile.go` (130)
-- [ ] `internal/tools/register.go` (54)
-- [ ] `internal/tools/runCommand.go` (396)
-- [ ] `internal/tools/runCommandBackground.go` (160)
-- [ ] `internal/tools/runCommandShell.go` (114)
-- [ ] `internal/tools/runCommandWatch.go` (158)
-- [ ] `internal/tools/tools.go` (31)
-- [ ] `internal/tools/watchOutput.go` (258)
+- [ ] `internal/tools/openFile.go` (129)
+- [x] `internal/tools/publicAPIList.go` (96)
+- [ ] `internal/tools/register.go` (58)
+- [ ] `internal/tools/tools.go` (24)
 
-### `internal/tools/external`
+### `internal/tools/calculate`
 
-- [x] `internal/tools/external/audio.go` (67)
-- [x] `internal/tools/external/image.go` (100)
-- [ ] `internal/tools/external/publicAPIList.go` (91)
-- [ ] `internal/tools/external/send.go` (257)
-- [ ] `internal/tools/external/toolAdapter.go` (89)
+- [x] `internal/tools/calculate/calculate.go` (527)
+- [x] `internal/tools/calculate/register.go` (61)
 
-### `internal/tools/external/searchWeb`
+### `internal/tools/command`
 
-- [ ] `internal/tools/external/searchWeb/decision.go` (114)
-- [ ] `internal/tools/external/searchWeb/fetch.go` (309)
-- [ ] `internal/tools/external/searchWeb/register.go` (171)
+- [ ] `internal/tools/command/register.go` (6)
+- [ ] `internal/tools/command/runCommand.go` (394)
+- [ ] `internal/tools/command/runCommandBackground.go` (157)
+- [ ] `internal/tools/command/runCommandShell.go` (114)
+- [ ] `internal/tools/command/runCommandWatch.go` (158)
+- [ ] `internal/tools/command/watchOutput.go` (258)
 
-### `internal/tools/external/searchWeb/googleRSS`
+### `internal/tools/cron`
 
-- [ ] `internal/tools/external/searchWeb/googleRSS/fetch.go` (124)
-- [ ] `internal/tools/external/searchWeb/googleRSS/register.go` (35)
+- [ ] `internal/tools/cron/list.go` (57)
+- [ ] `internal/tools/cron/parseTime.go` (39)
+- [ ] `internal/tools/cron/patch.go` (48)
+- [ ] `internal/tools/cron/register.go` (5)
+- [ ] `internal/tools/cron/remove.go` (36)
+- [ ] `internal/tools/cron/schedules.go` (99)
+- [ ] `internal/tools/cron/validateCron.go` (40)
+- [ ] `internal/tools/cron/write.go` (57)
 
 ### `internal/tools/fetchPage`
 
-- [ ] `internal/tools/fetchPage/check.go` (44)
-- [ ] `internal/tools/fetchPage/decision.go` (96)
-- [ ] `internal/tools/fetchPage/fetchPage.go` (355)
-- [ ] `internal/tools/fetchPage/register.go` (5)
+- [ ] `internal/tools/fetchPage/decision.go` (364)
+- [x] `internal/tools/fetchPage/downloadFile.go` (144)
+- [x] `internal/tools/fetchPage/fetchPage.go` (381)
+- [ ] `internal/tools/fetchPage/register.go` (11)
 - [ ] `internal/tools/fetchPage/skipped.go` (63)
 
 ### `internal/tools/file/boundary`
@@ -565,35 +563,35 @@ Agenvoy 是一人開發的專案，從 2 月到 10 月幾乎每天不間斷地�
 
 ### `internal/tools/file`
 
-- [ ] `internal/tools/file/editFile.go` (113)
-- [ ] `internal/tools/file/findFiles.go` (212)
+- [ ] `internal/tools/file/editFile.go` (109)
+- [ ] `internal/tools/file/findFiles.go` (211)
 - [ ] `internal/tools/file/fresh.go` (27)
 - [ ] `internal/tools/file/glob.go` (88)
 - [ ] `internal/tools/file/htmlCheck.go` (98)
 - [ ] `internal/tools/file/list.go` (73)
 - [ ] `internal/tools/file/patchFile.go` (239)
 - [ ] `internal/tools/file/quote.go` (95)
-- [ ] `internal/tools/file/readFiles.go` (165)
+- [ ] `internal/tools/file/readFiles.go` (164)
 - [ ] `internal/tools/file/register.go` (13)
 - [ ] `internal/tools/file/relevance.go` (16)
 - [ ] `internal/tools/file/remove.go` (63)
-- [ ] `internal/tools/file/removeFile.go` (46)
-- [ ] `internal/tools/file/restoreFile.go` (56)
+- [ ] `internal/tools/file/removeFile.go` (43)
+- [ ] `internal/tools/file/restoreFile.go` (53)
 - [ ] `internal/tools/file/search.go` (279)
 - [ ] `internal/tools/file/writeFile.go` (104)
-- [ ] `internal/tools/file/writeResult.go` (81)
+- [ ] `internal/tools/file/writeResult.go` (80)
 
 ### `internal/tools/file/variant`
 
-- [ ] `internal/tools/file/variant/editSkill.go` (96)
-- [ ] `internal/tools/file/variant/editTool.go` (96)
+- [ ] `internal/tools/file/variant/editSkill.go` (94)
+- [ ] `internal/tools/file/variant/editTool.go` (94)
 - [ ] `internal/tools/file/variant/register.go` (89)
 - [ ] `internal/tools/file/variant/skillPatch.go` (31)
 - [ ] `internal/tools/file/variant/skillRemove.go` (34)
 - [ ] `internal/tools/file/variant/skillWrite.go` (45)
 - [ ] `internal/tools/file/variant/toolPatch.go` (31)
 - [ ] `internal/tools/file/variant/toolRemove.go` (34)
-- [ ] `internal/tools/file/variant/toolTest.go` (96)
+- [ ] `internal/tools/file/variant/toolTest.go` (95)
 - [ ] `internal/tools/file/variant/toolWrite.go` (54)
 
 ### `internal/tools/history/action`
@@ -623,45 +621,50 @@ Agenvoy 是一人開發的專案，從 2 月到 10 月幾乎每天不間斷地�
 
 ### `internal/tools/interactive`
 
-- [ ] `internal/tools/interactive/askUser.go` (937)
+- [ ] `internal/tools/interactive/askUser.go` (936)
 - [ ] `internal/tools/interactive/background.go` (487)
 - [ ] `internal/tools/interactive/backgroundCancel.go` (179)
 - [ ] `internal/tools/interactive/backgroundStart.go` (104)
 - [ ] `internal/tools/interactive/online.go` (133)
 - [ ] `internal/tools/interactive/register.go` (7)
-- [ ] `internal/tools/interactive/storeSecret.go` (118)
+- [ ] `internal/tools/interactive/storeSecret.go` (116)
 - [ ] `internal/tools/interactive/writeTodo.go` (165)
 
 ### `internal/tools/register`
 
-- [ ] `internal/tools/register/register.go` (297)
+- [ ] `internal/tools/register/register.go` (309)
 
-### `internal/tools/scheduler`
+### `internal/tools/searchWeb`
 
-- [ ] `internal/tools/scheduler/list.go` (57)
-- [ ] `internal/tools/scheduler/parseTime.go` (39)
-- [ ] `internal/tools/scheduler/patch.go` (48)
-- [ ] `internal/tools/scheduler/register.go` (5)
-- [ ] `internal/tools/scheduler/remove.go` (36)
-- [ ] `internal/tools/scheduler/schedules.go` (101)
-- [ ] `internal/tools/scheduler/validateCron.go` (40)
-- [ ] `internal/tools/scheduler/write.go` (57)
+- [ ] `internal/tools/searchWeb/decision.go` (114)
+- [ ] `internal/tools/searchWeb/fetch.go` (309)
+- [ ] `internal/tools/searchWeb/register.go` (171)
 
-### `internal/tools/searcher`
+### `internal/tools/searchWeb/googleRSS`
 
-- [ ] `internal/tools/searcher/findTools.go` (93)
-- [ ] `internal/tools/searcher/list.go` (31)
-- [ ] `internal/tools/searcher/register.go` (7)
-- [ ] `internal/tools/searcher/runSkill.go` (87)
-- [ ] `internal/tools/searcher/runTool.go` (38)
-- [ ] `internal/tools/searcher/search.go` (209)
+- [ ] `internal/tools/searchWeb/googleRSS/fetch.go` (124)
+- [ ] `internal/tools/searchWeb/googleRSS/register.go` (35)
 
 ### `internal/tools/subagent`
 
-- [ ] `internal/tools/subagent/background.go` (77)
+- [ ] `internal/tools/subagent/background.go` (76)
 - [ ] `internal/tools/subagent/invoke.go` (158)
 - [ ] `internal/tools/subagent/list.go` (34)
-- [ ] `internal/tools/subagent/subagents.go` (121)
+- [ ] `internal/tools/subagent/subagents.go` (120)
+
+### `internal/tools/toolAdapter`
+
+- [ ] `internal/tools/toolAdapter/send.go` (257)
+- [ ] `internal/tools/toolAdapter/toolAdapter.go` (85)
+
+### `internal/tools/toolSkill`
+
+- [ ] `internal/tools/toolSkill/findTools.go` (92)
+- [ ] `internal/tools/toolSkill/list.go` (30)
+- [ ] `internal/tools/toolSkill/register.go` (7)
+- [ ] `internal/tools/toolSkill/runSkill.go` (86)
+- [ ] `internal/tools/toolSkill/runTool.go` (38)
+- [ ] `internal/tools/toolSkill/search.go` (210)
 
 ### `internal/tools/toolcache`
 
