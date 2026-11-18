@@ -65,7 +65,6 @@ type findQuery struct {
 func registFindFiles() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "find_files",
-		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `Locates files: the entries of a directory (list), the paths matching a filename glob (glob), or the files whose contents match an RE2 regex (search, paged).

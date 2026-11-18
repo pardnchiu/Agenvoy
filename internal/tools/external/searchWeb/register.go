@@ -38,12 +38,12 @@ type searchResult struct {
 
 func Register() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "search_web",
-		SystemUse:   false,
-		AlwaysAllow: true,
-		Concurrent:  true,
-		Timeout:     90 * time.Second,
-		Description: `[system-default] Live web lookup: DuckDuckGo results and Google News headlines together.
+		Name:          "search_web",
+		AlwaysAllow:   true,
+		Concurrent:    true,
+		Timeout:       90 * time.Second,
+		SystemDefault: true,
+		Description: `Live web lookup: DuckDuckGo results and Google News headlines together.
 Use for named entities, post-cutoff facts, versions, prices, "any news on", "what's the latest", "what's happening with", "look it up".
 Results are snippets: a result link worth citing → fetch_page; a URL already in hand → fetch_page directly; of several URLs from one domain on one topic, fetch the most relevant plus any that carries a figure or date the others lack.`,
 		Parameters: map[string]any{

@@ -12,10 +12,7 @@ import (
 
 func registRemoveFile() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "remove_file",
-		SystemUse:   false,
-		AlwaysAllow: false,
-		Concurrent:  false,
+		Name: "remove_file",
 		Description: `Moves one file aside instead of deleting it and returns where it went; restore_file puts it back.
 Use for "delete this file", "remove that file", and for delete / rm on a single file; only on explicit request or a Skill step.
 Undoing a change or reverting a version → restore_file; a skill or script tool → edit_skill / edit_tool with mode=remove.`,

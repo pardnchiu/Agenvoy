@@ -30,11 +30,8 @@ import (
 
 func registRunCommand() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "run_command",
-		Timeout:     configs.RUN_COMMAND_TIMEOUT,
-		SystemUse:   false,
-		AlwaysAllow: false,
-		Concurrent:  false,
+		Name:    "run_command",
+		Timeout: configs.RUN_COMMAND_TIMEOUT,
 		Description: fmt.Sprintf(`Runs one binary in the work directory and returns its combined stdout/stderr once it exits; networking is off unless network: true, and rm moves its targets to the trash instead of deleting them.
 Use for "run this", "build it", "run the tests", "lint / format the code", and local git work such as commit, branch or merge.
 A watcher (--watch, chokidar, npm run sass/build/dev), a job likely over %d minutes, or "run it in the background" / "tell me when it's done" → background_command; cat / head / tail → read_files; ls / find / grep / rg → find_files; a URL → fetch_page or http_request; %s; opening a file or link in an app → open_file.`, configs.BACKGROUND_THRESHOLD_MIN, systemPackageRoute),

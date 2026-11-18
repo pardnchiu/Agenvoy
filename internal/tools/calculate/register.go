@@ -13,7 +13,6 @@ import (
 func Register() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "calculate",
-		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `Evaluates numeric expressions — arithmetic and math functions on literal numbers — and returns each result. No units, variables or dates.

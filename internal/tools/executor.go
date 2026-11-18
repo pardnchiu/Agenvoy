@@ -71,7 +71,7 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 	unmarkedTools := make(map[string]bool)
 	for _, tool := range tools {
 		name := tool.Function.Name
-		if slices.Contains(configs.SYSTEM_DEFAULT_TOOLS, name) {
+		if slices.Contains(configs.PRELOAD_TOOLS, name) {
 			initial = append(initial, tool)
 			continue
 		}

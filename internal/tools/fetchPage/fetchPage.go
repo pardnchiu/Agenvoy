@@ -78,12 +78,12 @@ func ParseOutputType(s string) (int, error) {
 
 func registFetchPage() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "fetch_page",
-		SystemUse:   false,
-		AlwaysAllow: true,
-		Concurrent:  true,
-		Timeout:     90 * time.Second,
-		Description: `[system-default] Fetches one web page in a browser carrying the user's Chrome login, and returns it as markdown, html or json.
+		Name:          "fetch_page",
+		AlwaysAllow:   true,
+		Concurrent:    true,
+		Timeout:       90 * time.Second,
+		SystemDefault: true,
+		Description: `Fetches one web page in a browser carrying the user's Chrome login, and returns it as markdown, html or json.
 Use for "read this article", "what does this link say", "open this page", for each search or RSS result being cited, and for researching a site page by page until complete.
 No URL yet → search_web; saving a page or file to disk → download_file; a JSON API endpoint → http_request.`,
 		Parameters: map[string]any{

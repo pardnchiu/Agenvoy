@@ -100,7 +100,7 @@ var (
 	WATCH_REPORT_MAX_BYTES    = 8 << 10
 
 	// * Tools
-	SYSTEM_DEFAULT_TOOLS = []string{"find_tools", "run_tool", "reasoning_guide", "write_todo", "chat_history", "ask_user", "write_result"}
+	PRELOAD_TOOLS = []string{"find_tools", "run_tool", "reasoning_guide", "write_todo", "chat_history", "ask_user", "write_result"}
 
 	// * Pattern
 	RETRY_INTERVALS = []time.Duration{

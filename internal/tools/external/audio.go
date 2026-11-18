@@ -4,7 +4,6 @@ package external
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	agentaudio "github.com/pardnchiu/agenvoy/internal/agents/audio"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -14,12 +13,9 @@ import (
 
 func RegisterAudio() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "generate_audio",
-		SystemUse:   false,
-		AlwaysAllow: false,
-		Concurrent:  false,
-		Timeout:     5 * time.Minute,
-		Description: `[system-default] Speaks text with the configured text-to-speech model and saves the audio file.
+		Name:          "generate_audio",
+		SystemDefault: true,
+		Description: `Speaks text with the configured text-to-speech model and saves the audio file.
 Use for "read this aloud", "say this", "turn this into a voice file", "make an audio clip of this".
 Transcribing an existing recording → read_files.`,
 		Parameters: map[string]any{

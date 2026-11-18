@@ -9,6 +9,7 @@ import (
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
 
+	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -69,7 +70,7 @@ func matchName(names string, tools []go_llm_router.Tool) []Tool {
 				Name:          tool.Function.Name,
 				Description:   tool.Function.Description,
 				Parameters:    tool.Function.Parameters,
-				SystemDefault: strings.HasPrefix(strings.TrimSpace(tool.Function.Description), systemDefaultMarker),
+				SystemDefault: toolregister.IsSystemDefault(tool.Function.Name),
 			})
 		}
 	}
@@ -164,7 +165,7 @@ func matchKeyword(query string, tools []go_llm_router.Tool) []Tool {
 			continue
 		}
 
-		if strings.HasPrefix(strings.TrimSpace(tool.Function.Description), systemDefaultMarker) {
+		if toolregister.IsSystemDefault(tool.Function.Name) {
 			score--
 		}
 		candidates = append(candidates, scored{tool, score})
@@ -186,7 +187,7 @@ func matchKeyword(query string, tools []go_llm_router.Tool) []Tool {
 			Name:          candidate.tool.Function.Name,
 			Description:   candidate.tool.Function.Description,
 			Parameters:    candidate.tool.Function.Parameters,
-			SystemDefault: strings.HasPrefix(strings.TrimSpace(candidate.tool.Function.Description), systemDefaultMarker),
+			SystemDefault: toolregister.IsSystemDefault(candidate.tool.Function.Name),
 		})
 	}
 	return list

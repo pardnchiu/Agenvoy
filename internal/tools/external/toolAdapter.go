@@ -15,10 +15,9 @@ func Register() {
 	searchWeb.Register()
 	registPublicAPIList()
 	toolregister.Regist(toolregister.Def{
-		Name:        "http_request",
-		SystemUse:   false,
-		AlwaysAllow: false,
-		Concurrent:  true,
+		Name:          "http_request",
+		Concurrent:    true,
+		SystemDefault: true,
 		Description: `Sends one HTTP request to a public URL and returns the status, headers and text body; private, loopback and link-local hosts are out of reach.
 Use for "call this API", "hit this endpoint", "POST this data", including a public API found via public_api_list — what an endpoint accepts, returns or rejects is settled here, not by reading a project's source or SDK.
 HTML meant to be read → fetch_page; a binary file → download_file; a user-supplied API needing a key → script_* tool via reasoning_guide(tool_generate).`,

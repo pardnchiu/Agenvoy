@@ -20,10 +20,9 @@ import (
 
 func registDownloadFile() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "download_file",
-		SystemUse:   false,
-		AlwaysAllow: false,
-		Concurrent:  true,
+		Name:          "download_file",
+		Concurrent:    true,
+		SystemDefault: true,
 		Description: `Downloads a URL onto local disk: a binary file as-is, or a web page rendered in a browser and saved as markdown, html or json.
 Use for "download this", "grab this file", "save it locally", "export this page" — tar.gz, images, archives, installers, or a page to keep as a file.
 Reading a page without saving → fetch_page; JSON or an API response → http_request.`,

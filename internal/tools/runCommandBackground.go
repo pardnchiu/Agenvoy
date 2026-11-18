@@ -41,10 +41,7 @@ func registRunCommandBackground() {
 	})
 
 	toolregister.Regist(toolregister.Def{
-		Name:        "background_command",
-		SystemUse:   false,
-		AlwaysAllow: false,
-		Concurrent:  false,
+		Name: "background_command",
 		Description: fmt.Sprintf(`Starts one binary in the work directory and returns a task id at once; its output is reported when it exits, and also while it keeps running whenever a new line hits an error keyword, with the recent output to explain. Background legs started in the same turn form one group: while this task is open each report arrives here; once it has ended, the group runs objective + next as its own task when all of its legs finish. argv, network, write_paths and sandbox follow the run_command rules.
 Use for a watcher (--watch, chokidar, npm run sass/build/dev), which only runs here; a job very likely over %d minutes whose output does not decide your next tool call (full build, large install or download, long data job); "run it in the background" / "let me know when it finishes". When the user's ask continues after the job ("then deploy", "unpack and summarize it"), put that action in next. Start every leg of a group in the same turn so they share one objective and next. At most %d background tasks run per session, background_subagents included.
 Anything shorter, or a test or build whose failures you fix next → run_command. "How far along is it?" on a running task → read_files the log path its start result gave; never guess from missing reports.`, configs.BACKGROUND_THRESHOLD_MIN, configs.MAX_BACKGROUND_TASKS),

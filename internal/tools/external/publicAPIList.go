@@ -19,7 +19,7 @@ import (
 func registPublicAPIList() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "public_api_list",
-		SystemUse:   false,
+		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `Public API directory: the category names, or the keyless APIs in one category with their docs urls.

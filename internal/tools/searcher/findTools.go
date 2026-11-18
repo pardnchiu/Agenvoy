@@ -11,8 +11,7 @@ import (
 )
 
 const (
-	systemDefaultMarker = "[system-default]"
-	maxSelectNames      = 16
+	maxSelectNames = 16
 )
 
 type Tool struct {
@@ -43,7 +42,7 @@ Building a tool → edit_tool; testing a script tool → test_tool.`,
 					"type":        "array",
 					"items":       map[string]any{"type": "string"},
 					"maxItems":    maxSelectNames,
-					"description": "mode=search: exact names from the Tools list (case-insensitive), at most 16 per call; takes precedence over query. When several fit one intent, prefer mcp__* over script_* over [system-default].",
+					"description": "mode=search: exact names from the Tools list (case-insensitive), at most 16 per call; takes precedence over query. When several fit one intent, prefer mcp__* over script_*; system_default tools are the fallback when nothing else fits.",
 				},
 				"query": map[string]any{
 					"type":        "string",

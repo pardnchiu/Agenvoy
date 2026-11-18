@@ -21,10 +21,7 @@ func newStrings(targets []patchTarget) []string {
 
 func registEditFile() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "edit_file",
-		SystemUse:   false,
-		AlwaysAllow: false,
-		Concurrent:  false,
+		Name: "edit_file",
 		Description: `Changes one file on disk: create or replace it (write), or edit regions of it (patch); a write drops its content from history, so check the returned receipt and never read the file back or rewrite it to restore text that only looks missing.
 Use for "write this to a file", "change this part", and for write_file / patch_file; only on explicit request or a Skill step, never to park a short answer, a tool result or a calculation.
 Deleting a file → remove_file; undoing a change or reverting a version → restore_file; skill files → edit_skill; script tool definitions → edit_tool; a long report or page for the user → write_result; listing past versions → file_history.`,

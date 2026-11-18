@@ -13,9 +13,7 @@ import (
 func registSchedules() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "schedules",
-		SystemUse:   false,
 		AlwaysAllow: true,
-		Concurrent:  false,
 		Description: `This session's scheduled runs, each bound to a scheduler skill: list what is queued, move one to a new time (patch), or cancel one (remove).
 Use for "what's scheduled", "move my reminder to 9am", "cancel that schedule", "is that recurring job still on".
 Creating a schedule → the scheduler-skill-creator skill, never mode=write. A dry-run request → find the name with mode=list, read its SKILL.md and run the steps now; never answer "run /sched-X in the TUI".`,

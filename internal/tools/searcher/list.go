@@ -2,7 +2,6 @@ package toolSearcher
 
 import (
 	"encoding/json"
-	"strings"
 
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -19,7 +18,7 @@ func listTools(e *tooltypes.Executor) (string, error) {
 		list = append(list, Tool{
 			Name:          name,
 			Description:   tool.Function.Description,
-			SystemDefault: strings.HasPrefix(strings.TrimSpace(tool.Function.Description), systemDefaultMarker),
+			SystemDefault: toolregister.IsSystemDefault(tool.Function.Name),
 		})
 	}
 

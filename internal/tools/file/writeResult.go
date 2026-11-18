@@ -20,7 +20,6 @@ func registWriteResult() {
 		Name:        "write_result",
 		SystemUse:   true,
 		AlwaysAllow: true,
-		Concurrent:  false,
 		Description: `Saves one long-form deliverable as a new timestamped .md or .html file in the output directory and returns its path; the reply then gives the key findings and the path instead of reprinting the file.
 Use for "write a report", "summarize this into a document", "analyze / compare and write it up", "make it a web page", "give me html", or any answer with several sections or tables; a short answer stays in the reply.
 A file at a chosen path, or changing an existing file → edit_file.`,

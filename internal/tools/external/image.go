@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
-	"time"
 
 	agentimage "github.com/pardnchiu/agenvoy/internal/agents/image"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -15,12 +14,9 @@ import (
 
 func RegisterImage() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "generate_image",
-		SystemUse:   false,
-		AlwaysAllow: false,
-		Concurrent:  false,
-		Timeout:     15 * time.Minute,
-		Description: `[system-default] Generates an image from a text prompt and saves it.
+		Name:          "generate_image",
+		SystemDefault: true,
+		Description: `Generates an image from a text prompt and saves it.
 Use for "draw a picture of", "generate an image", "make me a logo", and "edit this image" when a reference image is given.
 Reading or describing an existing image → read_files; a real existing image such as a brand logo or a photo of a real place → download_file.`,
 		Parameters: map[string]any{

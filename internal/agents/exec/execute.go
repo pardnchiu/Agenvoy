@@ -362,7 +362,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	var toolNames []string
 	if slices.ContainsFunc(exec.Tools, func(t go_llm_router.Tool) bool { return t.Function.Name == "run_tool" }) {
 		for _, t := range exec.AllTools {
-			if name := t.Function.Name; !slices.Contains(configs.SYSTEM_DEFAULT_TOOLS, name) && !exec.ExcludeTools[name] {
+			if name := t.Function.Name; !slices.Contains(configs.PRELOAD_TOOLS, name) && !exec.ExcludeTools[name] {
 				toolNames = append(toolNames, name)
 			}
 		}
