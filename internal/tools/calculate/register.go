@@ -1,3 +1,4 @@
+// * last modified: 26/11/19
 package calculate
 
 import (

@@ -38,6 +38,7 @@ const (
 	MAX_DECISION_STATE_RUNES      = 20_000
 	DECISION_MIN_CONFIDENCE       = 0.7
 	MAX_DECISION_QUESTIONS        = 120
+	MAX_DECISION_PARALLEL         = 8
 
 	// * Retry
 	MAX_RETRY_TIMES             = 3

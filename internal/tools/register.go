@@ -33,7 +33,6 @@ func init() {
 	interactive.Register()
 	command.Register()
 
-	registDownloadFile()
 	registOpenFile()
 	registHTMLTemplate()
 	registPublicAPIList()
