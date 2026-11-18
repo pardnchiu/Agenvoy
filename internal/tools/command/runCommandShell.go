@@ -1,4 +1,4 @@
-package tools
+package command
 
 import (
 	"path/filepath"

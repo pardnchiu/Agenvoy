@@ -1,4 +1,4 @@
-package scheduler
+package cron
 
 func Register() {
 	registSchedules()

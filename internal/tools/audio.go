@@ -1,5 +1,5 @@
 // * last modified: 26/11/18
-package external
+package tools
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func RegisterAudio() {
+func registAudio() {
 	toolregister.Regist(toolregister.Def{
 		Name:          "generate_audio",
 		SystemDefault: true,
@@ -28,12 +28,10 @@ Transcribing an existing recording → read_files.`,
 				"voice": map[string]any{
 					"type":        "string",
 					"description": "Provider voice name, e.g. alloy for openai, Kore for gemini; blank uses the provider default.",
-					"default":     "",
 				},
 				"output_file": map[string]any{
 					"type":        "string",
 					"description": "Save path: blank auto-names audio-<timestamp> in the output directory; absolute is used as-is; relative joins under the working directory; the extension always follows the returned format.",
-					"default":     "",
 				},
 			},
 			"required": []string{"text"},

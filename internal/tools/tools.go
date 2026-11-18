@@ -1,12 +1,9 @@
 package tools
 
 import (
-	"context"
 	"encoding/json"
 
 	"github.com/pardnchiu/agenvoy/configs"
-	"github.com/pardnchiu/agenvoy/internal/tools/file"
-	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 )
 
 var (
@@ -24,8 +21,4 @@ func init() {
 	}
 	TUIOnlyTools = data.Tools
 	TUIOnlySkills = data.Skills
-}
-
-func moveToTrash(ctx context.Context, e *tooltypes.Executor, args []string) (string, error) {
-	return file.RemoveToTrash(ctx, e, args, "rm")
 }

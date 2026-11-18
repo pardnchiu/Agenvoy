@@ -1,10 +1,9 @@
-package external
+package toolAdapter
 
 import (
 	"context"
 	"encoding/json"
 
-	"github.com/pardnchiu/agenvoy/internal/tools/external/searchWeb"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -12,8 +11,6 @@ import (
 )
 
 func Register() {
-	searchWeb.Register()
-	registPublicAPIList()
 	toolregister.Regist(toolregister.Def{
 		Name:          "http_request",
 		Concurrent:    true,

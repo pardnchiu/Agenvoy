@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 
 	"github.com/pardnchiu/agenvoy/internal/tools/calculate"
-	"github.com/pardnchiu/agenvoy/internal/tools/external"
+	"github.com/pardnchiu/agenvoy/internal/tools/command"
+	toolcron "github.com/pardnchiu/agenvoy/internal/tools/cron"
 	"github.com/pardnchiu/agenvoy/internal/tools/fetchPage"
 	"github.com/pardnchiu/agenvoy/internal/tools/file"
 	_ "github.com/pardnchiu/agenvoy/internal/tools/history/action"
@@ -13,8 +14,9 @@ import (
 	_ "github.com/pardnchiu/agenvoy/internal/tools/history/file"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
-	toolscheduler "github.com/pardnchiu/agenvoy/internal/tools/scheduler"
-	toolsearcher "github.com/pardnchiu/agenvoy/internal/tools/searcher"
+	"github.com/pardnchiu/agenvoy/internal/tools/searchWeb"
+	"github.com/pardnchiu/agenvoy/internal/tools/toolAdapter"
+	"github.com/pardnchiu/agenvoy/internal/tools/toolSkill"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -22,18 +24,21 @@ import (
 func init() {
 	registReasoningGuide()
 
-	external.Register()
+	toolAdapter.Register()
+	searchWeb.Register()
 	fetchPage.Register()
 	file.Register()
-	toolscheduler.Register()
-	toolsearcher.Register()
+	toolcron.Register()
+	toolSkill.Register()
 	interactive.Register()
+	command.Register()
 
-	registRunCommand()
-	registRunCommandBackground()
 	registDownloadFile()
 	registOpenFile()
 	registHTMLTemplate()
+	registPublicAPIList()
+	registImage()
+	registAudio()
 
 	toolregister.RegistGroup("script_", func(ctx context.Context, e *tooltypes.Executor, name string, args json.RawMessage) (string, error) {
 		if e.ScriptToolbox == nil || !e.ScriptToolbox.IsExist(name) {

@@ -1,4 +1,5 @@
-package external
+// * last modified: 26/11/18
+package tools
 
 import (
 	"context"
@@ -65,9 +66,11 @@ Picked one → fetch_page its docs url, then http_request; no fitting API → re
 			if err != nil {
 				return "", err
 			}
+
 			var result struct {
 				Count int `json:"count"`
 			}
+
 			if err := json.Unmarshal([]byte(body), &result); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Upstream, "json.Unmarshal", "public_api_list", err)
 			}
@@ -79,9 +82,11 @@ Picked one → fetch_page its docs url, then http_request; no fitting API → re
 			if err != nil {
 				return "", err
 			}
+
 			var categories struct {
 				Data []string `json:"data"`
 			}
+
 			if err := json.Unmarshal([]byte(raw), &categories); err != nil {
 				return "", utilsmsg.Wrap(utilsmsg.Upstream, "json.Unmarshal", "public_api_list", err)
 			}

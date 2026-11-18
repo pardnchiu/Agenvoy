@@ -33,7 +33,6 @@ import (
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
 	usagelog "github.com/pardnchiu/agenvoy/internal/session/usage"
-	"github.com/pardnchiu/agenvoy/internal/tools/external"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	"github.com/pardnchiu/agenvoy/internal/tools/subagent"
 )
@@ -98,8 +97,6 @@ func Daemon() {
 	filesystem.SetTranscriber(func(ctx context.Context, raw []byte, mime string) (string, error) {
 		return audio.Transcribe(ctx, audio.STTRequest{Audio: raw, MimeType: mime})
 	})
-	external.RegisterImage()
-	external.RegisterAudio()
 	chatbottool.Register()
 
 	if _, err := runtime.Init(); err != nil {

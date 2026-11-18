@@ -1,5 +1,5 @@
 // * last modified: 26/11/18
-package external
+package tools
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func RegisterImage() {
+func registImage() {
 	toolregister.Regist(toolregister.Def{
 		Name:          "generate_image",
 		SystemDefault: true,

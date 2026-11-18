@@ -8,7 +8,7 @@ import (
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
-	"github.com/pardnchiu/agenvoy/internal/utils/secret"
+	utilssecret "github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
 
 func newStrings(targets []patchTarget) []string {
@@ -22,21 +22,20 @@ func newStrings(targets []patchTarget) []string {
 func registEditFile() {
 	toolregister.Regist(toolregister.Def{
 		Name: "edit_file",
-		Description: `Changes one file on disk: create or replace it (write), or edit regions of it (patch); a write drops its content from history, so check the returned receipt and never read the file back or rewrite it to restore text that only looks missing.
-Use for "write this to a file", "change this part", and for write_file / patch_file; only on explicit request or a Skill step, never to park a short answer, a tool result or a calculation.
-Deleting a file → remove_file; undoing a change or reverting a version → restore_file; skill files → edit_skill; script tool definitions → edit_tool; a long report or page for the user → write_result; listing past versions → file_history.`,
+		Description: `Writes one file whole (write) or edits regions of it (patch). Written content leaves history: trust the receipt; never re-read or rewrite the file to restore text that only looks missing.
+Use for "write this to a file", "change this part", write_file / patch_file; only on explicit request or a Skill step, never to park a short answer, tool result or calculation.
+Delete → remove_file; undo or revert → restore_file; past versions → file_history; skills → edit_skill; script tools → edit_tool; a long report or page for the user → write_result.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
 					"enum":        []string{"write", "patch"},
-					"description": "write: a first version or a deliberate full replacement. patch: every other change, since a whole-file rewrite throws away text that was already correct. Both need a read_files of an existing file in this turn, unchanged on disk since. Omitted: targets → patch, content → write.",
+					"description": "write: a first version or a deliberate full replacement. patch: every other change, since a whole-file rewrite discards already-correct text. Both need a read_files of an existing file this turn, unchanged on disk since. Omitted: targets → patch, content → write.",
 				},
 				"path": map[string]any{
 					"type":        "string",
-					"description": "The one file this call acts on, absolute or relative to the work directory: '/abs/path/foo.go', '~/notes.md', 'relative/file.md'. A file made for the user with no location asked for goes under the output directory named in the system prompt; give its full path.",
-					"default":     "",
+					"description": "One file per call, absolute or relative to the work directory: '/abs/path/foo.go', '~/notes.md', 'relative/file.md'. A file for the user with no requested location goes under the output directory named in the system prompt; give its full path.",
 				},
 				"content": map[string]any{
 					"type":        "string",
@@ -44,7 +43,7 @@ Deleting a file → remove_file; undoing a change or reverting a version → res
 				},
 				"targets": map[string]any{
 					"type":        "array",
-					"description": "mode=patch: the edits to that file, each {old_string, new_string}. Every old_string resolves against the bytes on disk before any edit applies, so targets must not overlap and one target cannot anchor on text another inserts; merge such edits into one target.",
+					"description": "mode=patch: edits, each {old_string, new_string}. Every old_string resolves against the on-disk bytes before any edit applies, so targets must not overlap or anchor on text another inserts; merge such edits into one target.",
 					"items": map[string]any{
 						"type": "object",
 						"properties": map[string]any{
@@ -54,7 +53,7 @@ Deleting a file → remove_file; undoing a change or reverting a version → res
 							},
 							"new_string": map[string]any{
 								"type":        "string",
-								"description": "What old_string becomes. Empty deletes it. To insert, start with old_string unchanged and append the new lines after it.",
+								"description": "What old_string becomes; empty deletes it. To insert, start with old_string unchanged, then the new lines.",
 							},
 							"replace_all": map[string]any{
 								"type":        "boolean",
@@ -82,7 +81,7 @@ Deleting a file → remove_file; undoing a change or reverting a version → res
 			if err := rejectElided(params.Content, params.Targets); err != nil {
 				return "", err
 			}
-			if masked := secret.FindMasked(strings.Join(append([]string{params.Content}, newStrings(params.Targets)...), "\n")); masked != "" {
+			if masked := utilssecret.FindMasked(strings.Join(append([]string{params.Content}, newStrings(params.Targets)...), "\n")); masked != "" {
 				return "", utilsmsg.New(utilsmsg.Invalid, "content", "contains %q, a redacted value from a tool result, not the real text; write the original from inside one run_command (e.g. sh -c with . ./.env) instead", masked)
 			}
 

@@ -1,4 +1,4 @@
-package toolSearcher
+package toolSkill
 
 func Register() {
 	registFindTools()
