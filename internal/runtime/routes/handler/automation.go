@@ -13,7 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	historystore "github.com/pardnchiu/agenvoy/internal/runtime/store"
 	sessionmanager "github.com/pardnchiu/agenvoy/internal/session"
-	toolscheduler "github.com/pardnchiu/agenvoy/internal/tools/scheduler"
+	toolcron "github.com/pardnchiu/agenvoy/internal/tools/cron"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -122,7 +122,7 @@ func (b scheduleBody) values() []string {
 func scheduleTimes(list []string) ([]time.Time, error) {
 	out := make([]time.Time, 0, len(list))
 	for _, one := range list {
-		at, err := toolscheduler.ParseTime(one)
+		at, err := toolcron.ParseTime(one)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +136,7 @@ func scheduleTimes(list []string) ([]time.Time, error) {
 
 func scheduleExpressions(list []string) error {
 	for _, one := range list {
-		if err := toolscheduler.ValidateCron(one); err != nil {
+		if err := toolcron.ValidateCron(one); err != nil {
 			return err
 		}
 	}

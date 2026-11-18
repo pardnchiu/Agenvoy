@@ -27,15 +27,16 @@ const (
 )
 
 type Def struct {
-	Name        string
-	Description string
-	Parameters  map[string]any
-	Handler     Handler
-	AlwaysAllow bool
-	Concurrent  bool
-	Background  bool
-	SystemUse   bool
-	Timeout     time.Duration
+	Name          string
+	Description   string
+	Parameters    map[string]any
+	Handler       Handler
+	AlwaysAllow   bool
+	Concurrent    bool
+	Background    bool
+	SystemUse     bool
+	SystemDefault bool
+	Timeout       time.Duration
 }
 
 var mu sync.RWMutex
@@ -48,6 +49,7 @@ var readOnlySet = map[string]bool{}
 var concurrentSet = map[string]bool{}
 var backgroundSet = map[string]bool{}
 var systemUseSet = map[string]bool{}
+var systemDefaultSet = map[string]bool{}
 var timeoutMap = map[string]time.Duration{}
 
 func Regist(d Def) {
@@ -89,6 +91,9 @@ func Regist(d Def) {
 	if d.SystemUse {
 		systemUseSet[d.Name] = true
 	}
+	if d.SystemDefault {
+		systemDefaultSet[d.Name] = true
+	}
 	if d.Timeout != 0 {
 		timeoutMap[d.Name] = d.Timeout
 	}
@@ -111,6 +116,7 @@ func RemoveByPrefix(prefix string) {
 			delete(concurrentSet, name)
 			delete(backgroundSet, name)
 			delete(systemUseSet, name)
+			delete(systemDefaultSet, name)
 			delete(timeoutMap, name)
 		}
 	}
@@ -191,6 +197,12 @@ func IsSystemUse(name string) bool {
 	mu.RLock()
 	defer mu.RUnlock()
 	return systemUseSet[name]
+}
+
+func IsSystemDefault(name string) bool {
+	mu.RLock()
+	defer mu.RUnlock()
+	return systemDefaultSet[name]
 }
 
 func GetTool(name string) *go_llm_router.Tool {

@@ -18,7 +18,7 @@ func registListChatbot() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `[system-default] List authorized chats for the specified platform (Telegram or Discord).`,
+		Description: `List authorized chats for the specified platform (Telegram or Discord).`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -26,6 +26,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/command"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -414,7 +415,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 		}
 
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)
-		unsandboxed := tools.RestrictedRunCommand(toolName, toolArg)
+		unsandboxed := command.RestrictedRunCommand(toolName, toolArg)
 		restrictedList := append(outsideHome(restrictedPaths), unsandboxed...)
 		allowRead := allowAll && (toolName == "read_files" || toolName == "find_files")
 		restricted := len(restrictedList) > 0 || len(restrictedPaths) > 0 && !*turnAllowAll && !allowRead

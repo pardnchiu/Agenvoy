@@ -38,6 +38,7 @@ const (
 	MAX_DECISION_STATE_RUNES      = 20_000
 	DECISION_MIN_CONFIDENCE       = 0.7
 	MAX_DECISION_QUESTIONS        = 120
+	MAX_DECISION_PARALLEL         = 8
 
 	// * Retry
 	MAX_RETRY_TIMES             = 3
@@ -100,7 +101,7 @@ var (
 	WATCH_REPORT_MAX_BYTES    = 8 << 10
 
 	// * Tools
-	SYSTEM_DEFAULT_TOOLS = []string{"find_tools", "run_tool", "reasoning_guide", "write_todo", "chat_history", "ask_user", "write_result"}
+	PRELOAD_TOOLS = []string{"find_tools", "run_tool", "reasoning_guide", "write_todo", "chat_history", "ask_user", "write_result"}
 
 	// * Pattern
 	RETRY_INTERVALS = []time.Duration{

@@ -22,7 +22,6 @@ const (
 func registReadFiles() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "read_files",
-		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `Reads files: text (each line prefixed with its row number, which is not in the file), PDF, DOCX, PPTX, CSV/TSV, images, and audio/video as a verbatim transcript.

@@ -1,50 +1,137 @@
-// * generate by claude sonnet 4.5
+// * last modified: 26/11/19
+/*
+ * NOTE: generate by claude sonnet 4.5
+ * regenerate by claude opus 5.5, review with openai gpt 6.2 sol and gemini 4 hydrogen - 26/11/18
+**/
 package calculate
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"math"
 	"math/big"
 	"strconv"
+	"strings"
 
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
+// maxExactPowBits caps the estimated bit length of an exact integer power.
+// When bitLen(base) * exponent stays within this budget, int ^ int is computed
+// with big.Int.Exp and returned exactly; beyond it the power falls back to
+// float64, where an overflowing result becomes +Inf and is rejected as
+// non-finite. The cap keeps inputs such as 2^100000000 from allocating
+// gigabytes of digits.
+const maxExactPowBits = 4096
+
+// unaryFuncs holds the single-argument functions that always operate on
+// float64. Each entry validates its own domain (sqrt rejects negatives, the
+// logarithms reject non-positive input) and returns an error instead of NaN.
+// abs, ceil, floor and round are handled separately in call because they keep
+// integer arguments exact rather than converting them to float64.
+var unaryFuncs = map[string]func(float64) (float64, error){
+	"sqrt": func(f float64) (float64, error) {
+		if f < 0 {
+			return 0, utilsmsg.New(utilsmsg.Invalid, "sqrt", "negative number")
+		}
+		return math.Sqrt(f), nil
+	},
+	"log":   positive("log", math.Log),
+	"log2":  positive("log2", math.Log2),
+	"log10": positive("log10", math.Log10),
+	"sin":   plain(math.Sin),
+	"cos":   plain(math.Cos),
+	"tan":   plain(math.Tan),
+}
+
+// positive wraps fn so that inputs <= 0 return an Invalid error naming the
+// function, which is the shared domain rule for log, log2 and log10.
+func positive(name string, fn func(float64) float64) func(float64) (float64, error) {
+	return func(f float64) (float64, error) {
+		if f <= 0 {
+			return 0, utilsmsg.New(utilsmsg.Invalid, name, "non-positive number")
+		}
+		return fn(f), nil
+	}
+}
+
+// plain adapts a total float64 function (defined for every finite input) to
+// the error-returning signature used by unaryFuncs.
+func plain(fn func(float64) float64) func(float64) (float64, error) {
+	return func(f float64) (float64, error) { return fn(f), nil }
+}
+
+// Calc evaluates one arithmetic expression and returns its result as text.
+//
+// Grammar (lowest to highest precedence):
+//
+//	expr    := term   { ("+" | "-") term }
+//	term    := unary  { ("*" | "/" | "%") unary }
+//	unary   := ("-" | "+") unary | power
+//	power   := primary [ "^" unary ]
+//	primary := number | name "(" [ expr { "," expr } ] ")" | "(" expr ")"
+//
+// "^" therefore binds tighter than unary minus (-2^2 = -4) and is
+// right-associative (2^3^2 = 2^9 = 512), while its exponent may itself carry a
+// sign (2^-2 = 0.25).
+//
+// Numbers are decimal only: integer literals become exact big.Int values and
+// anything with a "." or exponent becomes float64. Integer-only arithmetic
+// stays exact (including / and %, which truncate toward zero); the first float
+// operand switches that sub-expression to float64. Any NaN or Inf produced
+// along the way is reported as an error rather than returned.
+//
+// Integer results print in full; float results use the shortest decimal form
+// that round-trips, without scientific notation, and negative zero prints as
+// "0".
 func Calc(expression string) (string, error) {
-	if expression == "" {
+	if strings.TrimSpace(expression) == "" {
 		return "", utilsmsg.New(utilsmsg.Invalid, "expression", "required")
 	}
 
-	parseExpr, err := parser.ParseExpr(expression)
-	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Invalid, "parser.ParseExpr", "", err)
-	}
-
-	result, err := eval(parseExpr)
+	// parse and evaluate in a single pass; the parser carries no AST
+	p := &parser{src: expression}
+	result, err := p.parseExpr(0)
 	if err != nil {
 		return "", err
+	}
+	// a complete expression must consume the whole input, so "2 3" or "2(3)" fail here
+	p.skipSpace()
+	if p.pos < len(p.src) {
+		return "", p.unexpected()
 	}
 
 	if result.isInt {
 		return result.i.String(), nil
 	}
-	if result.f == math.Trunc(result.f) && !math.IsInf(result.f, 0) {
-		return strconv.FormatInt(int64(result.f), 10), nil
+	// normalise -0 so callers never see "-0"
+	if result.f == 0 {
+		return "0", nil
 	}
 	return strconv.FormatFloat(result.f, 'f', -1, 64), nil
 }
 
+// value is a number that is either an exact integer (isInt, i) or a float64
+// (f). Only the field matching isInt is meaningful.
 type value struct {
 	isInt bool
 	i     *big.Int
 	f     float64
 }
 
-func intVal(i *big.Int) value  { return value{isInt: true, i: i} }
-func floatVal(f float64) value { return value{f: f} }
+// intVal wraps an exact integer result.
+func intVal(i *big.Int) value { return value{isInt: true, i: i} }
 
+// floatVal wraps a float64 result and is the single choke point that rejects
+// NaN and +/-Inf, so a non-finite value can never propagate into a later
+// operation or reach the caller.
+func floatVal(f float64) (value, error) {
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "result is not a finite number")
+	}
+	return value{f: f}, nil
+}
+
+// toFloat converts v to float64. Integers beyond 2^53 lose precision here and
+// integers beyond the float64 range become +/-Inf, which floatVal then rejects.
 func (v value) toFloat() float64 {
 	if v.isInt {
 		f, _ := new(big.Float).SetInt(v.i).Float64()
@@ -53,207 +140,388 @@ func (v value) toFloat() float64 {
 	return v.f
 }
 
-func eval(node ast.Expr) (value, error) {
-	switch n := node.(type) {
-	case *ast.BasicLit:
-		if n.Kind == token.INT {
-			i := new(big.Int)
-			if _, ok := i.SetString(n.Value, 10); !ok {
-				return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "invalid number: %s", n.Value)
-			}
-			return intVal(i), nil
-		}
-		if n.Kind == token.FLOAT {
-			f, err := strconv.ParseFloat(n.Value, 64)
-			if err != nil {
-				return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "invalid number: %s", n.Value)
-			}
-			return floatVal(f), nil
-		}
-		return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "unsupported literal type: %s", n.Kind)
-
-	case *ast.UnaryExpr:
-		v, err := eval(n.X)
-		if err != nil {
-			return value{}, err
-		}
-		switch n.Op {
-		case token.SUB:
-			if v.isInt {
-				return intVal(new(big.Int).Neg(v.i)), nil
-			}
-			return floatVal(-v.f), nil
-		case token.ADD:
-			return v, nil
-		}
-		return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "unsupported unary operator: %s", n.Op)
-
-	case *ast.BinaryExpr:
-		left, err := eval(n.X)
-		if err != nil {
-			return value{}, err
-		}
-		right, err := eval(n.Y)
-		if err != nil {
-			return value{}, err
-		}
-		if left.isInt && right.isInt {
-			switch n.Op {
-			case token.ADD:
-				return intVal(new(big.Int).Add(left.i, right.i)), nil
-			case token.SUB:
-				return intVal(new(big.Int).Sub(left.i, right.i)), nil
-			case token.MUL:
-				return intVal(new(big.Int).Mul(left.i, right.i)), nil
-			case token.QUO:
-				if right.i.Sign() == 0 {
-					return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "division by zero")
-				}
-				return intVal(new(big.Int).Quo(left.i, right.i)), nil
-			case token.REM:
-				if right.i.Sign() == 0 {
-					return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "modulo by zero")
-				}
-				return intVal(new(big.Int).Rem(left.i, right.i)), nil
-			case token.XOR:
-				return floatVal(math.Pow(left.toFloat(), right.toFloat())), nil
-			}
-			return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "unsupported operator: %s", n.Op)
-		}
-		lf, rf := left.toFloat(), right.toFloat()
-		switch n.Op {
-		case token.ADD:
-			return floatVal(lf + rf), nil
-		case token.SUB:
-			return floatVal(lf - rf), nil
-		case token.MUL:
-			return floatVal(lf * rf), nil
-		case token.QUO:
-			if rf == 0 {
-				return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "division by zero")
-			}
-			return floatVal(lf / rf), nil
-		case token.REM:
-			if rf == 0 {
-				return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "modulo by zero")
-			}
-			return floatVal(math.Mod(lf, rf)), nil
-		case token.XOR:
-			return floatVal(math.Pow(lf, rf)), nil
-		}
-		return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "unsupported operator: %s", n.Op)
-
-	case *ast.ParenExpr:
-		return eval(n.X)
-
-	case *ast.CallExpr:
-		return evalFunc(n)
+// exact returns v as a big.Float with no rounding: SetInt picks a precision
+// large enough for the whole integer and SetFloat64 is exact by definition.
+// min and max compare through it so a mixed int/float comparison never alters
+// the winning value.
+func (v value) exact() *big.Float {
+	if v.isInt {
+		return new(big.Float).SetInt(v.i)
 	}
-
-	return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "unsupported expression type: %T", node)
+	return new(big.Float).SetFloat64(v.f)
 }
 
-func evalFunc(call *ast.CallExpr) (value, error) {
-	ident, ok := call.Fun.(*ast.Ident)
-	if !ok {
-		return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "unsupported function call")
-	}
+// parser is a recursive-descent parser over the raw expression bytes. pos is
+// the index of the next unread byte; every parse method evaluates as it goes
+// and returns the resulting value.
+type parser struct {
+	src string
+	pos int
+}
 
-	if len(call.Args) == 0 {
-		return value{}, utilsmsg.New(utilsmsg.Invalid, ident.Name, "requires arguments")
+// skipSpace advances past ASCII whitespace.
+func (p *parser) skipSpace() {
+	for p.pos < len(p.src) && (p.src[p.pos] == ' ' || p.src[p.pos] == '\t' || p.src[p.pos] == '\n' || p.src[p.pos] == '\r') {
+		p.pos++
 	}
+}
 
-	switch ident.Name {
-	case "min", "max":
-		return evalMinMax(ident.Name, call.Args)
+// peek skips whitespace and returns the next byte without consuming it, or 0
+// at end of input. 0 never matches an operator, so callers can treat it as
+// "no more tokens".
+func (p *parser) peek() byte {
+	p.skipSpace()
+	if p.pos >= len(p.src) {
+		return 0
 	}
+	return p.src[p.pos]
+}
 
-	a, err := eval(call.Args[0])
+// unexpected reports the byte at the current position (1-based for humans),
+// or end of input when nothing is left.
+func (p *parser) unexpected() error {
+	if p.pos >= len(p.src) {
+		return utilsmsg.New(utilsmsg.Invalid, "expression", "unexpected end of input")
+	}
+	return utilsmsg.New(utilsmsg.Invalid, "expression", "unexpected %q at position %d", p.src[p.pos], p.pos+1)
+}
+
+// binaryPrec returns the precedence of a left-associative binary operator, or
+// 0 when op is not one. "^" is deliberately absent: it is parsed in
+// parsePower so it can bind tighter than unary minus and associate right.
+func binaryPrec(op byte) int {
+	switch op {
+	case '+', '-':
+		return 1
+	case '*', '/', '%':
+		return 2
+	}
+	return 0
+}
+
+// parseExpr is a precedence-climbing loop for + - * / %. It consumes
+// operators whose precedence is at least minPrec; parsing the right operand at
+// prec+1 makes equal-precedence operators group to the left, so 10-3-2 is
+// (10-3)-2.
+func (p *parser) parseExpr(minPrec int) (value, error) {
+	left, err := p.parseUnary()
 	if err != nil {
 		return value{}, err
 	}
-	arg := a.toFloat()
-
-	switch ident.Name {
-	case "sqrt":
-		if arg < 0 {
-			return value{}, utilsmsg.New(utilsmsg.Invalid, "sqrt", "negative number")
+	for {
+		op := p.peek()
+		prec := binaryPrec(op)
+		if prec == 0 || prec < minPrec {
+			return left, nil
 		}
-		return floatVal(math.Sqrt(arg)), nil
-	case "abs":
-		return floatVal(math.Abs(arg)), nil
-	case "ceil":
-		return floatVal(math.Ceil(arg)), nil
-	case "floor":
-		return floatVal(math.Floor(arg)), nil
-	case "round":
-		return floatVal(math.Round(arg)), nil
-	case "log":
-		if arg <= 0 {
-			return value{}, utilsmsg.New(utilsmsg.Invalid, "log", "non-positive number")
-		}
-		return floatVal(math.Log(arg)), nil
-	case "log2":
-		if arg <= 0 {
-			return value{}, utilsmsg.New(utilsmsg.Invalid, "log2", "non-positive number")
-		}
-		return floatVal(math.Log2(arg)), nil
-	case "log10":
-		if arg <= 0 {
-			return value{}, utilsmsg.New(utilsmsg.Invalid, "log10", "non-positive number")
-		}
-		return floatVal(math.Log10(arg)), nil
-	case "sin":
-		return floatVal(math.Sin(arg)), nil
-	case "cos":
-		return floatVal(math.Cos(arg)), nil
-	case "tan":
-		return floatVal(math.Tan(arg)), nil
-	case "pow":
-		if len(call.Args) < 2 {
-			return value{}, utilsmsg.New(utilsmsg.Invalid, "pow", "requires 2 arguments")
-		}
-		e, err := eval(call.Args[1])
+		p.pos++
+		right, err := p.parseExpr(prec + 1)
 		if err != nil {
 			return value{}, err
 		}
-		return floatVal(math.Pow(arg, e.toFloat())), nil
+		if left, err = binary(op, left, right); err != nil {
+			return value{}, err
+		}
 	}
-
-	return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "unknown function: %s", ident.Name)
 }
 
-func evalMinMax(name string, args []ast.Expr) (value, error) {
-	vals := make([]value, len(args))
-	allInt := true
-	for i, a := range args {
-		v, err := eval(a)
+// parseUnary handles any number of leading signs. The operand is parsed with
+// parseUnary -> parsePower, so the sign applies to the whole power:
+// -2^2 = -(2^2) = -4.
+func (p *parser) parseUnary() (value, error) {
+	switch p.peek() {
+	case '-':
+		p.pos++
+		v, err := p.parseUnary()
 		if err != nil {
 			return value{}, err
 		}
-		vals[i] = v
-		if !v.isInt {
-			allInt = false
+		if v.isInt {
+			return intVal(new(big.Int).Neg(v.i)), nil
+		}
+		return floatVal(-v.f)
+	case '+':
+		p.pos++
+		return p.parseUnary()
+	}
+	return p.parsePower()
+}
+
+// parsePower parses primary [ "^" unary ]. Recursing into parseUnary for the
+// exponent gives right associativity (2^3^2 = 2^(3^2)) and allows a signed
+// exponent (2^-2).
+func (p *parser) parsePower() (value, error) {
+	base, err := p.parsePrimary()
+	if err != nil {
+		return value{}, err
+	}
+	if p.peek() != '^' {
+		return base, nil
+	}
+	p.pos++
+	exp, err := p.parseUnary()
+	if err != nil {
+		return value{}, err
+	}
+	return power(base, exp)
+}
+
+// parsePrimary parses the atoms of the grammar: a parenthesised expression, a
+// number (which may start with "." as in .5), or a function call.
+func (p *parser) parsePrimary() (value, error) {
+	c := p.peek()
+	switch {
+	case c == '(':
+		p.pos++
+		v, err := p.parseExpr(0)
+		if err != nil {
+			return value{}, err
+		}
+		if p.peek() != ')' {
+			return value{}, p.unexpected()
+		}
+		p.pos++
+		return v, nil
+	case isDigit(c) || c == '.':
+		return p.parseNumber()
+	case isLetter(c):
+		return p.parseCall()
+	}
+	return value{}, p.unexpected()
+}
+
+// parseNumber scans digits [ "." digits ] [ ("e"|"E") [sign] digits ]. A "."
+// or exponent makes the literal a float64; otherwise it is an exact base-10
+// big.Int, so leading zeros are decimal (010 = 10, 08 = 8) rather than octal.
+func (p *parser) parseNumber() (value, error) {
+	start := p.pos
+	isFloat := false
+	for p.pos < len(p.src) && isDigit(p.src[p.pos]) {
+		p.pos++
+	}
+	if p.pos < len(p.src) && p.src[p.pos] == '.' {
+		isFloat = true
+		p.pos++
+		for p.pos < len(p.src) && isDigit(p.src[p.pos]) {
+			p.pos++
 		}
 	}
-	if allInt {
-		best := vals[0].i
-		for _, v := range vals[1:] {
-			cmp := v.i.Cmp(best)
-			if (name == "min" && cmp < 0) || (name == "max" && cmp > 0) {
-				best = v.i
+	if p.pos < len(p.src) && (p.src[p.pos] == 'e' || p.src[p.pos] == 'E') {
+		isFloat = true
+		p.pos++
+		if p.pos < len(p.src) && (p.src[p.pos] == '+' || p.src[p.pos] == '-') {
+			p.pos++
+		}
+		for p.pos < len(p.src) && isDigit(p.src[p.pos]) {
+			p.pos++
+		}
+	}
+	// swallow trailing letters, digits and dots into the same token so that
+	// Go-style literals such as 1_000, 0x10, 0b1010 or 0x1.8p1 are reported
+	// as one invalid number instead of being split into "0" and a name
+	if p.pos < len(p.src) && (isLetter(p.src[p.pos]) || p.src[p.pos] == '.') {
+		for p.pos < len(p.src) && (isLetter(p.src[p.pos]) || isDigit(p.src[p.pos]) || p.src[p.pos] == '.') {
+			p.pos++
+		}
+	}
+
+	text := p.src[start:p.pos]
+	if !isFloat {
+		i, ok := new(big.Int).SetString(text, 10)
+		if !ok {
+			return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "invalid number: %s; use decimal digits only", text)
+		}
+		return intVal(i), nil
+	}
+	// ParseFloat returns a range error for literals such as 1e309, so an
+	// overflowing literal is rejected here rather than becoming +Inf
+	f, err := strconv.ParseFloat(text, 64)
+	if err != nil {
+		return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "invalid number: %s; use decimal digits only", text)
+	}
+	return floatVal(f)
+}
+
+// parseCall parses name "(" [ expr { "," expr } ] ")". A bare name without
+// parentheses is rejected because the calculator has no variables or
+// constants. Arguments are evaluated left to right before dispatch, so an
+// argument error surfaces before any arity check.
+func (p *parser) parseCall() (value, error) {
+	start := p.pos
+	for p.pos < len(p.src) && (isLetter(p.src[p.pos]) || isDigit(p.src[p.pos])) {
+		p.pos++
+	}
+	name := p.src[start:p.pos]
+	if p.peek() != '(' {
+		return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "unknown name %q; only function calls such as sqrt(2) are supported", name)
+	}
+	p.pos++
+
+	args := []value{}
+	if p.peek() == ')' {
+		p.pos++
+	} else {
+		for {
+			v, err := p.parseExpr(0)
+			if err != nil {
+				return value{}, err
+			}
+			args = append(args, v)
+			// consume the separator; step back on anything else so the error
+			// points at the offending byte
+			c := p.peek()
+			p.pos++
+			if c == ')' {
+				break
+			}
+			if c != ',' {
+				p.pos--
+				return value{}, p.unexpected()
 			}
 		}
-		return intVal(new(big.Int).Set(best)), nil
 	}
-	best := vals[0].toFloat()
-	for _, v := range vals[1:] {
-		f := v.toFloat()
-		if name == "min" {
-			best = math.Min(best, f)
-		} else {
-			best = math.Max(best, f)
+	return call(name, args)
+}
+
+// isDigit reports whether c is an ASCII decimal digit.
+func isDigit(c byte) bool { return c >= '0' && c <= '9' }
+
+// isLetter reports whether c may start or continue a name; "_" is included so
+// 1_000 is captured as one invalid token by parseNumber.
+func isLetter(c byte) bool { return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' }
+
+// binary applies + - * / % to two already-evaluated operands. When both are
+// integers the result stays exact: / and % use big.Int Quo and Rem, which
+// truncate toward zero (7/2 = 3, -7%2 = -1). Otherwise both sides are
+// converted to float64 and the result is checked for finiteness, so mixed
+// arithmetic follows float64 rounding (9007199254740993+0.0 =
+// 9007199254740992).
+func binary(op byte, left, right value) (value, error) {
+	if left.isInt && right.isInt {
+		switch op {
+		case '+':
+			return intVal(new(big.Int).Add(left.i, right.i)), nil
+		case '-':
+			return intVal(new(big.Int).Sub(left.i, right.i)), nil
+		case '*':
+			return intVal(new(big.Int).Mul(left.i, right.i)), nil
+		case '/':
+			if right.i.Sign() == 0 {
+				return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "division by zero")
+			}
+			return intVal(new(big.Int).Quo(left.i, right.i)), nil
+		case '%':
+			if right.i.Sign() == 0 {
+				return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "modulo by zero")
+			}
+			return intVal(new(big.Int).Rem(left.i, right.i)), nil
 		}
 	}
-	return floatVal(best), nil
+	lf, rf := left.toFloat(), right.toFloat()
+	switch op {
+	case '+':
+		return floatVal(lf + rf)
+	case '-':
+		return floatVal(lf - rf)
+	case '*':
+		return floatVal(lf * rf)
+	case '/':
+		if rf == 0 {
+			return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "division by zero")
+		}
+		return floatVal(lf / rf)
+	case '%':
+		if rf == 0 {
+			return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "modulo by zero")
+		}
+		return floatVal(math.Mod(lf, rf))
+	}
+	return value{}, utilsmsg.New(utilsmsg.Internal, "expression", "unhandled operator %q", op)
+}
+
+// power computes base^exp for both the "^" operator and pow(x, y). An integer
+// base with a non-negative int64 exponent is computed exactly when the result
+// fits maxExactPowBits; bases 0, 1 and -1 (bit length <= 1) are always exact
+// because their results never grow. Everything else, including negative or
+// fractional exponents, uses math.Pow, and floatVal rejects NaN (for example
+// (-2)^0.5) and Inf (for example 0^-1).
+func power(base, exp value) (value, error) {
+	if base.isInt && exp.isInt && exp.i.Sign() >= 0 && exp.i.IsInt64() {
+		n := exp.i.Int64()
+		if bits := int64(base.i.BitLen()); bits <= 1 || n <= maxExactPowBits/bits {
+			return intVal(new(big.Int).Exp(base.i, exp.i, nil)), nil
+		}
+	}
+	return floatVal(math.Pow(base.toFloat(), exp.toFloat()))
+}
+
+// call dispatches a function by name after its arguments have been
+// evaluated. min and max accept one or more arguments; pow takes exactly two;
+// every other function takes exactly one, and extra arguments are an error
+// rather than being ignored.
+func call(name string, args []value) (value, error) {
+	if len(args) == 0 {
+		return value{}, utilsmsg.New(utilsmsg.Invalid, name, "requires arguments")
+	}
+
+	switch name {
+	case "min", "max":
+		// compare exactly and return the winning operand unchanged, so a big
+		// integer is not rounded just because a float took part in the comparison
+		best := args[0]
+		for _, v := range args[1:] {
+			cmp := v.exact().Cmp(best.exact())
+			if (name == "min" && cmp < 0) || (name == "max" && cmp > 0) {
+				best = v
+			}
+		}
+		return best, nil
+	case "pow":
+		if len(args) != 2 {
+			return value{}, utilsmsg.New(utilsmsg.Invalid, "pow", "requires 2 arguments, got %d", len(args))
+		}
+		return power(args[0], args[1])
+	}
+
+	// abs, ceil, floor and round are known single-argument functions with no
+	// unaryFuncs entry, because they keep integer input exact below
+	fn, isUnary := unaryFuncs[name]
+	switch name {
+	case "abs", "ceil", "floor", "round":
+		isUnary = true
+	}
+	if !isUnary {
+		return value{}, utilsmsg.New(utilsmsg.Invalid, "expression", "unknown function: %s", name)
+	}
+	if len(args) != 1 {
+		return value{}, utilsmsg.New(utilsmsg.Invalid, name, "requires 1 argument, got %d", len(args))
+	}
+
+	arg := args[0]
+	switch name {
+	case "abs":
+		if arg.isInt {
+			return intVal(new(big.Int).Abs(arg.i)), nil
+		}
+		return floatVal(math.Abs(arg.f))
+	case "ceil", "floor", "round":
+		// an integer is already whole; returning it avoids a lossy float64 trip
+		if arg.isInt {
+			return arg, nil
+		}
+		switch name {
+		case "ceil":
+			return floatVal(math.Ceil(arg.f))
+		case "floor":
+			return floatVal(math.Floor(arg.f))
+		}
+		return floatVal(math.Round(arg.f))
+	}
+
+	// the remaining functions are float64-only; fn enforces its own domain
+	f, err := fn(arg.toFloat())
+	if err != nil {
+		return value{}, err
+	}
+	return floatVal(f)
 }

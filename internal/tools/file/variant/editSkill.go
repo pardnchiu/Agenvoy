@@ -13,9 +13,7 @@ import (
 func registEditSkill() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "edit_skill",
-		SystemUse:   false,
 		AlwaysAllow: true,
-		Concurrent:  false,
 		Description: `Edits files under the skills directory: create or rewrite one (write), replace a string inside one (patch), or trash a whole skill (remove); returns the affected path.
 Use for "edit this skill", "add a skill file", "this skill needs adjusting", "delete that skill", and for write_skill / patch_skill / remove_skill.
 Running a skill → run_skill; building a new skill from scratch → the skill-creator skill; script tools → edit_tool; any other file → edit_file.`,

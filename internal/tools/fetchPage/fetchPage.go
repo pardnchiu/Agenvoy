@@ -1,3 +1,4 @@
+// * last modified: 26/11/19
 package fetchPage
 
 import (
@@ -12,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	go_browser "github.com/pardnchiu/go-browser/core"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -24,83 +26,44 @@ import (
 )
 
 const (
-	skippedExpired    = 12 * time.Hour
-	emptySkipExpired  = 72 * time.Hour
-	skip4xxExpired    = 90 * 24 * time.Hour
-	maxMarkdownLength = 100 << 10
-	defaultScroll     = 3
-	maxScroll         = 20
+	skippedExpired   = 12 * time.Hour
+	emptySkipExpired = 72 * time.Hour
+	skip4xxExpired   = 90 * 24 * time.Hour
+	maxFetchLength   = 1 << 20
+	fullPageHint     = "full page: download_file(link, render=true), then read_files in parts"
 )
 
-func currentProfile() string {
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
-		return "Default"
-	}
-	var paths []string
-	switch runtime.GOOS {
-	case "darwin":
-		paths = []string{filepath.Join(home, "Library", "Application Support", "Google", "Chrome", "Local State")}
-	case "linux":
-		paths = []string{filepath.Join(home, ".config", "google-chrome", "Local State")}
-	default:
-		return "Default"
-	}
-	type localState struct {
-		Profile struct {
-			LastUsed string `json:"last_used"`
-		} `json:"profile"`
-	}
-	for _, p := range paths {
-		ls, err := go_pkg_filesystem.ReadJSON[localState](p)
-		if err != nil {
-			continue
-		}
-		if ls.Profile.LastUsed != "" {
-			return ls.Profile.LastUsed
-		}
-	}
-	return "Default"
-}
-
-func ParseOutputType(s string) (int, error) {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "", "markdown":
-		return go_browser.TypeMarkdown, nil
-	case "html":
-		return go_browser.TypeHTML, nil
-	case "json":
-		return go_browser.TypeJSON, nil
-	default:
-		return 0, utilsmsg.New(utilsmsg.Invalid, "type", "%q: want markdown|html|json", s)
-	}
-}
-
-func registFetchPage() {
+func refistFetchPage() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "fetch_page",
-		SystemUse:   false,
-		AlwaysAllow: true,
-		Concurrent:  true,
-		Timeout:     90 * time.Second,
-		Description: `[system-default] Fetches one web page in a browser carrying the user's Chrome login, and returns it as markdown, html or json.
-Use for "read this article", "what does this link say", "open this page", for each search or RSS result being cited, and for researching a site page by page until complete.
+		Name:          "fetch_page",
+		SystemDefault: true,
+		AlwaysAllow:   true,
+		Concurrent:    true,
+		Timeout:       90 * time.Second,
+		Description: `Fetches sne web page in a browser carrying the user's Chrome login, and returns it as markdown, html or json.
+Use for "read this article", "what does this link say", "open this page", each search or RSS result being cited, and researching a site page by page until complete.
 No URL yet → search_web; saving a page or file to disk → download_file; a JSON API endpoint → http_request.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"link": map[string]any{
 					"type":        "string",
-					"description": "Full URL, e.g. 'https://example.com/post/1'; http:// is upgraded to https://, a #fragment is dropped, max 2048 chars. Before the first page of a site, fetch its /llms.txt; when it lists the page you want, fetch that .md URL instead.",
+					"description": "Full URL, e.g. 'https://example.com/post/1', max 2048 chars; http:// becomes https://, #fragment is dropped. Before the first page of a site, fetch its /llms.txt; when it lists the page you want, fetch that .md URL instead.",
+				},
+				"output_type": map[string]any{
+					"type":        "string",
+					"enum":        []string{"markdown", "html", "json"},
+					"description": "Output format: markdown (reading and summarising), json (structured extraction, comparing items, feeding another tool), html (raw DOM, only when needed).",
+					"default":     "markdown",
 				},
 				"keep_links": map[string]any{
 					"type":        "boolean",
-					"description": "true keeps same-domain links in the output (and skips the boilerplate filter), for following subpages of a docs site or multi-page article.",
+					"description": "true keeps same-domain links (and skips the boilerplate filter), for following subpages of a docs site or multi-page article.",
 					"default":     false,
 				},
 				"same_session": map[string]any{
 					"type":        "boolean",
-					"description": "true sends the user's Chrome cookies and login state, so login-only pages (social feeds, paywalled news, dashboards) load; false only when the logged-out view is asked for.",
+					"description": "true sends the user's Chrome cookies and login, so login-only pages (social feeds, paywalled news, dashboards) load; false only when the logged-out view is asked for.",
 					"default":     true,
 				},
 				"headless": map[string]any{
@@ -108,22 +71,16 @@ No URL yet → search_web; saving a page or file to disk → download_file; a JS
 					"description": "true tries headless first and opens a window only when blocked; false opens a visible window right away, for \"open:[url]\" requests, bot checks, JS challenges and pages needing interaction.",
 					"default":     true,
 				},
-				"type": map[string]any{
-					"type":        "string",
-					"enum":        []string{"markdown", "html", "json"},
-					"description": "Output format: markdown (reading and summarising), json (structured extraction, comparing items, feeding another tool), html (raw DOM, only when needed).",
-					"default":     "markdown",
-				},
 				"scroll": map[string]any{
 					"type":        "integer",
-					"description": "Scroll passes to load lazy content, stopping early once the page stops changing: 10-20 for feeds, timelines and long comment threads; 0 when only the top of the page is needed. Values above 20 are clamped.",
+					"description": "Scroll passes for lazy content, stopping early once the page stops changing: 10-20 for feeds, timelines and long comment threads; 0 when only the top is needed.",
 					"minimum":     0,
 					"maximum":     maxScroll,
 					"default":     defaultScroll,
 				},
 				"force": map[string]any{
 					"type":        "boolean",
-					"description": "true skips the 30-minute result cache and re-fetches, also retrying a URL previously marked as failed; use when the user asks to refresh or re-check.",
+					"description": "true skips the 30-minute cache and re-fetches, also retrying a URL marked as failed; use when the user asks to refresh or re-check.",
 					"default":     false,
 				},
 			},
@@ -134,10 +91,10 @@ No URL yet → search_web; saving a page or file to disk → download_file; a JS
 		Handler: func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Link        string `json:"link"`
+				OutputType  string `json:"output_type"`
 				KeepLinks   bool   `json:"keep_links"`
 				SameSession *bool  `json:"same_session"`
 				Headless    *bool  `json:"headless"`
-				Type        string `json:"type"`
 				Force       bool   `json:"force"`
 				Scroll      *int   `json:"scroll"`
 			}
@@ -149,15 +106,13 @@ No URL yet → search_web; saving a page or file to disk → download_file; a JS
 			if link == "" {
 				return "", utilsmsg.New(utilsmsg.Invalid, "link", "required")
 			}
-			outType, err := ParseOutputType(params.Type)
+
+			outType, err := outputType(params.OutputType)
 			if err != nil {
 				return "", err
 			}
 			deliver := func(result string) string {
-				if outType != go_browser.TypeMarkdown {
-					return result
-				}
-				return checkRelevance(ctx, e.Objective, link, result)
+				return deliverPage(ctx, e.Objective, link, outType, params.KeepLinks, result)
 			}
 
 			if !params.Force {
@@ -210,7 +165,6 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 	}
 
 	opt := &go_browser.Option{
-		MaxLength:   maxMarkdownLength,
 		KeepLinks:   keepLinks,
 		SameSession: sameSession,
 		Visible:     !headless,
@@ -220,24 +174,35 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 	if scroll == 0 {
 		opt.ScrollCount = -1
 	}
+	opt.MaxLength = -1
+	if saveTo == nil {
+		opt.MaxLength = maxFetchLength + 1
+	}
 	if sameSession || !headless {
 		opt.Profile = currentProfile()
 	}
+
 	result, err := go_browser.Fetch(ctx, link, 30*time.Second, opt)
 	if err != nil {
-		var fe *go_browser.Error
-		if !errors.As(err, &fe) {
+		var fetchErr *go_browser.Error
+		if !errors.As(err, &fetchErr) {
 			slog.Error("go_browser.Fetch",
 				slog.String("url", link),
 				slog.String("error", err.Error()))
 			return "", utilsmsg.Trace("fetch_page "+link, "", err)
 		}
+
 		title := ""
 		if result != nil {
 			title = result.Title
 		}
-		addToSkippedMap(link, fe.Status, title)
-		return "", utilsmsg.New(utilsmsg.Upstream, link, "fetch failed [%d]", fe.Status)
+		// NOTE: 加入 map 方便後續直接跳過
+		addToSkippedMap(link, fetchErr.Status, title)
+		return "", utilsmsg.New(utilsmsg.Upstream, link, "fetch failed [%d]", fetchErr.Status)
+	}
+
+	if saveTo == nil && outType == go_browser.TypeHTML && len(result.Content) > maxFetchLength {
+		return "", utilsmsg.New(utilsmsg.Limit, link, "html content is over the 1 MiB limit; use output_type=markdown, or %s", fullPageHint)
 	}
 
 	var tree []json.RawMessage
@@ -253,9 +218,13 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 		tree = serialized.Tree
 	}
 
-	if isPage4xx(result.Title, result.FinalURL) {
-		addToSkippedMap(link, 404, result.Title)
-		return "", utilsmsg.New(utilsmsg.NotFound, link, "fetch failed [404]")
+	if result.Status >= 400 || isTitleContains4xx(result.Title) {
+		addToSkippedMap(link, result.Status, result.Title)
+		tag := utilsmsg.NotFound
+		if result.Status >= 400 && result.Status != 404 && result.Status != 410 {
+			tag = utilsmsg.Upstream
+		}
+		return "", utilsmsg.New(tag, link, "fetch failed [%d]: %q", result.Status, result.Title)
 	}
 
 	var full string
@@ -265,7 +234,7 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 			addToSkippedMap(link, 0, result.Title)
 			return "", utilsmsg.New(utilsmsg.Upstream, link, "empty content")
 		}
-		if !keepLinks && saveTo == nil {
+		if !keepLinks && saveTo == nil && len(result.Content) <= maxFetchLength {
 			result.Content = removeNoise(ctx, link, result.Content)
 		}
 		full = buildFrontmatter(result)
@@ -274,7 +243,11 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 			addToSkippedMap(link, 0, result.Title)
 			return "", utilsmsg.New(utilsmsg.Upstream, link, "empty content")
 		}
-		raw, err := json.Marshal(tree)
+		var page any = tree
+		if saveTo == nil {
+			page = jsonPage{Title: result.Title, Tree: tree}
+		}
+		raw, err := json.Marshal(page)
 		if err != nil {
 			return "", utilsmsg.Wrap(utilsmsg.Internal, "json.Marshal", "tree", err)
 		}
@@ -296,16 +269,76 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 		}
 		return fmt.Sprintf("Downloaded %d chars to %s", len(full), *saveTo), nil
 	}
-	return truncateResult(full), nil
+	return full, nil
 }
 
-func SavePage(ctx context.Context, link string, outType int, path string) (string, error) {
-	return handler(ctx, link, false, true, true, outType, defaultScroll, &path, false)
+func headBytes(content string, limit int) string {
+	if len(content) <= limit {
+		return content
+	}
+	for limit > 0 && !utf8.RuneStart(content[limit]) {
+		limit--
+	}
+	return content[:limit]
+}
+
+func isTitleContains4xx(title string) bool {
+	switch strings.ToLower(strings.TrimSpace(title)) {
+	case "404", "403", "not found", "page not found",
+		"404 not found", "403 forbidden", "access denied",
+		"找不到頁面", "頁面不存在", "此頁面不存在":
+		return true
+	}
+	return false
+}
+
+func currentProfile() string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return "Default"
+	}
+	var paths []string
+	switch runtime.GOOS {
+	case "darwin":
+		paths = []string{filepath.Join(home, "Library", "Application Support", "Google", "Chrome", "Local State")}
+	case "linux":
+		paths = []string{filepath.Join(home, ".config", "google-chrome", "Local State")}
+	default:
+		return "Default"
+	}
+	type localState struct {
+		Profile struct {
+			LastUsed string `json:"last_used"`
+		} `json:"profile"`
+	}
+	for _, p := range paths {
+		ls, err := go_pkg_filesystem.ReadJSON[localState](p)
+		if err != nil {
+			continue
+		}
+		if ls.Profile.LastUsed != "" {
+			return ls.Profile.LastUsed
+		}
+	}
+	return "Default"
+}
+
+func outputType(s string) (int, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "", "markdown":
+		return go_browser.TypeMarkdown, nil
+	case "html":
+		return go_browser.TypeHTML, nil
+	case "json":
+		return go_browser.TypeJSON, nil
+	default:
+		return 0, utilsmsg.New(utilsmsg.Invalid, "output_type", "%q: want markdown|html|json", s)
+	}
 }
 
 func validateURL(href string) error {
 	if len(href) > 2048 {
-		return utilsmsg.New(utilsmsg.Invalid, "url", "too long: max 2048 chars")
+		return utilsmsg.New(utilsmsg.Invalid, "link", "too long: max 2048 chars")
 	}
 
 	parsed, err := url.Parse(href)
@@ -314,20 +347,13 @@ func validateURL(href string) error {
 	}
 
 	if parsed.User != nil {
-		return utilsmsg.New(utilsmsg.Invalid, "url", "must not contain credentials")
+		return utilsmsg.New(utilsmsg.Invalid, "link", "must not contain credentials")
 	}
 
 	if !strings.Contains(parsed.Hostname(), ".") {
-		return utilsmsg.New(utilsmsg.Invalid, "url", "must have a valid hostname")
+		return utilsmsg.New(utilsmsg.Invalid, "link", "must have a valid hostname")
 	}
 	return nil
-}
-
-func truncateResult(result string) string {
-	if len(result) >= maxMarkdownLength {
-		result = result[:maxMarkdownLength] + "\n\n[Content truncated due to length...]"
-	}
-	return fmt.Sprintf("Web page content:\n---\n%s\n---", result)
 }
 
 func buildFrontmatter(r *go_browser.Result) string {

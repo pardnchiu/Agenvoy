@@ -161,7 +161,7 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 		return arg("path")
 
 	case "download_file":
-		return arg("url", "link")
+		return arg("link", "url")
 
 	case "fetch_page":
 		return arg("link", "url")

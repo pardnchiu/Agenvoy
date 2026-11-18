@@ -18,7 +18,6 @@ import (
 func registTestTool() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "test_tool",
-		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `Runs a script tool's script.py in the sandbox (60s limit) with JSON on stdin and returns its stdout, or its stderr as the error; tool.json is not checked.

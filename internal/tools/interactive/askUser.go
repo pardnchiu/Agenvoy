@@ -99,7 +99,6 @@ func registAskUser() {
 		Timeout:     toolregister.NoToolTimeout,
 		SystemUse:   true,
 		AlwaysAllow: true,
-		Concurrent:  false,
 		Description: `Asks the user one or more questions; the answers come back as this call's result, or, on channels that cannot wait, the run ends here and a new turn resumes from state with them.
 Use for requests whose target, scope, format or timing is not fixed by what they said, an active Skill's SKILL.md, or data a tool can fetch (git state, files), e.g. "remind me later", "clean up the project", "write me a report"; and when more than one tool fits. A bare /<skill> command is fully specified by its SKILL.md: run it without asking.
 API keys, tokens and passwords → store_secret.`,

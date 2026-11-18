@@ -35,7 +35,7 @@ func registReasoningGuide() {
 		SystemUse:   true,
 		AlwaysAllow: true,
 		Concurrent:  true,
-		Description: `[system-default] Returns the full rules for the topics below; call before acting on any match, with every matching topic in one call:
+		Description: `Returns the full rules for the topics below; call before acting on any match, with every matching topic in one call:
 - tool_error: a tool call just failed, before retrying it.
 - tool_generate: live external data (weather, FX, stock, geocoding, translation...) no script_*/ext_* covers, or the one found fails — before public_api_list, http_request or edit_tool.
 - web_search: non-smalltalk info query (people, orgs, facts, current events, prices).

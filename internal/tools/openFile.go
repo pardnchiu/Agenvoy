@@ -23,7 +23,6 @@ func registOpenFile() {
 		Name:        "open_file",
 		SystemUse:   true,
 		AlwaysAllow: true,
-		Concurrent:  false,
 		Description: `Hands a file or URL to the OS default handler and returns the opened path: plays a video, shows an image, opens a PDF viewer, a system settings pane or a link.
 Use for "open this file", "play the video", "show me the image", "open settings", and for open / xdg-open / start.
 run_command cannot do this: its sandbox has no route to the app-launch service. Reading the contents instead → read_files.`,

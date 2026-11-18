@@ -35,9 +35,6 @@ func (t Tool) getDef(server string, m *MCP) (toolregister.Def, bool) {
 	}
 	return toolregister.Def{
 		Name:        "mcp__" + server + "__" + toolName,
-		SystemUse:   false,
-		AlwaysAllow: false,
-		Concurrent:  false,
 		Description: description,
 		Parameters:  params,
 		Handler: func(ctx context.Context, _ *tooltypes.Executor, args json.RawMessage) (string, error) {
