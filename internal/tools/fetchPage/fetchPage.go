@@ -27,6 +27,7 @@ import (
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -202,7 +203,7 @@ func askChallenge(ctx context.Context, sessionID string) (bool, error) {
 	if origin == "" {
 		origin = agenvoyruntime.OriginOf(sessionID)
 	}
-	if agenttypes.NoPromptFrom(ctx) || agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff || !agenvoyruntime.HasListener(ctx, origin) {
+	if !canShowWindow() || agenttypes.NoPromptFrom(ctx) || agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff || !agenvoyruntime.HasListener(ctx, origin) {
 		return false, nil
 	}
 	text := getChallengeText()
@@ -219,6 +220,16 @@ func askChallenge(ctx context.Context, sessionID string) (bool, error) {
 	}
 	answer, _ := answers[0].(string)
 	return answer == text.Enable, nil
+}
+
+func canShowWindow() bool {
+	if runtime.GOOS != "linux" {
+		return true
+	}
+	if utils.IsWSL() {
+		return false
+	}
+	return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
 }
 
 func challengeDeclined(link string) error {
