@@ -260,7 +260,7 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 				p.kind = popupSecret
 				p.passwordPrompt = true
-				p.title = "System password:"
+				p.title = filesystem.GetConfirmText().Password + ":"
 				p.styledLines = nil
 				for _, one := range p.restrictedMsg {
 					p.styledLines = append(p.styledLines, warnStyle.Render(one))
@@ -276,7 +276,7 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case labels.Skip:
 			p.kind = popupText
 			p.skipWithReason = true
-			p.title = "Reason (enter to skip):"
+			p.title = filesystem.GetConfirmText().Reason + ":"
 			p.input = newPopupInput("", false)
 			return t, nil
 		case labels.Abort:

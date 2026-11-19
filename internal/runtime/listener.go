@@ -297,13 +297,13 @@ func (l *Listener[CID, MID]) OnCallback(ctx context.Context, chatID CID, msgID M
 		l.finalize(state, reply)
 
 	case TypeSkipChoice:
-		switch data {
+		switch skipChoiceFor(data) {
 		case skipWithoutReason:
 			l.deletePrompt(ctx, state)
 			l.finalize(state, Reply{Approve: false, Skip: true})
 		case skipWriteReason:
 			l.deletePrompt(ctx, state)
-			msgID, err := l.transport.SendAskText(ctx, state.chatID, skipReasonHeader, false)
+			msgID, err := l.transport.SendAskText(ctx, state.chatID, filesystem.GetConfirmText().SkipReasonHeader, false)
 			if err != nil {
 				l.finalize(state, Reply{Approve: false, Skip: true})
 				return true
@@ -416,26 +416,31 @@ func (l *Listener[CID, MID]) finalize(state *active[CID, MID], reply Reply) {
 func confirmOptions(restricted bool) []string {
 	labels := filesystem.GetConfirmLabels()
 	if restricted {
-		return []string{"❌ " + labels.Skip, "⛔ " + labels.Abort, "🗑️ " + labels.Cancel}
+		return []string{labels.Skip, labels.Abort, labels.Cancel}
 	}
-	return []string{
-		"✅ " + labels.Yes,
-		"✅ " + labels.Remember,
-		"✅ " + labels.AllowTurn,
-		"❌ " + labels.Skip,
-		"⛔ " + labels.Abort,
-		"🗑️ " + labels.Cancel,
-	}
+	return labels.List()
 }
 
 const (
-	skipWithoutReason = "↪️ Skip without reason"
-	skipWriteReason   = "✏️ Write a reason"
-	skipReasonHeader  = "Reason for skipping"
+	skipWithoutReason = "without_reason"
+	skipWriteReason   = "write_reason"
 )
 
+func skipChoiceFor(data string) string {
+	for _, text := range filesystem.AllConfirmText() {
+		switch data {
+		case text.SkipWithoutReason:
+			return skipWithoutReason
+		case text.SkipWriteReason:
+			return skipWriteReason
+		}
+	}
+	return ""
+}
+
 func (l *Listener[CID, MID]) askSkipReason(ctx context.Context, state *active[CID, MID]) {
-	msgID, err := l.transport.SendAskSingle(ctx, state.chatID, "Skipped. Add a reason for the agent?", []string{skipWithoutReason, skipWriteReason})
+	text := filesystem.GetConfirmText()
+	msgID, err := l.transport.SendAskSingle(ctx, state.chatID, text.SkipHeader, []string{text.SkipWithoutReason, text.SkipWriteReason})
 	if err != nil {
 		l.finalize(state, Reply{Approve: false, Skip: true})
 		return
@@ -445,25 +450,19 @@ func (l *Listener[CID, MID]) askSkipReason(ctx context.Context, state *active[CI
 }
 
 func confirmReplyFor(data string) (reply Reply, finalize bool) {
-	switch data {
-	case "❌ No":
-		return Reply{Approve: false, Skip: true}, true
-	case "⛔ Stop":
-		return Reply{Approve: false, Error: ErrUserAborted}, true
-	}
 	for _, labels := range filesystem.AllConfirmLabels() {
 		switch data {
-		case "✅ " + labels.Yes:
+		case labels.Yes:
 			return Reply{Approve: true}, true
-		case "✅ " + labels.Remember:
+		case labels.Remember:
 			return Reply{Approve: true, Remember: true}, true
-		case "✅ " + labels.AllowTurn:
+		case labels.AllowTurn:
 			return Reply{Approve: true, AllowTurn: true}, true
-		case "❌ " + labels.Skip:
+		case labels.Skip:
 			return Reply{Approve: false, Skip: true}, true
-		case "⛔ " + labels.Abort:
+		case labels.Abort:
 			return Reply{Approve: false, Error: ErrUserAborted}, true
-		case "🗑️ " + labels.Cancel:
+		case labels.Cancel:
 			return Reply{Approve: false, Error: ErrUserCanceled}, true
 		}
 	}

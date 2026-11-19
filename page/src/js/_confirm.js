@@ -7,7 +7,15 @@ const CONFIRM_OPTIONS = [
   { key: "cancel", label: "Cancel, delete task", body: { approve: false, cancel: true }, style: "abort" },
 ];
 
-async function resolveToolConfirm(sessionId, requestId, body, dom) {
+const CONFIRM_TEXT = {
+  password: "System password",
+  password_empty: "type your system password first",
+  password_rejected: "password rejected",
+  reason: "Why not? Tell it what to do instead (enter to skip)",
+  send: "send",
+};
+
+async function resolveToolConfirm(sessionId, requestId, body, dom, text) {
   const note = dom.querySelector("p.note");
   try {
     const response = await fetch(
@@ -21,7 +29,7 @@ async function resolveToolConfirm(sessionId, requestId, body, dom) {
     if (response.status === 401 || response.status === 403) {
       const detail = await response.json().catch(() => ({}));
       if (note) {
-        note.textContent = detail.error || "password rejected";
+        note.textContent = detail.error || text.password_rejected;
       }
       return;
     }
@@ -31,7 +39,7 @@ async function resolveToolConfirm(sessionId, requestId, body, dom) {
   dom.remove();
 }
 
-function askRejectReason(card, done) {
+function askRejectReason(card, text, done) {
   const action = card.querySelector("div.action");
   if (!action) {
     done("");
@@ -42,9 +50,9 @@ function askRejectReason(card, done) {
     type: "text",
     class: "reason",
     autocomplete: "off",
-    placeholder: "Why not? tell it what to do instead (enter to skip)",
+    placeholder: text.reason,
   });
-  const send = _("button", { type: "button", class: "reject" }, [_("p", "send")]);
+  const send = _("button", { type: "button", class: "reject" }, [_("p", text.send)]);
   const row = _("div.action", [field, send]);
 
   send.addEventListener("click", () => done(field.value.trim()));
@@ -98,7 +106,7 @@ function renderToolConfirm(event, sessionId) {
       autocomplete: "off",
       "data-1p-ignore": "true",
       "data-lpignore": "true",
-      placeholder: "System password",
+      placeholder: text.password,
     });
     note = _("p.note", "");
     password.addEventListener("input", () => {
@@ -112,6 +120,7 @@ function renderToolConfirm(event, sessionId) {
   let primary = null;
   const card = _("div.tool-confirm", { "data-id": requestId }, [...body, action]);
   const labels = event.confirm_options || {};
+  const text = Object.assign({}, CONFIRM_TEXT, event.confirm_text || {});
   for (const option of CONFIRM_OPTIONS) {
     if (restricted.length > 0 && (option.body.remember || option.body.allow_turn)) {
       continue;
@@ -122,7 +131,7 @@ function renderToolConfirm(event, sessionId) {
       if (password && option.body.approve) {
         const field = card.querySelector('input[type="password"]') || password;
         if (field.value === "") {
-          note.textContent = "type your system password first";
+          note.textContent = text.password_empty;
           field.focus();
           return;
         }
@@ -130,15 +139,15 @@ function renderToolConfirm(event, sessionId) {
         note.textContent = "";
       }
       if (option.reason) {
-        askRejectReason(card, (text) => {
-          if (text !== "") {
-            payload.reason = text;
+        askRejectReason(card, text, (reason) => {
+          if (reason !== "") {
+            payload.reason = reason;
           }
-          resolveToolConfirm(sessionId, requestId, payload, card);
+          resolveToolConfirm(sessionId, requestId, payload, card, text);
         });
         return;
       }
-      resolveToolConfirm(sessionId, requestId, payload, card);
+      resolveToolConfirm(sessionId, requestId, payload, card, text);
     });
     if (password && option.body.approve && !primary) {
       primary = button;

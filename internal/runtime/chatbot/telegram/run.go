@@ -164,7 +164,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 			slog.String("name", chatName(in)),
 			slog.String("code", code))
 		execchatbot.NotifyAdmin(ctx, code, "Telegram "+chatName(in))
-		prompt, err := b.client.SendInput(ctx, in.ChatID, 0, "Enter the 6-digit verification code printed in the daemon log.")
+		prompt, err := b.client.SendInput(ctx, in.ChatID, 0, filesystem.GetChatbotNotice().VerifyPrompt)
 		if err != nil {
 			slog.Warn("go_bot_telegram.Bot.client.SendInput",
 				slog.String("chat", chatName(in)),
@@ -185,7 +185,7 @@ func run(ctx context.Context, b *Bot, in go_bot_telegram.Input, attachInputs []g
 
 	if hasAttachment {
 		if slices.ContainsFunc(attachInputs, inputHasVoice) && audio.Model(audio.STT) == "" {
-			_, _ = b.client.Send(ctx, in.ChatID, in.MessageID, "No speech-to-text model selected · pick one with <code>/model stt</code> first.", go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
+			_, _ = b.client.Send(ctx, in.ChatID, in.MessageID, fmt.Sprintf(filesystem.GetChatbotNotice().STTMissing, "<code>/model stt</code>"), go_bot_telegram.WithSendType(go_bot_telegram.TypeHTML))
 			return nil
 		}
 		var attachments []chatbot.SavedAttachment

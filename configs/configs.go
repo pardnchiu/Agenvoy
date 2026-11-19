@@ -305,6 +305,12 @@ var ConfirmFetchChallenge []byte
 //go:embed confirm/tool_confirm.json
 var ConfirmTool []byte
 
+//go:embed confirm/ask_user.json
+var ConfirmAskUser []byte
+
+//go:embed confirm/chatbot_notice.json
+var ConfirmChatbotNotice []byte
+
 // * Official Guide
 
 //go:embed prompts/system_prompt/official_guides/*.md
