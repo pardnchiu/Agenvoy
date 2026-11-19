@@ -128,8 +128,8 @@ github.com/muesli/termenv v0.16.0 h1:S5AlUN9dENB57rsbnkPyfdGuWIlkmzJjbFf0Tf5FWUc
 github.com/muesli/termenv v0.16.0/go.mod h1:ZRfOIKPFDYQoDFF4Olj7/QJbW60Ol/kL1pU3VfY/Cnk=
 github.com/pardnchiu/go-bot v0.5.1 h1:MOrfP7RT+A9wqRDhu1NvdpKSsQAwjfBewp25SkWdi7o=
 github.com/pardnchiu/go-bot v0.5.1/go.mod h1:9eE+MLerrx6XTz/WS0tGPiPdjKCGGeOHPRhIGfD1HfI=
-github.com/pardnchiu/go-browser v0.3.6 h1:HmeoqEodEALb7hq1Mu+gvjKwaLv2haabxSfINVHm3gg=
-github.com/pardnchiu/go-browser v0.3.6/go.mod h1:zNpuRLCLzPD4kbdVEUtL59RydzlpuAeNEnfv6kSYCX8=
+github.com/pardnchiu/go-browser v0.3.7 h1:h+/8X7rD6hSqT6tCMI1ewgVXzZAcY2Qh5sqRclFQEUY=
+github.com/pardnchiu/go-browser v0.3.7/go.mod h1:zNpuRLCLzPD4kbdVEUtL59RydzlpuAeNEnfv6kSYCX8=
 github.com/pardnchiu/go-llm-router v0.10.5 h1:GCkDl7wl2dB3U4U43o6FmSmvW/DEdZGG9ZQzP5lcEFE=
 github.com/pardnchiu/go-llm-router v0.10.5/go.mod h1:D6Z8WFFiuzEjrx/11XhKlf88J0Un0uF9beIpJXbeZJU=
 github.com/pardnchiu/go-pkg v0.14.0 h1:M9J9EOBUBUGPSm0Zo70h2Pth6PPkSbna5AyKYn5bKog=
