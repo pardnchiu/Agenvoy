@@ -44,29 +44,82 @@ type Executor struct {
 	challengeMu     sync.Mutex
 }
 
+const challengeKeep = 30 * time.Minute
+
+type challengeState struct {
+	enabled bool
+	expire  time.Time
+}
+
+var (
+	sessionChallengeMu sync.Mutex
+	sessionChallenges  = map[string]challengeState{}
+)
+
+func (e *Executor) challengeDecision() *bool {
+	if e.EnableChallenge != nil {
+		e.keepChallenge(*e.EnableChallenge)
+		return e.EnableChallenge
+	}
+	if e.SessionID == "" {
+		return nil
+	}
+	sessionChallengeMu.Lock()
+	state, ok := sessionChallenges[e.SessionID]
+	if ok && time.Now().After(state.expire) {
+		delete(sessionChallenges, e.SessionID)
+		ok = false
+	}
+	sessionChallengeMu.Unlock()
+	if !ok {
+		return nil
+	}
+	enabled := state.enabled
+	e.EnableChallenge = &enabled
+	e.keepChallenge(enabled)
+	return e.EnableChallenge
+}
+
+func (e *Executor) keepChallenge(enabled bool) {
+	if e.SessionID == "" {
+		return
+	}
+	sessionChallengeMu.Lock()
+	defer sessionChallengeMu.Unlock()
+	sessionChallenges[e.SessionID] = challengeState{enabled: enabled, expire: time.Now().Add(challengeKeep)}
+}
+
 func (e *Executor) ChallengeEnabled() bool {
 	e.challengeMu.Lock()
 	defer e.challengeMu.Unlock()
-	return e.EnableChallenge != nil && *e.EnableChallenge
+	decision := e.challengeDecision()
+	return decision != nil && *decision
 }
 
 func (e *Executor) ResetChallenge() {
 	e.challengeMu.Lock()
 	defer e.challengeMu.Unlock()
 	e.EnableChallenge = nil
+	if e.SessionID == "" {
+		return
+	}
+	sessionChallengeMu.Lock()
+	defer sessionChallengeMu.Unlock()
+	delete(sessionChallenges, e.SessionID)
 }
 
 func (e *Executor) DecideChallenge(ask func() (bool, error)) (bool, error) {
 	e.challengeMu.Lock()
 	defer e.challengeMu.Unlock()
-	if e.EnableChallenge != nil {
-		return *e.EnableChallenge, nil
+	if decision := e.challengeDecision(); decision != nil {
+		return *decision, nil
 	}
 	enabled, err := ask()
 	if err != nil {
 		return false, err
 	}
 	e.EnableChallenge = &enabled
+	e.keepChallenge(enabled)
 	return enabled, nil
 }
 
