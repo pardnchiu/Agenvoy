@@ -34,6 +34,7 @@ type taggedEvent struct {
 	RestrictedNote  string                    `json:"restricted_note,omitempty"`
 	ConfirmOptions  *filesystem.ConfirmLabels `json:"confirm_options,omitempty"`
 	ConfirmText     *filesystem.ConfirmText   `json:"confirm_text,omitempty"`
+	AskText         *filesystem.AskUserText   `json:"ask_text,omitempty"`
 	Trace           string                    `json:"trace,omitempty"`
 }
 
@@ -45,6 +46,7 @@ type wireEvent struct {
 	RestrictedNote  string                    `json:"restricted_note,omitempty"`
 	ConfirmOptions  *filesystem.ConfirmLabels `json:"confirm_options,omitempty"`
 	ConfirmText     *filesystem.ConfirmText   `json:"confirm_text,omitempty"`
+	AskText         *filesystem.AskUserText   `json:"ask_text,omitempty"`
 	Trace           string                    `json:"trace,omitempty"`
 }
 
@@ -76,6 +78,9 @@ func toWire(ev agenttypes.Event) wireEvent {
 		wire.ConfirmOptions = &labels
 		text := filesystem.GetConfirmText()
 		wire.ConfirmText = &text
+	case agenttypes.EventAskPrompt:
+		text := filesystem.GetAskUserText()
+		wire.AskText = &text
 	}
 	return wire
 }
@@ -91,6 +96,7 @@ func toTagged(sessionID string, ev agenttypes.Event) taggedEvent {
 		RestrictedNote:  wire.RestrictedNote,
 		ConfirmOptions:  wire.ConfirmOptions,
 		ConfirmText:     wire.ConfirmText,
+		AskText:         wire.AskText,
 		Trace:           wire.Trace,
 	}
 }

@@ -50,6 +50,12 @@ func (e *Executor) ChallengeEnabled() bool {
 	return e.EnableChallenge != nil && *e.EnableChallenge
 }
 
+func (e *Executor) ResetChallenge() {
+	e.challengeMu.Lock()
+	defer e.challengeMu.Unlock()
+	e.EnableChallenge = nil
+}
+
 func (e *Executor) DecideChallenge(ask func() (bool, error)) (bool, error) {
 	e.challengeMu.Lock()
 	defer e.challengeMu.Unlock()

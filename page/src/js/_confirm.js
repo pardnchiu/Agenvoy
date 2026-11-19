@@ -170,3 +170,100 @@ function renderToolConfirm(event, sessionId) {
     password.focus();
   }
 }
+
+const ASK_TEXT = {
+  placeholder: "Type your answer...",
+  send: "Send",
+  skip: "Skip",
+};
+
+function renderAskPrompt(event, sessionId) {
+  const requestId = event.confirm_hash || "";
+  const dom = chatPart("confirm", sessionId);
+  const questions = event.questions || [];
+  if (!requestId || !dom || questions.length === 0) {
+    return;
+  }
+  clearPendingHint(sessionId);
+  if (dom.querySelector(`div.tool-confirm[data-id="${requestId}"]`)) {
+    return;
+  }
+
+  const text = Object.assign({}, ASK_TEXT, event.ask_text || {});
+  const answers = questions.map((q) => (q.multi_select ? [] : ""));
+  const card = _("div.tool-confirm", { "data-id": requestId });
+  const submit = () => resolveToolConfirm(sessionId, requestId, { answers: answers }, card, CONFIRM_TEXT);
+  const direct = questions.length === 1 && (questions[0].options || []).length > 0 && !questions[0].multi_select;
+
+  questions.forEach((question, index) => {
+    card.appendChild(_("p.name", question.question || ""));
+    if (question.detail) {
+      card.appendChild(_("p.detail", question.detail));
+    }
+
+    const options = question.options || [];
+    if (direct) {
+      const action = _("div.action");
+      options.forEach((option, i) => {
+        const button = _("button", { type: "button", class: i === 0 ? "approve" : "reject" }, [_("p", option)]);
+        button.addEventListener("click", () => {
+          answers[index] = option;
+          submit();
+        });
+        action.appendChild(button);
+      });
+      card.appendChild(action);
+      return;
+    }
+
+    if (options.length > 0) {
+      for (const option of options) {
+        const box = _("input", { type: question.multi_select ? "checkbox" : "radio", name: `${requestId}-${index}`, value: option });
+        box.addEventListener("change", () => {
+          if (!question.multi_select) {
+            answers[index] = option;
+            return;
+          }
+          const picked = answers[index].filter((item) => item !== option);
+          if (box.checked) {
+            picked.push(option);
+          }
+          answers[index] = picked;
+        });
+        card.appendChild(_("label.option", [box, _("span", option)]));
+      }
+      return;
+    }
+
+    const field = _("input", {
+      type: question.secret ? "password" : "text",
+      class: "reason",
+      autocomplete: "off",
+      "data-1p-ignore": "true",
+      "data-lpignore": "true",
+      placeholder: text.placeholder,
+    });
+    field.addEventListener("input", () => (answers[index] = field.value));
+    field.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.isComposing) {
+        e.preventDefault();
+        submit();
+      }
+    });
+    card.appendChild(_("div.action", [field]));
+  });
+
+  if (!direct) {
+    const skip = _("button", { type: "button", class: "reject" }, [_("p", text.skip)]);
+    skip.addEventListener("click", () => {
+      answers.fill("");
+      submit();
+    });
+    const send = _("button", { type: "button", class: "approve" }, [_("p", text.send)]);
+    send.addEventListener("click", submit);
+    card.appendChild(_("div.action", [skip, send]));
+  }
+
+  dom.appendChild(card);
+  scrollToBottom(true, sessionId);
+}

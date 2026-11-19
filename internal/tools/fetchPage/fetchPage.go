@@ -157,6 +157,10 @@ No URL yet → search_web; saving a page or file to disk → download_file; a JS
 					result, err = "", challengeDeclined(link)
 				}
 			}
+			if errors.Is(err, go_browser.ErrChallengeClosed) {
+				e.ResetChallenge()
+				result, err = "", challengeDeclined(link)
+			}
 			if err != nil {
 				return "", err
 			}
@@ -263,7 +267,7 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 	}
 
 	result, err := go_browser.Fetch(ctx, link, 30*time.Second, opt)
-	if errors.Is(err, go_browser.ErrChallengeRequired) {
+	if errors.Is(err, go_browser.ErrChallengeRequired) || errors.Is(err, go_browser.ErrChallengeClosed) {
 		return "", err
 	}
 	if errors.Is(err, go_browser.ErrChallenge) {

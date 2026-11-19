@@ -88,7 +88,9 @@ func StartWebConfirm(ctx context.Context) {
 }
 
 func emitWebConfirms() {
-	accept := func(r runtime.Request) bool { return r.Kind == runtime.KindToolConfirm }
+	accept := func(r runtime.Request) bool {
+		return r.Kind == runtime.KindToolConfirm || r.Kind == runtime.KindAskUser && r.AskUser != nil && len(r.AskUser.Questions) > 0
+	}
 
 	for {
 		id, req, ok := runtime.PickNextMatch(webSessionPrefix, accept)
@@ -106,6 +108,16 @@ func emitWebConfirms() {
 			ConfirmHash: id,
 			Restricted:  req.Restricted,
 			Explain:     req.Explain,
+		}
+		if req.Kind == runtime.KindAskUser {
+			event = agenttypes.Event{
+				Type:        agenttypes.EventAskPrompt,
+				ToolName:    req.ToolName,
+				ConfirmHash: id,
+			}
+			for _, q := range req.AskUser.Questions {
+				event.Questions = append(event.Questions, agenttypes.AskQuestion(q))
+			}
 		}
 		if len(req.Restricted) > 0 {
 			event.PasswordCached = sudo.Cached(context.Background())
@@ -131,6 +143,7 @@ func ResolveToolConfirm() gin.HandlerFunc {
 			Cancel    bool   `json:"cancel,omitempty"`
 			Reason    string `json:"reason,omitempty"`
 			Password  string `json:"password,omitempty"`
+			Answers   []any  `json:"answers,omitempty"`
 		}
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -171,6 +184,9 @@ func ResolveToolConfirm() gin.HandlerFunc {
 			reply.Error = runtime.ErrUserCanceled
 		case body.Abort:
 			reply.Error = runtime.ErrUserAborted
+		}
+		if body.Answers != nil && !body.Cancel {
+			reply = runtime.Reply{Answers: body.Answers}
 		}
 		runtime.Resolve(requestID, reply)
 		c.JSON(http.StatusOK, gin.H{"ok": true})
