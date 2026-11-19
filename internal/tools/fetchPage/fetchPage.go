@@ -19,6 +19,11 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
+	"github.com/pardnchiu/agenvoy/configs"
+	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	agenvoyruntime "github.com/pardnchiu/agenvoy/internal/runtime"
+	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -30,6 +35,7 @@ const (
 	emptySkipExpired = 72 * time.Hour
 	skip4xxExpired   = 90 * 24 * time.Hour
 	maxFetchLength   = 1 << 20
+	challengeWait    = 5 * time.Minute
 	fullPageHint     = "full page: download_file(link, render=true), then read_files in parts"
 )
 
@@ -39,7 +45,7 @@ func refistFetchPage() {
 		SystemDefault: true,
 		AlwaysAllow:   true,
 		Concurrent:    true,
-		Timeout:       90 * time.Second,
+		Timeout:       90*time.Second + challengeWait,
 		Description: `Fetches sne web page in a browser carrying the user's Chrome login, and returns it as markdown, html or json.
 Use for "read this article", "what does this link say", "open this page", each search or RSS result being cited, and researching a site page by page until complete.
 No URL yet → search_web; saving a page or file to disk → download_file; a JSON API endpoint → http_request.`,
@@ -133,7 +139,28 @@ No URL yet → search_web; saving a page or file to disk → download_file; a JS
 				scroll = min(max(*params.Scroll, 0), maxScroll)
 			}
 
-			result, err := handler(ctx, link, params.KeepLinks, sameSession, headless, outType, scroll, nil, params.Force)
+			var wait time.Duration
+			if e.ChallengeEnabled() {
+				wait = challengeWait
+			}
+			result, err := handler(ctx, link, params.KeepLinks, sameSession, headless, outType, scroll, nil, params.Force, wait)
+			if errors.Is(err, go_browser.ErrChallengeRequired) {
+				enabled, askErr := e.DecideChallenge(func() (bool, error) {
+					return askChallenge(ctx, e.SessionID)
+				})
+				if askErr != nil {
+					return "", askErr
+				}
+				if enabled {
+					result, err = handler(ctx, link, params.KeepLinks, sameSession, headless, outType, scroll, nil, true, challengeWait)
+				} else {
+					result, err = "", challengeDeclined(link)
+				}
+			}
+			if errors.Is(err, go_browser.ErrChallengeClosed) {
+				e.ResetChallenge()
+				result, err = "", challengeDeclined(link)
+			}
 			if err != nil {
 				return "", err
 			}
@@ -143,7 +170,63 @@ No URL yet → search_web; saving a page or file to disk → download_file; a JS
 	})
 }
 
-func handler(ctx context.Context, link string, keepLinks, sameSession, headless bool, outType, scroll int, saveTo *string, force bool) (string, error) {
+type challengeText struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Enable  string `json:"enable"`
+	Skip    string `json:"skip"`
+}
+
+var challengeTexts = loadChallengeTexts()
+
+func loadChallengeTexts() map[string]challengeText {
+	var dic map[string]challengeText
+	if err := json.Unmarshal(configs.ConfirmFetchChallenge, &dic); err != nil {
+		panic(fmt.Sprintf("[Internal] confirm/fetch_challenge.json: %v", err))
+	}
+	if _, ok := dic["en"]; !ok {
+		panic(`[Internal] confirm/fetch_challenge.json: missing "en"`)
+	}
+	return dic
+}
+
+func getChallengeText() challengeText {
+	if text, ok := challengeTexts[filesystem.CanonicalReplyLang(filesystem.ConfigReplyLang)]; ok {
+		return text
+	}
+	return challengeTexts["en"]
+}
+
+func askChallenge(ctx context.Context, sessionID string) (bool, error) {
+	origin := agenttypes.OriginFrom(ctx)
+	if origin == "" {
+		origin = agenvoyruntime.OriginOf(sessionID)
+	}
+	if agenttypes.NoPromptFrom(ctx) || agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff || !agenvoyruntime.HasListener(ctx, origin) {
+		return false, nil
+	}
+	text := getChallengeText()
+	answers, err := interactive.AskPrompt(ctx, sessionID, []agenvoyruntime.Question{{
+		Question: text.Title,
+		Detail:   fmt.Sprintf(text.Content, int(challengeWait.Minutes())),
+		Options:  []string{text.Enable, text.Skip},
+	}})
+	if err != nil {
+		return false, err
+	}
+	if len(answers) == 0 {
+		return false, nil
+	}
+	answer, _ := answers[0].(string)
+	return answer == text.Enable, nil
+}
+
+func challengeDeclined(link string) error {
+	addToSkippedMap(link, 403, "")
+	return utilsmsg.New(utilsmsg.Upstream, link, "fetch failed [403]")
+}
+
+func handler(ctx context.Context, link string, keepLinks, sameSession, headless bool, outType, scroll int, saveTo *string, force bool, wait time.Duration) (string, error) {
 	parsed, err := url.Parse(link)
 	if err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Invalid, "url.Parse", "", err)
@@ -165,11 +248,12 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 	}
 
 	opt := &go_browser.Option{
-		KeepLinks:   keepLinks,
-		SameSession: sameSession,
-		Visible:     !headless,
-		Type:        outType,
-		ScrollCount: scroll,
+		KeepLinks:     keepLinks,
+		SameSession:   sameSession,
+		Visible:       !headless,
+		Type:          outType,
+		ScrollCount:   scroll,
+		ChallengeWait: wait,
 	}
 	if scroll == 0 {
 		opt.ScrollCount = -1
@@ -183,6 +267,12 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 	}
 
 	result, err := go_browser.Fetch(ctx, link, 30*time.Second, opt)
+	if errors.Is(err, go_browser.ErrChallengeRequired) || errors.Is(err, go_browser.ErrChallengeClosed) {
+		return "", err
+	}
+	if errors.Is(err, go_browser.ErrChallenge) {
+		return "", utilsmsg.New(utilsmsg.Timeout, link, "verification was not completed in the browser window within %s; ask the user to retry and complete it", challengeWait)
+	}
 	if err != nil {
 		var fetchErr *go_browser.Error
 		if !errors.As(err, &fetchErr) {

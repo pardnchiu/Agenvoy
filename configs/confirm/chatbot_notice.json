@@ -1,0 +1,82 @@
+{
+  "en": {
+    "verify_prompt": "Enter the 6-digit verification code printed in the daemon log.",
+    "pending_resolved": "Pending task already resolved in another session.",
+    "stt_missing": "No speech-to-text model selected · pick one with %s first."
+  },
+  "zh-TW": {
+    "verify_prompt": "請輸入 daemon log 中顯示的 6 位數驗證碼。",
+    "pending_resolved": "此待處理任務已在其他工作階段處理完成。",
+    "stt_missing": "尚未選擇語音轉文字模型 · 請先用 %s 選擇。"
+  },
+  "zh-HK": {
+    "verify_prompt": "請輸入 daemon log 中顯示的 6 位數驗證碼。",
+    "pending_resolved": "此待處理任務已在其他工作階段處理完成。",
+    "stt_missing": "尚未選擇語音轉文字模型 · 請先用 %s 選擇。"
+  },
+  "zh-CN": {
+    "verify_prompt": "请输入 daemon log 中显示的 6 位验证码。",
+    "pending_resolved": "此待处理任务已在其他会话中处理完成。",
+    "stt_missing": "尚未选择语音转文字模型 · 请先用 %s 选择。"
+  },
+  "ja": {
+    "verify_prompt": "daemon log に表示された 6 桁の認証コードを入力してください。",
+    "pending_resolved": "この保留中のタスクは別のセッションで処理済みです。",
+    "stt_missing": "音声文字起こしモデルが未選択です · 先に %s で選択してください。"
+  },
+  "ko": {
+    "verify_prompt": "daemon log에 표시된 6자리 인증 코드를 입력하세요.",
+    "pending_resolved": "대기 중인 작업이 다른 세션에서 이미 처리되었습니다.",
+    "stt_missing": "음성 인식 모델이 선택되지 않았습니다 · 먼저 %s 로 선택하세요."
+  },
+  "es": {
+    "verify_prompt": "Introduce el código de verificación de 6 dígitos que aparece en el log del daemon.",
+    "pending_resolved": "La tarea pendiente ya se resolvió en otra sesión.",
+    "stt_missing": "No hay modelo de voz a texto seleccionado · elige uno primero con %s."
+  },
+  "fr": {
+    "verify_prompt": "Saisissez le code de vérification à 6 chiffres affiché dans le log du daemon.",
+    "pending_resolved": "La tâche en attente a déjà été traitée dans une autre session.",
+    "stt_missing": "Aucun modèle de reconnaissance vocale sélectionné · choisissez-en un d'abord avec %s."
+  },
+  "de": {
+    "verify_prompt": "Gib den 6-stelligen Bestätigungscode aus dem Daemon-Log ein.",
+    "pending_resolved": "Die ausstehende Aufgabe wurde bereits in einer anderen Sitzung erledigt.",
+    "stt_missing": "Kein Sprache-zu-Text-Modell ausgewählt · wähle zuerst eines mit %s."
+  },
+  "pt": {
+    "verify_prompt": "Digite o código de verificação de 6 dígitos exibido no log do daemon.",
+    "pending_resolved": "A tarefa pendente já foi resolvida em outra sessão.",
+    "stt_missing": "Nenhum modelo de fala para texto selecionado · escolha um primeiro com %s."
+  },
+  "it": {
+    "verify_prompt": "Inserisci il codice di verifica a 6 cifre mostrato nel log del daemon.",
+    "pending_resolved": "L'attività in sospeso è già stata gestita in un'altra sessione.",
+    "stt_missing": "Nessun modello di trascrizione vocale selezionato · scegline uno prima con %s."
+  },
+  "ru": {
+    "verify_prompt": "Введите 6-значный код подтверждения из журнала daemon.",
+    "pending_resolved": "Ожидающая задача уже обработана в другом сеансе.",
+    "stt_missing": "Модель распознавания речи не выбрана · сначала выберите её через %s."
+  },
+  "vi": {
+    "verify_prompt": "Nhập mã xác minh 6 chữ số hiển thị trong log của daemon.",
+    "pending_resolved": "Tác vụ đang chờ đã được xử lý ở phiên khác.",
+    "stt_missing": "Chưa chọn mô hình chuyển giọng nói thành văn bản · hãy chọn trước bằng %s."
+  },
+  "th": {
+    "verify_prompt": "ใส่รหัสยืนยัน 6 หลักที่แสดงใน log ของ daemon",
+    "pending_resolved": "งานที่รอดำเนินการถูกจัดการแล้วในเซสชันอื่น",
+    "stt_missing": "ยังไม่ได้เลือกโมเดลแปลงเสียงเป็นข้อความ · เลือกก่อนด้วย %s"
+  },
+  "id": {
+    "verify_prompt": "Masukkan kode verifikasi 6 digit yang tercetak di log daemon.",
+    "pending_resolved": "Tugas tertunda sudah diselesaikan di sesi lain.",
+    "stt_missing": "Belum ada model ucapan-ke-teks yang dipilih · pilih dulu dengan %s."
+  },
+  "ar": {
+    "verify_prompt": "أدخل رمز التحقق المكوّن من 6 أرقام الظاهر في سجل الـ daemon.",
+    "pending_resolved": "تمت معالجة المهمة المعلّقة بالفعل في جلسة أخرى.",
+    "stt_missing": "لم يتم اختيار نموذج تحويل الكلام إلى نص · اختر واحدًا أولًا عبر %s."
+  }
+}

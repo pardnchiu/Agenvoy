@@ -144,6 +144,11 @@ function parseEvent(event) {
     return;
   }
 
+  if (event.type === "EventAskPrompt") {
+    renderAskPrompt(event, sessionId);
+    return;
+  }
+
   if (event.type === "EventUserInput") {
     appendInboundUser(event.text, sessionId, event.task_hash);
     return;

@@ -13,6 +13,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/guide"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 )
 
@@ -322,7 +323,14 @@ func (t TUI) viewPopup() string {
 			hint = strings.NewReplacer("Esc:cancel", "Esc:back", "Esc:close", "Esc:back").Replace(hint)
 		}
 		if p.pendingId != "" {
-			hint = strings.ReplaceAll(hint, "  Esc:cancel", "")
+			text := filesystem.GetAskUserText()
+			hint = strings.NewReplacer(
+				"  Esc:cancel", "",
+				":confirm", ":"+text.HintConfirm,
+				":toggle", ":"+text.HintToggle,
+				":newline", ":"+text.HintNewline,
+				"(input hidden)", "("+text.HintHidden+")",
+			).Replace(hint)
 		}
 		trimTail()
 		tail = []string{renderFooter(hint)}

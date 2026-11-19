@@ -9,6 +9,7 @@ import (
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -54,7 +55,7 @@ Credentials travel only through this tool's masked input; keep the value out of 
 
 			question := strings.TrimSpace(params.Question)
 			if question == "" {
-				question = fmt.Sprintf("%s is required", key)
+				question = fmt.Sprintf(filesystem.GetAskUserText().SecretRequired, key)
 			}
 
 			value, err := SecretPrompt(ctx, e.SessionID, question)

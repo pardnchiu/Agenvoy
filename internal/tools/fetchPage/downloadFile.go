@@ -4,12 +4,14 @@ package fetchPage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
 
+	go_browser "github.com/pardnchiu/go-browser/core"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 
@@ -93,7 +95,11 @@ Reading a page without saving → fetch_page; JSON or an API response → http_r
 				if err != nil {
 					return "", err
 				}
-				return handler(ctx, link, false, true, true, outType, defaultScroll, &outputFile, false)
+				result, err := handler(ctx, link, false, true, true, outType, defaultScroll, &outputFile, false, 0)
+				if errors.Is(err, go_browser.ErrChallengeRequired) {
+					return "", challengeDeclined(link)
+				}
+				return result, err
 			}
 
 			// NOTE: 需搭配預設 timeput 避免卡死

@@ -148,7 +148,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 			slog.String("name", channelName(in)),
 			slog.String("code", code))
 		execchatbot.NotifyAdmin(ctx, code, "Discord "+channelName(in))
-		prompt, err := b.client.SendInput(ctx, in.ChannelID, "", "Enter the 6-digit verification code printed in the daemon log.")
+		prompt, err := b.client.SendInput(ctx, in.ChannelID, "", filesystem.GetChatbotNotice().VerifyPrompt)
 		if err != nil {
 			slog.Warn("go_bot_discord.Bot.client.SendInput",
 				slog.String("channel", channelName(in)),
@@ -165,7 +165,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 
 	if hasAttachment {
 		if hasVoiceAttachment(in) && audio.Model(audio.STT) == "" {
-			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, "No speech-to-text model selected · pick one with `/model stt` first.")
+			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, fmt.Sprintf(filesystem.GetChatbotNotice().STTMissing, "`/model stt`"))
 			return nil
 		}
 		attachments := saveAttachments(ctx, b, in)
