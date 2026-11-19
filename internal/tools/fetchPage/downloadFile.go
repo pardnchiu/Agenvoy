@@ -64,7 +64,7 @@ Reading a page without saving → fetch_page; JSON or an API response → http_r
 				"output_file",
 			},
 		},
-		Handler: func(ctx context.Context, _ *tooltypes.Executor, args json.RawMessage) (string, error) {
+		Handler: func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Link       string `json:"link"`
 				OutputFile string `json:"output_file"`
@@ -95,8 +95,25 @@ Reading a page without saving → fetch_page; JSON or an API response → http_r
 				if err != nil {
 					return "", err
 				}
-				result, err := handler(ctx, link, false, true, true, outType, defaultScroll, &outputFile, false, 0)
+				var wait time.Duration
+				if e.ChallengeEnabled() {
+					wait = challengeWait
+				}
+				result, err := handler(ctx, link, false, true, true, outType, defaultScroll, &outputFile, false, wait)
 				if errors.Is(err, go_browser.ErrChallengeRequired) {
+					enabled, askErr := e.DecideChallenge(func() (bool, error) {
+						return askChallenge(ctx, e.SessionID)
+					})
+					if askErr != nil {
+						return "", askErr
+					}
+					if !enabled {
+						return "", challengeDeclined(link)
+					}
+					result, err = handler(ctx, link, false, true, true, outType, defaultScroll, &outputFile, true, challengeWait)
+				}
+				if errors.Is(err, go_browser.ErrChallengeClosed) {
+					e.ResetChallenge()
 					return "", challengeDeclined(link)
 				}
 				return result, err

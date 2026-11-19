@@ -7,10 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
-	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -19,11 +16,6 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
-	"github.com/pardnchiu/agenvoy/configs"
-	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	agenvoyruntime "github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	"github.com/pardnchiu/agenvoy/internal/tools/toolcache"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -170,68 +162,10 @@ No URL yet → search_web; saving a page or file to disk → download_file; a JS
 	})
 }
 
-type challengeText struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
-	Enable  string `json:"enable"`
-	Skip    string `json:"skip"`
-}
-
-var challengeTexts = loadChallengeTexts()
-
-func loadChallengeTexts() map[string]challengeText {
-	var dic map[string]challengeText
-	if err := json.Unmarshal(configs.ConfirmFetchChallenge, &dic); err != nil {
-		panic(fmt.Sprintf("[Internal] confirm/fetch_challenge.json: %v", err))
-	}
-	if _, ok := dic["en"]; !ok {
-		panic(`[Internal] confirm/fetch_challenge.json: missing "en"`)
-	}
-	return dic
-}
-
-func getChallengeText() challengeText {
-	if text, ok := challengeTexts[filesystem.CanonicalReplyLang(filesystem.ConfigReplyLang)]; ok {
-		return text
-	}
-	return challengeTexts["en"]
-}
-
-func askChallenge(ctx context.Context, sessionID string) (bool, error) {
-	origin := agenttypes.OriginFrom(ctx)
-	if origin == "" {
-		origin = agenvoyruntime.OriginOf(sessionID)
-	}
-	if agenttypes.NoPromptFrom(ctx) || agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff || !agenvoyruntime.HasListener(ctx, origin) {
-		return false, nil
-	}
-	text := getChallengeText()
-	answers, err := interactive.AskPrompt(ctx, sessionID, []agenvoyruntime.Question{{
-		Question: text.Title,
-		Detail:   fmt.Sprintf(text.Content, int(challengeWait.Minutes())),
-		Options:  []string{text.Enable, text.Skip},
-	}})
-	if err != nil {
-		return false, err
-	}
-	if len(answers) == 0 {
-		return false, nil
-	}
-	answer, _ := answers[0].(string)
-	return answer == text.Enable, nil
-}
-
-func challengeDeclined(link string) error {
-	addToSkippedMap(link, 403, "")
-	return utilsmsg.New(utilsmsg.Upstream, link, "fetch failed [403]")
-}
-
+// NOTE: 與下載頁面共用
 func handler(ctx context.Context, link string, keepLinks, sameSession, headless bool, outType, scroll int, saveTo *string, force bool, wait time.Duration) (string, error) {
-	parsed, err := url.Parse(link)
+	parsed, err := go_browser.ValidURL(link)
 	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Invalid, "url.Parse", "", err)
-	}
-	if err := validateURL(link); err != nil {
 		return "", err
 	}
 	if parsed.Scheme == "http" {
@@ -261,9 +195,6 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 	opt.MaxLength = -1
 	if saveTo == nil {
 		opt.MaxLength = maxFetchLength + 1
-	}
-	if sameSession || !headless {
-		opt.Profile = currentProfile()
 	}
 
 	result, err := go_browser.Fetch(ctx, link, 30*time.Second, opt)
@@ -308,7 +239,7 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 		tree = serialized.Tree
 	}
 
-	if result.Status >= 400 || isTitleContains4xx(result.Title) {
+	if result.Status >= 400 || go_browser.IsErrorPageTitle(result.Title) {
 		addToSkippedMap(link, result.Status, result.Title)
 		tag := utilsmsg.NotFound
 		if result.Status >= 400 && result.Status != 404 && result.Status != 410 {
@@ -372,47 +303,6 @@ func headBytes(content string, limit int) string {
 	return content[:limit]
 }
 
-func isTitleContains4xx(title string) bool {
-	switch strings.ToLower(strings.TrimSpace(title)) {
-	case "404", "403", "not found", "page not found",
-		"404 not found", "403 forbidden", "access denied",
-		"找不到頁面", "頁面不存在", "此頁面不存在":
-		return true
-	}
-	return false
-}
-
-func currentProfile() string {
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
-		return "Default"
-	}
-	var paths []string
-	switch runtime.GOOS {
-	case "darwin":
-		paths = []string{filepath.Join(home, "Library", "Application Support", "Google", "Chrome", "Local State")}
-	case "linux":
-		paths = []string{filepath.Join(home, ".config", "google-chrome", "Local State")}
-	default:
-		return "Default"
-	}
-	type localState struct {
-		Profile struct {
-			LastUsed string `json:"last_used"`
-		} `json:"profile"`
-	}
-	for _, p := range paths {
-		ls, err := go_pkg_filesystem.ReadJSON[localState](p)
-		if err != nil {
-			continue
-		}
-		if ls.Profile.LastUsed != "" {
-			return ls.Profile.LastUsed
-		}
-	}
-	return "Default"
-}
-
 func outputType(s string) (int, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "", "markdown":
@@ -424,26 +314,6 @@ func outputType(s string) (int, error) {
 	default:
 		return 0, utilsmsg.New(utilsmsg.Invalid, "output_type", "%q: want markdown|html|json", s)
 	}
-}
-
-func validateURL(href string) error {
-	if len(href) > 2048 {
-		return utilsmsg.New(utilsmsg.Invalid, "link", "too long: max 2048 chars")
-	}
-
-	parsed, err := url.Parse(href)
-	if err != nil {
-		return utilsmsg.Wrap(utilsmsg.Invalid, "url.Parse", "", err)
-	}
-
-	if parsed.User != nil {
-		return utilsmsg.New(utilsmsg.Invalid, "link", "must not contain credentials")
-	}
-
-	if !strings.Contains(parsed.Hostname(), ".") {
-		return utilsmsg.New(utilsmsg.Invalid, "link", "must have a valid hostname")
-	}
-	return nil
 }
 
 func buildFrontmatter(r *go_browser.Result) string {
