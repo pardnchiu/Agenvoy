@@ -1,0 +1,98 @@
+{
+  "en": {
+    "title": "The target site requires human verification. Enable manual verification?",
+    "content": "1. You need to be at this computer: a browser window will open here for you to complete the check\n2. Times out after %d minutes; the window then closes and this page is skipped",
+    "enable": "Enable manual verification",
+    "skip": "Skip"
+  },
+  "zh-TW": {
+    "title": "目標網站需要真人驗證，是否啟用手動驗證？",
+    "content": "1. 你需要在這台電腦前：會在此開啟瀏覽器視窗，由你完成驗證\n2. %d 分鐘後逾時，視窗會關閉並略過此頁面",
+    "enable": "啟用手動驗證",
+    "skip": "略過"
+  },
+  "zh-HK": {
+    "title": "目標網站需要真人驗證，是否啟用手動驗證？",
+    "content": "1. 你需要在這部電腦前：會在此開啟瀏覽器視窗，由你完成驗證\n2. %d 分鐘後逾時，視窗會關閉並略過此頁面",
+    "enable": "啟用手動驗證",
+    "skip": "略過"
+  },
+  "zh-CN": {
+    "title": "目标网站需要真人验证，是否启用手动验证？",
+    "content": "1. 你需要在这台电脑前：会在此打开浏览器窗口，由你完成验证\n2. %d 分钟后超时，窗口会关闭并跳过此页面",
+    "enable": "启用手动验证",
+    "skip": "跳过"
+  },
+  "ja": {
+    "title": "対象サイトで人による認証が必要です。手動認証を有効にしますか？",
+    "content": "1. このコンピューターの前にいる必要があります：ここでブラウザーウィンドウが開くので、認証を完了してください\n2. %d 分でタイムアウトし、ウィンドウが閉じてこのページはスキップされます",
+    "enable": "手動認証を有効にする",
+    "skip": "スキップ"
+  },
+  "ko": {
+    "title": "대상 사이트에서 사람 인증이 필요합니다. 수동 인증을 사용하시겠습니까?",
+    "content": "1. 이 컴퓨터 앞에 있어야 합니다: 여기에서 브라우저 창이 열리면 직접 인증을 완료하세요\n2. %d분 후 시간이 초과되면 창이 닫히고 이 페이지는 건너뜁니다",
+    "enable": "수동 인증 사용",
+    "skip": "건너뛰기"
+  },
+  "es": {
+    "title": "El sitio de destino requiere verificación humana. ¿Activar la verificación manual?",
+    "content": "1. Debes estar frente a este equipo: se abrirá aquí una ventana del navegador para que completes la verificación\n2. Caduca a los %d minutos; la ventana se cerrará y se omitirá esta página",
+    "enable": "Activar verificación manual",
+    "skip": "Omitir"
+  },
+  "fr": {
+    "title": "Le site cible exige une vérification humaine. Activer la vérification manuelle ?",
+    "content": "1. Vous devez être devant cet ordinateur : une fenêtre de navigateur s'ouvrira ici pour que vous effectuiez la vérification\n2. Expire au bout de %d minutes ; la fenêtre se ferme alors et cette page est ignorée",
+    "enable": "Activer la vérification manuelle",
+    "skip": "Ignorer"
+  },
+  "de": {
+    "title": "Die Zielseite verlangt eine menschliche Verifizierung. Manuelle Verifizierung aktivieren?",
+    "content": "1. Sie müssen an diesem Computer sein: Hier öffnet sich ein Browserfenster, in dem Sie die Prüfung abschließen\n2. Nach %d Minuten läuft die Zeit ab; das Fenster wird geschlossen und diese Seite übersprungen",
+    "enable": "Manuelle Verifizierung aktivieren",
+    "skip": "Überspringen"
+  },
+  "pt": {
+    "title": "O site de destino exige verificação humana. Ativar a verificação manual?",
+    "content": "1. Você precisa estar neste computador: uma janela do navegador será aberta aqui para você concluir a verificação\n2. Expira após %d minutos; a janela é fechada e esta página é ignorada",
+    "enable": "Ativar verificação manual",
+    "skip": "Ignorar"
+  },
+  "it": {
+    "title": "Il sito di destinazione richiede una verifica umana. Attivare la verifica manuale?",
+    "content": "1. Devi essere davanti a questo computer: qui si aprirà una finestra del browser in cui completare la verifica\n2. Scade dopo %d minuti; la finestra si chiude e questa pagina viene saltata",
+    "enable": "Attiva verifica manuale",
+    "skip": "Salta"
+  },
+  "ru": {
+    "title": "Целевой сайт требует проверки, что вы человек. Включить ручную проверку?",
+    "content": "1. Вам нужно находиться за этим компьютером: здесь откроется окно браузера, в котором нужно пройти проверку\n2. Через %d мин. время истечёт, окно закроется, а страница будет пропущена",
+    "enable": "Включить ручную проверку",
+    "skip": "Пропустить"
+  },
+  "vi": {
+    "title": "Trang web đích yêu cầu xác minh người dùng. Bật xác minh thủ công?",
+    "content": "1. Bạn cần ở trước máy tính này: một cửa sổ trình duyệt sẽ mở tại đây để bạn hoàn tất xác minh\n2. Hết thời gian sau %d phút; cửa sổ sẽ đóng và trang này bị bỏ qua",
+    "enable": "Bật xác minh thủ công",
+    "skip": "Bỏ qua"
+  },
+  "th": {
+    "title": "เว็บไซต์ปลายทางต้องการการยืนยันว่าเป็นมนุษย์ เปิดใช้การยืนยันด้วยตนเองหรือไม่",
+    "content": "1. คุณต้องอยู่ที่คอมพิวเตอร์เครื่องนี้: หน้าต่างเบราว์เซอร์จะเปิดขึ้นที่นี่เพื่อให้คุณยืนยันให้เสร็จ\n2. หมดเวลาภายใน %d นาที จากนั้นหน้าต่างจะปิดและข้ามหน้านี้",
+    "enable": "เปิดใช้การยืนยันด้วยตนเอง",
+    "skip": "ข้าม"
+  },
+  "id": {
+    "title": "Situs tujuan memerlukan verifikasi manusia. Aktifkan verifikasi manual?",
+    "content": "1. Anda harus berada di depan komputer ini: jendela browser akan terbuka di sini agar Anda menyelesaikan verifikasi\n2. Waktu habis setelah %d menit; jendela akan ditutup dan halaman ini dilewati",
+    "enable": "Aktifkan verifikasi manual",
+    "skip": "Lewati"
+  },
+  "ar": {
+    "title": "يتطلب الموقع المستهدف تحققًا بشريًا. هل تريد تفعيل التحقق اليدوي؟",
+    "content": "1. يجب أن تكون أمام هذا الكمبيوتر: ستُفتح هنا نافذة متصفح لتكمل التحقق\n2. تنتهي المهلة بعد %d دقيقة؛ ثم تُغلق النافذة ويتم تخطي هذه الصفحة",
+    "enable": "تفعيل التحقق اليدوي",
+    "skip": "تخطٍّ"
+  }
+}

@@ -1,10 +1,10 @@
 const CONFIRM_OPTIONS = [
-  { label: "yes", body: { approve: true }, style: "approve" },
-  { label: "yes, don't ask again", body: { approve: true, remember: true }, style: "approve" },
-  { label: "yes, allow this turn", body: { approve: true, allow_turn: true }, style: "approve" },
-  { label: "no, skip this", body: { approve: false }, style: "reject", reason: true },
-  { label: "abort task", body: { approve: false, abort: true }, style: "abort" },
-  { label: "cancel task", body: { approve: false, cancel: true }, style: "abort" },
+  { key: "yes", label: "Yes", body: { approve: true }, style: "approve" },
+  { key: "remember", label: "Yes, don't ask again", body: { approve: true, remember: true }, style: "approve" },
+  { key: "allow_turn", label: "Yes, allow this turn", body: { approve: true, allow_turn: true }, style: "approve" },
+  { key: "skip", label: "No, skip this", body: { approve: false }, style: "reject", reason: true },
+  { key: "abort", label: "Abort, keep for resume", body: { approve: false, abort: true }, style: "abort" },
+  { key: "cancel", label: "Cancel, delete task", body: { approve: false, cancel: true }, style: "abort" },
 ];
 
 async function resolveToolConfirm(sessionId, requestId, body, dom) {
@@ -111,11 +111,12 @@ function renderToolConfirm(event, sessionId) {
   const action = _("div.action");
   let primary = null;
   const card = _("div.tool-confirm", { "data-id": requestId }, [...body, action]);
+  const labels = event.confirm_options || {};
   for (const option of CONFIRM_OPTIONS) {
     if (restricted.length > 0 && (option.body.remember || option.body.allow_turn)) {
       continue;
     }
-    const button = _("button", { type: "button", class: option.style }, [_("p", option.label)]);
+    const button = _("button", { type: "button", class: option.style }, [_("p", labels[option.key] || option.label)]);
     button.addEventListener("click", () => {
       const payload = Object.assign({}, option.body);
       if (password && option.body.approve) {

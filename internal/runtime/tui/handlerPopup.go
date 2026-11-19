@@ -17,6 +17,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	oauthgrok "github.com/pardnchiu/go-llm-router/core/oauth/grok"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -71,6 +72,7 @@ type Popup struct {
 	passwordPrompt bool
 	explain        string
 	commandLine    bool
+	confirmLabels  filesystem.ConfirmLabels
 	status         string
 	verifying      bool
 
@@ -246,9 +248,10 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyEnter:
 		chosen := p.options[p.cursor]
+		labels := p.confirmLabels
 		var reply runtime.Reply
-		switch {
-		case chosen == "Yes":
+		switch chosen {
+		case labels.Yes:
 			if len(p.restricted) > 0 {
 				if !p.needPassword {
 					resolvePending(p.pendingId, runtime.Reply{Approve: true})
@@ -266,19 +269,19 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return t, nil
 			}
 			reply = runtime.Reply{Approve: true}
-		case strings.HasPrefix(chosen, "Yes  don't ask again"):
+		case labels.Remember:
 			reply = runtime.Reply{Approve: true, Remember: true}
-		case strings.HasPrefix(chosen, "Yes  allow this turn"):
+		case labels.AllowTurn:
 			reply = runtime.Reply{Approve: true, AllowTurn: true}
-		case chosen == confirmSkip:
+		case labels.Skip:
 			p.kind = popupText
 			p.skipWithReason = true
 			p.title = "Reason (enter to skip):"
 			p.input = newPopupInput("", false)
 			return t, nil
-		case chosen == confirmAbort:
+		case labels.Abort:
 			reply = runtime.Reply{Approve: false, Error: runtime.ErrUserAborted}
-		case chosen == confirmCancel:
+		case labels.Cancel:
 			reply = runtime.Reply{Approve: false, Error: runtime.ErrUserCanceled}
 		}
 		resolvePending(p.pendingId, reply)
@@ -720,32 +723,15 @@ func (t TUI) updateTextInputPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return t, cmd
 }
 
-const (
-	confirmSkip   = "No  skip this"
-	confirmAbort  = "Abort  keep for resume"
-	confirmCancel = "Cancel  delete task"
-)
-
 func newPopup(pending Pending) *Popup {
 	id, req := pending.id, pending.request
 	switch req.Kind {
 	case runtime.KindToolConfirm:
 		msg := utils.FormatConfirm(req.ToolName, req.ToolArgs, req.Restricted, !pending.needPassword)
-		options := []string{
-			"Yes",
-			"Yes  don't ask again",
-			"Yes  allow this turn",
-			confirmSkip,
-			confirmAbort,
-			confirmCancel,
-		}
+		labels := filesystem.GetTUIConfirmLabels()
+		options := labels.List()
 		if len(req.Restricted) > 0 {
-			options = []string{
-				"Yes",
-				confirmSkip,
-				confirmAbort,
-				confirmCancel,
-			}
+			options = []string{labels.Yes, labels.Skip, labels.Abort, labels.Cancel}
 		}
 		p := &Popup{
 			pendingId:    id,
@@ -756,6 +742,7 @@ func newPopup(pending Pending) *Popup {
 			restricted:   req.Restricted,
 			needPassword: pending.needPassword,
 		}
+		p.confirmLabels = labels
 		p.explain = req.Explain
 		p.commandLine = true
 		if len(req.Restricted) > 0 {

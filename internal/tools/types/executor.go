@@ -40,6 +40,28 @@ type Executor struct {
 	filesEdited     []string
 	readMu          sync.Mutex
 	pathModTime     map[string]time.Time
+	EnableChallenge *bool
+	challengeMu     sync.Mutex
+}
+
+func (e *Executor) ChallengeEnabled() bool {
+	e.challengeMu.Lock()
+	defer e.challengeMu.Unlock()
+	return e.EnableChallenge != nil && *e.EnableChallenge
+}
+
+func (e *Executor) DecideChallenge(ask func() (bool, error)) (bool, error) {
+	e.challengeMu.Lock()
+	defer e.challengeMu.Unlock()
+	if e.EnableChallenge != nil {
+		return *e.EnableChallenge, nil
+	}
+	enabled, err := ask()
+	if err != nil {
+		return false, err
+	}
+	e.EnableChallenge = &enabled
+	return enabled, nil
 }
 
 func (e *Executor) MarkRead(path string, modTime time.Time) {

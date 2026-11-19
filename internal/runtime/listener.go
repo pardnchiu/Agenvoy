@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -176,10 +177,7 @@ func (l *Listener[CID, MID]) sendPrompt(ctx context.Context, id string, req Requ
 }
 
 func (l *Listener[CID, MID]) startConfirm(ctx context.Context, id string, chatID CID, req Request) {
-	options := ConfirmOptions
-	if len(req.Restricted) > 0 {
-		options = RestrictedConfirmOptions
-	}
+	options := confirmOptions(len(req.Restricted) > 0)
 	msg := utils.FormatConfirm(req.ToolName, req.ToolArgs, req.Restricted, false)
 	msgID, err := l.transport.SendConfirm(ctx, chatID, msg, req.Explain, options)
 	if err != nil {
@@ -415,19 +413,19 @@ func (l *Listener[CID, MID]) finalize(state *active[CID, MID], reply Reply) {
 	}
 }
 
-var ConfirmOptions = []string{
-	"✅ Yes",
-	"✅ Yes, don't ask again",
-	"✅ Yes, allow this turn",
-	"❌ No, skip this",
-	"⛔ Abort task",
-	"🗑️ Cancel task",
-}
-
-var RestrictedConfirmOptions = []string{
-	"❌ No, skip this",
-	"⛔ Abort task",
-	"🗑️ Cancel task",
+func confirmOptions(restricted bool) []string {
+	labels := filesystem.GetConfirmLabels()
+	if restricted {
+		return []string{"❌ " + labels.Skip, "⛔ " + labels.Abort, "🗑️ " + labels.Cancel}
+	}
+	return []string{
+		"✅ " + labels.Yes,
+		"✅ " + labels.Remember,
+		"✅ " + labels.AllowTurn,
+		"❌ " + labels.Skip,
+		"⛔ " + labels.Abort,
+		"🗑️ " + labels.Cancel,
+	}
 }
 
 const (
@@ -448,19 +446,26 @@ func (l *Listener[CID, MID]) askSkipReason(ctx context.Context, state *active[CI
 
 func confirmReplyFor(data string) (reply Reply, finalize bool) {
 	switch data {
-	case "✅ Yes":
-		return Reply{Approve: true}, true
-	case "✅ Yes, don't ask again":
-		return Reply{Approve: true, Remember: true}, true
-	case "✅ Yes, allow this turn":
-		return Reply{Approve: true, AllowTurn: true}, true
-	case "❌ No, skip this", "❌ No":
+	case "❌ No":
 		return Reply{Approve: false, Skip: true}, true
-	case "⛔ Abort task", "⛔ Stop":
+	case "⛔ Stop":
 		return Reply{Approve: false, Error: ErrUserAborted}, true
-	case "🗑️ Cancel task":
-		return Reply{Approve: false, Error: ErrUserCanceled}, true
-	default:
-		return Reply{}, false
 	}
+	for _, labels := range filesystem.AllConfirmLabels() {
+		switch data {
+		case "✅ " + labels.Yes:
+			return Reply{Approve: true}, true
+		case "✅ " + labels.Remember:
+			return Reply{Approve: true, Remember: true}, true
+		case "✅ " + labels.AllowTurn:
+			return Reply{Approve: true, AllowTurn: true}, true
+		case "❌ " + labels.Skip:
+			return Reply{Approve: false, Skip: true}, true
+		case "⛔ " + labels.Abort:
+			return Reply{Approve: false, Error: ErrUserAborted}, true
+		case "🗑️ " + labels.Cancel:
+			return Reply{Approve: false, Error: ErrUserCanceled}, true
+		}
+	}
+	return Reply{}, false
 }

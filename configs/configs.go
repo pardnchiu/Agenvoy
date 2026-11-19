@@ -297,6 +297,14 @@ var RefusalMessages []byte
 //go:embed jsons/secret_patterns.json
 var SecretPatterns []byte
 
+// * Confirm
+
+//go:embed confirm/fetch_challenge.json
+var ConfirmFetchChallenge []byte
+
+//go:embed confirm/tool_confirm.json
+var ConfirmTool []byte
+
 // * Official Guide
 
 //go:embed prompts/system_prompt/official_guides/*.md

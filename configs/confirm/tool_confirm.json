@@ -1,0 +1,146 @@
+{
+  "en": {
+    "separator": ", ",
+    "yes": ["Yes"],
+    "remember": ["Yes", "don't ask again"],
+    "allow_turn": ["Yes", "allow this turn"],
+    "skip": ["No", "skip this"],
+    "abort": ["Abort", "keep for resume"],
+    "cancel": ["Cancel", "delete task"]
+  },
+  "zh-TW": {
+    "separator": "，",
+    "yes": ["是"],
+    "remember": ["是", "不再詢問"],
+    "allow_turn": ["是", "本輪皆允許"],
+    "skip": ["否", "略過此項"],
+    "abort": ["中止", "保留以便續行"],
+    "cancel": ["取消", "刪除任務"]
+  },
+  "zh-HK": {
+    "separator": "，",
+    "yes": ["是"],
+    "remember": ["是", "不再詢問"],
+    "allow_turn": ["是", "今輪全部允許"],
+    "skip": ["否", "略過此項"],
+    "abort": ["中止", "保留以便續行"],
+    "cancel": ["取消", "刪除任務"]
+  },
+  "zh-CN": {
+    "separator": "，",
+    "yes": ["是"],
+    "remember": ["是", "不再询问"],
+    "allow_turn": ["是", "本轮全部允许"],
+    "skip": ["否", "跳过此项"],
+    "abort": ["中止", "保留以便继续"],
+    "cancel": ["取消", "删除任务"]
+  },
+  "ja": {
+    "separator": "、",
+    "yes": ["はい"],
+    "remember": ["はい", "今後は確認しない"],
+    "allow_turn": ["はい", "このターンは許可"],
+    "skip": ["いいえ", "スキップ"],
+    "abort": ["中断", "再開用に保持"],
+    "cancel": ["キャンセル", "タスク削除"]
+  },
+  "ko": {
+    "separator": ", ",
+    "yes": ["예"],
+    "remember": ["예", "다시 묻지 않음"],
+    "allow_turn": ["예", "이번 턴 모두 허용"],
+    "skip": ["아니요", "건너뛰기"],
+    "abort": ["중단", "재개용으로 보관"],
+    "cancel": ["취소", "작업 삭제"]
+  },
+  "es": {
+    "separator": ", ",
+    "yes": ["Sí"],
+    "remember": ["Sí", "no volver a preguntar"],
+    "allow_turn": ["Sí", "permitir en este turno"],
+    "skip": ["No", "omitir"],
+    "abort": ["Abortar", "guardar para reanudar"],
+    "cancel": ["Cancelar", "borrar tarea"]
+  },
+  "fr": {
+    "separator": ", ",
+    "yes": ["Oui"],
+    "remember": ["Oui", "ne plus demander"],
+    "allow_turn": ["Oui", "autoriser ce tour"],
+    "skip": ["Non", "ignorer"],
+    "abort": ["Interrompre", "garder pour reprise"],
+    "cancel": ["Annuler", "supprimer la tâche"]
+  },
+  "de": {
+    "separator": ", ",
+    "yes": ["Ja"],
+    "remember": ["Ja", "nicht mehr fragen"],
+    "allow_turn": ["Ja", "für diese Runde erlauben"],
+    "skip": ["Nein", "überspringen"],
+    "abort": ["Abbrechen", "zum Fortsetzen behalten"],
+    "cancel": ["Verwerfen", "Aufgabe löschen"]
+  },
+  "pt": {
+    "separator": ", ",
+    "yes": ["Sim"],
+    "remember": ["Sim", "não perguntar de novo"],
+    "allow_turn": ["Sim", "permitir nesta rodada"],
+    "skip": ["Não", "pular"],
+    "abort": ["Interromper", "manter para retomar"],
+    "cancel": ["Cancelar", "excluir tarefa"]
+  },
+  "it": {
+    "separator": ", ",
+    "yes": ["Sì"],
+    "remember": ["Sì", "non chiedere più"],
+    "allow_turn": ["Sì", "consenti in questo turno"],
+    "skip": ["No", "salta"],
+    "abort": ["Interrompi", "conserva per riprendere"],
+    "cancel": ["Annulla", "elimina attività"]
+  },
+  "ru": {
+    "separator": ", ",
+    "yes": ["Да"],
+    "remember": ["Да", "больше не спрашивать"],
+    "allow_turn": ["Да", "разрешить в этом ходе"],
+    "skip": ["Нет", "пропустить"],
+    "abort": ["Прервать", "сохранить"],
+    "cancel": ["Отменить", "удалить задачу"]
+  },
+  "vi": {
+    "separator": ", ",
+    "yes": ["Có"],
+    "remember": ["Có", "không hỏi lại"],
+    "allow_turn": ["Có", "cho phép lượt này"],
+    "skip": ["Không", "bỏ qua"],
+    "abort": ["Dừng", "giữ để tiếp tục"],
+    "cancel": ["Hủy", "xóa tác vụ"]
+  },
+  "th": {
+    "separator": " ",
+    "yes": ["ใช่"],
+    "remember": ["ใช่", "ไม่ต้องถามอีก"],
+    "allow_turn": ["ใช่", "อนุญาตรอบนี้"],
+    "skip": ["ไม่", "ข้ามไป"],
+    "abort": ["หยุด", "เก็บไว้ทำต่อ"],
+    "cancel": ["ยกเลิก", "ลบงาน"]
+  },
+  "id": {
+    "separator": ", ",
+    "yes": ["Ya"],
+    "remember": ["Ya", "jangan tanya lagi"],
+    "allow_turn": ["Ya", "izinkan giliran ini"],
+    "skip": ["Tidak", "lewati"],
+    "abort": ["Hentikan", "simpan untuk lanjut"],
+    "cancel": ["Batal", "hapus tugas"]
+  },
+  "ar": {
+    "separator": "، ",
+    "yes": ["نعم"],
+    "remember": ["نعم", "لا تسأل مجددًا"],
+    "allow_turn": ["نعم", "اسمح في هذه الجولة"],
+    "skip": ["لا", "تخطَّ"],
+    "abort": ["إيقاف", "احتفظ للاستئناف"],
+    "cancel": ["إلغاء", "احذف المهمة"]
+  }
+}
