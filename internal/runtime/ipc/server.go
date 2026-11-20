@@ -13,12 +13,12 @@ import (
 	"sync"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/agents/sudo"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
-	"github.com/pardnchiu/agenvoy/internal/sudo"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
