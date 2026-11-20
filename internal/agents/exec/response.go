@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/configs"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 )
 
 func Response(content string) string {
@@ -42,9 +42,9 @@ func guardrailRefusal(sessionID, model, content string) string {
 		slog.String("head", string(head)))
 
 	if rule == "secret-exfil" && command != "" {
-		return fmt.Sprintf(filesystem.RefusalMessage(rule), command)
+		return fmt.Sprintf(locale.GetRefusal(rule), command)
 	}
-	refusal := filesystem.RefusalMessage("default")
+	refusal := locale.GetRefusal("default")
 	if rule == "" {
 		return refusal
 	}

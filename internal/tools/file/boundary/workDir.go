@@ -38,7 +38,7 @@ func OutsideWorkDir(sessionID, workDir, toolName, toolArgs string) []string {
 
 func targetPaths(toolName, toolArgs string) []string {
 	switch toolName {
-	case "edit_file", "remove_file", "restore_file":
+	case "write_file", "remove_file", "restore_file":
 		return rawPaths(toolName, toolArgs)
 	case "run_command", "background_command":
 		var p struct {

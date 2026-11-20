@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -60,17 +59,9 @@ func OpenFile(ctx context.Context, workDir, sessionID, path string) (string, err
 	if IsOpenURL(path) {
 		absPath = strings.TrimSpace(path)
 	} else {
-		baseDir := workDir
-		if baseDir == "" {
-			baseDir = filesystem.DownloadDir
-		}
-
-		resolved, err := boundary.Resolve(sessionID, baseDir, path)
+		resolved, err := boundary.ResolveIn(sessionID, workDir, path)
 		if err != nil {
-			return "", utilsmsg.Trace("boundary.Resolve", "", err)
-		}
-		if resolved == "" {
-			return "", utilsmsg.New(utilsmsg.Invalid, "path", "required")
+			return "", utilsmsg.Trace("tools/file/boundary: ResolveIn", "", err)
 		}
 		absPath = resolved
 	}

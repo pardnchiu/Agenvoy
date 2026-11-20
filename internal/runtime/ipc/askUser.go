@@ -3,8 +3,8 @@ package ipc
 import (
 	"context"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/sudo"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	"github.com/pardnchiu/agenvoy/internal/sudo"
 )
 
 func (c *conn) askUser(ctx context.Context) {

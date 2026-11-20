@@ -8,10 +8,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/pardnchiu/agenvoy/internal/agents/sudo"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
-	"github.com/pardnchiu/agenvoy/internal/sudo"
 	internalutils "github.com/pardnchiu/agenvoy/internal/utils"
 )
 

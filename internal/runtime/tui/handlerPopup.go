@@ -17,7 +17,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	oauthgrok "github.com/pardnchiu/go-llm-router/core/oauth/grok"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -72,7 +72,7 @@ type Popup struct {
 	passwordPrompt bool
 	explain        string
 	commandLine    bool
-	confirmLabels  filesystem.ConfirmLabels
+	confirmLabels  locale.Confirm
 	status         string
 	verifying      bool
 
@@ -260,7 +260,7 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 				p.kind = popupSecret
 				p.passwordPrompt = true
-				p.title = filesystem.GetConfirmText().Password + ":"
+				p.title = locale.GetConfirm().Password + ":"
 				p.styledLines = nil
 				for _, one := range p.restrictedMsg {
 					p.styledLines = append(p.styledLines, warnStyle.Render(one))
@@ -276,7 +276,7 @@ func (t TUI) updateConfirmPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case labels.Skip:
 			p.kind = popupText
 			p.skipWithReason = true
-			p.title = filesystem.GetConfirmText().Reason + ":"
+			p.title = locale.GetConfirm().Reason + ":"
 			p.input = newPopupInput("", false)
 			return t, nil
 		case labels.Abort:
@@ -728,8 +728,8 @@ func newPopup(pending Pending) *Popup {
 	switch req.Kind {
 	case runtime.KindToolConfirm:
 		msg := utils.FormatConfirm(req.ToolName, req.ToolArgs, req.Restricted, !pending.needPassword)
-		labels := filesystem.GetTUIConfirmLabels()
-		options := labels.List()
+		labels := locale.GetConfirm()
+		options := labels.Options()
 		if len(req.Restricted) > 0 {
 			options = []string{labels.Yes, labels.Skip, labels.Abort, labels.Cancel}
 		}
@@ -758,7 +758,7 @@ func newPopup(pending Pending) *Popup {
 			}
 		}
 		switch req.ToolName {
-		case "edit_file", "edit_tool", "edit_skill":
+		case "write_file", "edit_tool", "edit_skill":
 			hunks := utils.FormatPatchDiff(req.ToolArgs)
 			if len(hunks) == 0 {
 				for _, l := range utils.FormatWriteDiff(req.ToolArgs) {

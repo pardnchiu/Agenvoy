@@ -115,7 +115,7 @@ scheduler 採 skill-based 觸發：到時間時，daemon 讀 `scheduler/<short>/
 
 > **腳本路徑**：`run_command` 的 CWD 是使用者的工作目錄，**不是本 skill 目錄**，相對路徑 `scripts/...` 必定找不到（實測會讓 agent 反覆 glob 找檔案，白燒數輪）。本 skill 只服務 Agenvoy、安裝位置固定，一律用絕對路徑 `~/.config/agenvoy/skills/.system/scheduler-skill-creator/scripts/`。
 
-> **禁止直接用 `edit_skill(mode=write)`／`edit_file(mode=write)` 建立 SKILL.md** —— LLM 容易寫成 `<short>.md` 而非 `<short>/SKILL.md`，或誤加 `scheduler-` 前綴；也無法自行產生 hash suffix。必須先跑 init 腳本。
+> **禁止直接用 `edit_skill(mode=write)`／`write_file(mode=write)` 建立 SKILL.md** —— LLM 容易寫成 `<short>.md` 而非 `<short>/SKILL.md`，或誤加 `scheduler-` 前綴；也無法自行產生 hash suffix。必須先跑 init 腳本。
 
 用 `run_command` 執行：
 
@@ -280,7 +280,7 @@ description: 每 5 分鐘抓取台積電 2330.TW 即時股價並提醒。
 
 ## 不做的事
 
-- **不**用 `edit_skill(mode=write)`／`edit_file(mode=write)` 直接建立 SKILL.md —— 必須走 `init_scheduler_skill.py`，避免結構錯誤（`<name>.md` vs `<name>/SKILL.md`）
+- **不**用 `edit_skill(mode=write)`／`write_file(mode=write)` 直接建立 SKILL.md —— 必須走 `init_scheduler_skill.py`，避免結構錯誤（`<name>.md` vs `<name>/SKILL.md`）
 - **不**在 short name、frontmatter、skill_name 任何位置加 `scheduler-` 前綴
 - **不**留 `[TODO: ...]` 佔位符在最終 skill —— 步驟 4 須把所有 TODO 替換為具體內容
 - 時間以使用者說的為準；沒說就用 `ask_user` 問，不用預設值或推測補齊

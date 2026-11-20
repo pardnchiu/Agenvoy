@@ -13,6 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	execchatbot "github.com/pardnchiu/agenvoy/internal/agents/exec/chatbot"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	"github.com/pardnchiu/agenvoy/internal/runtime/chatbot"
 	sessiondiscord "github.com/pardnchiu/agenvoy/internal/session/discord"
 	sessionhistory "github.com/pardnchiu/agenvoy/internal/session/history"
@@ -148,7 +149,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 			slog.String("name", channelName(in)),
 			slog.String("code", code))
 		execchatbot.NotifyAdmin(ctx, code, "Discord "+channelName(in))
-		prompt, err := b.client.SendInput(ctx, in.ChannelID, "", filesystem.GetChatbotNotice().VerifyPrompt)
+		prompt, err := b.client.SendInput(ctx, in.ChannelID, "", locale.GetChatbotCode().VerifyPrompt)
 		if err != nil {
 			slog.Warn("go_bot_discord.Bot.client.SendInput",
 				slog.String("channel", channelName(in)),
@@ -165,7 +166,7 @@ func run(ctx context.Context, b *Bot, in go_bot_discord.Input) error {
 
 	if hasAttachment {
 		if hasVoiceAttachment(in) && audio.Model(audio.STT) == "" {
-			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, fmt.Sprintf(filesystem.GetChatbotNotice().STTMissing, "`/model stt`"))
+			_, _ = b.client.Send(ctx, in.ChannelID, in.MessageID, fmt.Sprintf(locale.GetChatbotCode().STTMissing, "`/model stt`"))
 			return nil
 		}
 		attachments := saveAttachments(ctx, b, in)

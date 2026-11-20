@@ -56,7 +56,7 @@ Mount once at the end of `<body>`, after every library script (and after `T` on 
 1. `html_template(mode="read", name=...)`.
 2. Copy its `<link rel="stylesheet">` tag into your page.
 3. Replace the content in place, keeping class names and block order: every figure, row and label moves into the data object, and repeated blocks become one `:for` element.
-4. Save with `write_result(format="html")`.
+4. Save with `write_result`; the content starts with `<!DOCTYPE html>`.
 
 - **Zero new CSS**: no `<style>` block, custom property or font stack; the example's own `style=` attributes stay as they are. Redefining one variable (`--accent`, `--ink`) repaints the whole page.
 - **Zero new class names**: content that fits no component goes into the nearest existing one (stat block, card, list, callout). Nothing can hold it → the wrong entry was picked; back to §1.

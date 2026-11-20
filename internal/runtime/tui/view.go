@@ -13,7 +13,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/guide"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	configbot "github.com/pardnchiu/agenvoy/internal/session/config/bot"
 )
 
@@ -323,7 +323,7 @@ func (t TUI) viewPopup() string {
 			hint = strings.NewReplacer("Esc:cancel", "Esc:back", "Esc:close", "Esc:back").Replace(hint)
 		}
 		if p.pendingId != "" {
-			text := filesystem.GetAskUserText()
+			text := locale.GetAskUser()
 			hint = strings.NewReplacer(
 				"  Esc:cancel", "",
 				":confirm", ":"+text.HintConfirm,

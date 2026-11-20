@@ -16,7 +16,7 @@ func registEditTool() {
 		AlwaysAllow: true,
 		Description: `Edits a script tool's files (tool.json schema, script.py runtime): create or overwrite one (write), replace a string inside one (patch), or trash the whole tool (remove); returns the affected path.
 Use for "build a tool for this", "fix this tool", "this tool is broken", "delete that tool", and for write_tool / patch_tool / remove_tool.
-Finding an existing tool → find_tools; after writing tool.json and script.py, check it with test_tool before calling it; skill files → edit_skill; any other file → edit_file.`,
+Finding an existing tool → find_tools; after writing tool.json and script.py, check it with test_tool before calling it; skill files → edit_skill; any other file → write_file.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

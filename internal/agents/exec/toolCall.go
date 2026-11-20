@@ -220,7 +220,7 @@ func invalidateReadFileCache(alreadyCall map[string]string, writeArgsJSON string
 }
 
 var isWriteLikeTool = map[string]bool{
-	"edit_file":    true,
+	"write_file":   true,
 	"edit_skill":   true,
 	"edit_tool":    true,
 	"write_result": true,
@@ -234,15 +234,18 @@ func truncateWriteArgs(argsJSON string) string {
 
 	kept := map[string]any{}
 	for key, value := range m {
-		if key == "content" || key == "targets" {
+		if key == "content" || key == "write_content" || key == "patch_contents" {
 			continue
 		}
 		kept[key] = value
 	}
-	if targets, ok := m["targets"].([]any); ok {
+	if targets, ok := m["patch_contents"].([]any); ok {
 		kept["edits"] = len(targets)
 	}
 	if content, ok := m["content"].(string); ok {
+		kept["wrote_bytes"] = len(content)
+	}
+	if content, ok := m["write_content"].(string); ok {
 		kept["wrote_bytes"] = len(content)
 	}
 
@@ -677,7 +680,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			}
 		}
 
-		if (s.name == "edit_file" || s.name == "remove_file" || s.name == "restore_file") && s.execErr == "" {
+		if (s.name == "write_file" || s.name == "remove_file" || s.name == "restore_file") && s.execErr == "" {
 			invalidateReadFileCache(alreadyCall, s.args)
 		}
 		if isWriteLikeTool[s.name] && s.execErr == "" {

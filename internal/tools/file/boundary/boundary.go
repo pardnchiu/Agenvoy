@@ -73,6 +73,22 @@ func deniedErr(absPath string) error {
 	return utilsmsg.New(utilsmsg.Denied, "path", "%s is on denied_path and is permanently off limits for both reads and writes; it cannot be approved and retrying the same path fails the same way", absPath)
 }
 
+func ResolveIn(sessionID, workDir, path string) (string, error) {
+	baseDir := workDir
+	if baseDir == "" {
+		baseDir = filesystem.DownloadDir
+	}
+
+	absPath, err := Resolve(sessionID, baseDir, strings.TrimSpace(path))
+	if err != nil {
+		return "", err
+	}
+	if absPath == "" {
+		return "", utilsmsg.New(utilsmsg.Invalid, "path", "required")
+	}
+	return absPath, nil
+}
+
 func Resolve(sessionID, baseDir, path string) (string, error) {
 	abs, homeErr := go_pkg_filesystem.AbsPath(baseDir, path, go_pkg_filesystem.AbsPathOption{HomeOnly: true})
 	if homeErr == nil && filesystem.IsDeniedPath(abs) {
@@ -204,7 +220,7 @@ func rawPaths(toolName, toolArgs string) []string {
 		}
 		return out
 
-	case "edit_file", "remove_file", "restore_file", "open_file":
+	case "write_file", "remove_file", "restore_file", "open_file":
 		var p struct {
 			Path string `json:"path"`
 		}

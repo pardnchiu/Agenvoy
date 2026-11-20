@@ -108,7 +108,7 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 	baseExclude := []string{
 		"subagents",
 		"background_subagents",
-		"edit_file",
+		"write_file",
 		"remove_file",
 		"restore_file",
 		"edit_tool",
