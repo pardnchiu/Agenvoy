@@ -12,7 +12,6 @@ import (
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	historystore "github.com/pardnchiu/agenvoy/internal/runtime/store"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -20,18 +19,9 @@ import (
 )
 
 func writeToPath(ctx context.Context, e *tooltypes.Executor, targetPath, newContent, tool string) (string, error) {
-	baseDir := e.WorkDir
-	if baseDir == "" {
-		baseDir = filesystem.DownloadDir
-	}
-
-	path := strings.TrimSpace(targetPath)
-	absPath, err := boundary.Resolve(e.SessionID, baseDir, path)
+	absPath, err := boundary.ResolveIn(e.SessionID, e.WorkDir, targetPath)
 	if err != nil {
-		return "", utilsmsg.Trace("tools/file/boundary: Resolve", "", err)
-	}
-	if absPath == "" {
-		return "", utilsmsg.New(utilsmsg.Invalid, "path", "required")
+		return "", utilsmsg.Trace("tools/file/boundary: ResolveIn", "", err)
 	}
 
 	info, err := os.Stat(absPath)

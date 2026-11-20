@@ -106,7 +106,7 @@ Delete → remove_file; undo or revert → restore_file; past versions → file_
 				return writeToPath(ctx, e, params.Path, params.WriteContent, "write_file")
 
 			case "patch":
-				return patchFileTargets(ctx, e, params.Path, params.PatchContents)
+				return patchContents(ctx, e, params.Path, params.PatchContents)
 			}
 			return "", utilsmsg.New(utilsmsg.Invalid, "mode", "unknown %q; available: write, patch", mode)
 		},

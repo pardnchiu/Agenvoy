@@ -470,7 +470,7 @@ var toolDisplayName = map[string]string{
 	"list_chatbot":         "List",
 	"read_files":           "Read",
 	"write_result":         "Write",
-	"write_file":           "Edit",
+	"write_file":           "Write",
 	"remove_file":          "Remove",
 	"restore_file":         "Restore",
 	"run_command":          "Run",
