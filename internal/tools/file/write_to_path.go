@@ -1,3 +1,4 @@
+// * last modified: 26/11/21
 package file
 
 import (
@@ -18,30 +19,25 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func writeFileContent(ctx context.Context, e *tooltypes.Executor, path0, content0, tool string) (string, error) {
+func writeToPath(ctx context.Context, e *tooltypes.Executor, targetPath, newContent, tool string) (string, error) {
 	baseDir := e.WorkDir
 	if baseDir == "" {
 		baseDir = filesystem.DownloadDir
 	}
 
-	path := strings.TrimSpace(path0)
+	path := strings.TrimSpace(targetPath)
 	absPath, err := boundary.Resolve(e.SessionID, baseDir, path)
 	if err != nil {
-		return "", utilsmsg.Trace("boundary.Resolve", "", err)
+		return "", utilsmsg.Trace("tools/file/boundary: Resolve", "", err)
 	}
 	if absPath == "" {
 		return "", utilsmsg.New(utilsmsg.Invalid, "path", "required")
 	}
 
-	content := content0
-	if content == "" {
-		return "", utilsmsg.New(utilsmsg.Invalid, "content", "required")
-	}
-
 	info, err := os.Stat(absPath)
 	isNew := os.IsNotExist(err)
 	if err != nil && !isNew {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "os.Stat", "", err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "os: Stat", "", err)
 	}
 	if !isNew && info.Size() > configs.MAX_DOCUMENT_BYTES {
 		return "", utilsmsg.New(utilsmsg.Limit, "file", "too large (%d bytes, max %d MiB)", info.Size(), configs.MAX_DOCUMENT_BYTES>>20)
@@ -52,30 +48,39 @@ func writeFileContent(ctx context.Context, e *tooltypes.Executor, path0, content
 		}
 	}
 
+	// NOTE: 1. get file snapshot
 	change, err := historystore.Capture(absPath)
 	if err != nil {
-		slog.Debug("historystore.Capture",
+		slog.Debug("runtime/store: Capture",
 			slog.String("path", absPath),
 			slog.String("error", err.Error()))
 	}
 
-	if err := go_pkg_filesystem.WriteFile(absPath, content, 0644); err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.WriteFile", "", err)
+	// NOTE: 2. write file content
+	if err := go_pkg_filesystem.WriteFile(absPath, newContent, 0644); err != nil {
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem: WriteFile", "", err)
 	}
 
 	var unrecorded string
+	// NOTE: 3 record action for loop memory => show in the loop done to remind user what files edited in this loop
 	markWritten(e, absPath)
 	e.RecordFile(absPath)
 
-	if err := historystore.Record(ctx, change.WithCreated(content), historystore.Meta{SessionID: e.SessionID, TaskID: e.PendingTask, Tool: tool}); err != nil {
-		slog.Debug("historystore.Record",
+	// NOTE: 4. record file before after
+	if err := historystore.Record(ctx, change.WithCreated(newContent), historystore.Meta{
+		SessionID: e.SessionID,
+		TaskID:    e.PendingTask,
+		Tool:      tool,
+	}); err != nil {
+		slog.Debug("runtime/store: Record",
 			slog.String("path", absPath),
 			slog.String("error", err.Error()))
 		unrecorded = fmt.Sprintf("\nthe previous version was not recorded (%v), so this edit cannot be undone", err)
 	}
 
-	return writeReceipt(isNew, absPath, content) + unrecorded, nil
+	return writeReceipt(isNew, absPath, newContent) + unrecorded, nil
 }
+
 func writeReceipt(isNew bool, path, content string) string {
 	verb := "updated"
 	if isNew {
@@ -88,9 +93,13 @@ func writeReceipt(isNew bool, path, content string) string {
 	}
 
 	lines := strings.Split(strings.TrimRight(content, "\n"), "\n")
+	lineCount := len(lines)
+	if content == "" {
+		lineCount = 0
+	}
 	return fmt.Sprintf(
 		"successfully %s: %s (%d bytes, %d lines on disk)\nfirst line: %s\nlast line: %s\nThis is the file's real content. The elided write argument left in history is a context-saving marker, not what was written — do not rewrite the file to \"restore\" it.",
-		verb, path, size, len(lines),
+		verb, path, size, lineCount,
 		excerptLine(lines[0]), excerptLine(lines[len(lines)-1]),
 	)
 }

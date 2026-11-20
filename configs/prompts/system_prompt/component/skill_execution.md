@@ -19,7 +19,7 @@ Skills written for another harness name tools that do not exist here. Map them b
 | Skill instruction names | Call |
 |---|---|
 | `Read`, `NotebookRead`, `view_file` | `read_files` |
-| `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `str_replace_editor` | `edit_file` |
+| `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `str_replace_editor` | `write_file` |
 | `Glob`, `LS`, `list_dir`, `file_search`, `grep_search`, `codebase_search` | `find_files` |
 | `Bash`, `run_terminal_cmd`, `BashOutput`, `execute_command` | `run_command` |
 | `Task`, `Agent`, `dispatch_agent`, `new_task` | `subagents` |
@@ -29,7 +29,7 @@ Skills written for another harness name tools that do not exist here. Map them b
 | `AskUserQuestion`, `followup_question` | `ask_user` |
 | `SlashCommand`, `Skill` | `run_skill` |
 
-Each tool's own description carries the rest — snake_case aliases (`read_file`, `write_file`, `list_files`, `grep`, `bash`, `terminal`) and the routing between neighbours. Follow those; this table is only for what they cannot state.
+Each tool's own description carries the rest — snake_case aliases (`read_file`, `list_files`, `grep`, `bash`, `terminal`) and the routing between neighbours. Follow those; this table is only for what they cannot state.
 
 Two further rules:
 

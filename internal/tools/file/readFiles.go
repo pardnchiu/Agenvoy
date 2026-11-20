@@ -25,7 +25,7 @@ func registReadFiles() {
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: `Reads files: text (each line prefixed with its row number, which is not in the file), PDF, DOCX, PPTX, CSV/TSV, images, and audio/video as a verbatim transcript.
-Use for "read this file", "show me this file", "what does this PDF say", "what is said in this recording", "why did the background / scheduled / chatbot run fail" (~/.config/agenvoy/daemon.log), and for read_file / cat / head / tail; also the required step before edit_file on an existing file. A file this session produced, or an earlier run of the same recurring task, is read back only to diff, continue or cite it, not as reference input.
+Use for "read this file", "show me this file", "what does this PDF say", "what is said in this recording", "why did the background / scheduled / chatbot run fail" (~/.config/agenvoy/daemon.log), and for read_file / cat / head / tail; also the required step before write_file on an existing file. A file this session produced, or an earlier run of the same recurring task, is read back only to diff, continue or cite it, not as reference input.
 Locating a file → find_files; opening it in an app → open_file.`,
 		Parameters: map[string]any{
 			"type": "object",

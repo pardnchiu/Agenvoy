@@ -16,7 +16,7 @@ func registRestoreFile() {
 		Name: "restore_file",
 		Description: `Puts a recorded version of a file back, or undoes a whole task by returning every file it touched to before it ran; this also brings back a file remove_file moved aside.
 Use for "undo that", "revert to the previous version", "put the file back", "roll back what you just did".
-Finding the version to restore → file_history; any other change → edit_file.`,
+Finding the version to restore → file_history; any other change → write_file.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

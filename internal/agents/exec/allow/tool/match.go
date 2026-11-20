@@ -71,7 +71,7 @@ func read(path string) map[string]bool {
 /**
  * allow_tool example
  * ---
- * edit_file(/Users/pardn/Desktop/git/Agenvoy/.doc/version-generate/v1.0.23.md)
+ * write_file(/Users/pardn/Desktop/git/Agenvoy/.doc/version-generate/v1.0.23.md)
  * run_command(sh -c echo test > $HOME/always_allow_test.txt && cat $HOME/always_allow_test.txt && rm $HOME/always_allow_test.txt)
  * run_command(sh -c echo test > $HOME/always_allow_test.txt)
  * ...
@@ -108,18 +108,18 @@ func formatArgs(workDir, toolName, toolArgs string) (string, error) {
 
 func formatToolArgs(workDir, toolName, toolArgs string) (string, bool, error) {
 	switch toolName {
-	case "edit_file":
+	case "write_file":
 		var e struct {
 			Path string `json:"path"`
 		}
 		if err := json.Unmarshal([]byte(toolArgs), &e); err != nil {
-			return "", true, utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "edit_file", err)
+			return "", true, utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "write_file", err)
 		}
 
-		// ! can not allow edit_file with no path
+		// ! can not allow write_file with no path
 		path := strings.TrimSpace(e.Path)
 		if path == "" {
-			return "", true, utilsmsg.New(utilsmsg.Invalid, "edit_file path", "empty; allow rules only target a file path")
+			return "", true, utilsmsg.New(utilsmsg.Invalid, "write_file path", "empty; allow rules only target a file path")
 		}
 
 		return go_pkg_utils.AbsPath(workDir, path), true, nil

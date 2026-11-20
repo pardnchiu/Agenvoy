@@ -18,9 +18,9 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func patchFileTargets(ctx context.Context, e *tooltypes.Executor, path0 string, targets []patchTarget) (string, error) {
+func patchFileTargets(ctx context.Context, e *tooltypes.Executor, path0 string, targets []patchContent) (string, error) {
 	if len(targets) == 0 {
-		return "", utilsmsg.New(utilsmsg.Invalid, "targets", "required when mode=patch")
+		return "", utilsmsg.New(utilsmsg.Invalid, "patch_contents", "required when mode=patch")
 	}
 
 	baseDir := e.WorkDir
@@ -31,7 +31,7 @@ func patchFileTargets(ctx context.Context, e *tooltypes.Executor, path0 string, 
 	path := strings.TrimSpace(path0)
 	absPath, err := boundary.Resolve(e.SessionID, baseDir, path)
 	if err != nil {
-		return "", utilsmsg.Trace("boundary.Resolve", "", err)
+		return "", utilsmsg.Trace("tools/file/boundary: Resolve", "", err)
 	}
 	if absPath == "" {
 		return "", utilsmsg.New(utilsmsg.Invalid, "path", "path or name is required")
@@ -39,7 +39,7 @@ func patchFileTargets(ctx context.Context, e *tooltypes.Executor, path0 string, 
 
 	info, err := os.Stat(absPath)
 	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "os.Stat", "", err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "os: Stat", "", err)
 	}
 	if info.Size() > configs.MAX_DOCUMENT_BYTES {
 		return "", utilsmsg.New(utilsmsg.Limit, "file", "too large (%d bytes, max %d MiB)", info.Size(), configs.MAX_DOCUMENT_BYTES>>20)
@@ -50,12 +50,12 @@ func patchFileTargets(ctx context.Context, e *tooltypes.Executor, path0 string, 
 
 	content, err := go_pkg_filesystem.ReadText(absPath)
 	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.ReadText", "", err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem: ReadText", "", err)
 	}
 	change := historystore.CaptureContent(absPath, content)
 
 	if conflict := insertedAnchor(targets); conflict != "" {
-		return "", utilsmsg.New(utilsmsg.Invalid, "targets", "%s", conflict)
+		return "", utilsmsg.New(utilsmsg.Invalid, "patch_contents", "%s", conflict)
 	}
 
 	before := content
@@ -70,19 +70,19 @@ func patchFileTargets(ctx context.Context, e *tooltypes.Executor, path0 string, 
 		return fmt.Sprintf("no write: every target in %s already matches its new_string, so the file is unchanged", absPath), nil
 	}
 	if strings.TrimSpace(content) == "" && strings.TrimSpace(before) != "" {
-		return "", utilsmsg.New(utilsmsg.Invalid, "targets", "every target applied but %s would be left empty (it holds %d bytes); nothing written — re-read the file and narrow the anchors, or call edit_file with mode=write if emptying it is the intent", absPath, len(before))
+		return "", utilsmsg.New(utilsmsg.Invalid, "patch_contents", "every entry applied but %s would be left empty (it holds %d bytes); nothing written — re-read the file and narrow the anchors, or call write_file with mode=write if emptying it is the intent", absPath, len(before))
 	}
 
 	if err := go_pkg_filesystem.WriteFile(absPath, content, 0644); err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.WriteFile", "", err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem: WriteFile", "", err)
 	}
 
 	markWritten(e, absPath)
 	e.RecordFile(absPath)
 
 	var unrecorded string
-	if err := historystore.Record(ctx, change, historystore.Meta{SessionID: e.SessionID, TaskID: e.PendingTask, Tool: "edit_file"}); err != nil {
-		slog.Debug("historystore.Record",
+	if err := historystore.Record(ctx, change, historystore.Meta{SessionID: e.SessionID, TaskID: e.PendingTask, Tool: "write_file"}); err != nil {
+		slog.Debug("runtime/store: Record",
 			slog.String("path", absPath),
 			slog.String("error", err.Error()))
 		unrecorded = fmt.Sprintf("\nthe previous version was not recorded (%v), so this edit cannot be undone", err)
@@ -91,29 +91,18 @@ func patchFileTargets(ctx context.Context, e *tooltypes.Executor, path0 string, 
 	note := ""
 	if len(skipped) > 0 {
 		slices.Sort(skipped)
-		note = fmt.Sprintf("\n%d of %d targets were already applied and were skipped: %v", len(skipped), len(targets), skipped)
+		note = fmt.Sprintf("\n%d of %d patch_contents entries were already applied and were skipped: %v", len(skipped), len(targets), skipped)
 	}
 	return fmt.Sprintf("successfully updated %s", absPath) + note + unrecorded, nil
 }
 
-func rejectElided(content string, targets []patchTarget) error {
-	values := []string{content}
-	for _, one := range targets {
-		values = append(values, one.OldString, one.NewString)
-	}
-	if slices.ContainsFunc(values, tooltypes.IsElided) {
-		return utilsmsg.New(utilsmsg.Invalid, "content", "%s is a history placeholder, not file content — the earlier write already landed on disk; read_files the file and copy the real text", tooltypes.Elided)
-	}
-	return nil
-}
-
-type patchTarget struct {
+type patchContent struct {
 	OldString  string `json:"old_string"`
 	NewString  string `json:"new_string"`
 	ReplaceAll bool   `json:"replace_all"`
 }
 
-func insertedAnchor(targets []patchTarget) string {
+func insertedAnchor(targets []patchContent) string {
 	for i, one := range targets {
 		old := strings.TrimRight(one.OldString, "\n")
 		if old == "" {
@@ -123,7 +112,7 @@ func insertedAnchor(targets []patchTarget) string {
 			if !strings.Contains(targets[j].NewString, old) {
 				continue
 			}
-			return fmt.Sprintf("targets[%d]: %q also occurs inside targets[%d].new_string. Every anchor resolves against the bytes already on disk, so this target cannot reach text another target inserts. Nothing was written — merge the two targets into one, or send them in separate calls", i, old, j)
+			return fmt.Sprintf("patch_contents[%d]: %q also occurs inside patch_contents[%d].new_string. Every anchor resolves against the bytes already on disk, so this target cannot reach text another target inserts. Nothing was written — merge the two entries into one, or send them in separate calls", i, old, j)
 		}
 	}
 	return ""
@@ -136,14 +125,14 @@ type patchSpan struct {
 	text   string
 }
 
-func planTargets(content string, targets []patchTarget, absPath string) ([]patchSpan, []int, error) {
+func planTargets(content string, targets []patchContent, absPath string) ([]patchSpan, []int, error) {
 	var spans []patchSpan
 	var skipped []int
 
 	for i, one := range targets {
 		old := one.OldString
 		if old == "" {
-			return nil, nil, utilsmsg.New(utilsmsg.Invalid, fmt.Sprintf("targets[%d]", i), "old_string is required")
+			return nil, nil, utilsmsg.New(utilsmsg.Invalid, fmt.Sprintf("patch_contents[%d]", i), "old_string is required")
 		}
 		if old == one.NewString {
 			skipped = append(skipped, i)
@@ -153,7 +142,7 @@ func planTargets(content string, targets []patchTarget, absPath string) ([]patch
 		if !strings.Contains(content, old) {
 			actual, ok := findCurlyAnchor(content, old)
 			if !ok {
-				return nil, nil, utilsmsg.Trace(fmt.Sprintf("targets[%d]", i), "", anchorNotFound(content, old, absPath))
+				return nil, nil, utilsmsg.Trace(fmt.Sprintf("patch_contents[%d]", i), "", anchorNotFound(content, old, absPath))
 			}
 			text = curlQuotes(actual, text)
 			old = actual
@@ -166,7 +155,7 @@ func planTargets(content string, targets []patchTarget, absPath string) ([]patch
 
 		at := offsetsOf(content, search)
 		if len(at) > 1 && !one.ReplaceAll {
-			return nil, nil, utilsmsg.New(utilsmsg.Invalid, fmt.Sprintf("targets[%d]", i), "%q occurs on rows %v of %s; extend old_string until it matches once, or set replace_all", old, rowsAt(content, at), absPath)
+			return nil, nil, utilsmsg.New(utilsmsg.Invalid, fmt.Sprintf("patch_contents[%d]", i), "%q occurs on rows %v of %s; extend old_string until it matches once, or set replace_all", old, rowsAt(content, at), absPath)
 		}
 		if !one.ReplaceAll {
 			at = at[:1]
@@ -179,7 +168,7 @@ func planTargets(content string, targets []patchTarget, absPath string) ([]patch
 	slices.SortFunc(spans, func(a, b patchSpan) int { return a.start - b.start })
 	for k := 1; k < len(spans); k++ {
 		if spans[k].start < spans[k-1].end {
-			return nil, nil, utilsmsg.New(utilsmsg.Invalid, "targets", "targets[%d] and targets[%d] both cover row %d of %s, so applying one would destroy the other's anchor. Nothing was written — merge them into one target, or send them in separate calls", spans[k-1].target, spans[k].target, rowAt(content, spans[k].start), absPath)
+			return nil, nil, utilsmsg.New(utilsmsg.Invalid, "patch_contents", "patch_contents[%d] and patch_contents[%d] both cover row %d of %s, so applying one would destroy the other's anchor. Nothing was written — merge them into one entry, or send them in separate calls", spans[k-1].target, spans[k].target, rowAt(content, spans[k].start), absPath)
 		}
 	}
 	return spans, skipped, nil

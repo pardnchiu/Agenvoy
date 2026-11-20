@@ -25,7 +25,7 @@ func activityVerb(activity string) string {
 		case "read_files":
 			return "Reading"
 
-		case "edit_file", "remove_file", "restore_file", "write_error":
+		case "write_file", "remove_file", "restore_file", "write_error":
 			return "Writing"
 
 		case "run_command", "background_command":

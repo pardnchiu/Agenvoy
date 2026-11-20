@@ -5,7 +5,7 @@ import "github.com/pardnchiu/agenvoy/internal/tools/file/variant"
 func Register() {
 	registReadFiles()
 	registFindFiles()
-	registEditFile()
+	registWriteFile()
 	registRemoveFile()
 	registRestoreFile()
 	registWriteResult()

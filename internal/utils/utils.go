@@ -57,7 +57,7 @@ func FormatPatchDiff(raw string) []PatchHunk {
 			New    string `json:"new_string"`
 			Insert string `json:"insert_string"`
 			Row    int    `json:"row"`
-		} `json:"targets"`
+		} `json:"patch_contents"`
 	}
 	if json.Unmarshal([]byte(raw), &multi) == nil && len(multi.Targets) > 0 {
 		hunks := make([]PatchHunk, 0, len(multi.Targets))
@@ -86,12 +86,21 @@ func FormatPatchDiff(raw string) []PatchHunk {
 
 func FormatWriteDiff(raw string) []string {
 	var p struct {
-		Content string `json:"content"`
+		Content      string `json:"content"`
+		WriteContent string `json:"write_content"`
 	}
 	if json.Unmarshal([]byte(raw), &p) != nil {
 		return nil
 	}
+	if p.WriteContent != "" {
+		return splitLines(p.WriteContent)
+	}
 	return splitLines(p.Content)
+}
+
+func IsHTMLDocument(content string) bool {
+	head := strings.ToLower(strings.TrimSpace(content))
+	return strings.HasPrefix(head, "<!doctype html") || strings.HasPrefix(head, "<html")
 }
 
 func splitLines(s string) []string {

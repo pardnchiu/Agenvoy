@@ -90,7 +90,7 @@ func write(path string, allowMap map[string]bool) error {
 	/**
 	 * allow_tool example
 	 * ---
-	 * edit_file(/Users/pardn/Desktop/git/Agenvoy/.doc/version-generate/v1.0.23.md)
+	 * write_file(/Users/pardn/Desktop/git/Agenvoy/.doc/version-generate/v1.0.23.md)
 	 * run_command(sh -c echo test > $HOME/always_allow_test.txt && cat $HOME/always_allow_test.txt && rm $HOME/always_allow_test.txt)
 	 * run_command(sh -c echo test > $HOME/always_allow_test.txt)
 	 * ...
