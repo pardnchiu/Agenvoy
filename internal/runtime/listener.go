@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -303,7 +303,7 @@ func (l *Listener[CID, MID]) OnCallback(ctx context.Context, chatID CID, msgID M
 			l.finalize(state, Reply{Approve: false, Skip: true})
 		case skipWriteReason:
 			l.deletePrompt(ctx, state)
-			msgID, err := l.transport.SendAskText(ctx, state.chatID, filesystem.GetConfirmText().SkipReasonHeader, false)
+			msgID, err := l.transport.SendAskText(ctx, state.chatID, locale.GetConfirm().SkipReasonHeader, false)
 			if err != nil {
 				l.finalize(state, Reply{Approve: false, Skip: true})
 				return true
@@ -414,11 +414,11 @@ func (l *Listener[CID, MID]) finalize(state *active[CID, MID], reply Reply) {
 }
 
 func confirmOptions(restricted bool) []string {
-	labels := filesystem.GetConfirmLabels()
+	labels := locale.GetConfirm()
 	if restricted {
 		return []string{labels.Skip, labels.Abort, labels.Cancel}
 	}
-	return labels.List()
+	return labels.Options()
 }
 
 const (
@@ -427,7 +427,7 @@ const (
 )
 
 func skipChoiceFor(data string) string {
-	for _, text := range filesystem.AllConfirmText() {
+	for _, text := range locale.AllConfirm() {
 		switch data {
 		case text.SkipWithoutReason:
 			return skipWithoutReason
@@ -439,7 +439,7 @@ func skipChoiceFor(data string) string {
 }
 
 func (l *Listener[CID, MID]) askSkipReason(ctx context.Context, state *active[CID, MID]) {
-	text := filesystem.GetConfirmText()
+	text := locale.GetConfirm()
 	msgID, err := l.transport.SendAskSingle(ctx, state.chatID, text.SkipHeader, []string{text.SkipWithoutReason, text.SkipWriteReason})
 	if err != nil {
 		l.finalize(state, Reply{Approve: false, Skip: true})
@@ -450,7 +450,7 @@ func (l *Listener[CID, MID]) askSkipReason(ctx context.Context, state *active[CI
 }
 
 func confirmReplyFor(data string) (reply Reply, finalize bool) {
-	for _, labels := range filesystem.AllConfirmLabels() {
+	for _, labels := range locale.AllConfirm() {
 		switch data {
 		case labels.Yes:
 			return Reply{Approve: true}, true

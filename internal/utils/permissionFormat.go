@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 )
 
 type ConfirmMessage struct {
@@ -22,7 +22,7 @@ const (
 )
 
 func FormatConfirm(name, raw string, restricted []string, passwordCached bool) ConfirmMessage {
-	text := filesystem.GetConfirmText()
+	text := locale.GetConfirm()
 	msg := ConfirmMessage{
 		Title:   fmt.Sprintf(text.Title, ToolName(name)),
 		Display: FormatToolEvent(name, raw),
@@ -98,7 +98,7 @@ func chatExplain(msg ConfirmMessage, explain string) string {
 	if len(msg.RestrictedLines) == 0 {
 		return explain
 	}
-	return strings.TrimSpace(explain + "\n" + strings.Join(msg.RestrictedLines, "\n") + "\n" + msg.RestrictedNote + "\n" + filesystem.GetConfirmText().ChatRestricted)
+	return strings.TrimSpace(explain + "\n" + strings.Join(msg.RestrictedLines, "\n") + "\n" + msg.RestrictedNote + "\n" + locale.GetConfirm().ChatRestricted)
 }
 
 func utf16Len(text string) int {

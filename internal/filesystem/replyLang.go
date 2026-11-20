@@ -84,7 +84,7 @@ func ReplyLangName(code string) string {
 }
 
 func ReplyLangDirective() string {
-	code := strings.TrimSpace(ConfigReplyLang)
+	code := strings.TrimSpace(GetReplyLang())
 	if code == "" || strings.EqualFold(code, ReplyLangAuto) {
 		return ""
 	}
@@ -124,26 +124,4 @@ func ApplyReplyLang(template string) string {
 		}
 		template = template[:start] + inner + template[end+len(replyLangAutoClose):]
 	}
-}
-
-var langRefusal = getLangRefusal()
-
-func getLangRefusal() map[string]map[string]string {
-	var dic map[string]map[string]string
-	if err := json.Unmarshal(configs.RefusalMessages, &dic); err != nil {
-		slog.Warn("[Internal] refusal_messages: embedded JSON cannot be parsed",
-			slog.String("error", err.Error()))
-	}
-	return dic
-}
-
-func RefusalMessage(rule string) string {
-	dic, ok := langRefusal[rule]
-	if !ok {
-		dic = langRefusal["default"]
-	}
-	if text, ok := dic[CanonicalReplyLang(ConfigReplyLang)]; ok {
-		return text
-	}
-	return dic["en"]
 }
