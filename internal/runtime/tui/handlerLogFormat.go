@@ -10,6 +10,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/runtime"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
 )
@@ -91,6 +92,9 @@ func renderActionLine(p parsedAction, width int) string {
 		}, width)
 
 	case "error":
+		if body == runtime.ErrUserCanceled.Error() {
+			return ""
+		}
 		name, msg, _ := strings.Cut(body, " ")
 		return renderEvent(agenttypes.Event{
 			Type:     agenttypes.EventExecError,
