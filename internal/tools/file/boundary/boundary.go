@@ -74,12 +74,7 @@ func deniedErr(absPath string) error {
 }
 
 func ResolveIn(sessionID, workDir, path string) (string, error) {
-	baseDir := workDir
-	if baseDir == "" {
-		baseDir = filesystem.DownloadDir
-	}
-
-	absPath, err := Resolve(sessionID, baseDir, strings.TrimSpace(path))
+	absPath, err := Resolve(sessionID, BaseDir(workDir), strings.TrimSpace(path))
 	if err != nil {
 		return "", err
 	}
@@ -131,7 +126,7 @@ func Restricted(sessionID, workDir, toolName, toolArgs string) []string {
 		return nil
 	}
 
-	base := baseDir(workDir)
+	base := BaseDir(workDir)
 	seen := map[string]bool{}
 	var out []string
 	for _, one := range list {
@@ -196,7 +191,7 @@ func WriteBinds(sessionID, baseDir string, list []string) ([]string, error) {
 	return out, nil
 }
 
-func baseDir(workDir string) string {
+func BaseDir(workDir string) string {
 	if strings.TrimSpace(workDir) == "" {
 		return filesystem.DownloadDir
 	}
@@ -220,7 +215,7 @@ func rawPaths(toolName, toolArgs string) []string {
 		}
 		return out
 
-	case "write_file", "remove_file", "restore_file", "open_file":
+	case "open_file":
 		var p struct {
 			Path string `json:"path"`
 		}
@@ -228,6 +223,15 @@ func rawPaths(toolName, toolArgs string) []string {
 			return nil
 		}
 		return []string{p.Path}
+
+	case "write_file", "remove_file", "restore_file":
+		var p struct {
+			Filename string `json:"filename"`
+		}
+		if json.Unmarshal([]byte(toolArgs), &p) != nil {
+			return nil
+		}
+		return []string{p.Filename}
 
 	case "find_files":
 		var p struct {

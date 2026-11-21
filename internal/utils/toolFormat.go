@@ -133,9 +133,12 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 	case "read_files":
 		return joinPaths(argMap)
 
-	case "write_file", "remove_file", "restore_file":
-		if path := arg("path"); path != "" {
-			return path
+	case "write_file", "remove_file":
+		return arg("filename")
+
+	case "restore_file":
+		if filename := arg("filename"); filename != "" {
+			return filename
 		}
 		if v, ok := argMap["version"].(float64); ok && v > 0 {
 			return fmt.Sprintf("version %d", int64(v))

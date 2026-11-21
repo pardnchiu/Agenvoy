@@ -44,7 +44,7 @@ It fails → edit_tool(mode=patch), then test again; checking tool.json or editi
 				Input string `json:"input"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
+				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json: Unmarshal", "", err)
 			}
 			return testToolScript(ctx, params.Name, params.Input)
 		},
@@ -75,7 +75,7 @@ func testToolScript(ctx context.Context, name, input string) (string, error) {
 
 	cmd, err := go_pkg_sandbox.Wrap(execCtx, "python3", []string{scriptPath}, filesystem.ScriptToolsDir, nil)
 	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox.Wrap", "", err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox: Wrap", "", err)
 	}
 
 	cmd.Stdin = strings.NewReader(input)
@@ -86,9 +86,9 @@ func testToolScript(ctx context.Context, name, input string) (string, error) {
 
 	if err := go_pkg_sandbox.Run(cmd); err != nil {
 		if stderr.Len() > 0 {
-			return "", utilsmsg.New(utilsmsg.Internal, "test_tool", "script error: %s", strings.TrimSpace(stderr.String()))
+			return "", utilsmsg.New(utilsmsg.Upstream, "test_tool", "script error: %s", strings.TrimSpace(stderr.String()))
 		}
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "exec", "", err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_sandbox: Run", "", err)
 	}
 
 	return strings.TrimSpace(stdout.String()), nil

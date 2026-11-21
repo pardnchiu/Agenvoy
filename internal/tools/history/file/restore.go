@@ -36,11 +36,7 @@ func Restore(ctx context.Context, e *tooltypes.Executor, version int64, taskID0 
 	filters := []historystore.Filter{{TaskID: taskID}}
 	if len(paths) > 0 {
 		filters = filters[:0]
-		for _, raw := range paths {
-			path, err := absPath(e, raw)
-			if err != nil {
-				return "", err
-			}
+		for _, path := range paths {
 			filters = append(filters, historystore.Filter{TaskID: taskID, Path: path})
 		}
 	}

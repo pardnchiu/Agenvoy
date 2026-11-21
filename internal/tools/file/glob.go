@@ -48,7 +48,7 @@ func globBatch(ctx context.Context, e *tooltypes.Executor, queries []findQuery) 
 	merged = budget.take(merged)
 	raw, err := json.Marshal(merged)
 	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "json.Marshal", "", err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "json: Marshal", "", err)
 	}
 	return string(raw) + budget.notice(), nil
 }
@@ -72,14 +72,14 @@ func globOne(ctx context.Context, e *tooltypes.Executor, dir, pattern string) ([
 	}
 
 	dir = strings.TrimSpace(dir)
-	absPath, err := boundary.ResolveRead(e.SessionID, e.WorkDir, dir)
+	absPath, err := boundary.ResolveRead(e.SessionID, boundary.BaseDir(e.WorkDir), dir)
 	if err != nil {
-		return nil, utilsmsg.Trace("boundary.ResolveRead", "", err)
+		return nil, utilsmsg.Trace("tools/file/boundary: ResolveRead", "", err)
 	}
 
 	matches, err := go_pkg_filesystem_reader.GlobFiles(absPath, pattern)
 	if err != nil {
-		return nil, utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem_reader.GlobFiles", "", err)
+		return nil, utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem_reader: GlobFiles", "", err)
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err

@@ -110,16 +110,16 @@ func formatToolArgs(workDir, toolName, toolArgs string) (string, bool, error) {
 	switch toolName {
 	case "write_file":
 		var e struct {
-			Path string `json:"path"`
+			Filename string `json:"filename"`
 		}
 		if err := json.Unmarshal([]byte(toolArgs), &e); err != nil {
-			return "", true, utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "write_file", err)
+			return "", true, utilsmsg.Wrap(utilsmsg.Invalid, "json: Unmarshal", "write_file", err)
 		}
 
 		// ! can not allow write_file with no path
-		path := strings.TrimSpace(e.Path)
+		path := strings.TrimSpace(e.Filename)
 		if path == "" {
-			return "", true, utilsmsg.New(utilsmsg.Invalid, "write_file path", "empty; allow rules only target a file path")
+			return "", true, utilsmsg.New(utilsmsg.Invalid, "write_file filename", "empty; allow rules only target a file path")
 		}
 
 		return go_pkg_utils.AbsPath(workDir, path), true, nil

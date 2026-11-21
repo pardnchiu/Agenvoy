@@ -23,7 +23,7 @@ func Register() {
 func capture(path string) historystore.Change {
 	change, err := historystore.Capture(path)
 	if err != nil {
-		slog.Debug("historystore.Capture",
+		slog.Debug("[Internal] runtime/store: Capture",
 			slog.String("path", path),
 			slog.String("error", err.Error()))
 	}
@@ -32,7 +32,7 @@ func capture(path string) historystore.Change {
 
 func record(ctx context.Context, e *tooltypes.Executor, change historystore.Change, created, tool string) {
 	if err := historystore.Record(ctx, change.WithCreated(created), metaOf(e, tool)); err != nil {
-		slog.Debug("historystore.Record",
+		slog.Debug("[Internal] runtime/store: Record",
 			slog.String("tool", tool),
 			slog.String("error", err.Error()))
 	}
@@ -40,7 +40,7 @@ func record(ctx context.Context, e *tooltypes.Executor, change historystore.Chan
 
 func recordRemoval(ctx context.Context, e *tooltypes.Executor, path, trashPath, tool string) {
 	if err := historystore.RecordDelete(ctx, path, trashPath, metaOf(e, tool)); err != nil {
-		slog.Debug("historystore.RecordDelete",
+		slog.Debug("[Internal] runtime/store: RecordDelete",
 			slog.String("path", path),
 			slog.String("error", err.Error()))
 	}
@@ -56,7 +56,7 @@ func metaOf(e *tooltypes.Executor, tool string) historystore.Meta {
 func patch(path, old, new string, replaceAll bool) error {
 	info, err := os.Stat(path)
 	if err != nil {
-		return utilsmsg.Wrap(utilsmsg.Internal, "os.Stat", path, err)
+		return utilsmsg.Wrap(utilsmsg.Internal, "os: Stat", path, err)
 	}
 	if info.Size() > configs.MAX_DOCUMENT_BYTES {
 		return utilsmsg.New(utilsmsg.Limit, "file", "too large (%d bytes, max %d MiB)", info.Size(), configs.MAX_DOCUMENT_BYTES>>20)
@@ -64,7 +64,7 @@ func patch(path, old, new string, replaceAll bool) error {
 
 	content, err := go_pkg_filesystem.ReadText(path)
 	if err != nil {
-		return utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.ReadText", path, err)
+		return utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem: ReadText", path, err)
 	}
 
 	if !strings.Contains(content, old) {
@@ -83,7 +83,7 @@ func patch(path, old, new string, replaceAll bool) error {
 	}
 
 	if err := go_pkg_filesystem.WriteFile(path, updated, 0644); err != nil {
-		return utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.WriteFile", path, err)
+		return utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem: WriteFile", path, err)
 	}
 	return nil
 }

@@ -26,7 +26,7 @@ Delete → remove_file; undo or revert → restore_file; past versions → file_
 					"enum":        []string{"write", "patch"},
 					"description": "write: a first version or a deliberate full replacement. patch: every other change, since a whole-file rewrite discards already-correct text.",
 				},
-				"path": map[string]any{
+				"filename": map[string]any{
 					"type":        "string",
 					"description": "One file per call, absolute or relative to the work directory: '/abs/path/foo.go', '~/notes.md', 'relative/file.md'. A file for the user with no requested location goes under the output directory named in the system prompt; give its full path.",
 				},
@@ -58,12 +58,12 @@ Delete → remove_file; undo or revert → restore_file; past versions → file_
 					},
 				},
 			},
-			"required": []string{"mode", "path"},
+			"required": []string{"mode", "filename"},
 		},
 		Handler: func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Mode          string         `json:"mode"`
-				Path          string         `json:"path"`
+				Filename      string         `json:"filename"`
 				WriteContent  string         `json:"write_content"`
 				PatchContents []patchContent `json:"patch_contents"`
 			}
@@ -79,9 +79,13 @@ Delete → remove_file; undo or revert → restore_file; past versions → file_
 				return list
 			}
 
+			written := strings.Join(append([]string{params.WriteContent}, toStrings(params.PatchContents)...), "\n")
 			// NOTE: ensure wont to write back mask key to overwrite existing value
-			if masked := utilssecret.FindMasked(strings.Join(append([]string{params.WriteContent}, toStrings(params.PatchContents)...), "\n")); masked != "" {
+			if masked := utilssecret.FindMasked(written); masked != "" {
 				return "", utilsmsg.New(utilsmsg.Invalid, "write_content/patch_contents", "contains %q, a redacted value from a tool result, not the real text; write the original from inside one run_command (e.g. sh -c with . ./.env) instead", masked)
+			}
+			if strings.Contains(written, WITHHELD_MARKER) {
+				return "", utilsmsg.New(utilsmsg.Invalid, "write_content/patch_contents", "contains a read_files `[unrelated: ...]` marker, so it was built from a partial read; nothing written — read the file again with full: true and write from the full content")
 			}
 
 			mode := strings.ToLower(strings.TrimSpace(params.Mode))
@@ -103,10 +107,10 @@ Delete → remove_file; undo or revert → restore_file; past versions → file_
 				return "", utilsmsg.New(utilsmsg.Invalid, "mode", "required; available: write, patch")
 
 			case "write":
-				return writeToPath(ctx, e, params.Path, params.WriteContent, "write_file")
+				return writeToPath(ctx, e, params.Filename, params.WriteContent, "write_file")
 
 			case "patch":
-				return patchContents(ctx, e, params.Path, params.PatchContents)
+				return patchContents(ctx, e, params.Filename, params.PatchContents)
 			}
 			return "", utilsmsg.New(utilsmsg.Invalid, "mode", "unknown %q; available: write, patch", mode)
 		},

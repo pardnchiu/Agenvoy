@@ -82,17 +82,17 @@ Reading contents → read_files; past versions of a file → file_history.`,
 				"output": map[string]any{
 					"type":        "string",
 					"enum":        []string{"files", "content"},
-					"description": "mode=search only. files: each matching path with its match count and the rows of its first 5 matches; start here and pass those rows to read_files(around) when the query was precise. content: the matching lines with their text, for when rows alone cannot tell which match matters.",
+					"description": "mode=search only. files: each matching path with its match count and the rows of its first 5 matches; start here and pass those rows to read_files(lines) when the query was precise. content: the matching lines with their text, for when rows alone cannot tell which match matters.",
 					"default":     "files",
 				},
 				"offset": map[string]any{
 					"type":        "integer",
-					"description": "mode=search only: entries to skip (files for output=files, matching lines for output=content). Use the offset the page notice gives and keep queries and output unchanged between pages.",
+					"description": "Pairs with limit to page mode=search results: entries to skip (files for output=files, matching lines for output=content). Use the offset the page notice gives and keep queries and output unchanged between pages.",
 					"default":     0,
 				},
 				"limit": map[string]any{
 					"type":        "integer",
-					"description": "mode=search only: entries per page (files or matching lines, per output).",
+					"description": "Pairs with offset: entries per page of mode=search results (files or matching lines, per output).",
 					"default":     defaultSearchLimit,
 				},
 				"multiline": map[string]any{
@@ -100,9 +100,9 @@ Reading contents → read_files; past versions of a file → file_history.`,
 					"description": "mode=search only: match the regex against whole files so '.' crosses newlines ('^'/'$' still anchor lines), for spans like 'type \\w+ struct \\{.*?Name'. Every row a match spans is reported as a matching line.",
 					"default":     false,
 				},
-				"context": map[string]any{
+				"context_lines": map[string]any{
 					"type":        "integer",
-					"description": "mode=search, output=content: lines shown before and after each match, marked context=true; they do not count toward offset/limit.",
+					"description": "Pairs with output=content (mode=search): lines shown before and after each match, marked context=true; they do not count toward offset/limit.",
 					"default":     0,
 				},
 				"queries": map[string]any{
@@ -144,16 +144,16 @@ Reading contents → read_files; past versions of a file → file_history.`,
 			}
 
 			var params struct {
-				Mode      string      `json:"mode"`
-				Output    string      `json:"output"`
-				Offset    int         `json:"offset"`
-				Limit     int         `json:"limit"`
-				Context   int         `json:"context"`
-				Multiline bool        `json:"multiline"`
-				Queries   []findQuery `json:"queries"`
+				Mode         string      `json:"mode"`
+				Output       string      `json:"output"`
+				Offset       int         `json:"offset"`
+				Limit        int         `json:"limit"`
+				ContextLines int         `json:"context_lines"`
+				Multiline    bool        `json:"multiline"`
+				Queries      []findQuery `json:"queries"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
+				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json: Unmarshal", "", err)
 			}
 			if len(params.Queries) == 0 {
 				return "", utilsmsg.New(utilsmsg.Invalid, "queries", "required")
@@ -180,7 +180,7 @@ Reading contents → read_files; past versions of a file → file_history.`,
 				if output == "" {
 					output = "files"
 				}
-				return searchBatch(ctx, e, params.Queries, output, params.Offset, params.Limit, params.Context, params.Multiline)
+				return searchBatch(ctx, e, params.Queries, output, params.Offset, params.Limit, params.ContextLines, params.Multiline)
 			}
 			return "", utilsmsg.New(utilsmsg.Invalid, "mode", "unknown %q; available: list, glob, search", mode)
 		},

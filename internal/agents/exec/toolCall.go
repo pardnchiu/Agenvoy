@@ -207,13 +207,13 @@ func isReadOnlyMode(toolArgs string) bool {
 
 func invalidateReadFileCache(alreadyCall map[string]string, writeArgsJSON string) {
 	var p struct {
-		Path string `json:"path"`
+		Filename string `json:"filename"`
 	}
-	if json.Unmarshal([]byte(writeArgsJSON), &p) != nil || p.Path == "" {
+	if json.Unmarshal([]byte(writeArgsJSON), &p) != nil || p.Filename == "" {
 		return
 	}
 	for key := range alreadyCall {
-		if strings.HasPrefix(key, "read_files|") && strings.Contains(key, p.Path) {
+		if strings.HasPrefix(key, "read_files|") && strings.Contains(key, p.Filename) {
 			delete(alreadyCall, key)
 		}
 	}

@@ -65,7 +65,7 @@ Finding an existing tool → find_tools; after writing tool.json and script.py, 
 				ReplaceAll bool   `json:"replace_all"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
+				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json: Unmarshal", "", err)
 			}
 
 			mode := strings.ToLower(strings.TrimSpace(params.Mode))
