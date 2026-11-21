@@ -420,22 +420,30 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)
 		unsandboxed := command.RestrictedRunCommand(toolName, toolArg)
 		restrictedList := append(outsideHome(restrictedPaths), unsandboxed...)
-		allowRead := allowAll && (toolName == "read_files" || toolName == "find_files")
-		restricted := len(restrictedList) > 0 || len(restrictedPaths) > 0 && !*turnAllowAll && !allowRead
-		if !restricted && len(restrictedPaths) > 0 {
-			boundary.Grant(exec.SessionID, restrictedPaths...)
-		}
-
 		scoped := allowAll && !agenttypes.SubagentFrom(ctx)
 		autoAllow := allowAll && (!scoped || filesystem.WorkDirAllowsAll(exec.WorkDir))
-		needsConfirm := !allowRead && toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll)
-		irreversible := autoAllow && !*turnAllowAll && len(unsandboxed) == 0 &&
-			isIrreversibleCommand(toolName, toolArg)
+		allowTurn := *turnAllowAll || autoAllow
+		allowRead := allowTurn && (toolName == "read_files" || toolName == "find_files")
+		restricted := len(restrictedList) > 0 || len(restrictedPaths) > 0 && !allowTurn && !allowRead
+
+		needsConfirm := !allowRead && toolNeedsConfirmation(exec, toolName, toolArg, allowTurn)
 		var outsidePaths []string
-		if autoAllow && scoped && needsConfirm {
-			outsidePaths = boundary.OutsideWorkDir(exec.SessionID, exec.WorkDir, toolName, toolArg)
+		risky := false
+		if !restricted && allowTurn {
+			if !allowRead && !agenttypes.SubagentFrom(ctx) && toolNeedsConfirmation(exec, toolName, toolArg, false) {
+				outsidePaths = boundary.OutsideWorkDir(exec.SessionID, exec.WorkDir, toolName, toolArg)
+			}
+			irreversible := len(unsandboxed) == 0 && isMutatingCommand(toolName, toolArg) && isIrreversibleCommand(toolName, toolArg)
+			sensitive := !allowRead && len(restrictedPaths) > 0
+			if len(outsidePaths) > 0 || irreversible || sensitive {
+				unsafe, decided := unsafeByDecision(ctx, sessionData.ID, exec, toolName, toolArg, append(slices.Clone(outsidePaths), restrictedPaths...), irreversible)
+				risky = !decided || unsafe
+			}
+			if !risky {
+				outsidePaths = nil
+			}
 		}
-		if irreversible || restricted || len(outsidePaths) > 0 || !autoAllow && needsConfirm {
+		if risky || restricted || needsConfirm {
 			proceed := true
 			approved := false
 			verified := false
@@ -446,7 +454,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 				reason = "a background subagent leg cannot ask the user for confirmation; return what you gathered and state that this call still needs the user's approval"
 			} else if mode := agenttypes.AutoModeFrom(ctx); mode != agenttypes.AutoModeOff {
 				var missing []string
-				if (needsConfirm || irreversible || len(outsidePaths) > 0) && mode&agenttypes.AutoModeAllowEdit == 0 {
+				if (needsConfirm || risky || len(outsidePaths) > 0) && mode&agenttypes.AutoModeAllowEdit == 0 {
 					missing = append(missing, "enable_edit: true (this run is read-only: writes and non-read-only commands are refused)")
 				}
 				if len(restrictedList) > 0 && mode&agenttypes.AutoModeSkipSandbox == 0 {
