@@ -142,7 +142,7 @@ function renderReasoning(view, line) {
   view.trace += (view.trace ? "\n\n" : "") + line;
   view.think.hidden = false;
   view.resumed = Boolean(view.text);
-  render(view.reasoning, view.trace, view.session);
+  render(view.reasoning, line.split("\n\n").pop(), view.session);
   if (view.reasoned) {
     return;
   }
