@@ -13,7 +13,7 @@ import (
 
 const (
 	unrelated        = "unrelated"
-	minWithholdRunes = 1 << 12
+	minWithholdRunes = 1 << 14
 )
 
 var (

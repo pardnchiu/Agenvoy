@@ -15,7 +15,7 @@ func OutsideWorkDir(sessionID, workDir, toolName, toolArgs string) []string {
 	if err != nil {
 		return nil
 	}
-	dir, err := resolveRaw("", baseDir(workDir))
+	dir, err := resolveRaw("", BaseDir(workDir))
 	if err != nil {
 		return nil
 	}

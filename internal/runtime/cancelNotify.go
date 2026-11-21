@@ -1,11 +1,18 @@
 package runtime
 
 import (
+	"context"
 	"errors"
 	"sync"
 )
 
-var ErrUserCanceled = errors.New("user cancelled")
+type userCanceledError struct{}
+
+func (userCanceledError) Error() string { return "user cancelled" }
+
+func (userCanceledError) Is(target error) bool { return target == context.Canceled }
+
+var ErrUserCanceled error = userCanceledError{}
 
 var ErrUserAborted = errors.New("[Canceled] task: aborted by user; pending kept for resume")
 

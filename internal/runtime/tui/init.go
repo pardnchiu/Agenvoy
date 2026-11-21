@@ -303,7 +303,7 @@ func loadSessionTail(sid string, width int, all bool) []tea.Cmd {
 	cmds := make([]tea.Cmd, 0, len(lines)*2+1)
 	for i, l := range lines {
 		cmds = append(cmds, tea.Println(l.line))
-		if i+1 < len(lines) && (lines[i+1].kind == "done" || lines[i+1].kind == "canceled") {
+		if i+1 < len(lines) && (lines[i+1].kind == "done" || lines[i+1].kind == "canceled" || lines[i+1].kind == "tool_skipped") {
 			continue
 		}
 		cmds = append(cmds, tea.Println(""))

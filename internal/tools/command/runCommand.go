@@ -21,7 +21,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/tools/file"
+	toolsfile "github.com/pardnchiu/agenvoy/internal/tools/file"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -163,7 +163,7 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 			return "", errOpenCommand
 		}
 		if binary == "rm" {
-			return file.RemoveToTrash(ctx, e, argv[1:], "rm")
+			return toolsfile.MoveToTrash(ctx, e, argv[1:], "rm")
 		}
 	}
 

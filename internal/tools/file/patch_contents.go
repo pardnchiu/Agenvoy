@@ -99,7 +99,7 @@ func patchContents(ctx context.Context, e *tooltypes.Executor, targetPath string
 	var unrecorded string
 	// NOTE: 8. record action for loop memory => show in the loop done to remind user what files edited in this loop
 	if err := historystore.Record(ctx, change, historystore.Meta{SessionID: e.SessionID, TaskID: e.PendingTask, Tool: "write_file"}); err != nil {
-		slog.Debug("runtime/store: Record",
+		slog.Debug("[Internal] runtime/store: Record",
 			slog.String("path", absPath),
 			slog.String("error", err.Error()))
 		unrecorded = fmt.Sprintf("\nthe previous version was not recorded (%v), so this edit cannot be undone", err)

@@ -3,8 +3,10 @@ package exec
 import (
 	"context"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -18,7 +20,7 @@ import (
 )
 
 func assignTurnContext(ctx context.Context, session *agenttypes.Session, workDir string, skillScanner *runtime.SkillScanner, excludeSkills []string, withSkills bool, toolNames []string, toolGap bool, summary string, background []interactive.BackgroundTask) {
-	var parts []string
+	parts := []string{currentTimeSection(time.Now())}
 	if !session.Stateless {
 		parts = append(parts, strings.ReplaceAll(strings.TrimSpace(configs.InjectWorkDir), "{{.WorkDir}}", workDir))
 	}
@@ -48,13 +50,33 @@ func assignTurnContext(ctx context.Context, session *agenttypes.Session, workDir
 			parts = append(parts, guideText)
 		}
 	}
-	if len(parts) == 0 {
-		return
-	}
 	session.TurnContext = go_llm_router.Message{
 		Role:    "user",
 		Content: strings.Join(parts, "\n\n"),
 	}
+}
+
+func currentTimeSection(now time.Time) string {
+	zone := now.Format("UTC-07:00")
+	if name := localZoneName(); name != "" {
+		zone = name + ", " + zone
+	}
+	return strings.NewReplacer(
+		"{{.Time}}", now.Format("2006-01-02 15:04 Monday"),
+		"{{.Zone}}", zone,
+	).Replace(strings.TrimSpace(configs.InjectCurrentTime))
+}
+
+func localZoneName() string {
+	if tz := os.Getenv("TZ"); tz != "" {
+		return tz
+	}
+	if link, err := os.Readlink("/etc/localtime"); err == nil {
+		if _, name, ok := strings.Cut(link, "zoneinfo/"); ok {
+			return name
+		}
+	}
+	return ""
 }
 
 func agentGuideSection(ctx context.Context, workDir string) string {

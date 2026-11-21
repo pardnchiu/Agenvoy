@@ -1,3 +1,4 @@
+// * last modified: 26/11/22
 package file
 
 import (
@@ -15,8 +16,8 @@ import (
 )
 
 const (
-	defaultReadLimit     = 1 << 11 // 2048
-	defaultAroundContext = 20
+	defaultReadLimit    = 1 << 11 // 2048
+	defaultContextLines = 64
 )
 
 func registReadFiles() {
@@ -26,7 +27,7 @@ func registReadFiles() {
 		Concurrent:  true,
 		Description: `Reads files: text (each line prefixed with its row number, which is not in the file), PDF, DOCX, PPTX, CSV/TSV, images, and audio/video as a verbatim transcript.
 Use for "read this file", "show me this file", "what does this PDF say", "what is said in this recording", "why did the background / scheduled / chatbot run fail" (~/.config/agenvoy/daemon.log), and for read_file / cat / head / tail; also the required step before write_file on an existing file. A file this session produced, or an earlier run of the same recurring task, is read back only to diff, continue or cite it, not as reference input.
-Locating a file → find_files; opening it in an app → open_file.`,
+Locating a file → find_files; opening it in an app → open_file; past versions → file_history.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -40,102 +41,105 @@ Locating a file → find_files; opening it in an app → open_file.`,
 								"type":        "string",
 								"description": "File to read, absolute or relative to the work directory: '/abs/path/foo.go', '~/notes.md', 'relative/file.md'.",
 							},
+							// NOTE: offset/limit 用於未知行號的情況
 							"offset": map[string]any{
 								"type":        "integer",
-								"description": "1-based start: line for text, page for PDF, slide for PPTX, row for CSV; for an append-only log such as daemon.log, page from the end.",
+								"description": "Pairs with limit, for when the rows are not known yet: 1-based start, a line for text, page for PDF, slide for PPTX, row for CSV; for an append-only log such as daemon.log, start near the end.",
 								"default":     1,
 							},
 							"limit": map[string]any{
 								"type":        "integer",
-								"description": "How many lines (pages, slides, rows) to read from offset; a text file cut short ends with a notice naming the next offset. When find_files already gave the rows, use around instead of a wide range.",
+								"description": "Pairs with offset: how many lines (pages, slides, rows) to read from it.",
 								"default":     defaultReadLimit,
 							},
-							"around": map[string]any{
+							// NOTE: lines/context_lines 用於已知行號的情況
+							"lines": map[string]any{
 								"type":        "array",
 								"items":       map[string]any{"type": "integer"},
-								"description": "Plain-text files only: 1-based rows to read around, e.g. [42, 180] from find_files. Each row gets `context` lines on both sides, overlapping windows merge, and a '...' line marks skipped text. When set, offset and limit are ignored.",
+								"description": "Pairs with context_lines, for when the rows are known, e.g. [42, 180] from find_files' `lines`: plain-text files only, 1-based row numbers to read around instead of a wide offset/limit range. When set, offset and limit are ignored.",
 							},
-							"context": map[string]any{
+							"context_lines": map[string]any{
 								"type":        "integer",
-								"description": "With around only: lines shown before and after each row; 0 shows the rows alone.",
-								"default":     defaultAroundContext,
+								"description": "Pairs with lines: how many lines to show before and after each row; 0 shows the rows alone.",
+								"default":     defaultContextLines,
+							},
+							"full": map[string]any{
+								"type":        "boolean",
+								"description": "true returns every row, skipping the relevance filter: before write_file on the file, since parts left out as unrelated would be lost in a mode=write rewrite, or when a filtered read left out rows that are needed.",
+								"default":     false,
 							},
 						},
-						"required": []string{
-							"path",
-						},
+						"required": []string{"path"},
 					},
 				},
 			},
-			"required": []string{
-				"files",
-			},
+			"required": []string{"files"},
 		},
 		Handler: func(ctx context.Context, e *tooltypes.Executor, args json.RawMessage) (string, error) {
 			var params struct {
 				Files []struct {
-					Path    string `json:"path"`
-					Offset  int    `json:"offset"`
-					Limit   int    `json:"limit"`
-					Around  []int  `json:"around"`
-					Context *int   `json:"context"`
+					Path         string `json:"path"`
+					Offset       int    `json:"offset"`
+					Limit        int    `json:"limit"`
+					Lines        []int  `json:"lines"`
+					ContextLines *int   `json:"context_lines"`
+					Full         bool   `json:"full"`
 				} `json:"files"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
+				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json: Unmarshal", "", err)
 			}
 			if len(params.Files) == 0 {
 				return "", utilsmsg.New(utilsmsg.Invalid, "files", "required")
 			}
 
-			baseDir := e.WorkDir
-			if baseDir == "" {
-				baseDir = filesystem.DownloadDir
-			}
-
+			baseDir := boundary.BaseDir(e.WorkDir)
 			contents := make([]string, len(params.Files))
 			var wg sync.WaitGroup
-			for i, f := range params.Files {
-				contextLines := defaultAroundContext
-				if f.Context != nil {
-					contextLines = *f.Context
+			for i, file := range params.Files {
+				contextLines := defaultContextLines
+				if file.ContextLines != nil {
+					contextLines = *file.ContextLines
 				}
-				content, err := readOne(ctx, e, baseDir, f.Path, f.Offset, f.Limit, f.Around, contextLines)
+
+				content, err := readFile(ctx, e, baseDir, file.Path, file.Offset, file.Limit, file.Lines, contextLines)
 				if err != nil {
 					contents[i] = "error: " + err.Error()
 					continue
 				}
+
 				contents[i] = content
-				if len(f.Around) == 0 {
-					wg.Go(func() {
-						contents[i] = checkFileRelevance(ctx, e.SessionID, e.Objective, f.Path, content)
-					})
+				if file.Full {
+					continue
 				}
+				wg.Go(func() {
+					contents[i] = checkFileRelevance(ctx, e.SessionID, e.Objective, file.Path, content)
+				})
 			}
 			wg.Wait()
 
-			out := make(map[string]string, len(params.Files))
+			dic := make(map[string]string, len(params.Files))
 			for i, f := range params.Files {
 				content := contents[i]
-				if prev, ok := out[f.Path]; ok {
+				if prev, ok := dic[f.Path]; ok {
 					content = prev + "\n" + content
 				}
-				out[f.Path] = content
+				dic[f.Path] = content
 			}
 
-			result, err := utils.MarshalPlain(out)
+			raw, err := utils.MarshalPlain(dic)
 			if err != nil {
-				return "", utilsmsg.Wrap(utilsmsg.Internal, "utils.MarshalPlain", "", err)
+				return "", utilsmsg.Wrap(utilsmsg.Internal, "utils: MarshalPlain", "", err)
 			}
-			return string(result), nil
+			return string(raw), nil
 		},
 	})
 }
 
-func readOne(ctx context.Context, e *tooltypes.Executor, baseDir, path string, offset, limit int, around []int, contextLines int) (string, error) {
+func readFile(ctx context.Context, e *tooltypes.Executor, baseDir, path string, offset, limit int, lines []int, contextLines int) (string, error) {
 	absPath, err := boundary.ResolveRead(e.SessionID, baseDir, path)
 	if err != nil {
-		return "", utilsmsg.Trace("boundary.ResolveRead", "", err)
+		return "", utilsmsg.Trace("tools/file/boundary: ResolveRead", "", err)
 	}
 	if absPath == "" {
 		return "", utilsmsg.New(utilsmsg.Invalid, "path", "required")
@@ -149,8 +153,8 @@ func readOne(ctx context.Context, e *tooltypes.Executor, baseDir, path string, o
 
 	info, statErr := os.Stat(absPath)
 	var content string
-	if len(around) > 0 {
-		content, err = filesystem.ReadAround(absPath, around, contextLines)
+	if len(lines) > 0 {
+		content, err = filesystem.ReadLines(absPath, lines, contextLines)
 	} else {
 		content, err = filesystem.ReadFile(ctx, absPath, offset, limit)
 	}

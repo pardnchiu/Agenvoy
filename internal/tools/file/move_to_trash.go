@@ -2,6 +2,7 @@ package file
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -13,8 +14,9 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func RemoveToTrash(ctx context.Context, e *tooltypes.Executor, paths []string, tool string) (string, error) {
+func MoveToTrash(ctx context.Context, e *tooltypes.Executor, paths []string, tool string) (string, error) {
 	var moved, failed, unrecorded []string
+	var errs []error
 	for _, one := range paths {
 		if err := ctx.Err(); err != nil {
 			return "", utilsmsg.New(utilsmsg.Canceled, "remove", "cancelled: %w", err)
@@ -26,19 +28,21 @@ func RemoveToTrash(ctx context.Context, e *tooltypes.Executor, paths []string, t
 		src, err := boundary.Resolve(e.SessionID, e.WorkDir, one)
 		if err != nil {
 			failed = append(failed, fmt.Sprintf("%s (%v)", one, err))
+			errs = append(errs, err)
 			continue
 		}
 
 		dst, err := filesystem.MoveToStoreTemp(src)
 		if err != nil {
 			failed = append(failed, fmt.Sprintf("%s (%v)", one, err))
+			errs = append(errs, err)
 			continue
 		}
 
 		moved = append(moved, src)
 		e.RecordFile(src)
 		if err := historystore.RecordDelete(ctx, src, dst, historystore.Meta{SessionID: e.SessionID, TaskID: e.PendingTask, Tool: tool}); err != nil {
-			slog.Debug("historystore.RecordDelete",
+			slog.Debug("[Internal] runtime/store: RecordDelete",
 				slog.String("path", src),
 				slog.String("error", err.Error()))
 			unrecorded = append(unrecorded, fmt.Sprintf("%s now at %s (%v)", src, dst, err))
@@ -49,7 +53,7 @@ func RemoveToTrash(ctx context.Context, e *tooltypes.Executor, paths []string, t
 	case len(moved) == 0 && len(failed) == 0:
 		return "", utilsmsg.New(utilsmsg.Invalid, "paths", "required")
 	case len(moved) == 0:
-		return "", utilsmsg.New(utilsmsg.Internal, "remove", "removed nothing: %s", strings.Join(failed, "; "))
+		return "", utilsmsg.Trace("remove", "", errors.Join(errs...))
 	}
 
 	report := fmt.Sprintf("moved to %s: %s", filesystem.StoreTempDir, strings.Join(moved, ", "))

@@ -46,7 +46,7 @@ func writeToolFile(ctx context.Context, e *tooltypes.Executor, name, tag, conten
 
 	change := capture(target)
 	if err := go_pkg_filesystem.WriteFile(target, content, 0644); err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.WriteFile", target, err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem: WriteFile", target, err)
 	}
 	record(ctx, e, change, content, "edit_tool")
 

@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -208,7 +209,14 @@ func MoveToStoreTemp(src string) (string, error) {
 		return "", err
 	}
 	if err := go_pkg_filesystem.Move(src, dst); err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.Move", src+" → "+dst, err)
+		label := utilsmsg.Internal
+		switch {
+		case errors.Is(err, os.ErrNotExist):
+			label = utilsmsg.NotFound
+		case errors.Is(err, os.ErrPermission):
+			label = utilsmsg.Denied
+		}
+		return "", utilsmsg.Wrap(label, "go_pkg_filesystem: Move", src+" → "+dst, err)
 	}
 	return dst, nil
 }

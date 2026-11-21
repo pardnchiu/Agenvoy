@@ -63,7 +63,7 @@ Running a skill → run_skill; building a new skill from scratch → the skill-c
 				Name       string `json:"name"`
 			}
 			if err := json.Unmarshal(args, &params); err != nil {
-				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "", err)
+				return "", utilsmsg.Wrap(utilsmsg.Invalid, "json: Unmarshal", "", err)
 			}
 
 			mode := strings.ToLower(strings.TrimSpace(params.Mode))

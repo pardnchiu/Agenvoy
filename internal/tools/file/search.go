@@ -141,7 +141,7 @@ func searchFilesPage(merged []go_pkg_filesystem_reader.File, offset, limit int) 
 
 	raw, err := json.Marshal(list)
 	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "json.Marshal", "", err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "json: Marshal", "", err)
 	}
 	return string(raw) + page.notice("files"), nil
 }
@@ -234,7 +234,7 @@ func searchContentPage(merged []go_pkg_filesystem_reader.File, offset, limit, co
 
 	raw, err := json.Marshal(list)
 	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "json.Marshal", "", err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "json: Marshal", "", err)
 	}
 	return string(raw) + page.notice("lines"), nil
 }
@@ -246,9 +246,9 @@ func searchOne(ctx context.Context, e *tooltypes.Executor, dir, pattern, filePat
 	}
 
 	dir = strings.TrimSpace(dir)
-	absPath, err := boundary.ResolveRead(e.SessionID, e.WorkDir, dir)
+	absPath, err := boundary.ResolveRead(e.SessionID, boundary.BaseDir(e.WorkDir), dir)
 	if err != nil {
-		return nil, utilsmsg.Trace("boundary.ResolveRead", "", err)
+		return nil, utilsmsg.Trace("tools/file/boundary: ResolveRead", "", err)
 	}
 
 	var filePatterns []string
@@ -264,7 +264,7 @@ func searchOne(ctx context.Context, e *tooltypes.Executor, dir, pattern, filePat
 			Multiline:       multiline,
 		})
 	if err != nil {
-		return nil, utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem_reader.SearchFiles", "", err)
+		return nil, utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem_reader: SearchFiles", "", err)
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err

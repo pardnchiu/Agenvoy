@@ -41,7 +41,7 @@ func writeToPath(ctx context.Context, e *tooltypes.Executor, targetPath, newCont
 	// NOTE: 1. get file snapshot
 	change, err := historystore.Capture(absPath)
 	if err != nil {
-		slog.Debug("runtime/store: Capture",
+		slog.Debug("[Internal] runtime/store: Capture",
 			slog.String("path", absPath),
 			slog.String("error", err.Error()))
 	}
@@ -62,7 +62,7 @@ func writeToPath(ctx context.Context, e *tooltypes.Executor, targetPath, newCont
 		TaskID:    e.PendingTask,
 		Tool:      tool,
 	}); err != nil {
-		slog.Debug("runtime/store: Record",
+		slog.Debug("[Internal] runtime/store: Record",
 			slog.String("path", absPath),
 			slog.String("error", err.Error()))
 		unrecorded = fmt.Sprintf("\nthe previous version was not recorded (%v), so this edit cannot be undone", err)
