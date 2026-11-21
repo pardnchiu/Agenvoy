@@ -321,7 +321,7 @@ agen -p "摘要今天的 commit" --stream
    - OpenAI ChatGPT Plus（$20／月）
    - SuperGrok（$30／月）
 
-2. **強力推薦：**以 TypeSafe 的 Jev 作為 decision model：在 [TypeSafe Console](https://console.typesafe.ai/keys) 建立金鑰，以 `/model add` → **API Key** → **TypeSafe** 加入，再到 `/model` → **decision** 選 `typesafe@jev-latest`。它只依輸入 token 計費（每十億 $42，輸出不收費，依 2026-11-11 [TypeSafe 模型頁](https://docs.typesafe.ai/models)），能把無關的 skill、記憶條目、搜尋結果、網頁樣板，以及無關的檔案與歷史讀取擋在每輪 context 之外；作者本機實測有 95.8% 的 skill 條目不必放進 turn context。設定步驟與實測數據見[新手入門](https://agenvoy.com/zh/quickstart)。
+2. **強力推薦：**以 TypeSafe 的 Jev 作為 decision model：在 [TypeSafe Console](https://console.typesafe.ai/keys) 建立金鑰，以 `/model add` → **API Key** → **TypeSafe** 加入，再到 `/model` → **decision** 選 `typesafe@jev-latest`。它只依輸入 token 計費（每十億 $42，輸出不收費，依 2026-11-11 [TypeSafe 模型頁](https://docs.typesafe.ai/models)），能把無關的 skill、記憶條目、搜尋結果、網頁樣板，以及無關的檔案與歷史讀取擋在每輪 context 之外；作者本機實測有 95.8% 的 skill 條目不必放進 turn context。設定步驟與實測數據見[新手入門](https://agenvoy.com/zh/quickstart)；網頁與檔案篩選的實測見 [fetch_page](decision/fetchPage.zh.md)、[read_files](decision/readFiles.zh.md)。
 
 ## 適合誰使用
 

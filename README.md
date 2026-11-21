@@ -321,7 +321,7 @@ A cost-effective model setup to get started:
    - OpenAI ChatGPT Plus ($20/mo)
    - SuperGrok ($30/mo)
 
-2. **Strongly recommended:** Add TypeSafe's Jev as the decision model: create a key in the [TypeSafe Console](https://console.typesafe.ai/keys), add it with `/model add` → **API Key** → **TypeSafe**, then pick `typesafe@jev-latest` under `/model` → **decision**. It is billed only on input tokens ($42 per billion, output free, per [TypeSafe's model page](https://docs.typesafe.ai/models) on 2026-11-11) and keeps irrelevant skills, memory entries, search results, page boilerplate, and unrelated file and history reads out of each turn; on the author's machine it left 95.8% of skill entries out of the turn context. Setup and measurements: [Quickstart](https://agenvoy.com/quickstart).
+2. **Strongly recommended:** Add TypeSafe's Jev as the decision model: create a key in the [TypeSafe Console](https://console.typesafe.ai/keys), add it with `/model add` → **API Key** → **TypeSafe**, then pick `typesafe@jev-latest` under `/model` → **decision**. It is billed only on input tokens ($42 per billion, output free, per [TypeSafe's model page](https://docs.typesafe.ai/models) on 2026-11-11) and keeps irrelevant skills, memory entries, search results, page boilerplate, and unrelated file and history reads out of each turn; on the author's machine it left 95.8% of skill entries out of the turn context. Setup and measurements: [Quickstart](https://agenvoy.com/quickstart); measured page and file filtering: [fetch_page](doc/decision/fetchPage.md), [read_files](doc/decision/readFiles.md).
 
 ## Who it's for
 
