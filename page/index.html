@@ -63,10 +63,10 @@
       </section>
       <!---->
       <footer>
-        <div id="left-tab-update" name="Update" @click="system_update" hidden>
+        <a id="left-tab-update" name="See update" target="_blank" rel="noreferrer" hidden>
           <span class="material-symbols-outlined"> arrow_circle_up </span>
-          <p>Update</p>
-        </div>
+          <p>See update</p>
+        </a>
         <a href="/?page=monitor&tab=Usage" name="Monitor">
           <span class="material-symbols-outlined"> desktop_windows </span>
           <p>Monitor</p>
@@ -123,12 +123,7 @@
           <div class="input" data-voice="0">
             <span></span>
             <label dir="auto">
-              <textarea
-                id="chat-input"
-                placeholder="How can I help you today?"
-                @input="chat_input"
-                @keydown="chat_keydown"
-              ></textarea>
+              <textarea id="chat-input" placeholder="How can I help you today?" @input="chat_input" @keydown="chat_keydown"></textarea>
               <pre></pre>
             </label>
             <section>
@@ -200,12 +195,7 @@
           <div class="input" data-voice="0">
             <span></span>
             <label dir="auto">
-              <textarea
-                id="chat-input"
-                placeholder="How can I help you today?"
-                @input="chat_input"
-                @keydown="chat_keydown"
-              ></textarea>
+              <textarea id="chat-input" placeholder="How can I help you today?" @input="chat_input" @keydown="chat_keydown"></textarea>
               <pre></pre>
             </label>
             <section>
@@ -332,12 +322,7 @@
           <form id="schedule-form">
             <label for="schedule-name">
               <span>Name</span>
-              <input
-                id="schedule-name"
-                type="text"
-                maxlength="64"
-                placeholder="Skill folder name · A-Z a-z 0-9 _ - only, e.g. daily-hn-digest"
-              />
+              <input id="schedule-name" type="text" maxlength="64" placeholder="Skill folder name · A-Z a-z 0-9 _ - only, e.g. daily-hn-digest" />
             </label>
             <nav class="tab" id="schedule-files"></nav>
             <textarea id="schedule-content" rows="16" placeholder="SKILL.md · frontmatter + body"></textarea>
@@ -436,12 +421,12 @@
             <section class="tools" id="model-priority" data-open="1">
               <strong class="group">Fallback Priority</strong>
               <div class="note">
-                <p>Fallback under auto only — this order does not change which agent gets selected; after it fails, every other entry is tried top to bottom, <code>pass</code> included.</p>
-                <p>A hand-off walks downward and never back up, so the last entry is your final line of defense.</p>
                 <p>
-                  Cache never carries across providers, but keep copies of the same model adjacent anyway: capability
-                  then steps down instead of jumping.
+                  Fallback under auto only — this order does not change which agent gets selected; after it fails, every other entry is tried top to bottom,
+                  <code>pass</code> included.
                 </p>
+                <p>A hand-off walks downward and never back up, so the last entry is your final line of defense.</p>
+                <p>Cache never carries across providers, but keep copies of the same model adjacent anyway: capability then steps down instead of jumping.</p>
               </div>
               <section></section>
             </section>
@@ -497,11 +482,7 @@
               </label>
               <label for="mcp-headers">
                 <span>Headers</span>
-                <textarea
-                  id="mcp-headers"
-                  rows="3"
-                  placeholder="Headers · Key: value per line · a bare Authorization value gets a Bearer prefix"
-                ></textarea>
+                <textarea id="mcp-headers" rows="3" placeholder="Headers · Key: value per line · a bare Authorization value gets a Bearer prefix"></textarea>
               </label>
             </div>
             <section class="oauth" id="mcp-oauth"></section>
@@ -533,22 +514,11 @@
           <form id="keychain-form" autocomplete="off">
             <label for="keychain-name">
               <span>Name</span>
-              <input
-                id="keychain-name"
-                type="text"
-                maxlength="128"
-                autocomplete="off"
-                placeholder="Key name, e.g. GEMINI_API_KEY"
-              />
+              <input id="keychain-name" type="text" maxlength="128" autocomplete="off" placeholder="Key name, e.g. GEMINI_API_KEY" />
             </label>
             <label for="keychain-value">
               <span>Value</span>
-              <input
-                id="keychain-value"
-                type="password"
-                autocomplete="new-password"
-                placeholder="Value · stored in the OS keychain, never shown again"
-              />
+              <input id="keychain-value" type="password" autocomplete="new-password" placeholder="Value · stored in the OS keychain, never shown again" />
             </label>
             <footer>
               <button type="button" class="remove" @click="keychain_delete">delete</button>
