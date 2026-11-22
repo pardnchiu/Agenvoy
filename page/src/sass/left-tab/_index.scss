@@ -232,6 +232,8 @@
             }
 
             div.actions {
+              width: auto;
+              margin-left: 0;
               opacity: 1;
               pointer-events: auto;
             }
@@ -318,6 +320,20 @@
             &.dc {
               background-color: var(--warn);
             }
+
+            &.pin {
+              background-color: var(--error);
+            }
+          }
+        }
+
+        &[data-pin="1"] {
+          @media (min-width: 1280px) {
+            cursor: default;
+
+            > a {
+              pointer-events: none;
+            }
           }
         }
       }
@@ -326,8 +342,12 @@
         z-index: 1;
         display: flex;
         flex-flow: row;
+        flex-shrink: 0;
         align-items: center;
         gap: 0.25rem;
+        width: 0;
+        margin-left: -0.75rem;
+        overflow: hidden;
         opacity: 0;
         pointer-events: none;
         transition: 0.15s var(--ease);
@@ -364,6 +384,8 @@
         }
 
         @media (hover: none) {
+          width: auto;
+          margin-left: 0;
           opacity: 1;
           pointer-events: auto;
         }
