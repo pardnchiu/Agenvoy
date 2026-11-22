@@ -420,16 +420,23 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)
 		unsandboxed := command.RestrictedRunCommand(toolName, toolArg)
 		restrictedList := append(outsideHome(restrictedPaths), unsandboxed...)
+		trust, _ := ctx.Value(TrustCtxKey{}).(bool)
+		if trust {
+			unsandboxed = slices.DeleteFunc(slices.Clone(unsandboxed), func(one string) bool {
+				return !strings.HasPrefix(one, "sudo: ")
+			})
+			restrictedList = unsandboxed
+		}
 		scoped := allowAll && !agenttypes.SubagentFrom(ctx)
 		autoAllow := allowAll && (!scoped || filesystem.WorkDirAllowsAll(exec.WorkDir))
-		allowTurn := *turnAllowAll || autoAllow
+		allowTurn := trust || *turnAllowAll || autoAllow
 		allowRead := allowTurn && (toolName == "read_files" || toolName == "find_files")
 		restricted := len(restrictedList) > 0 || len(restrictedPaths) > 0 && !allowTurn && !allowRead
 
-		needsConfirm := !allowRead && toolNeedsConfirmation(exec, toolName, toolArg, allowTurn)
+		needsConfirm := !trust && !allowRead && toolNeedsConfirmation(exec, toolName, toolArg, allowTurn)
 		var outsidePaths []string
 		risky := false
-		if !restricted && allowTurn {
+		if !restricted && allowTurn && !trust {
 			if !allowRead && !agenttypes.SubagentFrom(ctx) && toolNeedsConfirmation(exec, toolName, toolArg, false) {
 				outsidePaths = boundary.OutsideWorkDir(exec.SessionID, exec.WorkDir, toolName, toolArg)
 			}
@@ -442,6 +449,9 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			if !risky {
 				outsidePaths = nil
 			}
+		}
+		if !risky && !restricted && !needsConfirm && len(restrictedPaths) > 0 {
+			boundary.Grant(exec.SessionID, restrictedPaths...)
 		}
 		if risky || restricted || needsConfirm {
 			proceed := true

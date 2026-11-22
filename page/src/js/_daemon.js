@@ -1,4 +1,4 @@
-const DAEMON_MAX_LINES = 2000;
+const DAEMON_PAGE_LINES = 100;
 const DAEMON_LEVELS = ["info", "debug", "warn", "error"];
 const DAEMON_SLOG = /\blevel=([A-Z]+)/;
 const DAEMON_STDLOG = /^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2} ([A-Z]+)\b/;
@@ -46,6 +46,90 @@ function daemonScope() {
   }
   const text = query.toString();
   return text ? `?${text}` : "";
+}
+
+let daemonStart = 0;
+
+function daemonQuery(before) {
+  const params = praseURL();
+  const query = new URLSearchParams(daemonScope());
+  if (DAEMON_LEVELS.includes(params.target)) {
+    query.set("level", params.target);
+  }
+  query.set("limit", DAEMON_PAGE_LINES);
+  if (before !== undefined) {
+    query.set("before", before);
+  }
+  return `?${query.toString()}`;
+}
+
+async function fetchDaemonPage(before) {
+  try {
+    const response = await fetch(`${API}/v1/daemon${daemonQuery(before)}`);
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (err) {
+    console.error("fetchDaemonPage", err);
+  }
+  return null;
+}
+
+function daemonLines(content) {
+  const frame = _("temp");
+  content = (content || "").replace(/\n+$/, "");
+  if (content) {
+    for (const line of content.split("\n")) {
+      frame.appendChild(daemonLine(line));
+    }
+  }
+  return frame;
+}
+
+function renderDaemonMore(dom, more) {
+  let button = dom.querySelector(":scope > button.more");
+  if (!more) {
+    if (button) {
+      button.remove();
+    }
+    return;
+  }
+  if (!button) {
+    button = _("button.more", { type: "button" }, "load more");
+    button.addEventListener("click", loadMoreDaemon);
+    dom.prepend(button);
+  }
+}
+
+async function loadMoreDaemon() {
+  const dom = daemonDom();
+  if (!dom || daemonStart <= 0) {
+    return;
+  }
+  const button = dom.querySelector(":scope > button.more");
+  if (button) {
+    button.disabled = true;
+  }
+
+  const page = await fetchDaemonPage(daemonStart);
+  if (button) {
+    button.disabled = false;
+  }
+  if (!page) {
+    return;
+  }
+
+  const height = dom.scrollHeight;
+  const top = dom.scrollTop;
+  const frame = daemonLines(page.content);
+  if (button) {
+    button.after(frame);
+  } else {
+    dom.prepend(frame);
+  }
+  daemonStart = page.start || 0;
+  renderDaemonMore(dom, page.more);
+  dom.scrollTop = top + dom.scrollHeight - height;
 }
 
 function daemonSubmit() {
@@ -122,12 +206,6 @@ function daemonLine(text) {
   return line;
 }
 
-function trimDaemonLog(dom) {
-  while (dom.childElementCount > DAEMON_MAX_LINES) {
-    dom.firstElementChild.remove();
-  }
-}
-
 async function renderDaemonPage() {
   const dom = daemonDom();
   if (!dom) {
@@ -149,24 +227,14 @@ async function renderDaemonPage() {
     keyword.value = params.keyword;
   }
 
-  let content = "";
-  try {
-    const response = await fetch(`${API}/v1/daemon${daemonScope()}`);
-    if (response.ok) {
-      content = (await response.json()).content || "";
-    }
-  } catch (err) {
-    console.error("renderDaemonPage", err);
-  }
+  const page = await fetchDaemonPage();
 
   dom.innerHTML = "";
-  content = content.replace(/\n+$/, "");
-  if (content) {
-    for (const line of content.split("\n")) {
-      dom.appendChild(daemonLine(line));
-    }
+  daemonStart = page ? page.start || 0 : 0;
+  if (page) {
+    dom.appendChild(daemonLines(page.content));
   }
-  trimDaemonLog(dom);
+  renderDaemonMore(dom, page ? page.more : false);
   dom.scrollTop = dom.scrollHeight;
 }
 
@@ -182,7 +250,6 @@ function appendDaemonLog(level, text, time) {
   const stick = dom.scrollHeight - dom.scrollTop - dom.clientHeight < AUTO_SCROLL_SLACK;
   const stamp = time || new Date().toISOString();
   dom.appendChild(daemonLine(`time=${stamp} level=${(level || "INFO").toUpperCase()} msg="${text}"`));
-  trimDaemonLog(dom);
   if (stick) {
     dom.scrollTop = dom.scrollHeight;
   }

@@ -78,6 +78,7 @@ const (
 
 type (
 	AllowAllCtxKey   struct{}
+	TrustCtxKey      struct{}
 	ParentEventsKey  struct{}
 	ParentWorkDirKey struct{}
 )
@@ -86,10 +87,9 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	execCtx := go_llm_router.WithSessionID(agenttypes.WithSessionID(ctx, session.ID), session.ID)
 	execStart := time.Now()
 
-	if !allowAll {
-		if data.Skill != nil && strings.TrimSpace(data.Skill.Content) != "" && agentsexecallowskill.Match(data.WorkDir, data.Skill.Name) {
-			allowAll = true
-		}
+	if data.Skill != nil && strings.TrimSpace(data.Skill.Content) != "" && agentsexecallowskill.Match(data.WorkDir, data.Skill.Name) {
+		allowAll = true
+		execCtx = context.WithValue(execCtx, TrustCtxKey{}, true)
 	}
 
 	execCtx = context.WithValue(execCtx, AllowAllCtxKey{}, allowAll)

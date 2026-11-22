@@ -220,17 +220,32 @@ TUI、Web、Telegram 與 Discord 的回覆 footer 以 `model/reasoning` 顯示�
 
 ### 權限模式
 
-TUI 的工作目錄是 `$HOME` 底下、且不是 denied 或敏感路徑的子目錄時，啟動即為 `⏵⏵ auto`，其餘情況（`$HOME` 本身、`$HOME` 以外）為 `⏸ safe`；`Shift+Tab` 可切換，auto 只在工作目錄符合條件時生效。
+三種信任層級決定哪些呼叫不必詢問就執行。不論哪一層，`denied_path` 的路徑與 `denied_command` 的指令一律直接拒絕，任何核准都解不開。
 
-| 呼叫 | `⏸ safe` | `⏵⏵ auto` |
+| 層級 | 何時套用 | 行為 |
 | --- | --- | --- |
-| 唯讀工具、白名單內的唯讀指令 | 執行 | 執行 |
-| 目標都在工作目錄內的寫入與指令，含 `rm`（移到垃圾桶） | 確認 | 執行 |
-| 其他工具（`http_request` 寫入、MCP 工具、script 工具、下載、生成） | 確認 | 執行 |
-| 寫入、指令或 `rm` 的目標在 `$HOME` 內、工作目錄外 | 確認 | 確認，核准後該路徑在此 session 授權 |
-| `$HOME` 內的敏感路徑 | 確認 | 確認 |
-| `$HOME` 以外的路徑、`sudo`、`sandbox: false` | 密碼 | 密碼 |
-| 不可逆指令 | 確認 | 確認，有符合的 allow rule 也照樣確認 |
+| `⏸ safe` | 工作目錄是 `$HOME` 本身、在 `$HOME` 以外或為敏感路徑 | 寫入、指令、非唯讀工具與敏感路徑的讀取都先詢問 |
+| `⏵⏵ auto`／Yes, allow this turn | 工作目錄是 `$HOME` 底下的非敏感子目錄；或在確認框選 **Yes, allow this turn** | 專案內直接執行；超出專案的呼叫由安全規則擋下並詢問，有設定 decision model 時由它減少規則誤擋 |
+| Trusted skill（原 allow skill） | 以標為 `trust` 的 skill 執行 | 所有讀寫與 `sandbox: false` 都放行，只有 `sudo` 仍會詢問 |
+
+**safe／auto 切換**：TUI 啟動時依工作目錄決定預設模式（`filesystem.WorkDirAllowsAll`），之後隨時可用 `Shift+Tab` 切換；auto 只在工作目錄符合條件時生效。**Yes, allow this turn** 讓該任務剩下的部分套用 auto 的規則，不受工作目錄限制，並寫進 pending 供接續時沿用。
+
+**Trusted skill**：在 `/skill` → `permission`（TUI）或 **Skills** → **Trust**（Web）調整，清單存於 `~/.config/agenvoy/trust_skill`（全域）與 `<workDir>/.agenvoy/trust_skill`（專案）；舊版的 `allow_skill` 檔在第一次讀取時改名為 `trust_skill`。請求以該 skill 執行時套用：`/<skill>`、`/v1/send` 的 `skill` 欄位、排程 skill；回合中以 `run_skill` 載入的 skill 不套用，其中啟動的 subagent 會繼承。**只對內容已逐一確認過的 skill 開啟**：它的指令會在不詢問的情況下寫入任意路徑、執行不可逆指令。
+
+| 呼叫 | `⏸ safe` | `⏵⏵ auto`／本輪放行 | Trusted skill |
+| --- | --- | --- | --- |
+| 唯讀工具、白名單內的唯讀指令 | 執行 | 執行 | 執行 |
+| 目標都在工作目錄內的寫入與指令，含 `rm`（移到垃圾桶） | 確認 | 執行 | 執行 |
+| 其他工具（`http_request` 寫入、MCP 工具、script 工具、下載、生成）、`network: true` | 確認 | 執行 | 執行 |
+| `read_files`／`find_files` 讀 `$HOME` 內的敏感路徑 | 確認 | 執行並授權該路徑 | 執行並授權該路徑 |
+| 寫入、指令或 `rm` 的目標在 `$HOME` 內、工作目錄外 | 確認 | 確認（decision model 可放行） | 執行並授權該路徑 |
+| 寫入或指令碰到 `$HOME` 內的敏感路徑 | 確認 | 確認（decision model 可放行） | 執行並授權該路徑 |
+| 不可逆指令 | 確認 | 確認（decision model 可放行）；allow rule 不能略過 | 執行 |
+| `$HOME` 以外的路徑（可讀系統清單除外） | 密碼 | 密碼 | 執行並授權該路徑 |
+| `sandbox: false` | 密碼 | 密碼 | 執行 |
+| `sudo` | 密碼 | 密碼 | 密碼 |
+
+auto 欄的「確認」來自寫死的安全規則（工作目錄外的目標、敏感路徑、不可逆指令），規則寧可多擋。有設定 [decision model](#decision-model) 時，會先把請求、目標與各目標是否已存在交給它判斷：有把握判為低影響就直接執行，並在此 session 授權相關路徑，減少規則誤擋；沒把握、判為危險或呼叫失敗時照常跳出確認。未設定 decision model 時一律確認。已授權的路徑在 daemon 存續期間對該 session 有效。
 
 不可逆指令對齊 Claude Code auto mode 預設擋的類別：`git reset --hard`、`git clean`、force push 與刪除遠端分支、下載後接直譯器執行、同時連網與讀取密鑰的腳本、上傳敏感檔案、`terraform`／`tofu`／`pulumi`／`cdk`／`kubectl`／`helm` 的套用與刪除、雲端 CLI 的刪除／部署／IAM 變更、部署 CLI（`firebase`、`vercel`、`netlify`、`wrangler`、`fly`、`serverless`）、資料庫 migration、破壞性 SQL、`gh pr merge` 與寫入型 `gh api`。目標取自 `write_file` 的 path 與 `run_command` 的 argv（絕對路徑、`~`、`..`、`write_paths`、`rm` 的目標），腳本內部的行為看不到。Subagent 以全部放行執行，不受工作目錄限制。
 
@@ -303,7 +318,7 @@ agen
 | `/mcp`                     | 列出 MCP server（`d` 移除）並 `add` 新增；單一 server 可登入、設定 OAuth client、以 `tools` 多選設定免確認工具（第一列為 `all`）、重連                                                                                                                                                              |
 | `/session` `/new`          | 以 self id 切換 session（`d` 刪除）或建立新的；清單橫跨兩種以上前綴時依 `all`／`cli-`／`tg-`／`dc-`／`chat-`／`temp-` 分頁；`/session` 清單下方可編輯當前 session 的 `name`／`self id`／`role`（`/session name\|id\|role` 直接開啟） |
 | `/compact` `/reset`        | 同一個彈窗含三個分頁：`summary` 唯讀檢視目前滾動摘要；`compact` 以 LLM 分析移除冗餘對話；`reset` 重設 session（需二次確認）：`summary` 先重建摘要並保留，`all` 連摘要一併清除。`/compact` 開在 compact 分頁、`/reset` 開在 reset 分頁 |
-| `/skill`                   | 三個 tab。`permission`：Enter 切換目前這個 skill 的 `always allow`／`ask`，`always allow` 為全域一律允許（略過權限確認），`o` 開啟該 skill 所在資料夾；`system`：多選官方 skill，勾選將 `github.com/agenvoy/skill-<name>` clone 至 `~/.config/agenvoy/skills/.system_design/<name>`，取消勾選則刪除；`source`：多選要讀取的外部 skill 來源（`claude`、`codex`、`copilot`、`opencode`、`agents`，即 `~/.<source>/skills`），取消勾選則略過 |
+| `/skill`                   | 三個 tab。`permission`：Enter 切換目前這個 skill 的 `trust`／`ask`（見[信任層級](#權限模式)），`o` 開啟該 skill 所在資料夾；`system`：多選官方 skill，勾選將 `github.com/agenvoy/skill-<name>` clone 至 `~/.config/agenvoy/skills/.system_design/<name>`，取消勾選則刪除；`source`：多選要讀取的外部 skill 來源（`claude`、`codex`、`copilot`、`opencode`、`agents`，即 `~/.<source>/skills`），取消勾選則略過 |
 | `/role`                    | 列出、新增或編輯 role（標題＋描述）                                                                                                                                                                                                                                                                 |
 | `/channel`                 | 兩個分頁 `telegram`／`discord`：啟用（token 先驗證再存入）或停用該頻道，`d` 撤銷已授權對話                                                                                                                                                                                                          |
 | `/config`                  | 可搜尋的設定清單，`enter` 修改游標所在項目：登入時自動啟動 daemon（macOS 走 launchd agent，Linux 走 systemd user unit）、回覆語言（`auto` 跟隨每則訊息）、輸出資料夾（產生的檔案存放位置；留空為 `~/Downloads`）、channel admin（接收新對話驗證碼的已授權對話；留空則只寫 log）與 official guide（是否注入官方模型指引） |

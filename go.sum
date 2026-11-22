@@ -136,8 +136,8 @@ github.com/pardnchiu/go-pkg v0.14.0 h1:M9J9EOBUBUGPSm0Zo70h2Pth6PPkSbna5AyKYn5bK
 github.com/pardnchiu/go-pkg v0.14.0/go.mod h1:DUCX9mbGQ2YCULGvoMOgagVJBMjSyiTzuwt29fw1qfQ=
 github.com/pardnchiu/go-scheduler v1.2.0 h1:DBmFWOPjGUzQEKYHZNeLS9v9PmJrKk/VwxQeVO754Ns=
 github.com/pardnchiu/go-scheduler v1.2.0/go.mod h1:JtHqK0I/ha8E9Eo86rVaw+cvLgREcL5LfT8p9DmY3Lg=
-github.com/pardnchiu/go-sqlkit v0.1.1 h1:9wirImB1gvwONKJwgkXU8JuZSe5UyzhctMuht0PW5Pk=
-github.com/pardnchiu/go-sqlkit v0.1.1/go.mod h1:wzFocv7SFi8NYjWVi5zo34ot3ECcsrJ0pmWubalyIhY=
+github.com/pardnchiu/go-sqlkit v0.1.2 h1:RvvkzwBip8rQ+NKuOrH1LOe7O8SwvC+FKnqQCUG4hVU=
+github.com/pardnchiu/go-sqlkit v0.1.2/go.mod h1:wzFocv7SFi8NYjWVi5zo34ot3ECcsrJ0pmWubalyIhY=
 github.com/pardnchiu/toriidb v0.7.0 h1:ZJKgxnjr9xxeB8Aov6I5I7AQL8StbrABiqgnRRa0FGU=
 github.com/pardnchiu/toriidb v0.7.0/go.mod h1:7PhjiK8cParJPHM79kPr0af06Pwi0LHoqil0lnf8nFY=
 github.com/pelletier/go-toml/v2 v2.4.3 h1:GTRvJQutkOSftxIFD5xw9aepkYNuPWmVJpffdDPYVpY=
