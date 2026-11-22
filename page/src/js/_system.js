@@ -158,6 +158,10 @@ async function checkUpdate() {
   if (button) {
     button.hidden = !available;
   }
+  const card = $("#system-update-card");
+  if (card) {
+    card.hidden = !available;
+  }
 }
 
 function watchUpdate() {
@@ -177,6 +181,10 @@ async function renderSystemVersion() {
   }
 
   const detail = await systemUpdateInfo();
+  const card = $("#system-update-card");
+  if (card) {
+    card.hidden = !hasNewVersion(detail);
+  }
   if (!detail.ok) {
     label.textContent = `${detail.version || "unknown"} (latest unavailable)`;
     button.hidden = true;

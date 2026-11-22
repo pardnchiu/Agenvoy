@@ -52,14 +52,6 @@
           </div>
           <section id="left-tab-chat-list"></section>
         </div>
-        <!---->
-        <details class="group" :if="LENGTH(pin) > 0" open data-hide="1">
-          <summary>
-            <p>Pinned</p>
-            <span class="material-symbols-outlined"> keyboard_arrow_down </span>
-          </summary>
-          <section id="left-tab-pin-list"></section>
-        </details>
       </section>
       <!---->
       <footer>
@@ -591,7 +583,7 @@
               </div>
             </div>
             <strong class="group">Other</strong>
-            <div class="card">
+            <div class="card" id="system-update-card" hidden>
               <div class="label">
                 <strong id="system-update-title">Update</strong>
                 <p>opens a terminal to install the latest release</p>

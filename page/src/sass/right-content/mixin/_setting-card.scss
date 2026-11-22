@@ -14,6 +14,10 @@
   border-radius: 0.75rem;
   box-shadow: var(--shadow-sm);
 
+  &[hidden] {
+    display: none;
+  }
+
   > div.label {
     display: flex;
     flex-flow: column;

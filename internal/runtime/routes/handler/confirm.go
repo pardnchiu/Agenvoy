@@ -89,7 +89,7 @@ func StartWebConfirm(ctx context.Context) {
 
 func emitWebConfirms() {
 	accept := func(r runtime.Request) bool {
-		return r.Kind == runtime.KindToolConfirm || r.Kind == runtime.KindAskUser && r.AskUser != nil && len(r.AskUser.Questions) > 0
+		return r.Kind == runtime.KindToolConfirm || r.Kind == runtime.KindAskUser && !r.Async && r.AskUser != nil && len(r.AskUser.Questions) > 0
 	}
 
 	for {
