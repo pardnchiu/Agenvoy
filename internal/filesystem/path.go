@@ -47,7 +47,8 @@ var (
 	DownloadDir             string
 	DownloadTrashDir        string
 	SessionsTrashDir        string
-	AllowSkillGlobalPath    string
+	TrustSkillGlobalPath    string
+	LegacyAllowSkillPath    string
 	AllowToolGlobalPath     string
 	PromptsDir              string
 	VendorDir               string
@@ -105,7 +106,8 @@ func Init() error {
 		DownloadDir = filepath.Join(AgenvoyDir, "download")
 		DownloadTrashDir = filepath.Join(DownloadDir, ".Trash")
 		SessionsTrashDir = filepath.Join(SessionsDir, ".Trash")
-		AllowSkillGlobalPath = filepath.Join(AgenvoyDir, "allow_skill")
+		TrustSkillGlobalPath = filepath.Join(AgenvoyDir, "trust_skill")
+		LegacyAllowSkillPath = filepath.Join(AgenvoyDir, "allow_skill")
 		AllowToolGlobalPath = filepath.Join(AgenvoyDir, "allow_tool")
 		PromptsDir = filepath.Join(AgenvoyDir, "prompts")
 		VendorDir = filepath.Join(AgenvoyDir, "vendor")
@@ -176,7 +178,11 @@ func PendingMetaPath(sessionID, taskHash string) string {
 	return filepath.Join(PendingDir(sessionID), taskHash+".json")
 }
 
-func AllowSkillProjectPath(workDir string) string {
+func TrustSkillProjectPath(workDir string) string {
+	return filepath.Join(workDir, "."+projectName, "trust_skill")
+}
+
+func LegacyAllowSkillProjectPath(workDir string) string {
 	return filepath.Join(workDir, "."+projectName, "allow_skill")
 }
 

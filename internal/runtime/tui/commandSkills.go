@@ -82,7 +82,7 @@ func (t TUI) commandSkills() (TUI, tea.Cmd, bool) {
 		},
 		onEnter: func(p *Popup, chosen string) tea.Cmd {
 			if _, err := agentsexecallowskill.Toggle(chosen); err != nil {
-				p.subtitle = errorStyle.Render(fmt.Sprintf("allow %s: %v", chosen, err))
+				p.subtitle = errorStyle.Render(fmt.Sprintf("trust %s: %v", chosen, err))
 				return nil
 			}
 			fillAllowSkills(p)
@@ -150,10 +150,10 @@ func fillAllowSkills(p *Popup) {
 		}
 		settings[i] = hintStyle.Render("ask")
 		if allowed[name] {
-			settings[i] = okayStyle.Render("always allow")
+			settings[i] = okayStyle.Render("trust")
 		}
 	}
-	p.subtitle = "always allowed skills skip the permission prompt  " + filesystem.AllowSkillGlobalPath
+	p.subtitle = "trusted skills pass every read and write without asking; only sudo still asks  " + filesystem.TrustSkillGlobalPath
 	p.options = optionColumn(labels, settings)
 	p.values = names
 	p.cursor = min(p.cursor, max(len(p.options)-1, 0))

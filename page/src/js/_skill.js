@@ -123,7 +123,7 @@ async function renderSkillTab() {
   const picked = praseURL().target || "";
 
   for (const name of skills) {
-    const mark = allowed[name] ? "always allow" : "ask each time";
+    const mark = allowed[name] ? "trust" : "ask each time";
     const card = _("div.card", [_("strong", name), _("p", `${source[name] || "unknown"} · ${mark}`)]);
     card.dataset.name = name;
     card.dataset.selected = name === picked ? "1" : "0";
@@ -288,7 +288,7 @@ async function renderSkillAllowList() {
 
   dom.allowList.innerHTML = "";
   dom.allowList.dataset.open = "1";
-  dom.allowList.appendChild(_("strong", "Always allow · pick the skills that skip the confirmation prompt"));
+  dom.allowList.appendChild(_("strong", "Trust · picked skills pass every read and write without asking; only sudo still asks"));
 
   for (const name of skills) {
     const box = _("input", { type: "checkbox" });
