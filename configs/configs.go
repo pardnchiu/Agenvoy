@@ -38,6 +38,7 @@ const (
 	MAX_DECISION_STATE_RUNES      = 20_000
 	DECISION_MIN_CONFIDENCE       = 0.7
 	MAX_DECISION_QUESTIONS        = 120
+	MAX_DECISION_PARALLEL         = 8
 
 	// * Retry
 	MAX_RETRY_TIMES             = 3
@@ -100,7 +101,7 @@ var (
 	WATCH_REPORT_MAX_BYTES    = 8 << 10
 
 	// * Tools
-	SYSTEM_DEFAULT_TOOLS = []string{"find_tools", "run_tool", "reasoning_guide", "write_todo", "chat_history", "ask_user", "write_result"}
+	PRELOAD_TOOLS = []string{"find_tools", "run_tool", "reasoning_guide", "write_todo", "chat_history", "ask_user", "write_result"}
 
 	// * Pattern
 	RETRY_INTERVALS = []time.Duration{
@@ -149,6 +150,9 @@ var ConfirmExplainPrompt string
 
 //go:embed prompts/system_prompt/voice.md
 var VoicePrompt string
+
+//go:embed prompts/system_prompt/transcript.md
+var TranscriptPrompt string
 
 //go:embed prompts/system_prompt/inject/assign_skill.md
 var AssignSkill string
@@ -216,6 +220,9 @@ var InjectScheduleRun string
 
 //go:embed prompts/system_prompt/inject/shell_run.md
 var InjectShellRun string
+
+//go:embed prompts/system_prompt/inject/turn_context/current_time.md
+var InjectCurrentTime string
 
 //go:embed prompts/system_prompt/inject/turn_context/work_dir.md
 var InjectWorkDir string
@@ -295,6 +302,20 @@ var RefusalMessages []byte
 
 //go:embed jsons/secret_patterns.json
 var SecretPatterns []byte
+
+// * Confirm
+
+//go:embed confirm/fetch_challenge.json
+var ConfirmFetchChallenge []byte
+
+//go:embed confirm/tool_confirm.json
+var ConfirmTool []byte
+
+//go:embed confirm/ask_user.json
+var ConfirmAskUser []byte
+
+//go:embed confirm/chatbot_notice.json
+var ConfirmChatbotNotice []byte
 
 // * Official Guide
 

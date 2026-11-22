@@ -1,12 +1,12 @@
 # Agenvoy - 技術文件
 
-最後更新：2026-10-16
+最後更新：2026-11-19
 
 > 返回 [README](./README.zh.md)
 
 ## 前置需求
 
-- Go 1.25.1 或更新版本
+- Go 1.26.10 或更新版本
 - macOS 或 Linux；Windows 請先安裝 WSL Linux 發行版，並在 WSL 終端機內執行 Agenvoy
 - 至少一組模型供應商憑證；Telegram 與 Discord 需要各自的 bot token。語音轉文字、文字轉語音與圖片生成各需選定對應模型／provider 及其憑證
 
@@ -127,11 +127,11 @@ Agenvoy 目前支援 Telegram 與 Discord。兩者都由本機 daemon 主動向�
 
 | 常數                       | 預設值 | 說明                                                      |
 | -------------------------- | -----: | --------------------------------------------------------- |
-| `MAX_SESSION_TASKS`        |    `3` | 每個 session 的並行工作數上限；超出的任務排隊等待而非失敗 |
-| `MAX_CONCURRENT_SUBAGENTS` |    `3` | 同時執行的 subagent leg 數，其餘排隊                      |
+| `MAX_SESSION_TASKS`        | CPU 核心數的一半，至少 `3` | 每個 session 的並行工作數上限；超出的任務排隊等待而非失敗 |
+| `MAX_CONCURRENT_SUBAGENTS` | CPU 核心數的一半，至少 `3` | 同時執行的 subagent leg 數（同時受 `MAX_CONCURRENT_TOOLS` 限制），其餘排隊 |
 | `MAX_SUBAGENT_TIMEOUT_MIN` |   `30` | Subagent 逾時分鐘數                                       |
 | `MAX_RESUME_WAIT_MIN`      |   `60` | Pending resume 等待回答的分鐘數                           |
-| `MAX_CONCURRENT_TOOLS`     |    `5` | 單一模型回合內同時執行的 tool call 數，其餘排隊           |
+| `MAX_CONCURRENT_TOOLS`     | CPU 核心數的一半，至少 `3` | 單一模型回合內同時執行的 tool call 數，其餘排隊           |
 
 ```json
 {
@@ -172,9 +172,9 @@ compat 通道只送 request body 與 `Authorization: Bearer <key>`，不夾帶�
 
 在 TUI 的 `/model` 對模型列按 `t`，或在 **Config › Model › Fallback Priority** 每張卡片的 tier 按鈕設定。tier 每次請求都重新讀取，改完不需重啟。
 
-session 固定了模型就不排序也不 fallback；但 session reasoning 為 `auto` 時仍會呼叫 selector 取得 reasoning 等級。否則 dispatcher 會收到每個已註冊模型解析後的 tier；沒設 tier 的模型依名稱判斷（`claude-opus` 為 S、`claude-sonnet` 為 A、`claude-haiku` 為 B、`*-mini` 與 `gemma*`／`qwen*` 等開源模型為 C 等）。排序依工作類型決定：寫程式或明確要求深度、精確 → S 優先；從多個來源蒐集再綜整的研究 → S 優先；審閱、規劃、撰寫與其餘工作 → A 優先；打招呼、短答、閒聊、翻譯 → B 優先；用工具取資料並原樣回傳 → C 優先。LLM dispatcher、decision model 與 subagent planner 共用同一張工作類型表與同一套名稱規則，排序結果一致。同一 tier 內，訂閱制 provider `claude-code`、其次 `codex` 的模型排在其他 provider 之前。同一個模型註冊在多個 provider 時，順序為 `claude-code`、`codex`／`grok-oauth`、`copilot`、直接 API、`openrouter`（比對時 `openrouter` 的模型名去掉 vendor 前綴）；點名或延續的模型維持在最前面，只重排其後的候選。`copilot` 轉售的 context window 較小，長輸入或 `research` 類工作會優先選其他 provider。`pass` 同時由 prompt 與 fallback 規範：dispatcher 被要求一律不回傳 `pass` 模型，selector 回傳的 `pass` 名稱也會被剔除；fallback 依優先順序嘗試其他已註冊模型（排除 `pass`），跳過失敗模型的 provider，並逐一以健康檢查（10 秒）確認可用；整輪皆失敗時最多重試 4 輪才失敗。串流沒有回應時，watchdog 也會切換到下一個模型。context 上限取自 `llm-io.agenvoy.com`，快取 1 小時；`copilot@` 模型會非同步向 GitHub Copilot models API 暖機專用模型限制快取，最多每 24 小時刷新一次；若 chat 模型有回報 `max_context_window_tokens`，就採用該值。未知 Copilot 模型與其他未列模型使用一般 128K 輸入上限。TUI 顯示目前 context token 相對於解析出的輸入上限；歷史達上限 80% 時開始 compact。
+session 固定了模型就不排序也不 fallback；但 session reasoning 為 `auto` 時仍會呼叫 selector 取得 reasoning 等級。否則 dispatcher 會收到每個已註冊模型解析後的 tier；沒設 tier 的模型依名稱判斷（`claude-opus` 為 S、`claude-sonnet` 為 A、`claude-haiku` 為 B、`*-mini` 與 `gemma*`／`qwen*` 等開源模型為 C 等）。排序依工作類型決定：寫程式或明確要求深度、精確 → S 優先；從多個來源蒐集再綜整的研究 → S 優先；審閱、規劃、撰寫與其餘工作 → A 優先；打招呼、短答、閒聊、翻譯 → B 優先；用工具取資料並原樣回傳 → C 優先。LLM dispatcher、decision model 與 subagent planner 共用同一張工作類型表與同一套名稱規則，排序結果一致。同一 tier 內，訂閱制 provider `claude-code`、其次 `codex` 的模型排在其他 provider 之前。同一個模型註冊在多個 provider 時，順序為 `claude-code`、`codex`／`grok-oauth`、`copilot`、直接 API、`openrouter`（比對時 `openrouter` 的模型名去掉 vendor 前綴）；點名或延續的模型維持在最前面，只重排其後的候選。`copilot` 轉售的 context window 較小，長輸入或 `research` 類工作會優先選其他 provider。`pass` 同時由 prompt 與 fallback 規範：dispatcher 被要求一律不回傳 `pass` 模型，selector 回傳的 `pass` 名稱也會被剔除；fallback 依優先順序嘗試其他已註冊模型（排除 `pass`），跳過失敗模型的 provider，並逐一以健康檢查（10 秒）確認可用；整輪皆失敗時最多重試 4 輪才失敗。串流沒有回應時，由 go-llm-router 的串流 idle 逾時結束該次請求；同一模型重試最多 3 次後才切換到下一個模型。context 上限取自 `llm-io.agenvoy.com`，快取 1 小時；`copilot@` 模型會非同步向 GitHub Copilot models API 暖機專用模型限制快取，最多每 24 小時刷新一次；若 chat 模型有回報 `max_context_window_tokens`，就採用該值。未知 Copilot 模型與其他未列模型使用一般 128K 輸入上限。TUI 顯示目前 context token 相對於解析出的輸入上限；歷史達上限 80% 時開始 compact。
 
-主 agent 一旦分派，只負責拆分任務、呼叫 leg 與綜整結果；每條 leg 只做一種工作——collect、analyze、compare、review、transform 或 code。`reasoning_guide` 的 `subagent_dispatch` 主題會把同一套 tier 整體降一階（S→A、A→B、B→C）提供給主 agent 參考：collect → fetch（C>B>A>S）、transform → chat（C>B>A>S）、analyze／compare／review → work（B>A>C>S）、程式碼或高精確工作 → code（A>B>C>S）；這是給主 agent 的選模建議，程式本身不強制。每條 leg 的 `model` 為必填，以即時的 registry 驗證，啟動後新增的模型也能使用，未註冊或 `pass` 模型會被拒絕。明確指定的模型會覆蓋 `self_id` session 自己固定的模型；傳 `auto` 時先沿用該 session 固定的模型，沒有才由 dispatcher 依 leg 的任務選模。`reasoning` 預設 `auto`（沿用 session 設定，仍為 `auto` 時由 selector 決定），不合法的值直接回傳錯誤並列出可用等級。最多同時執行 3 條 leg，報告寫入 `~/.config/agenvoy/download/temp-<report_name>.md`。
+主 agent 一旦分派，只負責拆分任務、呼叫 leg 與綜整結果；每條 leg 只做一種工作——collect、analyze、compare、review、transform 或 code。`reasoning_guide` 的 `subagent_dispatch` 主題會把同一套 tier 整體降一階（S→A、A→B、B→C）提供給主 agent 參考：collect → fetch（C>B>A>S）、transform → chat（C>B>A>S）、analyze／compare／review → work（B>A>C>S）、程式碼或高精確工作 → code（A>B>C>S）；這是給主 agent 的選模建議，程式本身不強制。每條 leg 的 `model` 為必填，以即時的 registry 驗證，啟動後新增的模型也能使用，未註冊或 `pass` 模型會被拒絕。明確指定的模型會覆蓋 `self_id` session 自己固定的模型；傳 `auto` 時先沿用該 session 固定的模型，沒有才由 dispatcher 依 leg 的任務選模。`reasoning` 預設 `auto`（沿用 session 設定，仍為 `auto` 時由 selector 決定），不合法的值直接回傳錯誤並列出可用等級。最多同時執行 `MAX_CONCURRENT_SUBAGENTS` 條 leg，報告寫入 `~/.config/agenvoy/download/temp-<report_name>.md`。
 
 ### Decision model
 
@@ -189,12 +189,14 @@ decision model 以不到一秒的時間回答型別化的問題（從選項中�
 | 分派 | 工作類型、是否明確點名模型、是否延續上一則請求；與 dispatcher 模型同時執行，先取得有效回答者勝出 | 採用 dispatcher 模型的回答 |
 | 監看（`background_command`） | 命中錯誤關鍵字的輸出是否真的是失敗，以及是否只是重複上次的回報；誤判與重複都不回報 | 照常回報該段輸出並註明檢查失敗。未設定 decision model 時，每次命中關鍵字都會回報：等輸出穩定（靜止 2 秒，最多等 10 秒）、每 30 秒最多一次，附最新至多 8 KiB 輸出 |
 | `search_web` | 哪些結果標題與請求相關，其餘剔除 | 保留全部結果 |
-| `fetch_page`（markdown） | 哪些區塊是頁面雜訊，存快取前移除；頁面是否與請求相關，不相關則不交給模型 | 回傳完整頁面 |
-| `read_files` | 4096 字元以上的檔案是否與請求相關，不相關則不交給模型；同一檔案第二次讀取一定回傳。帶 `around` 的讀取不檢查 | 回傳完整檔案 |
-| `chat_history`（`mode=read`） | 4096 字元以上的每個 run 是否與請求相關，不相關則換成附目標的一行說明；同一 task 第二次讀取一定回傳 | 回傳全部 run |
+| `fetch_page`（markdown、json） | Markdown：哪些區塊是頁面雜訊，存快取前移除（帶 `keep_links` 或超過 1 MiB 時不做）。交付時不論新抓或快取一律：20,000 字元（扣掉請求長度）以內的頁面整頁判斷，不相關則不交給模型；更長的頁面逐區塊過濾（保留表格，1 MiB 以內的頁面另保留標題），沒有任何區塊相關時不交給模型。超過 1 MiB 只檢查前 1 MiB，且只保留直接陳述答案的區塊 | 回傳完整頁面；超過 1 MiB 時回傳前 1 MiB（markdown 附 `download_file` 提示） |
+| `read_files` | 16,384 字元以下的檔案整檔判斷，與請求無關時不交給模型；較長的檔案依空行切段逐段判斷，連續的無關段落以行號範圍標記取代，沒有任何相關段落時整檔不交給模型。`full: true` 跳過判斷；`write_file` 拒絕仍含標記的內容 | 回傳完整檔案 |
+| `chat_history`（`mode=read`） | 16,384 字元以上的每個 run 是否與請求相關，不相關則換成附目標的一行說明；同一 task 第二次讀取一定回傳 | 回傳全部 run |
 | Turn context | 現有工具是否涵蓋這個請求，否則提示查閱建工具指南；哪些 skill 相關，其餘不列入清單；session 摘要的哪些條目（`key_decisions`／`past_discussions`／`current_discussion`）與請求相關，其餘不帶入，全部無關時不放摘要 | 不提示；列出全部 skill；帶入完整摘要 |
 | Session 摘要 | 哪些對話是雜訊、哪些 `key_decisions`／`past_discussions` 已過時，合併前一併移除 | 保留全部對話與條目 |
 | Context 超長 | 哪些工具步驟對請求已不需要，在依最舊優先刪減前先移除；最新一步與 `write_todo` 一律保留 | 只做最舊優先刪減 |
+
+`fetch_page` 過濾在加入 decision model 前後的實測效果：[fetch_page：加入 decision 前後比較](./decision/fetchPage.zh.md)。`read_files` 過濾在有無 decision model 下的實測效果：[read_files：有無 decision model 的比較](./decision/readFiles.zh.md)。
 
 只要設定了 `decision_model`，分派就會使用 decision model；它與 dispatcher 模型同時執行，先取得有效回答者勝出。分派時 decision model 會收到請求內容與最近至多四則 user／assistant 訊息，每則截至 2,048 字元。它會把請求歸成一種工作類型，模型排序與 reasoning 等級都依這個結果。另一題判斷請求是否明確指定「使用／用 <模型>」（不含 `pass` 模型），是的話把該模型排第一。session 的前一個模型仍在候選內時，第三題判斷請求是否延續上一則使用者訊息；是的話把該模型排在點名模型之後，且除非點名了其他模型，reasoning 等級沿用前一次的等級（取代本次分類結果）。前一個模型在每次成功回覆後記錄於 ToriiDB db_0 的 `lastModel:<session>`，`openai`／`codex` 保留 30 分鐘、`gemini` 60 分鐘、其他 provider 5 分鐘。
 
@@ -218,19 +220,34 @@ TUI、Web、Telegram 與 Discord 的回覆 footer 以 `model/reasoning` 顯示�
 
 ### 權限模式
 
-TUI 的工作目錄是 `$HOME` 底下、且不是 denied 或敏感路徑的子目錄時，啟動即為 `⏵⏵ auto`，其餘情況（`$HOME` 本身、`$HOME` 以外）為 `⏸ safe`；`Shift+Tab` 可切換，auto 只在工作目錄符合條件時生效。
+三種信任層級決定哪些呼叫不必詢問就執行。不論哪一層，`denied_path` 的路徑與 `denied_command` 的指令一律直接拒絕，任何核准都解不開。
 
-| 呼叫 | `⏸ safe` | `⏵⏵ auto` |
+| 層級 | 何時套用 | 行為 |
 | --- | --- | --- |
-| 唯讀工具、白名單內的唯讀指令 | 執行 | 執行 |
-| 目標都在工作目錄內的寫入與指令，含 `rm`（移到垃圾桶） | 確認 | 執行 |
-| 其他工具（`http_request` 寫入、MCP 工具、script 工具、下載、生成） | 確認 | 執行 |
-| 寫入、指令或 `rm` 的目標在 `$HOME` 內、工作目錄外 | 確認 | 確認，核准後該路徑在此 session 授權 |
-| `$HOME` 內的敏感路徑 | 確認 | 確認 |
-| `$HOME` 以外的路徑、`sudo`、`sandbox: false` | 密碼 | 密碼 |
-| 不可逆指令 | 確認 | 確認，有符合的 allow rule 也照樣確認 |
+| `⏸ safe` | 工作目錄是 `$HOME` 本身、在 `$HOME` 以外或為敏感路徑 | 寫入、指令、非唯讀工具與敏感路徑的讀取都先詢問 |
+| `⏵⏵ auto`／Yes, allow this turn | 工作目錄是 `$HOME` 底下的非敏感子目錄；或在確認框選 **Yes, allow this turn** | 專案內直接執行；超出專案的呼叫由安全規則擋下並詢問，有設定 decision model 時由它減少規則誤擋 |
+| Trusted skill（原 allow skill） | 以標為 `trust` 的 skill 執行 | 所有讀寫與 `sandbox: false` 都放行，只有 `sudo` 仍會詢問 |
 
-不可逆指令對齊 Claude Code auto mode 預設擋的類別：`git reset --hard`、`git clean`、force push 與刪除遠端分支、下載後接直譯器執行、同時連網與讀取密鑰的腳本、上傳敏感檔案、`terraform`／`tofu`／`pulumi`／`cdk`／`kubectl`／`helm` 的套用與刪除、雲端 CLI 的刪除／部署／IAM 變更、部署 CLI（`firebase`、`vercel`、`netlify`、`wrangler`、`fly`、`serverless`）、資料庫 migration、破壞性 SQL、`gh pr merge` 與寫入型 `gh api`。目標取自 `edit_file` 的 path 與 `run_command` 的 argv（絕對路徑、`~`、`..`、`write_paths`、`rm` 的目標），腳本內部的行為看不到。Subagent 以全部放行執行，不受工作目錄限制。
+**safe／auto 切換**：TUI 啟動時依工作目錄決定預設模式（`filesystem.WorkDirAllowsAll`），之後隨時可用 `Shift+Tab` 切換；auto 只在工作目錄符合條件時生效。**Yes, allow this turn** 讓該任務剩下的部分套用 auto 的規則，不受工作目錄限制，並寫進 pending 供接續時沿用。
+
+**Trusted skill**：在 `/skill` → `permission`（TUI）或 **Skills** → **Trust**（Web）調整，清單存於 `~/.config/agenvoy/trust_skill`（全域）與 `<workDir>/.agenvoy/trust_skill`（專案）；舊版的 `allow_skill` 檔在第一次讀取時改名為 `trust_skill`。請求以該 skill 執行時套用：`/<skill>`、`/v1/send` 的 `skill` 欄位、排程 skill；回合中以 `run_skill` 載入的 skill 不套用，其中啟動的 subagent 會繼承。**只對內容已逐一確認過的 skill 開啟**：它的指令會在不詢問的情況下寫入任意路徑、執行不可逆指令。
+
+| 呼叫 | `⏸ safe` | `⏵⏵ auto`／本輪放行 | Trusted skill |
+| --- | --- | --- | --- |
+| 唯讀工具、白名單內的唯讀指令 | 執行 | 執行 | 執行 |
+| 目標都在工作目錄內的寫入與指令，含 `rm`（移到垃圾桶） | 確認 | 執行 | 執行 |
+| 其他工具（`http_request` 寫入、MCP 工具、script 工具、下載、生成）、`network: true` | 確認 | 執行 | 執行 |
+| `read_files`／`find_files` 讀 `$HOME` 內的敏感路徑 | 確認 | 執行並授權該路徑 | 執行並授權該路徑 |
+| 寫入、指令或 `rm` 的目標在 `$HOME` 內、工作目錄外 | 確認 | 確認（decision model 可放行） | 執行並授權該路徑 |
+| 寫入或指令碰到 `$HOME` 內的敏感路徑 | 確認 | 確認（decision model 可放行） | 執行並授權該路徑 |
+| 不可逆指令 | 確認 | 確認（decision model 可放行）；allow rule 不能略過 | 執行 |
+| `$HOME` 以外的路徑（可讀系統清單除外） | 密碼 | 密碼 | 執行並授權該路徑 |
+| `sandbox: false` | 密碼 | 密碼 | 執行 |
+| `sudo` | 密碼 | 密碼 | 密碼 |
+
+auto 欄的「確認」來自寫死的安全規則（工作目錄外的目標、敏感路徑、不可逆指令），規則寧可多擋。有設定 [decision model](#decision-model) 時，會先把請求、目標與各目標是否已存在交給它判斷：有把握判為低影響就直接執行，並在此 session 授權相關路徑，減少規則誤擋；沒把握、判為危險或呼叫失敗時照常跳出確認。未設定 decision model 時一律確認。已授權的路徑在 daemon 存續期間對該 session 有效。
+
+不可逆指令對齊 Claude Code auto mode 預設擋的類別：`git reset --hard`、`git clean`、force push 與刪除遠端分支、下載後接直譯器執行、同時連網與讀取密鑰的腳本、上傳敏感檔案、`terraform`／`tofu`／`pulumi`／`cdk`／`kubectl`／`helm` 的套用與刪除、雲端 CLI 的刪除／部署／IAM 變更、部署 CLI（`firebase`、`vercel`、`netlify`、`wrangler`、`fly`、`serverless`）、資料庫 migration、破壞性 SQL、`gh pr merge` 與寫入型 `gh api`。目標取自 `write_file` 的 path 與 `run_command` 的 argv（絕對路徑、`~`、`..`、`write_paths`、`rm` 的目標），腳本內部的行為看不到。Subagent 以全部放行執行，不受工作目錄限制。
 
 ### 受限路徑與受限指令
 
@@ -241,7 +258,7 @@ TUI 的工作目錄是 `$HOME` 底下、且不是 denied 或敏感路徑的子�
 - 一般工具確認會回到原始 CLI、Web、Telegram 或 Discord 頻道；TUI 只監聽 CLI 來源的請求。
 - Telegram 與 Discord 無法收集系統密碼，受限確認不提供 **Yes**，並引導至本機的 TUI 或 Web UI。Web UI 只接受本機來源的核准，否則保留確認卡片並顯示錯誤。
 - `run_command` 的沙箱只約束寫入不約束讀取，因此指令只有在作業系統本身拒絕時才會在某個路徑上失敗；檔案工具（`read_files`、`find_files`、`open_file`、`file_history`）讀取 `$HOME` 以外或敏感路徑時仍需確認，`denied_path` 讀寫皆拒。`read_files` 與 `find_files` 讀取可讀清單內的系統與套件位置及 `readable_path` 項目時不需確認；`run_command` 的 argv 中存在、位於 `$HOME` 外且不在該清單的絕對路徑，會取消唯讀白名單的放行。
-- 工具輸出中的密鑰不會進入模型、log 與歷史：工具結果與錯誤、指令串流輸出與背景報告，都依 `configs/jsons/secret_patterns.json` 的格式規則比對，命中的值保留前後三字元、中間換成 `********`（短於 9 字元只留前三字元；3 字元以內整段遮蓋；私鑰區塊整段視為一個值）。需要金鑰的指令在同一次 `run_command` 內讀取並使用（`set -a; . ./.env; set +a; curl ...`）。`edit_file` 與 `run_command` 的參數含本 daemon 產生過的遮罩值時直接拒絕，避免把遮罩值當成金鑰寫回。
+- 工具輸出中的密鑰不會進入模型、log 與歷史：工具結果與錯誤、指令串流輸出與背景報告，都依 `configs/jsons/secret_patterns.json` 的格式規則比對，命中的值保留前後三字元、中間換成 `********`（短於 9 字元只留前三字元；3 字元以內整段遮蓋；私鑰區塊整段視為一個值）。需要金鑰的指令在同一次 `run_command` 內讀取並使用（`set -a; . ./.env; set +a; curl ...`）。`write_file` 與 `run_command` 的參數含本 daemon 產生過的遮罩值時直接拒絕，避免把遮罩值當成金鑰寫回。
 
 `$HOME` 一律可寫，不需要任何設定。指令要寫到 `$HOME` 以外時，agent 會在**那一次呼叫**自己附上 `write_paths`，你會看到確認框並輸入系統密碼，核准後那幾個路徑才額外綁進沙箱。
 
@@ -301,7 +318,7 @@ agen
 | `/mcp`                     | 列出 MCP server（`d` 移除）並 `add` 新增；單一 server 可登入、設定 OAuth client、以 `tools` 多選設定免確認工具（第一列為 `all`）、重連                                                                                                                                                              |
 | `/session` `/new`          | 以 self id 切換 session（`d` 刪除）或建立新的；清單橫跨兩種以上前綴時依 `all`／`cli-`／`tg-`／`dc-`／`chat-`／`temp-` 分頁；`/session` 清單下方可編輯當前 session 的 `name`／`self id`／`role`（`/session name\|id\|role` 直接開啟） |
 | `/compact` `/reset`        | 同一個彈窗含三個分頁：`summary` 唯讀檢視目前滾動摘要；`compact` 以 LLM 分析移除冗餘對話；`reset` 重設 session（需二次確認）：`summary` 先重建摘要並保留，`all` 連摘要一併清除。`/compact` 開在 compact 分頁、`/reset` 開在 reset 分頁 |
-| `/skill`                   | 三個 tab。`permission`：Enter 切換目前這個 skill 的 `always allow`／`ask`，`always allow` 為全域一律允許（略過權限確認），`o` 開啟該 skill 所在資料夾；`system`：多選官方 skill，勾選將 `github.com/agenvoy/skill-<name>` clone 至 `~/.config/agenvoy/skills/.system_design/<name>`，取消勾選則刪除；`source`：多選要讀取的外部 skill 來源（`claude`、`codex`、`copilot`、`opencode`、`agents`，即 `~/.<source>/skills`），取消勾選則略過 |
+| `/skill`                   | 三個 tab。`permission`：Enter 切換目前這個 skill 的 `trust`／`ask`（見[信任層級](#權限模式)），`o` 開啟該 skill 所在資料夾；`system`：多選官方 skill，勾選將 `github.com/agenvoy/skill-<name>` clone 至 `~/.config/agenvoy/skills/.system_design/<name>`，取消勾選則刪除；`source`：多選要讀取的外部 skill 來源（`claude`、`codex`、`copilot`、`opencode`、`agents`，即 `~/.<source>/skills`），取消勾選則略過 |
 | `/role`                    | 列出、新增或編輯 role（標題＋描述）                                                                                                                                                                                                                                                                 |
 | `/channel`                 | 兩個分頁 `telegram`／`discord`：啟用（token 先驗證再存入）或停用該頻道，`d` 撤銷已授權對話                                                                                                                                                                                                          |
 | `/config`                  | 可搜尋的設定清單，`enter` 修改游標所在項目：登入時自動啟動 daemon（macOS 走 launchd agent，Linux 走 systemd user unit）、回覆語言（`auto` 跟隨每則訊息）、輸出資料夾（產生的檔案存放位置；留空為 `~/Downloads`）、channel admin（接收新對話驗證碼的已授權對話；留空則只寫 log）與 official guide（是否注入官方模型指引） |
@@ -549,7 +566,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 
 ## 工具參考
 
-註冊表有 28 個工具固定可用（含內部用的 `run_tool`），另有 6 個依前置條件註冊或從執行中排除。涵蓋多種相關動作的工具以 `mode` 參數區分，而不是拆成多個名稱。
+註冊表有 31 個工具固定可用（含內部用的 `run_tool`），另有 6 個依前置條件註冊或從執行中排除。涵蓋多種相關動作的工具以 `mode` 參數區分，而不是拆成多個名稱。
 
 | 分類       | 工具                              | 用途                                                                                                                                                                                                                                                                                      |
 | ---------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -560,21 +577,21 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | Skill      | `run_skill`                       | 載入具名 skill 的參考素材                                                                                                                                                                                                                                                                 |
 |            | `edit_skill`                      | 編寫 skills 目錄底下的檔案（`mode=write\|patch\|remove`）                                                                                                                                                                                                                                 |
 | 排程       | `schedules`                       | 查詢、改期或取消定時與週期任務（`mode=list\|patch\|remove\|write`）                                                                                                                                                                                                                       |
-| 檔案       | `find_files`                      | 以目錄、檔名樣式或內容定位（`mode=list\|glob\|search`）；glob 依修改時間由新到舊排列；search 以 `offset`／`limit` 分頁（每頁 256），回傳符合的路徑、次數與前 5 個命中行號（`output=files`），或帶行號的符合行，可加 `context` 前後文（`output=content`）；`multiline` 讓 regex 可跨行比對 |
-|            | `read_files`                      | 批次讀取文字、PDF、DOCX、PPTX、CSV／TSV、圖片與音訊／影片（回傳逐字稿）；預設 2048 行，文字檔被截斷時結尾會標示下一個 `offset`；`around` 讀取文字檔指定行號前後各 `context` 行（預設 20）；同一路徑可在一次呼叫中重複出現 |
-|            | `edit_file`                       | 建立或修改檔案（`mode=write\|patch`）；覆寫或修改既有檔案前，必須在同一次執行中先以 `read_files` 讀過，且檔案之後未在磁碟上被改動 |
-|            | `remove_file`                     | 把單一檔案移到暫存而非直接刪除，可用 `restore_file` 找回；一律要求確認 |
-|            | `restore_file`                    | 還原紀錄中的某個版本（`file_history` 的 `version`），或把某個 task 動過的檔案全部還原到執行前（`task_id`，可用 `path` 限定單檔）；一律要求確認 |
+| 檔案       | `find_files`                      | 以目錄、檔名樣式或內容定位（`mode=list\|glob\|search`）；glob 依修改時間由新到舊排列；search 以 `offset`／`limit` 分頁（每頁 256），回傳符合的路徑、次數與前 5 個命中行號（`output=files`），或帶行號的符合行，可加 `context_lines` 前後文（`output=content`）；`multiline` 讓 regex 可跨行比對 |
+|            | `read_files`                      | 批次讀取文字、PDF、DOCX、PPTX、CSV／TSV、圖片與音訊／影片（回傳逐字稿）；預設 2048 行，文字檔被截斷時結尾會標示下一個 `offset`；`lines` 讀取文字檔指定行號前後各 `context_lines` 行（預設 64）；`full: true` 回傳完整檔案，不經 decision model 篩選；同一路徑可在一次呼叫中重複出現 |
+|            | `write_file`                      | 建立或修改檔案（`filename` 與 `mode=write\|patch` 必填；整份內容放 `write_content`，修改放 `patch_contents`）；覆寫或修改既有檔案前，必須在同一次執行中先以 `read_files` 讀過，且檔案之後未在磁碟上被改動；仍含 `read_files` 行號範圍標記的內容會被拒絕 |
+|            | `remove_file`                     | 把單一檔案（`filename`）移到暫存而非直接刪除，可用 `restore_file` 找回；一律要求確認 |
+|            | `restore_file`                    | 還原紀錄中的某個版本（`file_history` 的 `version`），或把某個 task 動過的檔案全部還原到執行前（`task_id`，可用 `filename` 限定單檔；以 `version` 還原時忽略 `filename`）；一律要求確認 |
 |            | `file_history`                    | 工具改過的每個檔案的版本紀錄（`mode=list\|read`）                                                                                                                                                                                                                                         |
-|            | `write_result`                    | 將長篇成果存為 `report-<時間>.md` 或 `.html`（`format=md\|html`），放在輸出資料夾（`output_dir`；預設 `~/Downloads`，不存在時為 `~/.config/agenvoy/download`）；模型只提供內容。`html` 寫入前會先檢查：須掛載 QuickUI（`new QUI(`）、inline script 須可解析、script 不得直接寫 markup（`innerHTML`、`createElement` 等）、`T.init` 目標 id 須存在、`{{ }}` 與 `:if` 不得含運算式；任一不符即不寫入並回傳問題清單（未掛 QuickUI 時另附 `html_render` 規則） |
+|            | `write_result`                    | 將長篇成果存為 `report-<時間>.md` 或 `.html`，放在輸出資料夾（`output_dir`；預設 `~/Downloads`，不存在時為 `~/.config/agenvoy/download`）；模型只提供內容，內容以 `<!DOCTYPE html>` 或 `<html>` 開頭時存成 `.html`，其餘存成 `.md`；同一秒內檔名已存在時依序加上 `-1`、`-2`... 流水號。`html` 寫入前會先檢查：須掛載 QuickUI（`new QUI(`）、inline script 須可解析、script 不得直接寫 markup（`innerHTML`、`createElement` 等）、`T.init` 目標 id 須存在、`{{ }}` 與 `:if` 不得含運算式；任一不符即不寫入並回傳問題清單（未掛 QuickUI 時另附 `html_render` 規則） |
 | 執行環境   | `run_command`                     | 在工作目錄以沙箱約束執行二進位並等待結束；watcher（`--watch`、`chokidar`，或會啟動 watcher 的 package script，含經 `sh -c` 與 `package.json` 展開者）在啟動前即拒絕，改由 `background_command` 執行。argv 命中唯讀白名單（`configs/jsons/read_only_command.json`，532 條，可用 `read_only_command` 追加）時不需確認，並與其他唯讀呼叫並行執行；`sh -c`／`bash -c` 腳本須每個內層指令都命中，且不含變數賦值、`export`、`printf -v`、算術與參數展開；版本查詢條目（`--version`、`-v`）須整個 argv 相符，git 全域旗標只收明列項；其餘除非命中使用者的 allow 規則、本輪全部允許，或處於 [auto 模式](#權限模式)，否則跳確認。argv 任一參數落在敏感路徑（`sensitive_path.json`）即取消命中，所以 `cat` 雖在清單內，`cat ~/.aws/credentials` 仍會跳確認。條目以 `bin`、`bin sub`、`bin sub sub` 三種形式比對，第四段永不參與比對，更長的形式只能收斂成這三種。沙箱禁網，`git clone`／`fetch`／`push`、`npm install`、`pip install`、`go mod download`、`curl`、`wget` 都會解析不到主機，除非該次呼叫帶 `network: true`；在 `⏸ safe` 下帶了就跳確認，也不再比對唯讀白名單。沙箱只允許寫入 `$HOME`，需寫入其外的絕對路徑時於 `write_paths` 宣告；root 擁有的目標以 argv `['sudo', '<binary>', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），會以 `sudo -n` 在沙箱外執行，取消時由 `sudo` 轉送 SIGTERM，root 程序會一併結束；`sandbox: false` 以使用者身分在沙箱外執行（Homebrew 需要，且不可加 sudo）。三者都須經使用者以系統密碼核准。權限錯誤找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。`rm` 改為移至垃圾桶（`sudo rm` 會直接刪除）；macOS 的 `open` 改走 `open_file`。單純抓 URL 走 `fetch_page`／`http_request`；裝系統套件用 `sudo` 加 system prompt Host OS 行列出的套件管理器（該行也列出作業系統版本），或以 `sandbox: false` 執行 `brew` |
 |            | `open_file`                       | 以系統預設處理程式開啟檔案、URL 或系統設定（如 `x-apple.systempreferences:`）；本機檔案免確認，URL 一律跳確認 |
-|            | `download_file`                   | 下載二進位資產至磁碟                                                                                                                                                                                                                                                                      |
-| Agent 協調 | `subagents`                       | 將子任務委派到獨立 session（`mode=invoke\|list`）；invoke 必填 `model`（可為 `auto`，未註冊或 `pass` 層級的模型會被拒絕），`reasoning` 預設 `auto`，不合法的值直接報錯；子 session 固定排除 `subagents`、`edit_file`、`write_result`、`html_template`、`generate_*`、`open_file`、`schedules`、`store_secret` 等寫檔或有持久副作用的工具 |
+|            | `download_file`                   | 將 URL 存到 `output_file`（相對路徑放在輸出目錄下）。預設把原始回應串流寫入暫存檔再改名就位（`timeout` 預設 120 秒，上限 600），回傳 `url`、`output_file`、`size_bytes`，伺服器有送 `X-Sha256` 時另附 `sha256`；`render=true` 以帶使用者 Chrome 登入的瀏覽器渲染頁面，依 `output_type`（markdown／html／json）整頁存檔，不限大小                                                                                                                                                                                                                                                                      |
+| Agent 協調 | `subagents`                       | 將子任務委派到獨立 session（`mode=invoke\|list`）；invoke 必填 `model`（可為 `auto`，未註冊或 `pass` 層級的模型會被拒絕），`reasoning` 預設 `auto`，不合法的值直接報錯；子 session 固定排除 `subagents`、`write_file`、`write_result`、`html_template`、`generate_*`、`open_file`、`schedules`、`store_secret` 等寫檔或有持久副作用的工具 |
 |            | `write_todo`                      | 使用者即時看得到的任務清單                                                                                                                                                                                                                                                                |
 |            | `ask_user`                        | 暫停提問。TUI 為 inline 提問：執行不中斷、該次工具呼叫不設逾時，回答後接著跑。其他頻道則中止執行並把狀態寫成 pending 快照，由回答續跑（快照中 args 截 4 KiB、tool result 截 32 KiB） |
 | 網路       | `search_web`                      | DuckDuckGo 結果與 Google News 標題一次取得；有 decision model 時剔除與請求無關的結果                                                                                                                                                                                                                                                |
-|            | `fetch_page`                      | 取得完整頁面內容（markdown／html／json）；agent 會先查看網站的 `/llms.txt`，有列出對應的 `.md` 頁面就優先抓取；有 decision model 時，markdown 會去除頁面雜訊，與請求無關的頁面不交給模型                                                                                                                                                                                                                                                  |
+|            | `fetch_page`                      | 以帶使用者 Chrome 登入的瀏覽器取得頁面內容（`output_type`：markdown／html／json；另有 `same_session`、`headless`、`scroll`）；`http://` 會改為 `https://`；agent 會先查看網站的 `/llms.txt`，有列出對應的 `.md` 頁面就優先抓取。結果跨 session 快取 30 分鐘（`force` 重新抓取）；HTTP 狀態 400 以上、標題顯示找不到頁面或內容為空時，該 URL 標記為失敗，之後的呼叫直接略過（5xx 12 小時、空內容 72 小時、其餘 90 天），帶 `force` 除外。markdown 與 json 超過 1 MiB 只保留前 1 MiB，html 超過 1 MiB 直接拒絕；json 以節點陣列回傳。有 decision model 時，markdown 會去除頁面雜訊，與請求無關的內容會被過濾或不交給模型（見 [Decision model](#decision-model)）                                                                                                                                                                                                                                                  |
 |            | `http_request`                    | 原始 HTTP 呼叫，含 multipart 上傳                                                                                                                                                                                                                                                         |
 |            | `public_api_list`                 | 免金鑰公開 API 目錄：列出分類，或某分類下每個 API 的說明、HTTPS 標記與文件網址；找到合適的就以 `fetch_page` 讀文件、`http_request` 呼叫，不建工具。需求明確對應分類時直接查該分類；分類不存在時錯誤附上分類清單 |
 |            | `html_template`                   | HTML 頁面範例庫（`mode=list\|read`）                                                                                                                                                                                                                                                      |
@@ -582,7 +599,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 |            | `error_history`                   | 跨 session 保留的工具失敗紀錄與對應解法（`mode=search\|read`） |
 |            | `write_error`                     | 儲存工具失敗與解決它的方法；只保留 `outcome=resolved` |
 |            | `reasoning_guide`                 | 依 `topics` 一次取得多個主題的完整推理規則                                                                                                                                                                                                                                                               |
-| 基礎支援   | `calculate`                       | 算術、單位與匯率換算                                                                                                                                                                                                                                                                      |
+| 基礎支援   | `calculate`                       | 對字面數字做算術與數學函式；不支援單位、變數與日期（匯率以數字傳入）。只接受十進位字面值，`^` 為次方（優先序最高、右結合），整數維持精確，任一運算元為浮點數時結果為 float64，NaN／Inf 視為錯誤                                                                                                                                                                                                                                                                      |
 |            | `store_secret`                    | 遮蔽輸入並存入 keychain                                                                                                                                                                                                                                                                   |
 | 條件註冊   | `generate_image`                  | 文字生成圖片並存檔——image generator 為 off 時排除                                                                                                                                                                                                                                         |
 |            | `generate_audio`                  | 文字轉語音並存檔——未選 TTS 模型時排除                                                                                                                                                                                                                                                     |
@@ -590,7 +607,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 |            | `background_command`              | 在背景啟動指令，結束時回報輸出，用於 watcher 與長時間工作；輸出行命中錯誤關鍵字（`keywords`，內建預設清單）時，指令執行中也會回報。回報方式見[背景任務](#背景任務)。執行期間的輸出寫在 `sessions/<id>/background/<task>.log`，結束後刪除——非 TUI 請求時排除 |
 |            | `background_subagents`            | 在背景啟動 subagent，完成時回報存好的報告路徑，用於很可能超過 5 分鐘、或使用者要求晚點再通知的子任務；回報方式見[背景任務](#背景任務)；與 `background_command` 共用每個 session 的背景任務上限——非 TUI 請求時排除 |
 
-工具依名稱排序，tool payload 只帶 `find_tools`、`run_tool`、`reasoning_guide`、`write_todo`、`chat_history`、`ask_user`、`write_result` 七個完整 schema，其餘工具只以名稱列在每輪注入的 TurnContext；模型先以 `find_tools` 取得 schema（以工具回傳內容交付，不寫回 tool payload），再經 `run_tool(name, args)` 呼叫。未先取 schema 就呼叫時，執行器會自動回傳該 schema 並要求重新呼叫；直接以名稱呼叫這七個以外的工具會被拒絕。工具失敗的結果末尾附 `next:` 提示：錯誤指向憑證缺漏或被拒時指向 `store_secret`，其他情況提示改用別的方法成功後以 `write_error` 記錄。因此整個 session 的工具序列化結果逐位元組不變，prompt 快取得以保留。`claude-code` provider 不使用 `run_tool`：只收到工具名稱與完整的 `find_tools` schema，取得 schema 後直接以名稱呼叫。`edit_file` 的 patch 模式每個 target 只接受 `{old_string, new_string}`（另可帶 `replace_all`）；`new_string` 取代 `old_string`，插入則是在 `new_string` 開頭重複 `old_string`。所有 target 都對寫入前的磁碟原始內容比對，因此列出順序不影響結果；`old_string` 在未帶 `replace_all` 時比對到多處、兩個 target 覆蓋同一段、某個 target 的 `old_string` 出現在先前 target 的 `new_string` 內，或整批套用後會把非空檔案清空，整批都會拒絕且不寫入；`old_string` 與 `new_string` 相同的 target 會略過並在回傳中註明，內容沒有變化時不寫檔。
+工具依名稱排序，tool payload 只帶 `find_tools`、`run_tool`、`reasoning_guide`、`write_todo`、`chat_history`、`ask_user`、`write_result` 七個完整 schema，其餘工具只以名稱列在每輪注入的 TurnContext；模型先以 `find_tools` 取得 schema（以工具回傳內容交付，不寫回 tool payload），再經 `run_tool(name, args)` 呼叫。`find_tools` 會把通用的備援工具（`search_web`、`fetch_page`、`download_file`、`http_request`、`generate_image`、`generate_audio`）排在其他命中結果之後並標記 `system_default`，有合適的 MCP 或 script 工具時優先選它。未先取 schema 就呼叫時，執行器會自動回傳該 schema 並要求重新呼叫；直接以名稱呼叫這七個以外的工具會被拒絕。工具失敗的結果末尾附 `next:` 提示：錯誤指向憑證缺漏或被拒時指向 `store_secret`，其他情況提示改用別的方法成功後以 `write_error` 記錄。因此整個 session 的工具序列化結果逐位元組不變，prompt 快取得以保留。`claude-code` provider 不使用 `run_tool`：只收到工具名稱與完整的 `find_tools` schema，取得 schema 後直接以名稱呼叫。`write_file` 的 patch 模式以 `patch_contents` 傳入多筆 `{old_string, new_string}`（另可帶 `replace_all`）；`new_string` 取代 `old_string`，插入則是在 `new_string` 開頭重複 `old_string`。每一筆都對寫入前的磁碟原始內容比對，因此列出順序不影響結果。任一筆 `old_string` 為空或在磁碟上找不到（彎引號與直引號視為相同），整批都會拒絕，因為只要一個錨點不符，就代表模型對檔案的認知已過時；`old_string` 在未帶 `replace_all` 時比對到多處、兩筆覆蓋同一段，或整批套用後會讓非空檔案變成空白，也同樣整批拒絕。以上情況都不寫入。`old_string` 與 `new_string` 相同的筆會直接略過、不另回報，全部都被略過時不寫檔。刪除文字（`new_string` 為空）時，每個命中處後面緊接的換行也會一併刪除。
 
 ### 背景任務
 

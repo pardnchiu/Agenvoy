@@ -1,6 +1,6 @@
 # Agenvoy - 架構
 
-最後更新：2026-10-16
+最後更新：2026-11-19
 
 > 返回 [README](./README.zh.md)
 
@@ -51,7 +51,7 @@ graph TB
 
 ## 模組：Daemon、Web 與 HTTP API
 
-Daemon 依序載入 runtime 設定、初始化 ToriiDB、清除過期的執行中標記、開啟 SQLite 歷史資料庫與用量表；接著註冊圖片／音訊／聊天工具、同步 Web 資源、檢查沙箱、註冊 subagent 與 Skill scanner，MCP 在背景非同步連線；再啟動排程器與兩個系統 cron（每 15 分鐘產生摘要、每 30 分鐘清理 session）、config 與 session 監看及 Telegram／Discord；最後依序註冊 Web 確認 listener、開啟 IPC socket 與 HTTP API。Dashboard 嵌入二進位檔後由 `/` 提供，開發時可用 `AGENVOY_PAGE_DIR` 改讀磁碟。HTTP API 只監聽 `127.0.0.1` 與 `[::1]`；另外，`localhostOnly()` 保護 session 管理、模型路由／tier／優先序、provider 與憑證、MCP 設定、角色（`/v1/role`，`/v1/rule` 為舊別名）、Skill、排程、白名單、runtime 設定、檔案、用量、頻道、語音、錯誤記憶、daemon log 與系統更新。Agent 執行（`/v1/send`、`/v1/chat/completions`）、確認、取消、pending 工作、session 清單、模型清單（`/v1/models`）、版本、SSE log、`/v1/mcp/tools` 與 Dashboard 靜態資源則不加守衛。
+Daemon 依序載入 runtime 設定、初始化 ToriiDB、清除過期的執行中標記、開啟 SQLite 歷史資料庫與用量表；接著設定 STT 轉錄並註冊聊天工具（其餘內建工具含圖片與音訊生成，在每個程序的 package init 註冊）、同步 Web 資源、檢查沙箱、註冊 subagent 與 Skill scanner，MCP 在背景非同步連線；再啟動排程器與兩個系統 cron（每 15 分鐘產生摘要、每 30 分鐘清理 session）、config 與 session 監看及 Telegram／Discord；最後依序註冊 Web 確認 listener、開啟 IPC socket 與 HTTP API。Dashboard 嵌入二進位檔後由 `/` 提供，開發時可用 `AGENVOY_PAGE_DIR` 改讀磁碟。HTTP API 只監聽 `127.0.0.1` 與 `[::1]`；另外，`localhostOnly()` 保護 session 管理、模型路由／tier／優先序、provider 與憑證、MCP 設定、角色（`/v1/role`，`/v1/rule` 為舊別名）、Skill、排程、白名單、runtime 設定、檔案、用量、頻道、語音、錯誤記憶、daemon log 與系統更新。Agent 執行（`/v1/send`、`/v1/chat/completions`）、確認、取消、pending 工作、session 清單、模型清單（`/v1/models`）、版本、SSE log、`/v1/mcp/tools` 與 Dashboard 靜態資源則不加守衛。
 
 ```mermaid
 graph TB
@@ -103,13 +103,13 @@ graph TB
 `internal/agents/exec` 依職責拆成多個子套件，主迴圈只負責組 prompt、送模型與分派工具：
 
 - **`exec/model`**：`Route` 決定指定模型、session 模型或選模器（`selectWithLLM`／`selectWithDecision`，開啟 decision dispatcher 時兩者同時執行；`config.SelectionPrompt` 產生的選模 prompt 會讓與 X 相關的請求優先選可搜尋 X 的 `grok`／`grok-oauth` 模型），並建立 fallback 清單；`Next` 在失敗時挑下一個候選並以 `CheckAlive` 做健康檢查（compat 端點打 `/models`，其他 provider 走 probe 或 health endpoint）。
-- **`exec/subagent`**：`Exec` 建立或接回子 session（`temp-` session 不讀歷史）、繼承父層工作目錄、allow-all（不受工作目錄限制）與 `DeliverTo`，排除寫檔與有持久副作用的工具後以 `exec.Run(..., isSub=true)` 執行，最多 3 條並行；遇到提問時由 `waitResume` 等待回答。
+- **`exec/subagent`**：`Exec` 建立或接回子 session（`temp-` session 不讀歷史）、繼承父層工作目錄、allow-all（不受工作目錄限制）與 `DeliverTo`，排除寫檔與有持久副作用的工具後以 `exec.Run(..., isSub=true)` 執行，最多 `min(MAX_CONCURRENT_TOOLS, MAX_CONCURRENT_SUBAGENTS)` 條並行（CPU 核心數的一半，至少 3）；遇到提問時由 `waitResume` 等待回答。
 - **`exec/chatbot`**：新對話的驗證碼除了寫入 daemon log，也會轉發到 `config.json` 設定的 admin 對話（`tg@<id>`／`dc@<id>`，須已授權）。
 - **`exec/summary` 與 `exec.Reset`**：daemon 每 15 分鐘產生滾動摘要，優先用 summary 模型，冷卻中或內容過大時退回主模型；有 decision model 時，合併前先移除雜訊對話與過時的 `key_decisions`／`past_discussions`；`Reset(withSummary)` 先重建摘要，產生不了就中止以免遺失 context。
 - **`exec/compact`**：非第一輪且上一輪 input tokens 達上限 80% 時，先萃取舊歷史再壓縮工具歷史；context 超長錯誤走 `TrimRatio`：先由 decision model 移除請求已不需要的工具步驟（保留最新一步與 `write_todo`），再以 `TrimFallback` 依最舊優先刪減；換模型時先試 `RawToolFallback`，不行才清空工具歷史。
 - **Turn context 與 steer**：工作目錄、`run_tool` 工具名單（MCP 工具依 server 前綴分組）、Skill 清單、滾動摘要、同一 task 仍在執行的背景任務與 `CLAUDE.md`／`AGENTS.md`（開啟 guide 時）每輪以一則 user 訊息注入在使用者輸入之前（模板位於 `configs/prompts/system_prompt/inject/`），system prompt 因此保持穩定；有 decision model 時，Skill 清單只保留與請求相關的 Skill，滾動摘要只保留與請求相關的 `key_decisions`／`past_discussions`／`current_discussion` 條目（未設 decision model 或判斷失敗時全數保留，全部無關時不放摘要），現有工具都不涵蓋請求時另加一行提示查閱建工具指南；執行中送入的 steer 經 IPC 進入佇列，下一輪以 `inject/steer.md` 注入，session reset 時清除。
 - **背景 job**：同一回合開的 `background_subagents`／`background_command` leg 組成一個 job，存於 `sessions/<id>/background/`，帶 `objective` 與 `next`；發起的任務不會因此維持 pending。發起任務的 pending 仍在時，exec 迴圈每輪以 `TakeBackgroundReport` 收取已完成的報告，或在恢復時由 `LoadResumeMessage` 帶入；發起任務結束後，`SettleBackground` 等整個 job 完成，以 `objective`、`next`、報告與發起任務 id 另開一輪。TUI 經 `background_cancel` IPC frame 取消單一 leg。
-- **`agents/decision`**：`Ready` 與 `Request` 取得已設定的 decision model 並整理請求文字，`Decide` 以 3 秒逾時呼叫一次，`Batch` 依字數與題數切分大量輸入，`Confident` 在信心值達 0.7 時採用回答；未設定 decision model 或呼叫失敗時，各呼叫端維持原本的行為。`Unrelated` 判斷一段內容是否與請求相關，`Withhold` 再加上 4096 字元門檻，且同一 session 中同一檔案或 task 最多略過一次；`fetch_page`、`read_files` 與 `chat_history(mode=read)` 以此確保與請求無關的內容不進入主模型。推薦使用 `typesafe@jev-latest`（TypeSafe 的 Jev）。
+- **`agents/decision`**：`Ready` 與 `Request` 取得已設定的 decision model 並整理請求文字，`Decide` 以 3 秒逾時呼叫一次，`Batch` 依字數與題數切分大量輸入，`Confident` 在信心值達 0.7 時採用回答；未設定 decision model 或呼叫失敗時，各呼叫端維持原本的行為。`Unrelated` 判斷一段內容是否與請求相關，`Withhold` 再加上 16,384 字元門檻，且同一 session 中同一 task 最多略過一次；`fetch_page`、`read_files`（16,384 字元以下的檔案；較長的檔案逐段判斷）與 `chat_history(mode=read)` 以此確保與請求無關的內容不進入主模型。推薦使用 `typesafe@jev-latest`（TypeSafe 的 Jev）。
 - **`/v1/chat/completions`**：不經 `Prepare`／`Run`，以 stateless session 直接呼叫 `exec.Execute`，預設排除所有工具，agent 模式 header 才開放。
 - **錯誤訊息**：錯誤一律經 `internal/utils/msg` 的 `New`／`Wrap`／`Trace` 建立，格式為 `[Label] target: reason`；標示限 `Invalid`、`Not found`、`Denied`、`Conflict`、`Limit`、`Unavailable`、`Timeout`、`Upstream`、`Canceled`、`Internal`，包裝層保留最底層的標示，讓 agent 與 log 能直接判斷類別。
 
@@ -134,7 +134,7 @@ graph TB
 
 內建工具、script／extension 工具及外部 MCP 工具都進入同一份註冊表。所有工具依名稱排序；tool payload 只帶 `find_tools`、`run_tool`、`reasoning_guide`、`write_todo`、`chat_history`、`ask_user`、`write_result` 的完整 schema，其餘工具以名稱列在每輪注入的 TurnContext，schema 由 `find_tools(mode=search)` 以工具回傳內容交付、不寫回 tool payload，呼叫則經 `run_tool(name, args)`，因此整個 session 的工具序列化結果逐位元組不變，prompt 快取得以保留。`claude-code` provider 不帶 `run_tool`，僅收到工具名稱與完整 `find_tools` schema，取得 schema 後直接以名稱呼叫。執行前，工具執行器會檢查 denied path、敏感路徑、命令政策、確認需求、參數驗證、`run_command` 的 shell AST validation 及作業系統沙箱。指令一律在禁網下執行，需要連線的呼叫帶 `network: true`，帶了就跳確認且不比對唯讀白名單；argv `['sudo', ...]` 與 `sandbox: false` 經系統密碼確認後在沙箱外執行，`rm` 改為移至垃圾桶。工具確認依序判斷：讀取敏感路徑一律確認、本輪全部允許則略過、破壞性 mode 一律確認、`open_file` 開 URL 一律確認、唯讀工具與唯讀指令略過，最後比對使用者的 allow-list（全域 `~/.config/agenvoy/allow_tool` 與專案 `<workDir>/.agenvoy/allow_list`，條目可寫 `name` 或 `name(argGlob)`）。一般工具確認會詢問是否允許該次工具呼叫；受限路徑、`sudo` 指令與 `sandbox: false` 指令在支援的頻道還需要系統驗證，任何權限模式都一樣。`run_command` 與 `background_command` 的確認附一句由 dispatcher model 以單次、不帶 session 歷史的呼叫產生的說明；唯讀的 `run_command` 免確認且並行執行。拒絕時有三種退出：跳過該次呼叫（可附理由給 agent）、中止任務並保留 pending，或取消任務並刪除 pending。命中 denied path 或使用者設定的 denied command 會直接拒絕；不在 denied command 清單不代表失敗，但仍可能進入一般確認流程。
 
-檔案工具透過共用的邊界檢查解析路徑。`find_files` 支援列出目錄、檔名 glob 與 regex 內容搜尋。glob 結果依修改時間由新到舊排列。search 採分頁：`output=files` 回傳每個符合的路徑、命中次數與前 5 個命中行號，查詢夠精準時可直接接 `read_files`；`output=content` 回傳符合的行，可加 `context` 前後文；`multiline` 讓 regex 對整份檔案比對，`.` 可跨行，`^` 與 `$` 仍為行錨點。序列化結果上限為 128 KiB。`read_files` 批次處理文字與支援的文件、圖片、音訊／影片格式，文字預設每次讀 2048 行。`edit_file` 負責寫入與修改；`remove_file` 把單一檔案移到暫存，`restore_file` 還原紀錄中的版本或某個 task 動過的所有檔案，兩者一律要求確認。純文字檔可用 `around` 讀取指定行號前後各 `context` 行（預設 20），重疊的窗口會合併，略過的內容以一行 `...` 標示；同一路徑可在一次呼叫中出現多次，結果依序串接。`edit_file` 提供 write、patch、remove、restore 四種模式。寫入或修改既有檔案時，`read_files` 必須已在同一次執行中記錄過它的修改時間，且磁碟上的修改時間之後未變；寫入成功會更新這個記錄，因此連續 patch 不需重讀。patch 的 anchor 無法精確比對時，會把彎引號視為直引號再比對一次，替換內容也會沿用檔案原本的彎引號樣式。檔案變更在可用時記錄於 SQLite 歷史；歷史記錄失敗不會撤銷已完成的寫入，並會回報給呼叫端。長篇成果（Markdown 或 HTML）經 `write_result` 寫入設定的輸出資料夾；HTML 寫入前會先驗證 QuickUI 掛載、inline script 語法與模板綁定，不符即不寫入並回傳問題清單（`output_dir`；預設 `~/Downloads`，不存在時為 `~/.config/agenvoy/download`），不寫入工作目錄，其他替使用者產生的檔案在請求沒指定位置時也放在這裡。`run_command` 會等待程序結束，因此會啟動 file watcher 的命令（`--watch`、`chokidar`，或會啟動 watcher 的 package script，含經 `sh -c` 與 `package.json` 展開者）在執行前即拒絕；這類命令與長時間工作改由 `background_command` 執行，它立即回傳 task id，結束時帶著輸出接續任務。它一律監看輸出：輸出行命中錯誤關鍵字（`keywords`，內建預設清單）時，會在指令繼續執行的同時帶著最新輸出接續任務；有 decision model 時，誤判與重複上次回報的會先被濾掉。執行期間的輸出寫在 `sessions/<id>/background/<task>.log`，指令結束後刪除。耗時的 subagent 以同樣方式走 `background_subagents`；兩個工具只提供給 TUI 請求。有 decision model 時，`search_web` 剔除與請求無關的結果，`fetch_page` 在存快取前去除頁面雜訊，與請求無關的頁面不交給模型。缺少即時資料工具時，Agent 先以 `public_api_list` 找免金鑰的公開 API 並用 `http_request` 呼叫；只有找不到合適的 API，或使用者提供的 API 需要金鑰時，才建立、測試並保留 script 工具。Web Search 與檔案搜尋可直接提供即時或本機資料；RAG 沒有內建工具，需由外部 MCP server 提供。
+檔案工具透過共用的邊界檢查解析路徑。`find_files` 支援列出目錄、檔名 glob 與 regex 內容搜尋。glob 結果依修改時間由新到舊排列。search 採分頁：`output=files` 回傳每個符合的路徑、命中次數與前 5 個命中行號，查詢夠精準時可直接接 `read_files`；`output=content` 回傳符合的行，可加 `context_lines` 前後文；`multiline` 讓 regex 對整份檔案比對，`.` 可跨行，`^` 與 `$` 仍為行錨點。序列化結果上限為 128 KiB。`read_files` 批次處理文字與支援的文件、圖片、音訊／影片格式，文字預設每次讀 2048 行。`write_file` 負責寫入與修改；`remove_file` 把單一檔案移到暫存，`restore_file` 還原紀錄中的版本或某個 task 動過的所有檔案，兩者一律要求確認。純文字檔可用 `lines` 讀取指定行號前後各 `context_lines` 行（預設 64），重疊的窗口會合併，略過的內容以一行 `...` 標示；同一路徑可在一次呼叫中出現多次，結果依序串接。設定 decision model 時，16,384 字元以下的檔案整檔判斷，無關則不交給模型；較長的檔案逐段篩選，連續的無關段落以行號範圍標記取代；`full: true` 跳過篩選。`write_file` 拒絕仍含標記的內容，整檔覆寫時不會丟掉 agent 沒看到的行。`write_file` 提供 write 與 patch 兩種模式，以必填的 `mode` 選擇。寫入或修改既有檔案時，`read_files` 必須已在同一次執行中記錄過它的修改時間，且磁碟上的修改時間之後未變；寫入成功會更新這個記錄，因此連續 patch 不需重讀。patch 的 anchor 無法精確比對時，會把彎引號視為直引號再比對一次，替換內容也會沿用檔案原本的彎引號樣式。檔案變更在可用時記錄於 SQLite 歷史；歷史記錄失敗不會撤銷已完成的寫入，並會回報給呼叫端。長篇成果經 `write_result` 寫入設定的輸出資料夾（內容以 `<!DOCTYPE html>` 或 `<html>` 開頭時存成 HTML，其餘為 Markdown）；HTML 寫入前會先驗證 QuickUI 掛載、inline script 語法與模板綁定，不符即不寫入並回傳問題清單（`output_dir`；預設 `~/Downloads`，不存在時為 `~/.config/agenvoy/download`），不寫入工作目錄，其他替使用者產生的檔案在請求沒指定位置時也放在這裡。`run_command` 會等待程序結束，因此會啟動 file watcher 的命令（`--watch`、`chokidar`，或會啟動 watcher 的 package script，含經 `sh -c` 與 `package.json` 展開者）在執行前即拒絕；這類命令與長時間工作改由 `background_command` 執行，它立即回傳 task id，結束時帶著輸出接續任務。它一律監看輸出：輸出行命中錯誤關鍵字（`keywords`，內建預設清單）時，會在指令繼續執行的同時帶著最新輸出接續任務；有 decision model 時，誤判與重複上次回報的會先被濾掉。執行期間的輸出寫在 `sessions/<id>/background/<task>.log`，指令結束後刪除。耗時的 subagent 以同樣方式走 `background_subagents`；兩個工具只提供給 TUI 請求。有 decision model 時，`search_web` 剔除與請求無關的結果，`fetch_page` 在存快取前去除 markdown 的頁面雜訊，交付時（不論新抓或快取）短頁面整頁判斷、長頁面逐區塊過濾，沒有任何內容相關時不交給模型。缺少即時資料工具時，Agent 先以 `public_api_list` 找免金鑰的公開 API 並用 `http_request` 呼叫；只有找不到合適的 API，或使用者提供的 API 需要金鑰時，才建立、測試並保留 script 工具。Web Search 與檔案搜尋可直接提供即時或本機資料；RAG 沒有內建工具，需由外部 MCP server 提供。
 
 ```mermaid
 graph TB
@@ -222,13 +222,17 @@ sequenceDiagram
 ## 安全邊界
 
 - Daemon 只監聽 `127.0.0.1` 與 `[::1]`；管理類 endpoint 另有 `localhostOnly()` 守衛。
-- denied path 與 denied command 會直接拒絕；`$HOME` 內的敏感路徑要求確認，檔案工具在 `$HOME` 外的讀取與寫入（`read_files`、`find_files`、`file_history`、`edit_file`、`remove_file`、`restore_file`、`open_file`）、`sudo` 與 `sandbox: false` 另要求系統密碼；核准範圍限於該 session 與所請求的路徑或執行檔。`read_files` 與 `find_files` 讀取 go-pkg 可讀清單內的系統與套件位置及 `readable_path` 項目時不需確認。
-- auto 模式（`⏵⏵ auto`）只在工作目錄是 `$HOME` 底下的非敏感子目錄時生效（`filesystem.WorkDirAllowsAll`，TUI 啟動時也依它決定預設模式）；生效時所有工具直接執行，但目標在 `$HOME` 內、工作目錄外的寫入與指令（`boundary.OutsideWorkDir`）與不可逆指令（`isIrreversibleCommand`，對齊 Claude Code auto mode 預設擋的類別，allow rule 不能略過）仍需確認；subagent 不受工作目錄限制。
-- 透過 `edit_file` 寫入或修改既有檔案前，必須在同一次執行中成功以 `read_files` 讀過該檔，且之後修改時間未變，否則拒絕；新檔案不需事先讀取。這項新鮮度檢查是路徑邊界與權限檢查的補充，不取代它們。
+- denied path 與 denied command 會直接拒絕；`$HOME` 內的敏感路徑要求確認，檔案工具在 `$HOME` 外的讀取與寫入（`read_files`、`find_files`、`file_history`、`write_file`、`remove_file`、`restore_file`、`open_file`）、`sudo` 與 `sandbox: false` 另要求系統密碼；核准範圍限於該 session 與所請求的路徑或執行檔。`read_files` 與 `find_files` 讀取 go-pkg 可讀清單內的系統與套件位置及 `readable_path` 項目時不需確認。
+- 確認依三種信任層級，由 `toolCall` 逐次判斷：
+  - `⏸ safe`：寫入、指令與非唯讀工具都先詢問。
+  - `⏵⏵ auto`（只在工作目錄是 `$HOME` 底下的非敏感子目錄時生效，`filesystem.WorkDirAllowsAll`，TUI 啟動時也依它決定預設模式）與 **Yes, allow this turn**（`allowTurn`，不限工作目錄，寫進 pending 供接續）：所有工具直接執行。三種情況先交給 decision model 判斷（`unsafeByDecision`）：目標在 `$HOME` 內、工作目錄外的寫入與指令（`boundary.OutsideWorkDir`）、碰到敏感路徑的寫入與指令，以及不可逆指令（`isIrreversibleCommand`，對齊 Claude Code auto mode 預設擋的類別，allow rule 不能略過）。有把握判為低影響時直接執行並授權路徑（`boundary.Grant`）；其餘情況，包括未設定 decision model 或呼叫失敗，一律詢問。`$HOME` 以外的路徑、`sudo` 與 `sandbox: false` 仍要密碼。
+  - Trusted skill（`trust_skill`，分全域與專案；舊版 `allow_skill` 檔在第一次讀取時改名）：請求以該 skill 執行時以 `TrustCtxKey` 標記整次執行。所有讀寫一律放行並授權路徑，含 `$HOME` 以外、敏感路徑與不可逆指令，不呼叫 decision model；`sandbox: false` 也直接執行；只有 `sudo`（取自 `RestrictedRunCommand`）仍要密碼。subagent 經 context 繼承。
+  - subagent 不受工作目錄限制；denied path 與 denied command 在任何層級都直接拒絕。
+- 透過 `write_file` 寫入或修改既有檔案前，必須在同一次執行中成功以 `read_files` 讀過該檔，且之後修改時間未變，否則拒絕；新檔案不需事先讀取。這項新鮮度檢查是路徑邊界與權限檢查的補充，不取代它們。
 - 命令執行受 shell AST validation 及 OS 沙箱限制（macOS 的 `sandbox-exec`、Linux 的 `bwrap`），且預設禁網；該次呼叫帶 `network: true` 才開放，auto 模式以外要求確認。需要寫入 `$HOME` 以外的命令，要在該次呼叫以 `write_paths` 宣告路徑；需要 root 的命令以 argv `['sudo', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），以 `sudo -n` 在沙箱外執行，取消時經 `sudo` 轉送 SIGTERM；兩者都由使用者輸入系統密碼核准。被沙箱擋住且找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。script 工具的沙箱保持網路開啟，只能寫入 `$HOME`。
 - `/v1/send` 在請求帶 `enable_edit` 或 `enable_sandbox`，或沒有開啟中的網頁確認 listener 時（`agen -p` 一律如此）以 API auto mode 執行：不跳確認；未設 `enable_edit` 為 true 時唯讀；未設 `enable_sandbox` 為 false 時留在沙箱（不得存取 `$HOME` 外路徑、`sudo`、`sandbox: false`）；不提供 `ask_user`、`store_secret` 與背景工具；每次請求開始時清除該 session 的路徑授權，核准不會延續；被擋的呼叫會回傳可放行的參數。
 - 帶非 loopback `Origin` 的寫入請求（`POST`、`PUT`、`PATCH`、`DELETE`）一律拒絕，`/v1/send` 與 `/v1/chat/completions` 只接受 JSON body，`enable_sandbox: false` 只接受 loopback 來源，網頁無法發起執行或解除沙箱。
-- 工具輸出中的密鑰在進入模型、log 與歷史前依格式遮蓋（`internal/utils/secret`，規則在 `configs/jsons/secret_patterns.json`）：結果與錯誤在 `toolregister.Dispatch`、串流進度經 `secret.Stream`、背景報告亦同；`edit_file` 與 `run_command` 的參數含 daemon 產生過的遮罩值時直接拒絕。
+- 工具輸出中的密鑰在進入模型、log 與歷史前依格式遮蓋（`internal/utils/secret`，規則在 `configs/jsons/secret_patterns.json`）：結果與錯誤在 `toolregister.Dispatch`、串流進度經 `secret.Stream`、背景報告亦同；`write_file` 與 `run_command` 的參數含 daemon 產生過的遮罩值時直接拒絕。
 - 憑證與 provider、MCP 的 OAuth token 存在作業系統 keychain（macOS Keychain、Linux `secret-tool`），不寫入 repository；`secret-tool` 失敗時改存 `~/.config/agenvoy/.secrets`（權限 0600）；都查無時最後才讀同名環境變數。
 
 ## 持久化結構
@@ -255,7 +259,7 @@ flowchart LR
     DesignSkills[skills/.system_design] -->|/skill| Scanner
     Schedules[crons.json／tasks.json] --> Scheduler[Scheduler]
     Auth[.telegram／.discord] --> Channels[已授權頻道]
-    Allow[allow_skill／allow_tool／.agenvoy/allow_list] --> Confirm[免確認規則]
+    Allow[trust_skill／allow_tool／.agenvoy/allow_list] --> Confirm[免確認規則]
 ```
 
 ---

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
@@ -24,9 +25,25 @@ var (
 	NetWhiteList    []string
 	ReadOnlyCommand []string
 	ReadablePath    []string
-	ConfigReplyLang = ReplyLangAuto
 	ConfigOutputDir string
 )
+
+var (
+	replyLangMu     sync.RWMutex
+	configReplyLang = ReplyLangAuto
+)
+
+func GetReplyLang() string {
+	replyLangMu.RLock()
+	defer replyLangMu.RUnlock()
+	return configReplyLang
+}
+
+func SetReplyLang(lang string) {
+	replyLangMu.Lock()
+	defer replyLangMu.Unlock()
+	configReplyLang = lang
+}
 
 const ReplyLangAuto = "auto"
 
@@ -74,17 +91,18 @@ func LoadRuntime() error {
 	configs.MAX_HISTORY_MESSAGES = max(limits.MaxHistoryMessages, configs.MAX_HISTORY_MESSAGES)
 	configs.MAX_HISTORY_BYTES = max(limits.MaxHistoryBytes, configs.MAX_HISTORY_BYTES)
 
-	ConfigReplyLang = ReplyLangAuto
+	lang := ReplyLangAuto
 	if data, ok := raw["reply_lang"]; ok && len(data) > 0 {
 		var user string
 		if err := json.Unmarshal(data, &user); err != nil {
 			return utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "reply_lang", err)
 		}
 		if user = strings.TrimSpace(user); user != "" {
-			ConfigReplyLang = user
+			lang = user
 		}
 	}
-	langRaw, err := json.Marshal(ConfigReplyLang)
+	SetReplyLang(lang)
+	langRaw, err := json.Marshal(lang)
 	if err != nil {
 		return utilsmsg.Wrap(utilsmsg.Internal, "json.Marshal", "reply_lang", err)
 	}

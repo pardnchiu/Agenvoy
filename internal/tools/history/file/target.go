@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/pardnchiu/agenvoy/configs"
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -26,14 +25,9 @@ func absPath(e *tooltypes.Executor, path string) (string, error) {
 		return "", nil
 	}
 
-	baseDir := e.WorkDir
-	if baseDir == "" {
-		baseDir = filesystem.DownloadDir
-	}
-
-	abs, err := boundary.Resolve(e.SessionID, baseDir, path)
+	abs, err := boundary.ResolveIn(e.SessionID, e.WorkDir, path)
 	if err != nil {
-		return "", utilsmsg.Trace("boundary.Resolve", "", err)
+		return "", utilsmsg.Trace("tools/file/boundary: ResolveIn", "", err)
 	}
 	return filepath.Clean(abs), nil
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -176,10 +177,7 @@ func (l *Listener[CID, MID]) sendPrompt(ctx context.Context, id string, req Requ
 }
 
 func (l *Listener[CID, MID]) startConfirm(ctx context.Context, id string, chatID CID, req Request) {
-	options := ConfirmOptions
-	if len(req.Restricted) > 0 {
-		options = RestrictedConfirmOptions
-	}
+	options := confirmOptions(len(req.Restricted) > 0)
 	msg := utils.FormatConfirm(req.ToolName, req.ToolArgs, req.Restricted, false)
 	msgID, err := l.transport.SendConfirm(ctx, chatID, msg, req.Explain, options)
 	if err != nil {
@@ -299,13 +297,13 @@ func (l *Listener[CID, MID]) OnCallback(ctx context.Context, chatID CID, msgID M
 		l.finalize(state, reply)
 
 	case TypeSkipChoice:
-		switch data {
+		switch skipChoiceFor(data) {
 		case skipWithoutReason:
 			l.deletePrompt(ctx, state)
 			l.finalize(state, Reply{Approve: false, Skip: true})
 		case skipWriteReason:
 			l.deletePrompt(ctx, state)
-			msgID, err := l.transport.SendAskText(ctx, state.chatID, skipReasonHeader, false)
+			msgID, err := l.transport.SendAskText(ctx, state.chatID, locale.GetConfirm().SkipReasonHeader, false)
 			if err != nil {
 				l.finalize(state, Reply{Approve: false, Skip: true})
 				return true
@@ -415,29 +413,34 @@ func (l *Listener[CID, MID]) finalize(state *active[CID, MID], reply Reply) {
 	}
 }
 
-var ConfirmOptions = []string{
-	"✅ Yes",
-	"✅ Yes, don't ask again",
-	"✅ Yes, allow this turn",
-	"❌ No, skip this",
-	"⛔ Abort task",
-	"🗑️ Cancel task",
-}
-
-var RestrictedConfirmOptions = []string{
-	"❌ No, skip this",
-	"⛔ Abort task",
-	"🗑️ Cancel task",
+func confirmOptions(restricted bool) []string {
+	labels := locale.GetConfirm()
+	if restricted {
+		return []string{labels.Skip, labels.Abort, labels.Cancel}
+	}
+	return labels.Options()
 }
 
 const (
-	skipWithoutReason = "↪️ Skip without reason"
-	skipWriteReason   = "✏️ Write a reason"
-	skipReasonHeader  = "Reason for skipping"
+	skipWithoutReason = "without_reason"
+	skipWriteReason   = "write_reason"
 )
 
+func skipChoiceFor(data string) string {
+	for _, text := range locale.AllConfirm() {
+		switch data {
+		case text.SkipWithoutReason:
+			return skipWithoutReason
+		case text.SkipWriteReason:
+			return skipWriteReason
+		}
+	}
+	return ""
+}
+
 func (l *Listener[CID, MID]) askSkipReason(ctx context.Context, state *active[CID, MID]) {
-	msgID, err := l.transport.SendAskSingle(ctx, state.chatID, "Skipped. Add a reason for the agent?", []string{skipWithoutReason, skipWriteReason})
+	text := locale.GetConfirm()
+	msgID, err := l.transport.SendAskSingle(ctx, state.chatID, text.SkipHeader, []string{text.SkipWithoutReason, text.SkipWriteReason})
 	if err != nil {
 		l.finalize(state, Reply{Approve: false, Skip: true})
 		return
@@ -447,20 +450,21 @@ func (l *Listener[CID, MID]) askSkipReason(ctx context.Context, state *active[CI
 }
 
 func confirmReplyFor(data string) (reply Reply, finalize bool) {
-	switch data {
-	case "✅ Yes":
-		return Reply{Approve: true}, true
-	case "✅ Yes, don't ask again":
-		return Reply{Approve: true, Remember: true}, true
-	case "✅ Yes, allow this turn":
-		return Reply{Approve: true, AllowTurn: true}, true
-	case "❌ No, skip this", "❌ No":
-		return Reply{Approve: false, Skip: true}, true
-	case "⛔ Abort task", "⛔ Stop":
-		return Reply{Approve: false, Error: ErrUserAborted}, true
-	case "🗑️ Cancel task":
-		return Reply{Approve: false, Error: ErrUserCanceled}, true
-	default:
-		return Reply{}, false
+	for _, labels := range locale.AllConfirm() {
+		switch data {
+		case labels.Yes:
+			return Reply{Approve: true}, true
+		case labels.Remember:
+			return Reply{Approve: true, Remember: true}, true
+		case labels.AllowTurn:
+			return Reply{Approve: true, AllowTurn: true}, true
+		case labels.Skip:
+			return Reply{Approve: false, Skip: true}, true
+		case labels.Abort:
+			return Reply{Approve: false, Error: ErrUserAborted}, true
+		case labels.Cancel:
+			return Reply{Approve: false, Error: ErrUserCanceled}, true
+		}
 	}
+	return Reply{}, false
 }

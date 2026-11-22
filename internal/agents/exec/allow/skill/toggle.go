@@ -20,15 +20,15 @@ func Toggle(skillName string, workDir ...string) (bool, error) {
 	}
 
 	// default is global, if assign path, then path
-	path := filesystem.AllowSkillGlobalPath
+	src, path := globalPath(), filesystem.TrustSkillGlobalPath
 	if len(workDir) > 0 {
 		if strings.TrimSpace(workDir[0]) == "" {
 			return false, utilsmsg.New(utilsmsg.Invalid, "work dir", "empty")
 		}
-		path = filesystem.AllowSkillProjectPath(workDir[0])
+		src, path = projectPath(workDir[0]), filesystem.TrustSkillProjectPath(workDir[0])
 	}
 
-	dic := read(path)
+	dic := read(src)
 	added := false
 	if dic[name] {
 		delete(dic, name)
@@ -52,7 +52,7 @@ func write(path string, allowMap map[string]bool) error {
 	sort.Strings(lines)
 
 	/**
-	 * allow_skill example
+	 * trust_skill example
 	 * ---
 	 * commit-generate
 	 * version-generate

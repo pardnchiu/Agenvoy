@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	sessiontelegram "github.com/pardnchiu/agenvoy/internal/session/telegram"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -17,7 +18,7 @@ func (b *Bot) resumeFromPending(sessionID, taskHash string, answers []any) {
 	full, history, err := interactive.LoadResumeMessage(sessionID, taskHash, answers)
 	if err != nil {
 		if chatID, chErr := lookupChatID(sessionID); chErr == nil {
-			b.client.Send(context.Background(), chatID, 0, "Pending task already resolved in another session.", nil)
+			b.client.Send(context.Background(), chatID, 0, locale.GetChatbotCode().PendingResolved, nil)
 		}
 		return
 	}

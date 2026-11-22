@@ -18,11 +18,13 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	agentsexecallowskill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
 	execmodel "github.com/pardnchiu/agenvoy/internal/agents/exec/model"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/retryHandler"
+	agentimage "github.com/pardnchiu/agenvoy/internal/agents/image"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
@@ -35,8 +37,6 @@ import (
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	usagelog "github.com/pardnchiu/agenvoy/internal/session/usage"
 	"github.com/pardnchiu/agenvoy/internal/tools"
-	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
-	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -78,6 +78,7 @@ const (
 
 type (
 	AllowAllCtxKey   struct{}
+	TrustCtxKey      struct{}
 	ParentEventsKey  struct{}
 	ParentWorkDirKey struct{}
 )
@@ -86,10 +87,9 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	execCtx := go_llm_router.WithSessionID(agenttypes.WithSessionID(ctx, session.ID), session.ID)
 	execStart := time.Now()
 
-	if !allowAll {
-		if data.Skill != nil && strings.TrimSpace(data.Skill.Content) != "" && agentsexecallowskill.Match(data.WorkDir, data.Skill.Name) {
-			allowAll = true
-		}
+	if data.Skill != nil && strings.TrimSpace(data.Skill.Content) != "" && agentsexecallowskill.Match(data.WorkDir, data.Skill.Name) {
+		allowAll = true
+		execCtx = context.WithValue(execCtx, TrustCtxKey{}, true)
 	}
 
 	execCtx = context.WithValue(execCtx, AllowAllCtxKey{}, allowAll)
@@ -300,10 +300,10 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	}
 
 	cfg, _ := config.Load()
-	if !imagetool.Enabled() {
+	if agentimage.Model() == "" {
 		data.ExcludeTools = append(data.ExcludeTools, "generate_image")
 	}
-	if !audiotool.TTSEnabled() {
+	if audio.Model(audio.TTS) == "" {
 		data.ExcludeTools = append(data.ExcludeTools, "generate_audio")
 	}
 	autoMode := agenttypes.AutoModeFrom(ctx) != agenttypes.AutoModeOff
@@ -366,7 +366,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	var toolNames []string
 	if slices.ContainsFunc(exec.Tools, func(t go_llm_router.Tool) bool { return t.Function.Name == "run_tool" }) {
 		for _, t := range exec.AllTools {
-			if name := t.Function.Name; !slices.Contains(configs.SYSTEM_DEFAULT_TOOLS, name) && !exec.ExcludeTools[name] {
+			if name := t.Function.Name; !slices.Contains(configs.PRELOAD_TOOLS, name) && !exec.ExcludeTools[name] {
 				toolNames = append(toolNames, name)
 			}
 		}

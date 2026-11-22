@@ -303,6 +303,15 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 			t.trackSubagent(ev.Source, "skipped: "+ev.ToolName)
 			return t, nil
 		}
+		line, ok := renderAgentEvent(ev, t.runTarget, t.cwd, t.width, "")
+		if !ok {
+			return t, nil
+		}
+		t.gap, t.textTail = true, false
+		if collapse := t.collapseToolBuf(); collapse != nil {
+			return t, tea.Sequence(collapse, tea.Println(line))
+		}
+		return t, tea.Println(line)
 
 	case agenttypes.EventReasoning:
 		if ev.Source != "" {

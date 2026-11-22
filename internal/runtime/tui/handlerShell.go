@@ -16,8 +16,8 @@ import (
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/agents/sudo"
 	"github.com/pardnchiu/agenvoy/internal/runtime/ipc"
-	"github.com/pardnchiu/agenvoy/internal/sudo"
 )
 
 var sudoWord = regexp.MustCompile(`(^|[\s;&|(])sudo(\s|$)`)

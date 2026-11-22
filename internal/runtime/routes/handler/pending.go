@@ -13,6 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	internalutils "github.com/pardnchiu/agenvoy/internal/utils"
 )
@@ -108,7 +109,7 @@ func GetSessionPendingQuestions() gin.HandlerFunc {
 				Secret:      q.Secret,
 			})
 		}
-		c.JSON(http.StatusOK, gin.H{"questions": list})
+		c.JSON(http.StatusOK, gin.H{"questions": list, "text": locale.GetAskUser()})
 	}
 }
 

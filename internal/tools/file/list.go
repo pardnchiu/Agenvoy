@@ -30,20 +30,20 @@ func listBatch(ctx context.Context, e *tooltypes.Executor, queries []findQuery) 
 
 	raw, err := utils.MarshalPlain(out)
 	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "utils.MarshalPlain", "", err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "utils: MarshalPlain", "", err)
 	}
 	return string(raw) + budget.notice(), nil
 }
 
 func listOne(ctx context.Context, e *tooltypes.Executor, dir string, recursive bool) ([]go_pkg_filesystem_reader.File, error) {
 	dir = strings.TrimSpace(dir)
-	absPath, err := boundary.ResolveRead(e.SessionID, e.WorkDir, dir)
+	absPath, err := boundary.ResolveRead(e.SessionID, boundary.BaseDir(e.WorkDir), dir)
 	if err != nil {
-		return nil, utilsmsg.Trace("boundary.ResolveRead", "", err)
+		return nil, utilsmsg.Trace("tools/file/boundary: ResolveRead", "", err)
 	}
 
 	if file, err := os.Open(absPath); err != nil {
-		return nil, utilsmsg.Wrap(utilsmsg.Internal, "os.Open", "", err)
+		return nil, utilsmsg.Wrap(utilsmsg.Internal, "os: Open", "", err)
 	} else {
 		file.Close()
 	}
@@ -60,14 +60,14 @@ func listOne(ctx context.Context, e *tooltypes.Executor, dir string, recursive b
 			IncludeNonRegular: true,
 		})
 		if err != nil {
-			return nil, utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem_reader.WalkFiles", "", err)
+			return nil, utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem_reader: WalkFiles", "", err)
 		}
 		return files, nil
 	}
 
 	files, err := go_pkg_filesystem_reader.ListAll(absPath, go_pkg_filesystem_reader.ListOption{SkipExcluded: true})
 	if err != nil {
-		return nil, utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem_reader.ListAll", "", err)
+		return nil, utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem_reader: ListAll", "", err)
 	}
 	return files, nil
 }

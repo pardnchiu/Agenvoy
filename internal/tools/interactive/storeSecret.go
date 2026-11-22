@@ -9,6 +9,7 @@ import (
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -18,10 +19,8 @@ import (
 
 func registStoreSecret() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "store_secret",
-		SystemUse:   true,
-		AlwaysAllow: false,
-		Concurrent:  false,
+		Name:      "store_secret",
+		SystemUse: true,
 		Description: `Asks the user for a secret with masked input and stores it in the OS keychain; returns only the key name, never the value.
 Use for "set my OpenAI key", "update my API token", and on an auth failure (missing key, 401, 403, expired token): take the key name from the error, call this, then re-invoke the tool that failed. Other questions to the user → ask_user.
 Stored keys already live in the OS keychain under service ` + "`agenvoy`" + `, account = the key name (OPENAI_API_KEY, POLYGON_API_KEY, ...): macOS ` + "`security find-generic-password -s agenvoy -a <KEY> -w`" + `, Linux ` + "`secret-tool lookup service agenvoy account <KEY>`" + ` then ` + "`~/.config/agenvoy/.secrets`" + `, and only after those the environment variable of that name. Nothing is exported into the process environment, so an empty ` + "`printenv`" + ` is no reason to ask the user or call the task blocked; read from there when a call needs credentials, and use this tool only for a key that is not there yet.
@@ -56,7 +55,7 @@ Credentials travel only through this tool's masked input; keep the value out of 
 
 			question := strings.TrimSpace(params.Question)
 			if question == "" {
-				question = fmt.Sprintf("%s is required", key)
+				question = fmt.Sprintf(locale.GetAskUser().SecretRequired, key)
 			}
 
 			value, err := SecretPrompt(ctx, e.SessionID, question)

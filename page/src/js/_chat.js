@@ -1,5 +1,15 @@
 let chatListRetry = 0;
 
+const CHAT_MODE_COOKIE = "agenvoy_chat_mode";
+
+const otherTags = {
+  cli: "TUI",
+  tg: "TG",
+  dc: "DC",
+  ln: "LINE",
+  temp: "TEMP",
+};
+
 function retryChatList() {
   clearTimeout(chatListRetry);
   chatListRetry = setTimeout(renderChatList, 3000);
@@ -8,11 +18,6 @@ function retryChatList() {
 async function renderChatList() {
   const dom = $("#left-tab-chat-list");
   const pinDom = $("#left-tab-pin-list");
-  const discordDom = $("#left-tab-discord-list");
-  const telegramDom = $("#left-tab-telegram-list");
-  const lineDom = $("#left-tab-line-list");
-  const terminalDom = $("#left-tab-terminal-list");
-  const tempDom = $("#left-tab-temp-list");
   if (!dom) {
     return;
   }
@@ -32,20 +37,13 @@ async function renderChatList() {
   clearTimeout(chatListRetry);
 
   dom.innerHTML = "";
-  for (const one of [pinDom, discordDom, telegramDom, lineDom, terminalDom, tempDom]) {
-    if (one) {
-      one.innerHTML = "";
-    }
+  if (pinDom) {
+    pinDom.innerHTML = "";
   }
 
   const pinned = pinChats();
   const frameChat = _("temp");
   const framePin = _("temp");
-  const frameTerminal = _("temp");
-  const frameTemp = _("temp");
-  const frameDiscord = _("temp");
-  const frameTelegram = _("temp");
-  const frameLine = _("temp");
 
   for (const e of list) {
     const panel = document.querySelector(`section.chat > section[data-id="${e.id}"]`);
@@ -61,56 +59,16 @@ async function renderChatList() {
       frameChat.appendChild(chatListItem(e.id, e.name || e.id));
       continue;
     }
-    if (e.id.startsWith("cli-")) {
-      frameTerminal.appendChild(chatListItem(e.id, e.name || e.id));
-      continue;
-    }
-    if (e.id.startsWith("temp-")) {
-      frameTemp.appendChild(chatListItem(e.id, e.name || e.id));
-      continue;
-    }
-    if (e.id.startsWith("dc-")) {
-      frameDiscord.appendChild(chatListItem(e.id, e.name || e.id));
-      continue;
-    }
-    if (e.id.startsWith("tg-")) {
-      frameTelegram.appendChild(chatListItem(e.id, e.name || e.id));
-      continue;
-    }
-    if (e.id.startsWith("ln-")) {
-      frameLine.appendChild(chatListItem(e.id, e.name || e.id));
+    const tag = otherTags[e.id.split("-")[0]];
+    if (tag) {
+      frameChat.appendChild(chatListItem(e.id, e.name || e.id, tag));
     }
   }
 
   dom.appendChild(frameChat);
-  for (const [box, frame] of [
-    [pinDom, framePin],
-    [discordDom, frameDiscord],
-    [telegramDom, frameTelegram],
-    [lineDom, frameLine],
-    [terminalDom, frameTerminal],
-    [tempDom, frameTemp],
-  ]) {
-    if (box) {
-      box.appendChild(frame);
-    }
-  }
-
-  for (const [box, label] of [
-    [discordDom, "Discords"],
-    [telegramDom, "Telegrams"],
-    [lineDom, "Lines"],
-    [terminalDom, "Terminals"],
-    [tempDom, "Temps"],
-  ]) {
-    if (!box) {
-      continue;
-    }
-    const group = box.closest("details");
-    const title = group ? group.querySelector("summary > p") : null;
-    if (title) {
-      title.textContent = `${label} (${box.childElementCount})`;
-    }
+  filterChatList();
+  if (pinDom) {
+    pinDom.appendChild(framePin);
   }
 
   const active = currentSessionId
@@ -121,6 +79,24 @@ async function renderChatList() {
     if (group) {
       group.open = true;
     }
+  }
+}
+
+function setChatListMode(mode) {
+  writeCookie(CHAT_MODE_COOKIE, mode);
+  filterChatList();
+}
+
+function filterChatList() {
+  const input = $("#left-tab-chat-search");
+  const keyword = input ? input.value.trim().toLowerCase() : "";
+  const mode = readCookie(CHAT_MODE_COOKIE) === "all" ? "all" : "chat";
+  for (const button of document.querySelectorAll("#left-tab-chat-mode > button")) {
+    button.dataset.selected = button.dataset.mode === mode ? 1 : 0;
+  }
+  for (const row of document.querySelectorAll("#left-tab-chat-list > div")) {
+    const hidden = (mode === "chat" && row.dataset.tag) || (keyword && !row.dataset.name.includes(keyword));
+    row.style.display = hidden ? "none" : "";
   }
 }
 
@@ -162,7 +138,7 @@ function pinListItem(sessionId, title) {
   );
 }
 
-function chatListItem(sessionId, title) {
+function chatListItem(sessionId, title, tag) {
   const actions = _("div.actions", [
     rowActionItem("keep", "Pin", "", () => addPinChat(sessionId)),
     rowActionItem("delete", "Delete", "remove", function () {
@@ -176,9 +152,18 @@ function chatListItem(sessionId, title) {
     "div",
     {
       "data-id": sessionId,
+      "data-name": title.toLowerCase(),
+      "data-tag": tag || "",
       "data-selected": sessionId === currentSessionId ? 1 : 0,
     },
-    [_("a", { href: getLink({ page: "chat", chat: sessionId }) }, title), actions],
+    [
+      _(
+        "a",
+        { href: getLink({ page: "chat", chat: sessionId }) },
+        tag ? [_(`span.tag.${tag.toLowerCase()}`, tag), _("span", title)] : title,
+      ),
+      actions,
+    ],
   );
 }
 
@@ -220,10 +205,16 @@ function renameChat(sessionId, title) {
     return;
   }
 
-  const label = document.querySelector(`section.chats [data-id="${sessionId}"] > a`);
+  const row = document.querySelector(`section.chats [data-id="${sessionId}"]`);
+  if (!row) {
+    return;
+  }
+  row.dataset.name = title.toLowerCase();
+  const label = row.querySelector(":scope > a > span:not(.tag)") || row.querySelector(":scope > a");
   if (label) {
     label.textContent = title;
   }
+  filterChatList();
 }
 
 async function renderChat(sessionId) {

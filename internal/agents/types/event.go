@@ -48,6 +48,7 @@ var eventTypeByName = map[string]EventType{
 	"EventPendingEnd":      EventPendingEnd,
 	"EventClientToolCall":  EventClientToolCall,
 	"EventFileChanged":     EventFileChanged,
+	"EventAskPrompt":       EventAskPrompt,
 }
 
 func (e *EventType) UnmarshalJSON(data []byte) error {
@@ -95,6 +96,7 @@ const (
 	EventFileChanged
 	EventToolProgress
 	EventPendingEnd
+	EventAskPrompt
 )
 
 func (e EventType) String() string {
@@ -137,6 +139,8 @@ func (e EventType) String() string {
 		return "EventDone"
 	case EventFileChanged:
 		return "EventFileChanged"
+	case EventAskPrompt:
+		return "EventAskPrompt"
 	case EventUserInput:
 		return "EventUserInput"
 	case EventDaemonLog:
@@ -194,7 +198,16 @@ type Event struct {
 	Explain         string                   `json:"explain,omitempty"`
 	PasswordCached  bool                     `json:"password_cached,omitempty"`
 	ClientToolCalls []go_llm_router.ToolCall `json:"client_tool_calls,omitempty"`
+	Questions       []AskQuestion            `json:"questions,omitempty"`
 	Err             error                    `json:"-"`
+}
+
+type AskQuestion struct {
+	Question    string   `json:"question"`
+	Detail      string   `json:"detail,omitempty"`
+	Options     []string `json:"options,omitempty"`
+	MultiSelect bool     `json:"multi_select,omitempty"`
+	Secret      bool     `json:"secret,omitempty"`
 }
 
 func ErrorEvent(err error) Event {

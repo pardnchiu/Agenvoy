@@ -1,6 +1,13 @@
 let pendingTask = null;
 let pendingAnswers = [];
 
+const PENDING_TEXT = {
+  placeholder: "Type your answer...",
+  next: "Next",
+  send: "Send",
+  skip: "Skip",
+};
+
 async function loadPending(sessionId, taskHash, ownerId) {
   const dom = chatPart("pending", sessionId);
   if (!dom || !sessionId || !taskHash) {
@@ -11,13 +18,16 @@ async function loadPending(sessionId, taskHash, ownerId) {
   clearPending(sessionId);
 
   let questions = [];
+  let text = {};
   try {
     const url = `${API}/v1/session/${encodeURIComponent(owner)}/task/${encodeURIComponent(taskHash)}/questions`;
     const response = await fetch(url);
     if (!response.ok) {
       return;
     }
-    questions = (await response.json()).questions || [];
+    const data = await response.json();
+    questions = data.questions || [];
+    text = data.text || {};
   } catch (err) {
     console.error("loadPending", err);
     return;
@@ -26,7 +36,13 @@ async function loadPending(sessionId, taskHash, ownerId) {
     return;
   }
 
-  pendingTask = { sessionId: sessionId, owner: owner, taskHash: taskHash, questions: questions };
+  pendingTask = {
+    sessionId: sessionId,
+    owner: owner,
+    taskHash: taskHash,
+    questions: questions,
+    text: Object.assign({}, PENDING_TEXT, text),
+  };
   pendingAnswers = questions.map((q) => (q.multi_select ? [] : ""));
 
   for (let i = 0; i < questions.length; i++) {
@@ -92,11 +108,12 @@ function pendingCard(question, index, total) {
     }
   }
 
+  const text = pendingTask ? pendingTask.text : PENDING_TEXT;
   const last = index === total - 1;
-  const submit = _("button", { type: "button", class: "submit" }, last ? "Send" : "Next");
+  const submit = _("button", { type: "button", class: "submit" }, last ? text.send : text.next);
   submit.addEventListener("click", () => answerPending(index, total));
 
-  const skip = _("button", { type: "button", class: "skip" }, "Skip");
+  const skip = _("button", { type: "button", class: "skip" }, text.skip);
   skip.addEventListener("click", () => {
     pendingAnswers[index] = question.multi_select ? [] : "";
     answerPending(index, total);
@@ -107,13 +124,14 @@ function pendingCard(question, index, total) {
 }
 
 function pendingInput(question, index) {
+  const placeholder = (pendingTask ? pendingTask.text : PENDING_TEXT).placeholder;
   if (question.secret) {
-    const dom = _("input", { type: "password", placeholder: "Type your answer..." });
+    const dom = _("input", { type: "password", placeholder: placeholder });
     dom.addEventListener("input", () => (pendingAnswers[index] = dom.value));
     return dom;
   }
 
-  const dom = _("textarea", { rows: "3", placeholder: "Type your answer..." });
+  const dom = _("textarea", { rows: "3", placeholder: placeholder });
   dom.addEventListener("input", () => (pendingAnswers[index] = dom.value));
   dom.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" || e.shiftKey || e.isComposing) {

@@ -5,6 +5,8 @@ import (
 	"html"
 	"strings"
 	"unicode/utf16"
+
+	"github.com/pardnchiu/agenvoy/internal/locale"
 )
 
 type ConfirmMessage struct {
@@ -17,12 +19,12 @@ type ConfirmMessage struct {
 const (
 	discordMessageLimit  = 2000
 	telegramMessageLimit = 4096
-	chatRestrictedNote   = "chat cannot collect it: approve it from the TUI or Web UI on this machine"
 )
 
 func FormatConfirm(name, raw string, restricted []string, passwordCached bool) ConfirmMessage {
+	text := locale.GetConfirm()
 	msg := ConfirmMessage{
-		Title:   fmt.Sprintf("Run %s?", ToolName(name)),
+		Title:   fmt.Sprintf(text.Title, ToolName(name)),
 		Display: FormatToolEvent(name, raw),
 	}
 	if msg.Display == "" {
@@ -32,14 +34,14 @@ func FormatConfirm(name, raw string, restricted []string, passwordCached bool) C
 		return msg
 	}
 
-	msg.Title = fmt.Sprintf("Run %s outside the allow list?", ToolName(name))
+	msg.Title = fmt.Sprintf(text.TitleRestricted, ToolName(name))
 	msg.RestrictedLines = make([]string, len(restricted))
 	for i, one := range restricted {
 		msg.RestrictedLines[i] = "⚠ " + one
 	}
-	msg.RestrictedNote = "system password required"
+	msg.RestrictedNote = text.PasswordRequired
 	if passwordCached {
-		msg.RestrictedNote = "sudo credentials still valid — no password needed"
+		msg.RestrictedNote = text.PasswordCached
 	}
 	return msg
 }
@@ -96,7 +98,7 @@ func chatExplain(msg ConfirmMessage, explain string) string {
 	if len(msg.RestrictedLines) == 0 {
 		return explain
 	}
-	return strings.TrimSpace(explain + "\n" + strings.Join(msg.RestrictedLines, "\n") + "\n" + msg.RestrictedNote + "\n" + chatRestrictedNote)
+	return strings.TrimSpace(explain + "\n" + strings.Join(msg.RestrictedLines, "\n") + "\n" + msg.RestrictedNote + "\n" + locale.GetConfirm().ChatRestricted)
 }
 
 func utf16Len(text string) int {

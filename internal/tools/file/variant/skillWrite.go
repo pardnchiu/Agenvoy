@@ -25,7 +25,7 @@ func writeSkillFile(ctx context.Context, e *tooltypes.Executor, path, content st
 
 	change := capture(absPath)
 	if err := go_pkg_filesystem.WriteFile(absPath, content, 0644); err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.WriteFile", absPath, err)
+		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem: WriteFile", absPath, err)
 	}
 	record(ctx, e, change, content, "edit_skill")
 

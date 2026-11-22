@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -47,7 +48,8 @@ var (
 	DownloadDir             string
 	DownloadTrashDir        string
 	SessionsTrashDir        string
-	AllowSkillGlobalPath    string
+	TrustSkillGlobalPath    string
+	LegacyAllowSkillPath    string
 	AllowToolGlobalPath     string
 	PromptsDir              string
 	VendorDir               string
@@ -106,7 +108,8 @@ func Init() error {
 		DownloadDir = filepath.Join(AgenvoyDir, "download")
 		DownloadTrashDir = filepath.Join(DownloadDir, ".Trash")
 		SessionsTrashDir = filepath.Join(SessionsDir, ".Trash")
-		AllowSkillGlobalPath = filepath.Join(AgenvoyDir, "allow_skill")
+		TrustSkillGlobalPath = filepath.Join(AgenvoyDir, "trust_skill")
+		LegacyAllowSkillPath = filepath.Join(AgenvoyDir, "allow_skill")
 		AllowToolGlobalPath = filepath.Join(AgenvoyDir, "allow_tool")
 		PromptsDir = filepath.Join(AgenvoyDir, "prompts")
 		VendorDir = filepath.Join(AgenvoyDir, "vendor")
@@ -177,7 +180,11 @@ func PendingMetaPath(sessionID, taskHash string) string {
 	return filepath.Join(PendingDir(sessionID), taskHash+".json")
 }
 
-func AllowSkillProjectPath(workDir string) string {
+func TrustSkillProjectPath(workDir string) string {
+	return filepath.Join(workDir, "."+projectName, "trust_skill")
+}
+
+func LegacyAllowSkillProjectPath(workDir string) string {
 	return filepath.Join(workDir, "."+projectName, "allow_skill")
 }
 
@@ -210,7 +217,14 @@ func MoveToStoreTemp(src string) (string, error) {
 		return "", err
 	}
 	if err := go_pkg_filesystem.Move(src, dst); err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.Move", src+" → "+dst, err)
+		label := utilsmsg.Internal
+		switch {
+		case errors.Is(err, os.ErrNotExist):
+			label = utilsmsg.NotFound
+		case errors.Is(err, os.ErrPermission):
+			label = utilsmsg.Denied
+		}
+		return "", utilsmsg.Wrap(label, "go_pkg_filesystem: Move", src+" → "+dst, err)
 	}
 	return dst, nil
 }

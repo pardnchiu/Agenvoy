@@ -82,11 +82,11 @@ func ReadFile(ctx context.Context, path string, offset, limit int) (string, erro
 	return sliceLines(result, path, offset, limit), nil
 }
 
-func ReadAround(path string, rows []int, contextLines int) (string, error) {
+func ReadLines(path string, rows []int, contextLines int) (string, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch {
 	case IsMedia(path), imageExts[ext], ext == ".pdf", ext == ".pptx", ext == ".docx", ext == ".csv", ext == ".tsv":
-		return "", utilsmsg.New(utilsmsg.Invalid, "around", "applies to plain-text files; %s is %s, use offset/limit instead", path, ext)
+		return "", utilsmsg.New(utilsmsg.Invalid, "lines", "applies to plain-text files; %s is %s, use offset/limit instead", path, ext)
 	}
 
 	result, err := readPlainText(path)

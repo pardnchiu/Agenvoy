@@ -28,8 +28,14 @@ func selectWithLLM(ctx context.Context, meta SelectMeta, selectionPrompt string,
 		return nil, ""
 	}
 
-	trimSeletionPromprt := strings.TrimSpace(selectionPrompt)
-	trimSeletionPromprt = strings.ReplaceAll(trimSeletionPromprt, "{{.ModelSelection}}", string(orderRaw))
+	workKinds := make([]string, 0, len(config.WorkKinds))
+	for _, k := range config.WorkKinds {
+		workKinds = append(workKinds, "`"+k.Key+"`")
+	}
+	systemPrompt := strings.NewReplacer(
+		"{{.WorkKinds}}", strings.Join(workKinds, ", "),
+		"{{.ModelSelection}}", strings.TrimSpace(selectionPrompt),
+	).Replace(strings.TrimSpace(configs.AgentSelector))
 
 	skillLine := ""
 	if meta.SkillDescription != "" {
@@ -42,7 +48,7 @@ func selectWithLLM(ctx context.Context, meta SelectMeta, selectionPrompt string,
 	).Replace(configs.AgentSelectorRequest))
 
 	messages := []go_llm_router.Message{
-		{Role: "system", Content: trimSeletionPromprt},
+		{Role: "system", Content: systemPrompt},
 		{Role: "user", Content: trimTask},
 	}
 

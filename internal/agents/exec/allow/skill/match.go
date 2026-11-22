@@ -2,7 +2,9 @@
 package skill
 
 import (
+	"log/slog"
 	"maps"
+	"os"
 	"strings"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -22,11 +24,33 @@ func Match(workDir, skillName string) bool {
 
 // load global and project conbime to one
 func Load(workDir ...string) map[string]bool {
-	dic := read(filesystem.AllowSkillGlobalPath)
+	dic := read(globalPath())
 	if len(workDir) > 0 && strings.TrimSpace(workDir[0]) != "" {
-		maps.Copy(dic, read(filesystem.AllowSkillProjectPath(workDir[0])))
+		maps.Copy(dic, read(projectPath(workDir[0])))
 	}
 	return dic
+}
+
+func globalPath() string {
+	return migrate(filesystem.TrustSkillGlobalPath, filesystem.LegacyAllowSkillPath)
+}
+
+func projectPath(workDir string) string {
+	return migrate(filesystem.TrustSkillProjectPath(workDir), filesystem.LegacyAllowSkillProjectPath(workDir))
+}
+
+func migrate(path, legacy string) string {
+	if go_pkg_filesystem_reader.Exists(path) || !go_pkg_filesystem_reader.Exists(legacy) {
+		return path
+	}
+	if err := os.Rename(legacy, path); err != nil {
+		slog.Warn("[Internal] os: Rename",
+			slog.String("from", legacy),
+			slog.String("to", path),
+			slog.String("error", err.Error()))
+		return legacy
+	}
+	return path
 }
 
 // read path and parse to dic
@@ -42,7 +66,7 @@ func read(path string) map[string]bool {
 	}
 
 	/**
-	 * allow_skill example
+	 * trust_skill example
 	 * ---
 	 * commit-generate
 	 * version-generate

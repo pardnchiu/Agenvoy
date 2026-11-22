@@ -137,7 +137,8 @@ function renderUpdateEntry(available, latest) {
   }
 
   entry.hidden = !available;
-  const label = latest ? `Update (${latest})` : "Update";
+  entry.href = latest ? RELEASE_TAG_URL + encodeURIComponent(latest) : RELEASE_URL;
+  const label = latest ? `See update (${latest})` : "See update";
   const text = entry.querySelector("p");
   if (text) {
     text.textContent = label;
@@ -164,7 +165,8 @@ function watchUpdate() {
   setInterval(checkUpdate, UPDATE_INTERVAL);
 }
 
-const RELEASE_TAG_URL = "https://github.com/agenvoy/Agenvoy/releases/tag/";
+const RELEASE_URL = "https://github.com/agenvoy/Agenvoy/releases";
+const RELEASE_TAG_URL = `${RELEASE_URL}/tag/`;
 
 async function renderSystemVersion() {
   const label = $("#system-version");

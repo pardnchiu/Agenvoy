@@ -64,7 +64,7 @@ var eventModeLabel = map[string]map[string]string{
 	"subagents":  {"list": "Subagents", "invoke": "Subagent"},
 	"find_files": {"list": "Files", "glob": "Search", "search": "Search"},
 	"schedules":  {"list": "Schedules", "write": "Write", "patch": "Edit", "remove": "Remove"},
-	"edit_file":  {"write": "Write", "patch": "Edit"},
+	"write_file": {"write": "Write", "patch": "Edit"},
 	"edit_skill": {"write": "Write", "patch": "Edit", "remove": "Remove"},
 	"edit_tool":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
 }
@@ -133,9 +133,12 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 	case "read_files":
 		return joinPaths(argMap)
 
-	case "edit_file", "remove_file", "restore_file":
-		if path := arg("path"); path != "" {
-			return path
+	case "write_file", "remove_file":
+		return arg("filename")
+
+	case "restore_file":
+		if filename := arg("filename"); filename != "" {
+			return filename
 		}
 		if v, ok := argMap["version"].(float64); ok && v > 0 {
 			return fmt.Sprintf("version %d", int64(v))
@@ -161,7 +164,7 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 		return arg("path")
 
 	case "download_file":
-		return arg("url", "link")
+		return arg("link", "url")
 
 	case "fetch_page":
 		return arg("link", "url")
@@ -199,11 +202,11 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 		return joinStrings(argMap["topics"])
 
 	case "write_result":
-		format := arg("format")
-		if format == "" {
-			format = "md"
+		ext := "md"
+		if content, _ := argMap["content"].(string); IsHTMLDocument(content) {
+			ext = "html"
 		}
-		return filepath.Join(filesystem.OutputDir(), "report-*."+format)
+		return filepath.Join(filesystem.OutputDir(), "report-*."+ext)
 
 	case "find_tools":
 		if names := joinStrings(argMap["names"]); names != "" {
@@ -283,11 +286,11 @@ func eventMode(name string, argMap map[string]any) string {
 		}
 		return mode
 
-	case "edit_file":
-		if targets, ok := argMap["targets"].([]any); ok && len(targets) > 0 {
+	case "write_file":
+		if targets, ok := argMap["patch_contents"].([]any); ok && len(targets) > 0 {
 			return "patch"
 		}
-		if content, _ := argMap["content"].(string); content != "" {
+		if content, _ := argMap["write_content"].(string); content != "" {
 			return "write"
 		}
 
@@ -470,7 +473,7 @@ var toolDisplayName = map[string]string{
 	"list_chatbot":         "List",
 	"read_files":           "Read",
 	"write_result":         "Write",
-	"edit_file":            "Edit",
+	"write_file":           "Write",
 	"remove_file":          "Remove",
 	"restore_file":         "Restore",
 	"run_command":          "Run",

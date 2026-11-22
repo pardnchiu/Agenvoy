@@ -31,7 +31,6 @@ func registBackgroundSubagents() {
 
 	toolregister.Regist(toolregister.Def{
 		Name:        "background_subagents",
-		SystemUse:   false,
 		AlwaysAllow: true,
 		Concurrent:  true,
 		Description: fmt.Sprintf(`Starts a subtask in its own session in the background and returns a task id at once. Legs started in the same turn form one group: while this task is open each finished leg's report arrives here; once it has ended, the group runs objective + next as its own task when all of its legs finish.

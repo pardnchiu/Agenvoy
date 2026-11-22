@@ -25,8 +25,6 @@ import (
 func registSendToChatbot() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "send_to_chatbot",
-		SystemUse:   false,
-		AlwaysAllow: false,
 		Concurrent:  true,
 		Description: sendToChatbotDescription(),
 		Parameters: map[string]any{
@@ -79,7 +77,7 @@ func registSendToChatbot() {
 
 func sendToChatbotDescription() string {
 	var sb strings.Builder
-	sb.WriteString("[system-default] Send a formatted message to an authorized chat/channel, from any session (including TUI / CLI / cron). Never fabricate target_id — call list_chatbot for the platform first.\n")
+	sb.WriteString("Send a formatted message to an authorized chat/channel, from any session (including TUI / CLI / cron). Never fabricate target_id — call list_chatbot for the platform first.\n")
 	if slices.Contains(platformEnum, platformTelegram) {
 		sb.WriteString("- Telegram (platform=telegram): if the user did not name a specific chat, list_chatbot(platform=telegram) → ask_user(options=[names]) → map chosen name → target_id → send. Group ids carrying a `-` prefix are especially prone to LLM hallucination and may target chats the bot was kicked from (→ 403 forbidden).\n")
 		sb.WriteString("- Telegram messages go out with parse_mode=HTML: use <b>, <i>, <code>, <pre>, <a href>, <blockquote> and nothing else. Markdown (**bold**, backtick code, leading -/*/#, [text](url), fenced blocks) and `| ... |` tables render as literal characters.\n")

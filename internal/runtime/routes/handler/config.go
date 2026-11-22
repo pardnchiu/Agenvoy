@@ -23,13 +23,13 @@ func GetConfig() gin.HandlerFunc {
 			c.JSON(http.StatusOK, gin.H{"enabled": startup.State(), "installed": startup.Enabled()})
 		case "system":
 			c.JSON(http.StatusOK, gin.H{
-				"reply_lang": filesystem.ConfigReplyLang,
+				"reply_lang": filesystem.GetReplyLang(),
 				"languages":  filesystem.ReplyLangOptions(),
 			})
 		case "reply_lang":
 			c.JSON(http.StatusOK, gin.H{
-				"reply_lang": filesystem.ConfigReplyLang,
-				"name":       filesystem.ReplyLangName(filesystem.ConfigReplyLang),
+				"reply_lang": filesystem.GetReplyLang(),
+				"name":       filesystem.ReplyLangName(filesystem.GetReplyLang()),
 				"directive":  filesystem.ReplyLangDirective(),
 			})
 		case "output_dir":
@@ -142,7 +142,7 @@ func setSystemConfig(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	filesystem.ConfigReplyLang = lang
+	filesystem.SetReplyLang(lang)
 
 	c.JSON(http.StatusOK, gin.H{"ok": true, "reply_lang": lang})
 }

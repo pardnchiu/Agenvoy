@@ -26,6 +26,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
+	"github.com/pardnchiu/agenvoy/internal/tools/command"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
@@ -206,20 +207,20 @@ func isReadOnlyMode(toolArgs string) bool {
 
 func invalidateReadFileCache(alreadyCall map[string]string, writeArgsJSON string) {
 	var p struct {
-		Path string `json:"path"`
+		Filename string `json:"filename"`
 	}
-	if json.Unmarshal([]byte(writeArgsJSON), &p) != nil || p.Path == "" {
+	if json.Unmarshal([]byte(writeArgsJSON), &p) != nil || p.Filename == "" {
 		return
 	}
 	for key := range alreadyCall {
-		if strings.HasPrefix(key, "read_files|") && strings.Contains(key, p.Path) {
+		if strings.HasPrefix(key, "read_files|") && strings.Contains(key, p.Filename) {
 			delete(alreadyCall, key)
 		}
 	}
 }
 
 var isWriteLikeTool = map[string]bool{
-	"edit_file":    true,
+	"write_file":   true,
 	"edit_skill":   true,
 	"edit_tool":    true,
 	"write_result": true,
@@ -233,15 +234,18 @@ func truncateWriteArgs(argsJSON string) string {
 
 	kept := map[string]any{}
 	for key, value := range m {
-		if key == "content" || key == "targets" {
+		if key == "content" || key == "write_content" || key == "patch_contents" {
 			continue
 		}
 		kept[key] = value
 	}
-	if targets, ok := m["targets"].([]any); ok {
+	if targets, ok := m["patch_contents"].([]any); ok {
 		kept["edits"] = len(targets)
 	}
 	if content, ok := m["content"].(string); ok {
+		kept["wrote_bytes"] = len(content)
+	}
+	if content, ok := m["write_content"].(string); ok {
 		kept["wrote_bytes"] = len(content)
 	}
 
@@ -360,9 +364,12 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			continue
 		}
 
-		if exec.UnmarkedTools[toolName] || activatedInBatch[toolName] {
+		exec.ToolsMu.Lock()
+		unmarked := exec.UnmarkedTools[toolName]
+		exec.ToolsMu.Unlock()
+		if unmarked || activatedInBatch[toolName] {
 			schema := ""
-			if exec.UnmarkedTools[toolName] {
+			if unmarked {
 				activateArgs, _ := json.Marshal(map[string]any{"mode": "search", "names": []string{toolName}})
 				out, err := toolregister.Dispatch(ctx, exec, "find_tools", activateArgs)
 				if err != nil {
@@ -371,7 +378,9 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 						slog.String("error", err.Error()))
 				}
 				schema = out
+				exec.ToolsMu.Lock()
 				delete(exec.UnmarkedTools, toolName)
+				exec.ToolsMu.Unlock()
 			}
 			activatedInBatch[toolName] = true
 			reinvoke := toolName
@@ -409,24 +418,42 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 		}
 
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)
-		unsandboxed := tools.RestrictedRunCommand(toolName, toolArg)
+		unsandboxed := command.RestrictedRunCommand(toolName, toolArg)
 		restrictedList := append(outsideHome(restrictedPaths), unsandboxed...)
-		allowRead := allowAll && (toolName == "read_files" || toolName == "find_files")
-		restricted := len(restrictedList) > 0 || len(restrictedPaths) > 0 && !*turnAllowAll && !allowRead
-		if !restricted && len(restrictedPaths) > 0 {
-			boundary.Grant(exec.SessionID, restrictedPaths...)
+		trust, _ := ctx.Value(TrustCtxKey{}).(bool)
+		if trust {
+			unsandboxed = slices.DeleteFunc(slices.Clone(unsandboxed), func(one string) bool {
+				return !strings.HasPrefix(one, "sudo: ")
+			})
+			restrictedList = unsandboxed
 		}
-
 		scoped := allowAll && !agenttypes.SubagentFrom(ctx)
 		autoAllow := allowAll && (!scoped || filesystem.WorkDirAllowsAll(exec.WorkDir))
-		needsConfirm := !allowRead && toolNeedsConfirmation(exec, toolName, toolArg, *turnAllowAll)
-		irreversible := autoAllow && !*turnAllowAll && len(unsandboxed) == 0 &&
-			isIrreversibleCommand(toolName, toolArg)
+		allowTurn := trust || *turnAllowAll || autoAllow
+		allowRead := allowTurn && (toolName == "read_files" || toolName == "find_files")
+		restricted := len(restrictedList) > 0 || len(restrictedPaths) > 0 && !allowTurn && !allowRead
+
+		needsConfirm := !trust && !allowRead && toolNeedsConfirmation(exec, toolName, toolArg, allowTurn)
 		var outsidePaths []string
-		if autoAllow && scoped && needsConfirm {
-			outsidePaths = boundary.OutsideWorkDir(exec.SessionID, exec.WorkDir, toolName, toolArg)
+		risky := false
+		if !restricted && allowTurn && !trust {
+			if !allowRead && !agenttypes.SubagentFrom(ctx) && toolNeedsConfirmation(exec, toolName, toolArg, false) {
+				outsidePaths = boundary.OutsideWorkDir(exec.SessionID, exec.WorkDir, toolName, toolArg)
+			}
+			irreversible := len(unsandboxed) == 0 && isMutatingCommand(toolName, toolArg) && isIrreversibleCommand(toolName, toolArg)
+			sensitive := !allowRead && len(restrictedPaths) > 0
+			if len(outsidePaths) > 0 || irreversible || sensitive {
+				unsafe, decided := unsafeByDecision(ctx, sessionData.ID, exec, toolName, toolArg, append(slices.Clone(outsidePaths), restrictedPaths...), irreversible)
+				risky = !decided || unsafe
+			}
+			if !risky {
+				outsidePaths = nil
+			}
 		}
-		if irreversible || restricted || len(outsidePaths) > 0 || !autoAllow && needsConfirm {
+		if !risky && !restricted && !needsConfirm && len(restrictedPaths) > 0 {
+			boundary.Grant(exec.SessionID, restrictedPaths...)
+		}
+		if risky || restricted || needsConfirm {
 			proceed := true
 			approved := false
 			verified := false
@@ -437,7 +464,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 				reason = "a background subagent leg cannot ask the user for confirmation; return what you gathered and state that this call still needs the user's approval"
 			} else if mode := agenttypes.AutoModeFrom(ctx); mode != agenttypes.AutoModeOff {
 				var missing []string
-				if (needsConfirm || irreversible || len(outsidePaths) > 0) && mode&agenttypes.AutoModeAllowEdit == 0 {
+				if (needsConfirm || risky || len(outsidePaths) > 0) && mode&agenttypes.AutoModeAllowEdit == 0 {
 					missing = append(missing, "enable_edit: true (this run is read-only: writes and non-read-only commands are refused)")
 				}
 				if len(restrictedList) > 0 && mode&agenttypes.AutoModeSkipSandbox == 0 {
@@ -671,7 +698,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			}
 		}
 
-		if (s.name == "edit_file" || s.name == "remove_file" || s.name == "restore_file") && s.execErr == "" {
+		if (s.name == "write_file" || s.name == "remove_file" || s.name == "restore_file") && s.execErr == "" {
 			invalidateReadFileCache(alreadyCall, s.args)
 		}
 		if isWriteLikeTool[s.name] && s.execErr == "" {

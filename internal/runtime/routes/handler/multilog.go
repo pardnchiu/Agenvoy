@@ -13,6 +13,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
 	configstatus "github.com/pardnchiu/agenvoy/internal/session/config/status"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
@@ -27,20 +28,26 @@ const (
 type taggedEvent struct {
 	Session string `json:"session"`
 	agenttypes.Event
-	Display         string   `json:"tool_display,omitempty"`
-	ConfirmTitle    string   `json:"confirm_title,omitempty"`
-	RestrictedLines []string `json:"restricted_lines,omitempty"`
-	RestrictedNote  string   `json:"restricted_note,omitempty"`
-	Trace           string   `json:"trace,omitempty"`
+	Display         string          `json:"tool_display,omitempty"`
+	ConfirmTitle    string          `json:"confirm_title,omitempty"`
+	RestrictedLines []string        `json:"restricted_lines,omitempty"`
+	RestrictedNote  string          `json:"restricted_note,omitempty"`
+	ConfirmOptions  *locale.Confirm `json:"confirm_options,omitempty"`
+	ConfirmText     *locale.Confirm `json:"confirm_text,omitempty"`
+	AskUserText     *locale.AskUser `json:"ask_text,omitempty"`
+	Trace           string          `json:"trace,omitempty"`
 }
 
 type wireEvent struct {
 	agenttypes.Event
-	Display         string   `json:"tool_display,omitempty"`
-	ConfirmTitle    string   `json:"confirm_title,omitempty"`
-	RestrictedLines []string `json:"restricted_lines,omitempty"`
-	RestrictedNote  string   `json:"restricted_note,omitempty"`
-	Trace           string   `json:"trace,omitempty"`
+	Display         string          `json:"tool_display,omitempty"`
+	ConfirmTitle    string          `json:"confirm_title,omitempty"`
+	RestrictedLines []string        `json:"restricted_lines,omitempty"`
+	RestrictedNote  string          `json:"restricted_note,omitempty"`
+	ConfirmOptions  *locale.Confirm `json:"confirm_options,omitempty"`
+	ConfirmText     *locale.Confirm `json:"confirm_text,omitempty"`
+	AskText         *locale.AskUser `json:"ask_text,omitempty"`
+	Trace           string          `json:"trace,omitempty"`
 }
 
 func skipEvent(ev agenttypes.Event) bool {
@@ -67,6 +74,12 @@ func toWire(ev agenttypes.Event) wireEvent {
 		wire.ConfirmTitle = msg.Title
 		wire.RestrictedLines = msg.RestrictedLines
 		wire.RestrictedNote = msg.RestrictedNote
+		confirm := locale.GetConfirm()
+		wire.ConfirmOptions = &confirm
+		wire.ConfirmText = &confirm
+	case agenttypes.EventAskPrompt:
+		text := locale.GetAskUser()
+		wire.AskText = &text
 	}
 	return wire
 }
@@ -80,6 +93,9 @@ func toTagged(sessionID string, ev agenttypes.Event) taggedEvent {
 		ConfirmTitle:    wire.ConfirmTitle,
 		RestrictedLines: wire.RestrictedLines,
 		RestrictedNote:  wire.RestrictedNote,
+		ConfirmOptions:  wire.ConfirmOptions,
+		ConfirmText:     wire.ConfirmText,
+		AskUserText:     wire.AskText,
 		Trace:           wire.Trace,
 	}
 }

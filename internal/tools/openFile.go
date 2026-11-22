@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -23,7 +22,6 @@ func registOpenFile() {
 		Name:        "open_file",
 		SystemUse:   true,
 		AlwaysAllow: true,
-		Concurrent:  false,
 		Description: `Hands a file or URL to the OS default handler and returns the opened path: plays a video, shows an image, opens a PDF viewer, a system settings pane or a link.
 Use for "open this file", "play the video", "show me the image", "open settings", and for open / xdg-open / start.
 run_command cannot do this: its sandbox has no route to the app-launch service. Reading the contents instead → read_files.`,
@@ -61,17 +59,9 @@ func OpenFile(ctx context.Context, workDir, sessionID, path string) (string, err
 	if IsOpenURL(path) {
 		absPath = strings.TrimSpace(path)
 	} else {
-		baseDir := workDir
-		if baseDir == "" {
-			baseDir = filesystem.DownloadDir
-		}
-
-		resolved, err := boundary.Resolve(sessionID, baseDir, path)
+		resolved, err := boundary.ResolveIn(sessionID, workDir, path)
 		if err != nil {
-			return "", utilsmsg.Trace("boundary.Resolve", "", err)
-		}
-		if resolved == "" {
-			return "", utilsmsg.New(utilsmsg.Invalid, "path", "required")
+			return "", utilsmsg.Trace("tools/file/boundary: ResolveIn", "", err)
 		}
 		absPath = resolved
 	}

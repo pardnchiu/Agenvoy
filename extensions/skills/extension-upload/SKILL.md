@@ -215,7 +215,7 @@ First publish needs a marketplace registry email (stored in ~/.config/agenvoy/co
 
 Validate against `^[^@\s]+@[^@\s]+\.[^@\s]+$`:
 
-- Pass → **lowercase first**, then `read_files` → `edit_file(mode=patch)` to persist `"email": "<lowercased>"` into config.json (worker normalizes to lowercase, client must match)
+- Pass → **lowercase first**, then `read_files` → `write_file(mode=patch)` to persist `"email": "<lowercased>"` into config.json (worker normalizes to lowercase, client must match)
 - Fail → re-prompt; abort after 3 attempts with "email format invalid"
 - Blank / cancel → abort with "no email provided, cannot upload"
 
@@ -259,7 +259,7 @@ Fixed output directory: `~/.config/agenvoy/tools/.extension/.package/` — **not
 
 Fixed filename format: `<name>@<version>.tar.gz` (e.g. `yt-dlp-info@1.0.0.tar.gz`).
 
-`edit_file(mode=write)`:
+`write_file(mode=write)`:
 
 - Path: `<extension_dir>/manifest.json`
 - Content: the manifest that passed §6 validation, pretty-printed (2-space indent), trailing newline
@@ -418,7 +418,7 @@ Upload-stage failure (§8.1 / §8.2 / §8.3) → show `✅ packaged` plus `❌ p
 
 ## Forbidden
 
-- Never hardcode `email`; it must come from `config.json` (and §5.1 `ask_user` + `edit_file(mode=patch)` if missing)
+- Never hardcode `email`; it must come from `config.json` (and §5.1 `ask_user` + `write_file(mode=patch)` if missing)
 - Never touch `git config user.name` / `git config user.email`; marketplace identity uses only the config registry email
 - Never use an `author` field in the manifest; the worker expects `email` (a pure email string, not `<name> (<email>)`)
 - Never skip the §5.2 lowercase normalize; the worker normalizes email to lowercase — mismatched case breaks both KV verification lookup and D1 lookup

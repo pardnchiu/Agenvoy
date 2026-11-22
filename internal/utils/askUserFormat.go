@@ -3,6 +3,8 @@ package utils
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pardnchiu/agenvoy/internal/locale"
 )
 
 type AskMessage struct {
@@ -17,7 +19,7 @@ func FormatAskUser(question, detail string, index, total int) AskMessage {
 		Detail: strings.TrimSpace(detail),
 	}
 	if total > 1 {
-		msg.Progress = fmt.Sprintf("question %d/%d", index+1, total)
+		msg.Progress = fmt.Sprintf(locale.GetAskUser().Progress, index+1, total)
 	}
 	return msg
 }
@@ -35,14 +37,14 @@ func FormatChatAsk(msg AskMessage) string {
 
 func FormatDiscordAskText(header string, secret bool) string {
 	if secret {
-		return header + "\n\n🔒 Your reply is captured via a private modal and is not logged."
+		return header + "\n\n" + locale.GetAskUser().DiscordSecret
 	}
 	return header
 }
 
 func FormatTelegramAskText(header string, secret bool) string {
 	if secret {
-		return header + "\n\n🔒 Your reply will be deleted from chat after capture."
+		return header + "\n\n" + locale.GetAskUser().TelegramSecret
 	}
 	return header
 }

@@ -16,14 +16,14 @@ import (
 	oauthgrok "github.com/pardnchiu/go-llm-router/core/oauth/grok"
 	"github.com/pardnchiu/go-pkg/filesystem/keychain"
 
-	"github.com/pardnchiu/agenvoy/internal/agents/decision"
+	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
+	agentimage "github.com/pardnchiu/agenvoy/internal/agents/image"
 	agentkeychain "github.com/pardnchiu/agenvoy/internal/agents/keychain"
 	"github.com/pardnchiu/agenvoy/internal/agents/probe"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
+	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/session/config"
-	audiotool "github.com/pardnchiu/agenvoy/internal/tools/external/audio"
-	imagetool "github.com/pardnchiu/agenvoy/internal/tools/external/image"
 )
 
 type providerInfo struct {
@@ -174,10 +174,7 @@ func AddProviderKey() gin.HandlerFunc {
 				return
 			}
 			DropQuotaCache(prov)
-			imagetool.DropModelsCache(c.Request.Context(), prov)
-			decision.DropModelsCache(c.Request.Context(), prov)
-			audiotool.DropModelsCache(c.Request.Context(), prov)
-			probe.DropModelsCache(c.Request.Context(), name)
+			torii.DropModelsCache(c.Request.Context(), name)
 			c.JSON(http.StatusOK, gin.H{"ok": true})
 			return
 		}
@@ -220,10 +217,7 @@ func AddProviderKey() gin.HandlerFunc {
 		}
 
 		DropQuotaCache(prov)
-		imagetool.DropModelsCache(c.Request.Context(), prov)
-		decision.DropModelsCache(c.Request.Context(), prov)
-		audiotool.DropModelsCache(c.Request.Context(), prov)
-		probe.DropModelsCache(c.Request.Context(), prov)
+		torii.DropModelsCache(c.Request.Context(), prov)
 
 		if prov == "cloudflare" {
 			if err := keychain.Set("CLOUDFLARE_ACCOUNT_ID", accountID); err != nil {
@@ -293,10 +287,7 @@ func ProviderOAuth() gin.HandlerFunc {
 			return
 		}
 		DropQuotaCache(prov)
-		imagetool.DropModelsCache(c.Request.Context(), prov)
-		decision.DropModelsCache(c.Request.Context(), prov)
-		audiotool.DropModelsCache(c.Request.Context(), prov)
-		probe.DropModelsCache(c.Request.Context(), prov)
+		torii.DropModelsCache(c.Request.Context(), prov)
 		emit(gin.H{"done": true, "ok": true})
 	}
 }
@@ -347,11 +338,10 @@ func ClearProviderOAuth() gin.HandlerFunc {
 		}
 
 		DropQuotaCache(prov)
-		imagetool.DropModelsCache(c.Request.Context(), prov)
-		decision.DropModelsCache(c.Request.Context(), prov)
-		audiotool.DropModelsCache(c.Request.Context(), prov)
-		probe.DropModelsCache(c.Request.Context(), prov)
-		imagetool.Prune(c.Request.Context())
+		torii.DropModelsCache(c.Request.Context(), prov)
+		agentimage.Prune(c.Request.Context())
+		audio.Prune(c.Request.Context(), audio.STT)
+		audio.Prune(c.Request.Context(), audio.TTS)
 		c.JSON(http.StatusOK, gin.H{"ok": true})
 	}
 }

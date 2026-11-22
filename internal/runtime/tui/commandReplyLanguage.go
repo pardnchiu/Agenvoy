@@ -27,7 +27,7 @@ func (t TUI) commandReplyLanguage() (TUI, tea.Cmd, bool) {
 	cursor := 0
 	for i, one := range languages {
 		detail := one.Label
-		if one.Code == filesystem.ConfigReplyLang {
+		if one.Code == filesystem.GetReplyLang() {
 			detail += "  " + systemStyle.Render("[current]")
 			cursor = i
 		}
@@ -61,7 +61,7 @@ func (t TUI) runReplyLanguageSelect(code string) (TUI, tea.Cmd) {
 	if err := config.Write(dic); err != nil {
 		return t, notice(msgError(fmt.Sprintf("reply-language: %v", err)) + "\n")
 	}
-	filesystem.ConfigReplyLang = lang
+	filesystem.SetReplyLang(lang)
 
 	slog.Debug("reply language updated", slog.String("lang", lang))
 	return t.openConfig(configReplyLang), nil

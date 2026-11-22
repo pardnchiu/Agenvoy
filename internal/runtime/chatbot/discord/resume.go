@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pardnchiu/agenvoy/internal/agents/exec"
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	sessiondiscord "github.com/pardnchiu/agenvoy/internal/session/discord"
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
@@ -17,7 +18,7 @@ func (b *Bot) resumeFromPending(sessionID, taskHash string, answers []any) {
 	if err != nil {
 		channelID, chErr := sessiondiscord.GetChannel(sessionID)
 		if chErr == nil && strings.TrimSpace(channelID) != "" {
-			b.client.Send(context.Background(), strings.TrimSpace(channelID), "", "Pending task already resolved in another session.")
+			b.client.Send(context.Background(), strings.TrimSpace(channelID), "", locale.GetChatbotCode().PendingResolved)
 		}
 		return
 	}

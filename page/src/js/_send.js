@@ -548,7 +548,7 @@ function newStreamItem(init, sessionId) {
   };
   assistantViews.set(dom, view);
   if (view.trace) {
-    render(view.reasoning, view.trace, sid);
+    render(view.reasoning, view.trace.split("\n\n").pop(), sid);
   }
   if (view.text) {
     render(view.answer, view.text, sid);

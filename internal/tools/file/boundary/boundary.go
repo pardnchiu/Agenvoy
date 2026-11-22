@@ -73,6 +73,17 @@ func deniedErr(absPath string) error {
 	return utilsmsg.New(utilsmsg.Denied, "path", "%s is on denied_path and is permanently off limits for both reads and writes; it cannot be approved and retrying the same path fails the same way", absPath)
 }
 
+func ResolveIn(sessionID, workDir, path string) (string, error) {
+	absPath, err := Resolve(sessionID, BaseDir(workDir), strings.TrimSpace(path))
+	if err != nil {
+		return "", err
+	}
+	if absPath == "" {
+		return "", utilsmsg.New(utilsmsg.Invalid, "path", "required")
+	}
+	return absPath, nil
+}
+
 func Resolve(sessionID, baseDir, path string) (string, error) {
 	abs, homeErr := go_pkg_filesystem.AbsPath(baseDir, path, go_pkg_filesystem.AbsPathOption{HomeOnly: true})
 	if homeErr == nil && filesystem.IsDeniedPath(abs) {
@@ -115,7 +126,7 @@ func Restricted(sessionID, workDir, toolName, toolArgs string) []string {
 		return nil
 	}
 
-	base := baseDir(workDir)
+	base := BaseDir(workDir)
 	seen := map[string]bool{}
 	var out []string
 	for _, one := range list {
@@ -180,7 +191,7 @@ func WriteBinds(sessionID, baseDir string, list []string) ([]string, error) {
 	return out, nil
 }
 
-func baseDir(workDir string) string {
+func BaseDir(workDir string) string {
 	if strings.TrimSpace(workDir) == "" {
 		return filesystem.DownloadDir
 	}
@@ -204,7 +215,7 @@ func rawPaths(toolName, toolArgs string) []string {
 		}
 		return out
 
-	case "edit_file", "remove_file", "restore_file", "open_file":
+	case "open_file":
 		var p struct {
 			Path string `json:"path"`
 		}
@@ -212,6 +223,15 @@ func rawPaths(toolName, toolArgs string) []string {
 			return nil
 		}
 		return []string{p.Path}
+
+	case "write_file", "remove_file", "restore_file":
+		var p struct {
+			Filename string `json:"filename"`
+		}
+		if json.Unmarshal([]byte(toolArgs), &p) != nil {
+			return nil
+		}
+		return []string{p.Filename}
 
 	case "find_files":
 		var p struct {
