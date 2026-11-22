@@ -17,7 +17,6 @@ function retryChatList() {
 
 async function renderChatList() {
   const dom = $("#left-tab-chat-list");
-  const pinDom = $("#left-tab-pin-list");
   if (!dom) {
     return;
   }
@@ -37,13 +36,10 @@ async function renderChatList() {
   clearTimeout(chatListRetry);
 
   dom.innerHTML = "";
-  if (pinDom) {
-    pinDom.innerHTML = "";
-  }
 
   const pinned = pinChats();
   const frameChat = _("temp");
-  const framePin = _("temp");
+  const pinRows = new Map();
 
   for (const e of list) {
     const panel = document.querySelector(`section.chat > section[data-id="${e.id}"]`);
@@ -52,7 +48,7 @@ async function renderChatList() {
     }
 
     if (pinned.includes(e.id)) {
-      framePin.appendChild(pinListItem(e.id, e.name || e.id));
+      pinRows.set(e.id, pinListItem(e.id, e.name || e.id, e.id.startsWith("chat-") ? "" : otherTags[e.id.split("-")[0]] || ""));
       continue;
     }
     if (e.id.startsWith("chat-")) {
@@ -65,11 +61,15 @@ async function renderChatList() {
     }
   }
 
+  for (const id of pinned.slice().reverse()) {
+    const row = pinRows.get(id);
+    if (row) {
+      frameChat.prepend(row);
+    }
+  }
+
   dom.appendChild(frameChat);
   filterChatList();
-  if (pinDom) {
-    pinDom.appendChild(framePin);
-  }
 
   const active = currentSessionId
     ? document.querySelector(`section.chats [data-id="${currentSessionId}"]`)
@@ -115,9 +115,9 @@ function rowActionItem(icon, label, style, action) {
   return dom;
 }
 
-function pinListItem(sessionId, title) {
+function pinListItem(sessionId, title, tag) {
   const body = [
-    _("a", { href: getLink({ page: "chat", chat: sessionId }) }, title),
+    _("a", { href: getLink({ page: "chat", chat: sessionId }) }, [_("span.tag.pin", "PIN"), _("span", title)]),
     _("div.actions", [
       rowActionItem("keep_off", "Unpin", "", () => removePinChat(sessionId)),
       rowActionItem("delete", "Delete", "remove", function () {
@@ -132,6 +132,9 @@ function pinListItem(sessionId, title) {
     "div",
     {
       "data-id": sessionId,
+      "data-name": title.toLowerCase(),
+      "data-pin": 1,
+      "data-tag": tag,
       "data-selected": sessionId === currentSessionId ? 1 : 0,
     },
     body,

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -130,7 +131,24 @@ func (t TUI) Init() tea.Cmd {
 	} else {
 		seq = append(seq, func() tea.Msg { return StartupSelectSession{} })
 	}
-	return tea.Batch(tea.Sequence(seq...), t.spinner.Tick, pollBackground())
+	return tea.Batch(tea.Sequence(seq...), t.spinner.Tick, pollBackground(), checkLatestRelease(t.ctx))
+}
+
+func checkLatestRelease(ctx context.Context) tea.Cmd {
+	if runtime.IsDev() {
+		return nil
+	}
+	return func() tea.Msg {
+		latest, err := runtime.LatestRelease(ctx)
+		if err != nil {
+			slog.Debug("[Unavailable] tui: checkLatestRelease", slog.String("error", err.Error()))
+			return nil
+		}
+		if latest == runtime.CurrentVersion {
+			return nil
+		}
+		return noticeMsg{text: msgWarn(fmt.Sprintf("new release %s available (current %s)  run /update to upgrade", latest, runtime.CurrentVersion))}
+	}
 }
 
 type BackgroundCancelPick struct {

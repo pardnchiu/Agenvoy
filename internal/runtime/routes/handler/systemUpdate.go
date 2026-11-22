@@ -25,15 +25,6 @@ import (
 
 const terminalLaunchTimeout = 10 * time.Second
 
-const latestReleaseURL = "https://github.com/pardnchiu/Agenvoy/releases/latest/download/x"
-
-var releaseClient = &http.Client{
-	Timeout: terminalLaunchTimeout,
-	CheckRedirect: func(*http.Request, []*http.Request) error {
-		return http.ErrUseLastResponse
-	},
-}
-
 const updateTerminalScript = `"$1" update || { printf '\nagen update failed; press Enter to close'; read _; }
 `
 
@@ -58,7 +49,7 @@ var linuxTerminals = []struct {
 
 func GetSystemUpdate() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		latest, err := latestRelease(c.Request.Context())
+		latest, err := runtime.LatestRelease(c.Request.Context())
 		if err != nil {
 			c.JSON(http.StatusBadGateway, gin.H{"version": runtime.CurrentVersion, "error": err.Error()})
 			return
@@ -69,27 +60,6 @@ func GetSystemUpdate() gin.HandlerFunc {
 			"update_available": latest != runtime.CurrentVersion,
 		})
 	}
-}
-
-func latestRelease(ctx context.Context) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, latestReleaseURL, nil)
-	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Internal, "http.NewRequestWithContext", "", err)
-	}
-	resp, err := releaseClient.Do(req)
-	if err != nil {
-		return "", utilsmsg.Wrap(utilsmsg.Unavailable, "resolve latest release", "", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusFound {
-		return "", utilsmsg.New(utilsmsg.Upstream, "resolve latest release", "github http %d", resp.StatusCode)
-	}
-	parts := strings.Split(strings.Trim(resp.Header.Get("Location"), "/"), "/")
-	if len(parts) < 3 || parts[len(parts)-3] != "download" || parts[len(parts)-2] == "" {
-		return "", utilsmsg.New(utilsmsg.Upstream, "resolve latest release", "unexpected redirect %q", resp.Header.Get("Location"))
-	}
-	return parts[len(parts)-2], nil
 }
 
 func SystemUpdate() gin.HandlerFunc {

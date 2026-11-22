@@ -1085,6 +1085,10 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !msg.ok {
 			return t, nil
 		}
+		if t.cancelExec != nil {
+			t.cancelExec(nil)
+			t.cancelExec = nil
+		}
 		return t, tea.Sequence(
 			notice(msgLog("stopping daemon  downloading latest  expect sudo prompt")+"\n"),
 			runUpdateExec(),
