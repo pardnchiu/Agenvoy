@@ -42,6 +42,7 @@ type Request struct {
 	Explain    string
 	AskUser    *UserPayload
 	Inline     bool
+	Async      bool
 	Ctx        context.Context
 	EnqueueAt  time.Time
 }
@@ -62,7 +63,6 @@ type entry struct {
 	req       Request
 	replyCh   chan Reply
 	claimed   bool
-	async     bool
 	onResolve func(Reply)
 }
 
@@ -216,12 +216,12 @@ func AskUser(req Request, onResolve func(Reply)) (string, error) {
 		req.DeliverTo = req.SessionID
 	}
 	req.Ctx = context.Background()
+	req.Async = true
 	req.EnqueueAt = time.Now()
 
 	e := &entry{
 		req:       req,
 		replyCh:   make(chan Reply, 1),
-		async:     true,
 		onResolve: onResolve,
 	}
 
@@ -236,14 +236,14 @@ func AskUser(req Request, onResolve func(Reply)) (string, error) {
 func Resolve(id string, r Reply) {
 	mu.Lock()
 	e, ok := entries[id]
-	if ok && e.async {
+	if ok && e.req.Async {
 		delete(entries, id)
 	}
 	mu.Unlock()
 	if !ok {
 		return
 	}
-	if e.async {
+	if e.req.Async {
 		if e.onResolve != nil {
 			go e.onResolve(r)
 		}
