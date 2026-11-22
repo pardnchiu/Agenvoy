@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   setPinChats(hasModel || models === null ? config.pin_chat.slice() : []);
 
   const pinnedChats = pinChats();
-  if (pinnedChats.includes(params.chat)) {
+  if (isWide() && pinnedChats.includes(params.chat)) {
     window.location.href = getLink({ page: params.page });
     return;
   }
@@ -167,6 +167,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       },
       history_open: function () {
         window.location.href = historyLink(panelSession(this) || currentSessionId, 0);
+      },
+      chat_search: function () {
+        filterChatList();
+      },
+      chat_mode: function () {
+        setChatListMode(this.dataset.mode);
       },
       history_range: function () {
         rangeSubmit("History", "history");
@@ -383,6 +389,9 @@ document.addEventListener("DOMContentLoaded", async function () {
           renderTaskButton(params.chat);
 
           for (const pinned of pinnedChats) {
+            if (pinned === params.chat) {
+              continue;
+            }
             renderChat(pinned);
             renderPendingHint(pinned);
             renderTaskButton(pinned);
