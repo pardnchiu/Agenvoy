@@ -223,7 +223,11 @@ sequenceDiagram
 
 - Daemon 只監聽 `127.0.0.1` 與 `[::1]`；管理類 endpoint 另有 `localhostOnly()` 守衛。
 - denied path 與 denied command 會直接拒絕；`$HOME` 內的敏感路徑要求確認，檔案工具在 `$HOME` 外的讀取與寫入（`read_files`、`find_files`、`file_history`、`write_file`、`remove_file`、`restore_file`、`open_file`）、`sudo` 與 `sandbox: false` 另要求系統密碼；核准範圍限於該 session 與所請求的路徑或執行檔。`read_files` 與 `find_files` 讀取 go-pkg 可讀清單內的系統與套件位置及 `readable_path` 項目時不需確認。
-- auto 模式（`⏵⏵ auto`）只在工作目錄是 `$HOME` 底下的非敏感子目錄時生效（`filesystem.WorkDirAllowsAll`，TUI 啟動時也依它決定預設模式）；生效時所有工具直接執行，但目標在 `$HOME` 內、工作目錄外的寫入與指令（`boundary.OutsideWorkDir`）與不可逆指令（`isIrreversibleCommand`，對齊 Claude Code auto mode 預設擋的類別，allow rule 不能略過）仍需確認；subagent 不受工作目錄限制。
+- 確認依三種信任層級，由 `toolCall` 逐次判斷：
+  - `⏸ safe`：寫入、指令與非唯讀工具都先詢問。
+  - `⏵⏵ auto`（只在工作目錄是 `$HOME` 底下的非敏感子目錄時生效，`filesystem.WorkDirAllowsAll`，TUI 啟動時也依它決定預設模式）與 **Yes, allow this turn**（`allowTurn`，不限工作目錄，寫進 pending 供接續）：所有工具直接執行。三種情況先交給 decision model 判斷（`unsafeByDecision`）：目標在 `$HOME` 內、工作目錄外的寫入與指令（`boundary.OutsideWorkDir`）、碰到敏感路徑的寫入與指令，以及不可逆指令（`isIrreversibleCommand`，對齊 Claude Code auto mode 預設擋的類別，allow rule 不能略過）。有把握判為低影響時直接執行並授權路徑（`boundary.Grant`）；其餘情況，包括未設定 decision model 或呼叫失敗，一律詢問。`$HOME` 以外的路徑、`sudo` 與 `sandbox: false` 仍要密碼。
+  - Trusted skill（`trust_skill`，分全域與專案；舊版 `allow_skill` 檔在第一次讀取時改名）：請求以該 skill 執行時以 `TrustCtxKey` 標記整次執行。所有讀寫一律放行並授權路徑，含 `$HOME` 以外、敏感路徑與不可逆指令，不呼叫 decision model；`sandbox: false` 也直接執行；只有 `sudo`（取自 `RestrictedRunCommand`）仍要密碼。subagent 經 context 繼承。
+  - subagent 不受工作目錄限制；denied path 與 denied command 在任何層級都直接拒絕。
 - 透過 `write_file` 寫入或修改既有檔案前，必須在同一次執行中成功以 `read_files` 讀過該檔，且之後修改時間未變，否則拒絕；新檔案不需事先讀取。這項新鮮度檢查是路徑邊界與權限檢查的補充，不取代它們。
 - 命令執行受 shell AST validation 及 OS 沙箱限制（macOS 的 `sandbox-exec`、Linux 的 `bwrap`），且預設禁網；該次呼叫帶 `network: true` 才開放，auto 模式以外要求確認。需要寫入 `$HOME` 以外的命令，要在該次呼叫以 `write_paths` 宣告路徑；需要 root 的命令以 argv `['sudo', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），以 `sudo -n` 在沙箱外執行，取消時經 `sudo` 轉送 SIGTERM；兩者都由使用者輸入系統密碼核准。被沙箱擋住且找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。script 工具的沙箱保持網路開啟，只能寫入 `$HOME`。
 - `/v1/send` 在請求帶 `enable_edit` 或 `enable_sandbox`，或沒有開啟中的網頁確認 listener 時（`agen -p` 一律如此）以 API auto mode 執行：不跳確認；未設 `enable_edit` 為 true 時唯讀；未設 `enable_sandbox` 為 false 時留在沙箱（不得存取 `$HOME` 外路徑、`sudo`、`sandbox: false`）；不提供 `ask_user`、`store_secret` 與背景工具；每次請求開始時清除該 session 的路徑授權，核准不會延續；被擋的呼叫會回傳可放行的參數。
@@ -255,7 +259,7 @@ flowchart LR
     DesignSkills[skills/.system_design] -->|/skill| Scanner
     Schedules[crons.json／tasks.json] --> Scheduler[Scheduler]
     Auth[.telegram／.discord] --> Channels[已授權頻道]
-    Allow[allow_skill／allow_tool／.agenvoy/allow_list] --> Confirm[免確認規則]
+    Allow[trust_skill／allow_tool／.agenvoy/allow_list] --> Confirm[免確認規則]
 ```
 
 ---

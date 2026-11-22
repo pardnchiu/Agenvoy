@@ -220,17 +220,32 @@ Every surface offers the same choices: **Yes**, **Yes, don't ask again**, **Yes,
 
 ### Permission modes
 
-The TUI starts in `⏵⏵ auto` when its working directory is a subdirectory of `$HOME` that is neither denied nor on the sensitive list, and in `⏸ safe` otherwise (`$HOME` itself, anywhere outside it); `Shift+Tab` toggles between them, and auto only takes effect while the working directory qualifies.
+Three trust levels decide which calls run without asking. In every level, paths on `denied_path` and commands on `denied_command` are refused outright and no approval lifts them.
 
-| Call | `⏸ safe` | `⏵⏵ auto` |
+| Level | When | Behaviour |
 | --- | --- | --- |
-| Read-only tools, allowlisted read-only commands | Run | Run |
-| Writes and commands whose targets stay inside the working directory, including `rm` (moved to the trash) | Confirm | Run |
-| Other tools (`http_request` writes, MCP tools, script tools, downloads, generation) | Confirm | Run |
-| A write, command or `rm` target inside `$HOME` but outside the working directory | Confirm | Confirm, then that path is granted for the session |
-| A path on the sensitive list inside `$HOME` | Confirm | Confirm |
-| A path outside `$HOME`, `sudo`, `sandbox: false` | Password | Password |
-| Irreversible commands | Confirm | Confirm, even when an allow rule matches |
+| `⏸ safe` | Working directory is `$HOME` itself, outside `$HOME`, or a sensitive path | Writes, commands, non-read-only tools and reads of sensitive paths all ask first |
+| `⏵⏵ auto` / Yes, allow this turn | Working directory is a non-sensitive subdirectory of `$HOME`; or a prompt answered with **Yes, allow this turn** | Work inside the project runs; calls reaching past it are stopped by the safety rules and ask, and a configured decision model cuts down the rules' false alarms |
+| Trusted skill (formerly allow skill) | Running a skill marked `trust` | Every read and write passes, `sandbox: false` included; only `sudo` still asks |
+
+**Switching safe and auto**: the TUI picks its starting mode from the working directory (`filesystem.WorkDirAllowsAll`), and `Shift+Tab` switches between them at any time; auto takes effect only while the working directory qualifies. **Yes, allow this turn** applies auto's rules to the rest of that task, whatever the working directory, and is kept in the pending entry for resume.
+
+**Trusted skills**: set under `/skill` → `permission` (TUI) or **Skills** → **Trust** (web); the list lives in `~/.config/agenvoy/trust_skill` (global) and `<workDir>/.agenvoy/trust_skill` (project), and a legacy `allow_skill` file is renamed to `trust_skill` on first read. Trust applies when the request runs that skill: `/<skill>`, the `skill` field of `/v1/send`, or a scheduled skill; a skill loaded mid-turn with `run_skill` does not count, and subagents started inside a trusted skill inherit it. **Turn it on only for a skill whose content you have reviewed**: its instructions can write to any path and run irreversible commands without asking.
+
+| Call | `⏸ safe` | `⏵⏵ auto` / allow this turn | Trusted skill |
+| --- | --- | --- | --- |
+| Read-only tools, allowlisted read-only commands | Run | Run | Run |
+| Writes and commands whose targets stay inside the working directory, including `rm` (moved to the trash) | Confirm | Run | Run |
+| Other tools (`http_request` writes, MCP tools, script tools, downloads, generation), `network: true` | Confirm | Run | Run |
+| `read_files` / `find_files` on a sensitive path inside `$HOME` | Confirm | Run, path granted | Run, path granted |
+| A write, command or `rm` target inside `$HOME` but outside the working directory | Confirm | Confirm (the decision model may allow) | Run, path granted |
+| A write or command touching a sensitive path inside `$HOME` | Confirm | Confirm (the decision model may allow) | Run, path granted |
+| Irreversible commands | Confirm | Confirm (the decision model may allow); an allow rule never skips it | Run |
+| A path outside `$HOME` (other than the readable system list) | Password | Password | Run, path granted |
+| `sandbox: false` | Password | Password | Run |
+| `sudo` | Password | Password | Password |
+
+The auto column's confirmations come from hard-coded safety rules (targets outside the working directory, sensitive paths, irreversible commands) that err on the side of stopping a call. With a [decision model](#decision-model) configured, the call is first sent to it with the request, the targets and whether each one already exists: a confident low-impact answer runs the call and grants its paths for the session, cutting down the rules' false alarms; an unsure or dangerous answer, or a failed call, asks as usual. Without a decision model these calls always ask. Approved paths stay granted for that session while the daemon runs.
 
 Irreversible commands follow the categories Claude Code's auto mode blocks by default: `git reset --hard`, `git clean`, force pushes and remote branch deletion, a download piped into an interpreter, a script that both reaches the network and reads a secret, uploading a sensitive file, `terraform` / `tofu` / `pulumi` / `cdk` / `kubectl` / `helm` applies and deletions, cloud CLI deletions, deploys and IAM changes, deploy CLIs (`firebase`, `vercel`, `netlify`, `wrangler`, `fly`, `serverless`), database migrations, destructive SQL, `gh pr merge` and mutating `gh api` calls. Targets are taken from `write_file` paths and from `run_command` argv (absolute, `~` and `..` tokens, `write_paths`, `rm` operands), so what a script does internally is not seen. Subagents run with every tool allowed and are not limited to the working directory.
 
@@ -303,7 +318,7 @@ Type a message to run it in the current session. Colors follow the terminal's li
 | `/mcp`                     | List MCP servers (`d` removes one) and `add` new ones; per server: log in, set the OAuth client, pick always-allowed `tools` (first row `all`), reconnect                                                                                                                                                                                                                 |
 | `/session` `/new`          | Switch to another session by self id (`d` deletes it), or create one; when the list spans two or more prefixes it is tabbed by `all` / `cli-` / `tg-` / `dc-` / `chat-` / `temp-`; the `/session` list also edits the current session `name` / `self id` / `role` (`/session name\|id\|role` opens one directly)                                                                                                                                                                       |
 | `/compact` `/reset`        | One popup with three tabs: `summary` shows the current rolling summary read-only; `compact` drops redundant exchanges using LLM analysis; `reset` resets the session (double-confirmed): `summary` regenerates the summary first and keeps it, `all` also wipes the summary. `/compact` opens on the compact tab, `/reset` on the reset tab                                                                                                                                                                                                     |
-| `/skill`                   | Three tabs. `permission`: Enter toggles the highlighted skill between `always allow` / `ask`; `always allow` skills skip the permission prompt globally, and `o` opens the highlighted skill's folder. `system`: multi-select official skills; checked clones `github.com/agenvoy/skill-<name>` into `~/.config/agenvoy/skills/.system_design/<name>`, unchecked removes it. `source`: multi-select the external skill sources to read (`claude`, `codex`, `copilot`, `opencode`, `agents`, i.e. `~/.<source>/skills`); unchecked ones are skipped |
+| `/skill`                   | Three tabs. `permission`: Enter toggles the highlighted skill between `trust` / `ask` (see [trust levels](#permission-modes)), and `o` opens the highlighted skill's folder. `system`: multi-select official skills; checked clones `github.com/agenvoy/skill-<name>` into `~/.config/agenvoy/skills/.system_design/<name>`, unchecked removes it. `source`: multi-select the external skill sources to read (`claude`, `codex`, `copilot`, `opencode`, `agents`, i.e. `~/.<source>/skills`); unchecked ones are skipped |
 | `/role`                    | List, add or edit roles (title + description)                                                                                                                                                                                                                                                                                                                             |
 | `/channel`                 | Two tabs, `telegram` and `discord`: enable one (the token is validated before it is stored) or disable it, and `d` revokes an authorized chat                                                                                                                                                                                                                             |
 | `/config`                  | Searchable settings list; `enter` changes the highlighted one: startup on login (launchd agent on macOS, systemd user unit on Linux), reply language (`auto` follows each message), output dir (where generated files land; blank uses `~/Downloads`) channel admin (the authorized chat that receives new-chat verification codes; blank keeps them log-only) and official guide (whether to inject the official model guide)                                                                                                                  |
