@@ -33,7 +33,7 @@
 
 ## Quick start
 
-1. **Install** (macOS / Linux; on Windows, run it inside WSL — see below):
+1. **Install** (macOS / Linux; on Windows, run it inside WSL; on Android, run it in the built-in Terminal or inside Ubuntu on Termux — see below):
 
    ```bash
    curl -fsSL https://agenvoy.com/scripts/install.sh | bash
@@ -43,6 +43,17 @@
 2. **Add a model** — type `/model add` and sign in with a subscription you already have (Copilot, ChatGPT, Claude) or paste an API key.
 
 Then just ask. New here? [From Copilot sign-in to first answer in 5 minutes](https://agenvoy.com/quickstart).
+
+<details>
+<summary><strong>macOS</strong></summary>
+
+If you run schedules on a MacBook, also run the following so sleep does not interrupt them:
+
+```bash
+sudo pmset -c sleep 0
+```
+
+</details>
 
 <details>
 <summary><strong>Windows (via WSL)</strong></summary>
@@ -58,7 +69,30 @@ After installation, restart your computer, open a WSL terminal, and run the inst
 
 </details>
 
-> **macOS tip:** If you run schedules on a MacBook, also run `sudo pmset -c sleep 0` so sleep does not interrupt them.
+<details>
+<summary><strong>Android</strong></summary>
+
+On Android 15 QPR2 / Android 16 or later with the built-in Terminal app (Pixel, Galaxy Z Flip 7, ...), enable **Developer options → Linux development environment**, open Terminal, install `curl`, then run the install command above:
+
+```bash
+sudo apt update && sudo apt install -y curl
+```
+
+On other devices, use Termux. Termux cannot run the Linux binary directly. Install Ubuntu with `proot-distro` in Termux and log in to it:
+
+```bash
+pkg install proot-distro
+proot-distro install ubuntu
+proot-distro login ubuntu
+```
+
+Inside Ubuntu, install `curl`, then run the install command above:
+
+```bash
+apt update && apt install -y curl
+```
+
+</details>
 
 ## What a session looks like
 

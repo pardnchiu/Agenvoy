@@ -7,7 +7,7 @@
 ## 前置需求
 
 - Go 1.26.10 或更新版本
-- macOS 或 Linux；Windows 請先安裝 WSL Linux 發行版，並在 WSL 終端機內執行 Agenvoy
+- macOS 或 Linux；Windows 請先安裝 WSL Linux 發行版，並在 WSL 終端機內執行 Agenvoy；Android 請在內建 Terminal（Android 15 QPR2／16 以上）或 Termux 以 `proot-distro` 安裝的 Ubuntu 內執行 Agenvoy
 - 至少一組模型供應商憑證；Telegram 與 Discord 需要各自的 bot token。語音轉文字、文字轉語音與圖片生成各需選定對應模型／provider 及其憑證
 
 ## 安裝
@@ -29,6 +29,28 @@ wsl --install <發行版名稱>
 ```
 
 完成安裝、重新開機並進入 WSL 終端機後，再執行[官方安裝程式](#官方安裝程式)。
+
+### Android
+
+Android 15 QPR2／Android 16 以上且有內建 Terminal 的裝置（Pixel、Galaxy Z Flip 7 等），請開啟**開發人員選項 → Linux 開發環境**，進入 Terminal 安裝 `curl` 後執行[官方安裝程式](#官方安裝程式)：
+
+```bash
+sudo apt update && sudo apt install -y curl
+```
+
+其他裝置請改用 Termux。Termux 無法直接執行 Linux 執行檔，請先在 Termux 裡用 `proot-distro` 安裝並登入 Ubuntu：
+
+```bash
+pkg install proot-distro
+proot-distro install ubuntu
+proot-distro login ubuntu
+```
+
+進入 Ubuntu 後安裝 `curl`，再執行[官方安裝程式](#官方安裝程式)：
+
+```bash
+apt update && apt install -y curl
+```
 
 ### 從原始碼建置
 
