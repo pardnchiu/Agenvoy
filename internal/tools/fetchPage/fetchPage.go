@@ -207,7 +207,7 @@ func handler(ctx context.Context, link string, keepLinks, sameSession, headless 
 	if err != nil {
 		var fetchErr *go_browser.Error
 		if !errors.As(err, &fetchErr) {
-			slog.Error("go_browser.Fetch",
+			slog.Debug("go_browser.Fetch",
 				slog.String("url", link),
 				slog.String("error", err.Error()))
 			return "", utilsmsg.Trace("fetch_page "+link, "", err)
