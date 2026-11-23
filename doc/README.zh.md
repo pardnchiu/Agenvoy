@@ -33,7 +33,7 @@
 
 ## 快速開始
 
-1. **安裝**（macOS／Linux；Windows 請在 WSL 裡執行，見下方）：
+1. **安裝**（macOS／Linux；Windows 請在 WSL 裡執行；Android 請在內建 Terminal 或 Termux 的 Ubuntu 裡執行，見下方）：
 
    ```bash
    curl -fsSL https://agenvoy.com/scripts/install.sh | bash
@@ -43,6 +43,17 @@
 2. **加入模型** —— 輸入 `/model add`，用既有的訂閱（Copilot、ChatGPT、Claude）登入，或貼上 API key。
 
 接著直接提問即可。第一次用？[五分鐘從 Copilot 登入到第一個回答](https://agenvoy.com/zh/quickstart)。
+
+<details>
+<summary><strong>macOS</strong></summary>
+
+若使用 MacBook 執行排程，建議額外執行以下指令，避免電腦休眠而中斷排程：
+
+```bash
+sudo pmset -c sleep 0
+```
+
+</details>
 
 <details>
 <summary><strong>Windows（透過 WSL）</strong></summary>
@@ -58,7 +69,30 @@ wsl --install <發行版名稱>
 
 </details>
 
-> **macOS 提示：**若使用 MacBook 執行排程，建議額外執行 `sudo pmset -c sleep 0`，避免電腦休眠而中斷排程。
+<details>
+<summary><strong>Android</strong></summary>
+
+Android 15 QPR2／Android 16 以上且有內建 Terminal 的裝置（Pixel、Galaxy Z Flip 7 等），請開啟**開發人員選項 → Linux 開發環境**，進入 Terminal 安裝 `curl` 後執行上方的安裝指令：
+
+```bash
+sudo apt update && sudo apt install -y curl
+```
+
+其他裝置請改用 Termux。Termux 無法直接執行 Linux 執行檔，請先在 Termux 裡用 `proot-distro` 安裝並登入 Ubuntu：
+
+```bash
+pkg install proot-distro
+proot-distro install ubuntu
+proot-distro login ubuntu
+```
+
+進入 Ubuntu 後安裝 `curl`，再執行上方的安裝指令：
+
+```bash
+apt update && apt install -y curl
+```
+
+</details>
 
 ## 實際對話長這樣
 

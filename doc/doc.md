@@ -7,7 +7,7 @@ Last updated: 2026-11-19
 ## Prerequisites
 
 - Go 1.26.10 or later
-- macOS or Linux; on Windows, install a WSL Linux distribution first and run Agenvoy inside its WSL terminal
+- macOS or Linux; on Windows, install a WSL Linux distribution first and run Agenvoy inside its WSL terminal; on Android, run Agenvoy in the built-in Terminal (Android 15 QPR2 / 16 or later) or inside Ubuntu installed with `proot-distro` in Termux
 - At least one configured model-provider credential; Telegram and Discord require their respective bot tokens. Speech-to-text, text-to-speech and image generation each require a selected model / provider and its credential.
 
 ## Installation
@@ -29,6 +29,28 @@ wsl --install <distribution-name>
 ```
 
 Restart, open the installed WSL distribution, then run the [official installer](#official-installer) in its terminal.
+
+### Android
+
+On Android 15 QPR2 / Android 16 or later with the built-in Terminal app (Pixel, Galaxy Z Flip 7, ...), enable **Developer options → Linux development environment**, open Terminal, install `curl`, then run the [official installer](#official-installer):
+
+```bash
+sudo apt update && sudo apt install -y curl
+```
+
+On other devices, use Termux. Termux cannot run the Linux binary directly. Install Ubuntu with `proot-distro` in Termux and log in to it:
+
+```bash
+pkg install proot-distro
+proot-distro install ubuntu
+proot-distro login ubuntu
+```
+
+Inside Ubuntu, install `curl`, then run the [official installer](#official-installer):
+
+```bash
+apt update && apt install -y curl
+```
 
 ### Build from source
 
