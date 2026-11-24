@@ -282,6 +282,9 @@ var ExcludeList []byte
 //go:embed jsons/read_only_command.json
 var ReadOnlyCommand []byte
 
+//go:embed jsons/denied_path.json
+var DeniedPath []byte
+
 //go:embed jsons/tui_tools.json
 var TUITools []byte
 
