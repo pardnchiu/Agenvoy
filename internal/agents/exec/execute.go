@@ -439,6 +439,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 		SessionID: session.ID,
 		TaskHash:  exec.PendingTask,
 		Input:     exec.Objective,
+		Events:    events,
 	}
 	entryHook := agentsexechook.BeforeUserSend
 	if data.PendingTask != "" {

@@ -159,6 +159,9 @@ func drainNew(path string, lastSize int64) int64 {
 		if line != "" && parsed.kind == "user" {
 			line += "\n"
 		}
+		if line != "" && parsed.kind == "hook" && !isTaskDoneHook(parsed.body) {
+			line = "\n" + line
+		}
 		if line == "" && parsed.kind != "pending" && parsed.kind != "canceled" {
 			continue
 		}

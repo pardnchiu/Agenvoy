@@ -810,7 +810,7 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, hooks map[string
 			Text:     chunk,
 		}
 	})
-	hookMeta := agentsexechook.Meta{SessionID: exec.SessionID, TaskHash: exec.PendingTask, ToolName: s.name, ToolArgs: s.args}
+	hookMeta := agentsexechook.Meta{SessionID: exec.SessionID, TaskHash: exec.PendingTask, ToolName: s.name, ToolArgs: s.args, Events: events}
 	if pass, message := agentsexechook.Run(ctx, hooks, agentsexechook.BeforeToolCall, hookMeta); !pass {
 		failToolEvent(exec, s, events, &agentsexechook.StopError{State: agentsexechook.BeforeToolCall, Message: message})
 		return

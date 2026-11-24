@@ -486,6 +486,15 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		}
 		return t, cancelNotice(reasons...)
 
+	case agenttypes.EventHookLog:
+		if ev.Source == "" && !isTaskDoneHook(ev.Text) {
+			line, ok := renderAgentEvent(ev, t.runTarget, t.cwd, t.width, "")
+			if !ok {
+				return t, nil
+			}
+			return t, t.printBlock(line)
+		}
+
 	case agenttypes.EventUsageUpdate:
 		if ev.Source == "" && ev.Usage != nil {
 			t.lastIn = ev.Usage.Input

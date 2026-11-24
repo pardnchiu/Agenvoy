@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"time"
+
+	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 )
 
 type State int
@@ -26,6 +28,7 @@ type Meta struct {
 	ToolArgs  string
 	Input     string
 	Err       error
+	Events    chan<- agenttypes.Event
 }
 
 var hookFnDic = map[State]func(context.Context, Script, Meta) (bool, string, error){
@@ -60,6 +63,9 @@ func Run(ctx context.Context, scriptDic map[string]Script, state State, meta Met
 		slog.Debug("[Denied] hook "+state.String()+": stop action", details...)
 	} else if debug != "" {
 		slog.Debug("hook "+state.String()+": passed", append(details, "debug", debug)...)
+		if meta.Events != nil {
+			meta.Events <- agenttypes.Event{Type: agenttypes.EventHookLog, Text: state.String() + ": " + debug}
+		}
 	}
 	return isPass, debug
 }
@@ -82,7 +88,7 @@ func (e *StopError) Error() string {
 
 func (e *StopError) Reason() string {
 	if e.Message == "" {
-		return e.State.String() + ": stopped the task"
+		return e.State.String()
 	}
 	return e.State.String() + ": " + e.Message
 }
