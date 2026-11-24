@@ -463,12 +463,18 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			return
 		}
 		switch {
-		case errors.Is(execErr, context.Canceled):
+		case errors.Is(execErr, context.Canceled) && errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled):
 			cancelMeta := hookMeta
-			cancelMeta.Error = context.Cause(execCtx)
+			cancelMeta.Error = errors.New("user cancel it")
+			cancelMeta.InputTotals, cancelMeta.HitTotals = agenttypes.InputTotals(&usage)
+			cancelMeta.OutputTotals = usage.Output
 			agentsexechook.Run(execCtx, hooks, agentsexechook.AfterTaskCancel, cancelMeta)
 		case execErr == nil:
-			agentsexechook.Run(execCtx, hooks, agentsexechook.AfterTaskDone, hookMeta)
+			doneMeta := hookMeta
+			doneMeta.InputTotals, doneMeta.HitTotals = agenttypes.InputTotals(&usage)
+			doneMeta.OutputTotals = usage.Output
+			doneMeta.Duration = time.Since(execStart)
+			agentsexechook.Run(execCtx, hooks, agentsexechook.AfterTaskDone, doneMeta)
 		}
 	}()
 
@@ -841,6 +847,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				sendText(events, refusal)
 				emitChangedFiles()
 				events <- agenttypes.DoneEvent(data.Agent.Name(), &usage, time.Since(execStart), sendElapsedTotal)
+				hookMeta.Result = refusal
 				interactive.FinalizePending(session.ID, exec.PendingTask, refusal)
 				keepPending = false
 				return nil
@@ -867,6 +874,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				interactive.CommitBackgroundReport(session.ID, data.PendingTask, data.HistoryContent)
 			}
 
+			hookMeta.Result = responseText
 			interactive.FinalizePending(session.ID, exec.PendingTask, responseText)
 
 			if pending := getSteer(session.ID); len(pending) > 0 {
@@ -924,6 +932,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				sendText(events, refusal)
 				emitChangedFiles()
 				events <- agenttypes.DoneEvent(data.Agent.Name(), &usage, time.Since(execStart), sendElapsedTotal)
+				hookMeta.Result = refusal
 				interactive.FinalizePending(session.ID, exec.PendingTask, refusal)
 				keepPending = false
 				return nil
@@ -931,6 +940,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			sendText(events, summaryStripped)
 			emitChangedFiles()
 			events <- agenttypes.DoneEvent(data.Agent.Name(), &usage, time.Since(execStart), sendElapsedTotal)
+			hookMeta.Result = summaryStripped
 			interactive.FinalizePending(session.ID, exec.PendingTask, summaryStripped)
 			keepPending = false
 			return nil

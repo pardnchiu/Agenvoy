@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
 	go_pkg_utils "github.com/pardnchiu/go-pkg/utils"
@@ -816,6 +817,7 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, hooks map[string
 		failToolEvent(exec, s, events, &agentsexechook.StopError{State: agentsexechook.BeforeToolCall, Message: message})
 		return
 	}
+	toolStart := time.Now()
 	result, err := tools.Execute(progressCtx, exec, s.name, json.RawMessage(s.args))
 	progressMu.Lock()
 	progressDone = true
@@ -827,6 +829,7 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, hooks map[string
 		return
 	}
 	hookMeta.Result = result
+	hookMeta.Duration = time.Since(toolStart)
 	hookMeta.InputTokens, hookMeta.Hit = agenttypes.InputTotals(&usage)
 	hookMeta.OutputTokens = usage.Output
 	s.stopErr = agentsexechook.Stop(ctx, hooks, agentsexechook.AfterToolCall, hookMeta)

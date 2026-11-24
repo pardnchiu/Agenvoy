@@ -3,8 +3,6 @@ package exec
 import (
 	"context"
 	"sync"
-
-	agentsexechook "github.com/pardnchiu/agenvoy/internal/agents/exec/hook"
 )
 
 var (
@@ -20,9 +18,6 @@ func Cancel(taskHash string, cause error) bool {
 		return false
 	}
 
-	if pass, _ := agentsexechook.Run(context.Background(), agentsexechook.Load(""), agentsexechook.BeforeTaskCancel, agentsexechook.Meta{TaskHash: taskHash, Error: cause}); !pass {
-		return false
-	}
 	fn(cause)
 	return true
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/muesli/reflow/wrap"
 
-	agentsexechook "github.com/pardnchiu/agenvoy/internal/agents/exec/hook"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -554,9 +553,6 @@ func renderAgentEvent(ev agenttypes.Event, sessionLabel, cwd string, width int, 
 		return errorStyle.Render("  ⎿ " + srcPrefix + fmt.Sprintf("error: %v", ev.Err)), true
 
 	case agenttypes.EventHookLog:
-		if isTaskDoneHook(ev.Text) {
-			return okayStyle.Render("  ⎿ " + srcPrefix + ev.Text), true
-		}
 		return okayStyle.Render("⏺ ") + strings.ReplaceAll(wrapText(ev.Text, width-2), "\n", "\n  "), true
 
 	case agenttypes.EventSummaryGenerate:
@@ -709,8 +705,4 @@ func writeDiffLine(header, args string, width int) string {
 func oneLine(s string) string {
 	r := strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ")
 	return r.Replace(s)
-}
-
-func isTaskDoneHook(text string) bool {
-	return strings.HasPrefix(text, agentsexechook.AfterTaskDone.String()+": ")
 }

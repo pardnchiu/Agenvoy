@@ -17,7 +17,6 @@ const (
 	AfterToolError
 	AfterAskUser
 	AfterTaskDone
-	BeforeTaskCancel
 	AfterTaskCancel
 )
 
@@ -35,19 +34,19 @@ type Meta struct {
 	HitTotals    int
 	Input        string
 	Answers      []Answer
+	Duration     time.Duration
 	Error        error
 	Events       chan<- agenttypes.Event
 }
 
 var hookFnDic = map[State]func(context.Context, Script, Meta) (bool, string, error){
-	BeforeUserSend:   beforeUserSend,
-	BeforeToolCall:   beforeToolCall,
-	AfterToolCall:    afterToolCall,
-	AfterToolError:   afterToolError,
-	AfterAskUser:     afterAskUser,
-	AfterTaskDone:    afterTaskDone,
-	BeforeTaskCancel: beforeTaskCancel,
-	AfterTaskCancel:  afterTaskCancel,
+	BeforeUserSend:  beforeUserSend,
+	BeforeToolCall:  beforeToolCall,
+	AfterToolCall:   afterToolCall,
+	AfterToolError:  afterToolError,
+	AfterAskUser:    afterAskUser,
+	AfterTaskDone:   afterTaskDone,
+	AfterTaskCancel: afterTaskCancel,
 }
 
 func Run(ctx context.Context, scriptDic map[string]Script, state State, meta Meta) (bool, string) {
@@ -136,6 +135,7 @@ func afterToolCall(ctx context.Context, script Script, meta Meta) (bool, string,
 		"input_totals":  meta.InputTotals,
 		"output_totals": meta.OutputTotals,
 		"hit_totals":    meta.HitTotals,
+		"during_ms":     meta.Duration.Milliseconds(),
 		"time":          time.Now().Format(time.RFC3339),
 	})
 }
@@ -165,13 +165,32 @@ func afterAskUser(ctx context.Context, script Script, meta Meta) (bool, string, 
 }
 
 func afterTaskDone(ctx context.Context, script Script, meta Meta) (bool, string, error) {
-	return call(ctx, script, nil)
-}
-
-func beforeTaskCancel(ctx context.Context, script Script, meta Meta) (bool, string, error) {
-	return call(ctx, script, nil)
+	return call(ctx, script, map[string]any{
+		"session":       meta.SessionID,
+		"task_hash":     meta.TaskHash,
+		"input":         meta.Input,
+		"result":        meta.Result,
+		"input_totals":  meta.InputTotals,
+		"output_totals": meta.OutputTotals,
+		"hit_totals":    meta.HitTotals,
+		"during_ms":     meta.Duration.Milliseconds(),
+		"time":          time.Now().Format(time.RFC3339),
+	})
 }
 
 func afterTaskCancel(ctx context.Context, script Script, meta Meta) (bool, string, error) {
-	return call(ctx, script, nil)
+	cancelError := ""
+	if meta.Error != nil {
+		cancelError = meta.Error.Error()
+	}
+	return call(ctx, script, map[string]any{
+		"session":       meta.SessionID,
+		"task_hash":     meta.TaskHash,
+		"input":         meta.Input,
+		"error":         cancelError,
+		"input_totals":  meta.InputTotals,
+		"output_totals": meta.OutputTotals,
+		"hit_totals":    meta.HitTotals,
+		"time":          time.Now().Format(time.RFC3339),
+	})
 }

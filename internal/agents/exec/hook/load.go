@@ -21,14 +21,13 @@ var (
 		".js": "node",
 	}
 	hookStateKey = [...]string{
-		BeforeUserSend:   "before_user_send",
-		BeforeToolCall:   "before_tool_call",
-		AfterToolCall:    "after_tool_call",
-		AfterToolError:   "after_tool_error",
-		AfterAskUser:     "after_ask_user",
-		AfterTaskDone:    "after_task_done",
-		BeforeTaskCancel: "before_task_cancel",
-		AfterTaskCancel:  "after_task_cancel",
+		BeforeUserSend:  "before_user_send",
+		BeforeToolCall:  "before_tool_call",
+		AfterToolCall:   "after_tool_call",
+		AfterToolError:  "after_tool_error",
+		AfterAskUser:    "after_ask_user",
+		AfterTaskDone:   "after_task_done",
+		AfterTaskCancel: "after_task_cancel",
 	}
 )
 
