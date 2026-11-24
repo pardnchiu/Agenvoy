@@ -20,7 +20,7 @@ func Cancel(taskHash string, cause error) bool {
 		return false
 	}
 
-	if pass, _ := agentsexechook.Run(context.Background(), agentsexechook.Load(""), agentsexechook.BeforeTaskCancel, agentsexechook.Meta{TaskHash: taskHash, Err: cause}); !pass {
+	if pass, _ := agentsexechook.Run(context.Background(), agentsexechook.Load(""), agentsexechook.BeforeTaskCancel, agentsexechook.Meta{TaskHash: taskHash, Error: cause}); !pass {
 		return false
 	}
 	fn(cause)

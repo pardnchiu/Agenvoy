@@ -25,7 +25,7 @@ var (
 		BeforeToolCall:   "before_tool_call",
 		AfterToolCall:    "after_tool_call",
 		AfterToolError:   "after_tool_error",
-		AfterRequest:     "after_request",
+		AfterAskUser:     "after_ask_user",
 		AfterTaskDone:    "after_task_done",
 		BeforeTaskCancel: "before_task_cancel",
 		AfterTaskCancel:  "after_task_cancel",

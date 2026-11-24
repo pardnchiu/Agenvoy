@@ -15,20 +15,28 @@ const (
 	BeforeToolCall
 	AfterToolCall
 	AfterToolError
-	AfterRequest
+	AfterAskUser
 	AfterTaskDone
 	BeforeTaskCancel
 	AfterTaskCancel
 )
 
 type Meta struct {
-	SessionID string
-	TaskHash  string
-	ToolName  string
-	ToolArgs  string
-	Input     string
-	Err       error
-	Events    chan<- agenttypes.Event
+	SessionID    string
+	TaskHash     string
+	ToolName     string
+	ToolArgs     string
+	Result       string
+	InputTokens  int
+	OutputTokens int
+	InputTotals  int
+	OutputTotals int
+	Hit          int
+	HitTotals    int
+	Input        string
+	Answers      []Answer
+	Error        error
+	Events       chan<- agenttypes.Event
 }
 
 var hookFnDic = map[State]func(context.Context, Script, Meta) (bool, string, error){
@@ -36,7 +44,7 @@ var hookFnDic = map[State]func(context.Context, Script, Meta) (bool, string, err
 	BeforeToolCall:   beforeToolCall,
 	AfterToolCall:    afterToolCall,
 	AfterToolError:   afterToolError,
-	AfterRequest:     afterRequest,
+	AfterAskUser:     afterAskUser,
 	AfterTaskDone:    afterTaskDone,
 	BeforeTaskCancel: beforeTaskCancel,
 	AfterTaskCancel:  afterTaskCancel,
@@ -103,19 +111,57 @@ func beforeUserSend(ctx context.Context, script Script, meta Meta) (bool, string
 }
 
 func beforeToolCall(ctx context.Context, script Script, meta Meta) (bool, string, error) {
-	return call(ctx, script, nil)
+	return call(ctx, script, map[string]any{
+		"session":       meta.SessionID,
+		"task_hash":     meta.TaskHash,
+		"tool_name":     meta.ToolName,
+		"tool_args":     meta.ToolArgs,
+		"input_totals":  meta.InputTotals,
+		"output_totals": meta.OutputTotals,
+		"hit_totals":    meta.HitTotals,
+		"time":          time.Now().Format(time.RFC3339),
+	})
 }
 
 func afterToolCall(ctx context.Context, script Script, meta Meta) (bool, string, error) {
-	return call(ctx, script, nil)
+	return call(ctx, script, map[string]any{
+		"session":       meta.SessionID,
+		"task_hash":     meta.TaskHash,
+		"tool_name":     meta.ToolName,
+		"tool_args":     meta.ToolArgs,
+		"tool_result":   meta.Result,
+		"input_tokens":  meta.InputTokens,
+		"output_tokens": meta.OutputTokens,
+		"hit":           meta.Hit,
+		"input_totals":  meta.InputTotals,
+		"output_totals": meta.OutputTotals,
+		"hit_totals":    meta.HitTotals,
+		"time":          time.Now().Format(time.RFC3339),
+	})
 }
 
 func afterToolError(ctx context.Context, script Script, meta Meta) (bool, string, error) {
-	return call(ctx, script, nil)
+	toolError := ""
+	if meta.Error != nil {
+		toolError = meta.Error.Error()
+	}
+	return call(ctx, script, map[string]string{
+		"session":   meta.SessionID,
+		"task_hash": meta.TaskHash,
+		"tool_name": meta.ToolName,
+		"tool_args": meta.ToolArgs,
+		"error":     toolError,
+		"time":      time.Now().Format(time.RFC3339),
+	})
 }
 
-func afterRequest(ctx context.Context, script Script, meta Meta) (bool, string, error) {
-	return call(ctx, script, nil)
+func afterAskUser(ctx context.Context, script Script, meta Meta) (bool, string, error) {
+	return call(ctx, script, map[string]any{
+		"session":   meta.SessionID,
+		"task_hash": meta.TaskHash,
+		"answers":   meta.Answers,
+		"time":      time.Now().Format(time.RFC3339),
+	})
 }
 
 func afterTaskDone(ctx context.Context, script Script, meta Meta) (bool, string, error) {

@@ -443,7 +443,11 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	}
 	entryHook := agentsexechook.BeforeUserSend
 	if data.PendingTask != "" {
-		entryHook = agentsexechook.AfterRequest
+		entryHook = agentsexechook.AfterAskUser
+		questions, answers := interactive.LoadPendingAnswers(session.ID, data.PendingTask)
+		for i, q := range questions {
+			hookMeta.Answers = append(hookMeta.Answers, agentsexechook.Answer{Question: q, Answer: answers[i]})
+		}
 	}
 	if pass, message := agentsexechook.Run(execCtx, hooks, entryHook, hookMeta); !pass {
 		keepPending = false
@@ -461,7 +465,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 		switch {
 		case errors.Is(execErr, context.Canceled):
 			cancelMeta := hookMeta
-			cancelMeta.Err = context.Cause(execCtx)
+			cancelMeta.Error = context.Cause(execCtx)
 			agentsexechook.Run(execCtx, hooks, agentsexechook.AfterTaskCancel, cancelMeta)
 		case execErr == nil:
 			agentsexechook.Run(execCtx, hooks, agentsexechook.AfterTaskDone, hookMeta)
@@ -790,7 +794,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				}
 			}
 
-			session, alreadyCall, err = toolCall(execCtx, exec, hooks, choice, session, events, allowAll, alreadyCall, &turnAllowAll)
+			session, alreadyCall, err = toolCall(execCtx, exec, hooks, choice, session, events, resp.Usage, usage, allowAll, alreadyCall, &turnAllowAll)
 			if err != nil {
 				if errors.Is(err, ErrAskUserInterrupted) {
 					askInterrupted = true

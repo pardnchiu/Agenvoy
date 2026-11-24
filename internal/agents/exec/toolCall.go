@@ -285,7 +285,7 @@ func isGet(argsJSON string) bool {
 	return p.Method == "" || strings.EqualFold(p.Method, "GET")
 }
 
-func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]agentsexechook.Script, choice go_llm_router.OutputChoices, sessionData *agenttypes.Session, events chan<- agenttypes.Event, allowAll bool, alreadyCall map[string]string, turnAllowAll *bool) (*agenttypes.Session, map[string]string, error) {
+func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]agentsexechook.Script, choice go_llm_router.OutputChoices, sessionData *agenttypes.Session, events chan<- agenttypes.Event, usage, totals go_llm_router.Usage, allowAll bool, alreadyCall map[string]string, turnAllowAll *bool) (*agenttypes.Session, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 	exec.BackgroundGroup = go_pkg_utils.UUID()
 
@@ -629,7 +629,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]ag
 			continue
 		}
 		if toolregister.IsBackground(s.name) {
-			go runToolExec(ctx, exec, hooks, s, events)
+			go runToolExec(ctx, exec, hooks, s, events, usage, totals)
 			s.result = "ok"
 			s.state = slotDispatched
 			continue
@@ -640,7 +640,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]ag
 				defer wg.Done()
 				toolSlots <- struct{}{}
 				defer func() { <-toolSlots }()
-				runToolExec(ctx, exec, hooks, s, events)
+				runToolExec(ctx, exec, hooks, s, events, usage, totals)
 			}(s)
 			s.state = slotDispatched
 			continue
@@ -651,7 +651,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]ag
 		if s.state != slotReady {
 			continue
 		}
-		runToolExec(ctx, exec, hooks, s, events)
+		runToolExec(ctx, exec, hooks, s, events, usage, totals)
 	}
 	wg.Wait()
 
@@ -769,7 +769,7 @@ func failToolEvent(exec *tooltypes.Executor, s *toolSlot, events chan<- agenttyp
 	}
 }
 
-func runToolExec(ctx context.Context, exec *tooltypes.Executor, hooks map[string]agentsexechook.Script, s *toolSlot, events chan<- agenttypes.Event) {
+func runToolExec(ctx context.Context, exec *tooltypes.Executor, hooks map[string]agentsexechook.Script, s *toolSlot, events chan<- agenttypes.Event, usage, totals go_llm_router.Usage) {
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -810,7 +810,8 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, hooks map[string
 			Text:     chunk,
 		}
 	})
-	hookMeta := agentsexechook.Meta{SessionID: exec.SessionID, TaskHash: exec.PendingTask, ToolName: s.name, ToolArgs: s.args, Events: events}
+	hookMeta := agentsexechook.Meta{SessionID: exec.SessionID, TaskHash: exec.PendingTask, ToolName: s.name, ToolArgs: s.args, OutputTotals: totals.Output, Events: events}
+	hookMeta.InputTotals, hookMeta.HitTotals = agenttypes.InputTotals(&totals)
 	if pass, message := agentsexechook.Run(ctx, hooks, agentsexechook.BeforeToolCall, hookMeta); !pass {
 		failToolEvent(exec, s, events, &agentsexechook.StopError{State: agentsexechook.BeforeToolCall, Message: message})
 		return
@@ -820,14 +821,18 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, hooks map[string
 	progressDone = true
 	progressMu.Unlock()
 	if err != nil {
-		hookMeta.Err = err
+		hookMeta.Error = err
 		s.stopErr = agentsexechook.Stop(ctx, hooks, agentsexechook.AfterToolError, hookMeta)
 		failToolEvent(exec, s, events, err)
 		return
 	}
+	hookMeta.Result = result
+	hookMeta.InputTokens, hookMeta.Hit = agenttypes.InputTotals(&usage)
+	hookMeta.OutputTokens = usage.Output
 	s.stopErr = agentsexechook.Stop(ctx, hooks, agentsexechook.AfterToolCall, hookMeta)
 	if s.stopErr == nil && s.name == "ask_user" {
-		s.stopErr = agentsexechook.Stop(ctx, hooks, agentsexechook.AfterRequest, hookMeta)
+		hookMeta.Answers = agentsexechook.Answers(s.args, result)
+		s.stopErr = agentsexechook.Stop(ctx, hooks, agentsexechook.AfterAskUser, hookMeta)
 	}
 
 	if result != "" {
