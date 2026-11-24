@@ -19,6 +19,7 @@ import (
 
 var (
 	filesystemOnce          sync.Once
+	HomeDir                 string
 	AgenvoyDir              string
 	ConfigPath              string
 	DaemonLogPath           string
@@ -29,6 +30,7 @@ var (
 	StoreTempDir            string
 	SessionsDir             string
 	ToolsDir                string
+	HooksDir                string
 	ScriptToolsDir          string
 	SystemToolsDir          string
 	ExtensionScriptToolsDir string
@@ -75,6 +77,7 @@ func Init() error {
 	}
 
 	filesystemOnce.Do(func() {
+		HomeDir = homeDir
 		AgenvoyDir = filepath.Join(homeDir, ".config", projectName)
 		ConfigPath = filepath.Join(AgenvoyDir, "config.json")
 		DaemonLogPath = filepath.Join(AgenvoyDir, "daemon.log")
@@ -86,6 +89,7 @@ func Init() error {
 		StoreTempDir = filepath.Join(StoreDir, "temp")
 		SessionsDir = filepath.Join(AgenvoyDir, "sessions")
 		ToolsDir = filepath.Join(AgenvoyDir, "tools")
+		HooksDir = filepath.Join(AgenvoyDir, "hooks")
 		ScriptToolsDir = filepath.Join(ToolsDir, "script")
 		SystemToolsDir = filepath.Join(ToolsDir, ".system")
 		ExtensionScriptToolsDir = filepath.Join(ToolsDir, ".extension", "script")
@@ -184,6 +188,10 @@ func TrustSkillProjectPath(workDir string) string {
 
 func LegacyAllowSkillProjectPath(workDir string) string {
 	return filepath.Join(workDir, "."+projectName, "allow_skill")
+}
+
+func WorkHooksDir(workDir string) string {
+	return filepath.Join(workDir, ".config", projectName, "hooks")
 }
 
 func AllowToolPath(workDir string) string {

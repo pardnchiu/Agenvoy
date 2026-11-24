@@ -22,6 +22,7 @@ import (
 	agentsexecallowskill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
+	agentsexechook "github.com/pardnchiu/agenvoy/internal/agents/exec/hook"
 	execmodel "github.com/pardnchiu/agenvoy/internal/agents/exec/model"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/retryHandler"
 	agentimage "github.com/pardnchiu/agenvoy/internal/agents/image"
@@ -93,6 +94,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	}
 
 	execCtx = context.WithValue(execCtx, AllowAllCtxKey{}, allowAll)
+	hooks := agentsexechook.Load(data.WorkDir)
 
 	if events != nil {
 		execCtx = context.WithValue(execCtx, ParentEventsKey{}, events)
@@ -433,6 +435,38 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	oldHistoriesCompacted := false
 	firstAttempt := true
 
+	hookMeta := agentsexechook.Meta{
+		SessionID: session.ID,
+		TaskHash:  exec.PendingTask,
+		Input:     exec.Objective,
+	}
+	entryHook := agentsexechook.BeforeUserSend
+	if data.PendingTask != "" {
+		entryHook = agentsexechook.AfterRequest
+	}
+	if pass, message := agentsexechook.Run(execCtx, hooks, entryHook, hookMeta); !pass {
+		keepPending = false
+		stop := &agentsexechook.StopError{State: entryHook, Message: message}
+		events <- agenttypes.Event{Type: agenttypes.EventCanceled, Text: stop.Reason(), Model: data.Agent.Name(), Duration: time.Since(execStart)}
+		return nil
+	}
+
+	askInterrupted := false
+	hookStopped := false
+	defer func() {
+		if askInterrupted || hookStopped {
+			return
+		}
+		switch {
+		case errors.Is(execErr, context.Canceled):
+			cancelMeta := hookMeta
+			cancelMeta.Err = context.Cause(execCtx)
+			agentsexechook.Run(execCtx, hooks, agentsexechook.AfterTaskCancel, cancelMeta)
+		case execErr == nil:
+			agentsexechook.Run(execCtx, hooks, agentsexechook.AfterTaskDone, hookMeta)
+		}
+	}()
+
 	go compact.Warm(context.WithoutCancel(execCtx))
 
 	compactHistory := func() {
@@ -755,10 +789,23 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				}
 			}
 
-			session, alreadyCall, err = toolCall(execCtx, exec, choice, session, events, allowAll, alreadyCall, &turnAllowAll)
+			session, alreadyCall, err = toolCall(execCtx, exec, hooks, choice, session, events, allowAll, alreadyCall, &turnAllowAll)
 			if err != nil {
 				if errors.Is(err, ErrAskUserInterrupted) {
+					askInterrupted = true
 					return nil
+				}
+				if stop, ok := errors.AsType[*agentsexechook.StopError](err); ok {
+					hookStopped = true
+					events <- agenttypes.Event{Type: agenttypes.EventCanceled, Text: stop.Reason(), Model: data.Agent.Name(), Duration: time.Since(execStart)}
+					return nil
+				}
+				if execCtx.Err() != nil {
+					events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
+					if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
+						interactive.CancelPending(session.ID, exec.PendingTask)
+					}
+					return execCtx.Err()
 				}
 				return err
 			}

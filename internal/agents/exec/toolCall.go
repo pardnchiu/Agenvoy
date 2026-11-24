@@ -18,6 +18,7 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	agentsexecallowtool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/explain"
+	agentsexechook "github.com/pardnchiu/agenvoy/internal/agents/exec/hook"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/memory"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/readonly"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -135,6 +136,7 @@ type toolSlot struct {
 	result     string
 	execErr    string
 	execErrVal error
+	stopErr    error
 }
 
 func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, turnAllowAll bool) bool {
@@ -283,7 +285,7 @@ func isGet(argsJSON string) bool {
 	return p.Method == "" || strings.EqualFold(p.Method, "GET")
 }
 
-func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_router.OutputChoices, sessionData *agenttypes.Session, events chan<- agenttypes.Event, allowAll bool, alreadyCall map[string]string, turnAllowAll *bool) (*agenttypes.Session, map[string]string, error) {
+func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]agentsexechook.Script, choice go_llm_router.OutputChoices, sessionData *agenttypes.Session, events chan<- agenttypes.Event, allowAll bool, alreadyCall map[string]string, turnAllowAll *bool) (*agenttypes.Session, map[string]string, error) {
 	sessionData.ToolHistories = append(sessionData.ToolHistories, choice.Message)
 	exec.BackgroundGroup = go_pkg_utils.UUID()
 
@@ -627,7 +629,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 			continue
 		}
 		if toolregister.IsBackground(s.name) {
-			go runToolExec(ctx, exec, s, events)
+			go runToolExec(ctx, exec, hooks, s, events)
 			s.result = "ok"
 			s.state = slotDispatched
 			continue
@@ -638,7 +640,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 				defer wg.Done()
 				toolSlots <- struct{}{}
 				defer func() { <-toolSlots }()
-				runToolExec(ctx, exec, s, events)
+				runToolExec(ctx, exec, hooks, s, events)
 			}(s)
 			s.state = slotDispatched
 			continue
@@ -649,12 +651,18 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, choice go_llm_route
 		if s.state != slotReady {
 			continue
 		}
-		runToolExec(ctx, exec, s, events)
+		runToolExec(ctx, exec, hooks, s, events)
 	}
 	wg.Wait()
 
 	if err := ctx.Err(); err != nil {
 		return sessionData, alreadyCall, err
+	}
+
+	for i := range slots {
+		if s := &slots[i]; s.stopErr != nil && !toolregister.IsBackground(s.name) {
+			return sessionData, alreadyCall, s.stopErr
+		}
 	}
 
 	var imageURLs []string
@@ -761,7 +769,7 @@ func failToolEvent(exec *tooltypes.Executor, s *toolSlot, events chan<- agenttyp
 	}
 }
 
-func runToolExec(ctx context.Context, exec *tooltypes.Executor, s *toolSlot, events chan<- agenttypes.Event) {
+func runToolExec(ctx context.Context, exec *tooltypes.Executor, hooks map[string]agentsexechook.Script, s *toolSlot, events chan<- agenttypes.Event) {
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -802,13 +810,24 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, s *toolSlot, eve
 			Text:     chunk,
 		}
 	})
+	hookMeta := agentsexechook.Meta{SessionID: exec.SessionID, TaskHash: exec.PendingTask, ToolName: s.name, ToolArgs: s.args}
+	if pass, message := agentsexechook.Run(ctx, hooks, agentsexechook.BeforeToolCall, hookMeta); !pass {
+		failToolEvent(exec, s, events, &agentsexechook.StopError{State: agentsexechook.BeforeToolCall, Message: message})
+		return
+	}
 	result, err := tools.Execute(progressCtx, exec, s.name, json.RawMessage(s.args))
 	progressMu.Lock()
 	progressDone = true
 	progressMu.Unlock()
 	if err != nil {
+		hookMeta.Err = err
+		s.stopErr = agentsexechook.Stop(ctx, hooks, agentsexechook.AfterToolError, hookMeta)
 		failToolEvent(exec, s, events, err)
 		return
+	}
+	s.stopErr = agentsexechook.Stop(ctx, hooks, agentsexechook.AfterToolCall, hookMeta)
+	if s.stopErr == nil && s.name == "ask_user" {
+		s.stopErr = agentsexechook.Stop(ctx, hooks, agentsexechook.AfterRequest, hookMeta)
 	}
 
 	if result != "" {

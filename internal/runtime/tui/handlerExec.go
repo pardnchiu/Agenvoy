@@ -127,8 +127,12 @@ type agentExec struct {
 	cancel context.CancelCauseFunc
 }
 
-func cancelNotice() tea.Cmd {
-	return notice(msgLog("Cancel Task at "+formatFinishedAt(time.Now())) + "\n")
+func cancelNotice(reasons ...string) tea.Cmd {
+	reason := "user cancel it"
+	if len(reasons) > 0 {
+		reason = strings.Join(reasons, " ")
+	}
+	return tea.Println(hintStyle.Render("  ⎿ Cancel: "+reason) + "\n")
 }
 
 type agentExecDone struct {
@@ -307,6 +311,9 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		if !ok {
 			return t, nil
 		}
+		if t.gap {
+			line = "\n" + line
+		}
 		t.gap, t.textTail = true, false
 		if collapse := t.collapseToolBuf(); collapse != nil {
 			return t, tea.Sequence(collapse, tea.Println(line))
@@ -454,6 +461,9 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		if !ok {
 			return t, quota
 		}
+		if t.gap {
+			line = "\n" + line
+		}
 		t.gap, t.textTail = false, false
 		return t, tea.Batch(tea.Println(line), quota)
 
@@ -466,10 +476,15 @@ func (t TUI) handleAgentEvent(ev agenttypes.Event) (tea.Model, tea.Cmd) {
 		collapse := t.collapseToolBuf()
 		t.todos = nil
 		t.subBuf, t.subOrder, t.subActive = nil, nil, 0
-		if collapse != nil {
-			return t, tea.Sequence(collapse, cancelNotice())
+		var reasons []string
+		if ev.Text != "" {
+			reasons = append(reasons, ev.Text)
 		}
-		return t, cancelNotice()
+		t.gap, t.textTail = false, false
+		if collapse != nil {
+			return t, tea.Sequence(collapse, cancelNotice(reasons...))
+		}
+		return t, cancelNotice(reasons...)
 
 	case agenttypes.EventUsageUpdate:
 		if ev.Source == "" && ev.Usage != nil {

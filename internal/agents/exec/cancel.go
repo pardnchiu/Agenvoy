@@ -3,6 +3,8 @@ package exec
 import (
 	"context"
 	"sync"
+
+	agentsexechook "github.com/pardnchiu/agenvoy/internal/agents/exec/hook"
 )
 
 var (
@@ -15,6 +17,10 @@ func Cancel(taskHash string, cause error) bool {
 	fn, ok := cancelFnMap[taskHash]
 	cancelFnMapMu.Unlock()
 	if !ok {
+		return false
+	}
+
+	if pass, _ := agentsexechook.Run(context.Background(), agentsexechook.Load(""), agentsexechook.BeforeTaskCancel, agentsexechook.Meta{TaskHash: taskHash, Err: cause}); !pass {
 		return false
 	}
 	fn(cause)

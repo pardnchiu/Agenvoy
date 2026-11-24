@@ -80,8 +80,10 @@ jobs:
           install -m 0755 agen "$stage/agen"
           cp -R extensions/skills "$stage/skills"
           find "$stage/skills" -name __pycache__ -prune -exec rm -rf {} +
+          mkdir -p "$stage/hooks"
+          cp -R configs/hooks/demo "$stage/hooks/demo"
           asset="agen-${GITHUB_REF_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz"
-          tar -C "$stage" -czf "$asset" agen skills
+          tar -C "$stage" -czf "$asset" agen skills hooks
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum "$asset" > "${asset}.sha256"
           else
