@@ -35,6 +35,11 @@ func (t TUI) commandMcp(parts []string) (TUI, tea.Cmd, bool) {
 		}
 	}
 
+	next, cmd := t.openLoading("/mcp", mcpPopup)
+	return next, cmd, true
+}
+
+func mcpPopup() *Popup {
 	list := mcpStatusList()
 	options := make([]string, 0, len(list)+2)
 	values := make([]string, 0, len(list)+2)
@@ -59,7 +64,7 @@ func (t TUI) commandMcp(parts []string) (TUI, tea.Cmd, bool) {
 	values = append(values, "add")
 	tails = append(tails, "")
 
-	t.popup = &Popup{
+	return &Popup{
 		kind:       popupSingleSelect,
 		title:      "/mcp",
 		options:    options,
@@ -76,7 +81,6 @@ func (t TUI) commandMcp(parts []string) (TUI, tea.Cmd, bool) {
 			return nil
 		},
 	}
-	return t, nil, true
 }
 
 func mcpStatusList() []mcp.ServerInfo {

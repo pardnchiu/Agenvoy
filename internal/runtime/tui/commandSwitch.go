@@ -43,10 +43,15 @@ func (t TUI) commandSessions(parts []string) (TUI, tea.Cmd, bool) {
 		return next, cmd, true
 	}
 
-	popup := popupSwitch(t.currentSessionID)
-	if popup == nil {
-		slog.Debug("tui: no sessions available")
-		return t, nil, true
+	current := t.currentSessionID
+	next, cmd := t.openLoading("/session", func() *Popup { return sessionPopup(current, sid) })
+	return next, cmd, true
+}
+
+func sessionPopup(current, sid string) *Popup {
+	popup := popupSwitch(current)
+	if len(popup.options) == 0 {
+		return messagePopup("/session", "no session yet  /new creates one")
 	}
 	popup.subtitle = "pick a session to switch to"
 	if sid != "" {
@@ -88,8 +93,7 @@ func (t TUI) commandSessions(parts []string) (TUI, tea.Cmd, bool) {
 		}
 		return SessionDeletePick{id: chosen}
 	}
-	t.popup = popup
-	return t, nil, true
+	return popup
 }
 
 func (t TUI) runCommandSwitch(id string) (TUI, tea.Cmd) {

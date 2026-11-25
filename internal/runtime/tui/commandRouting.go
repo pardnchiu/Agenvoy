@@ -62,6 +62,10 @@ func summaryOptions() (options, values []string, cursor int) {
 }
 
 func routingTabLoad(p *Popup, kind string) tea.Cmd {
+	if cached, ok := p.routingTabs[kind]; ok {
+		applyRoutingTab(p, cached)
+		return nil
+	}
 	p.options, p.values, p.cursor = nil, nil, 0
 	p.styledLines = []string{hintStyle.Render("  loading...")}
 
@@ -97,14 +101,29 @@ func (t TUI) runRoutingTabLoaded(msg RoutingTabLoaded) (TUI, tea.Cmd) {
 	if p != msg.target {
 		return t, nil
 	}
-	if msg.err != nil {
-		p.styledLines = []string{errorStyle.Render("  config.Load: " + msg.err.Error())}
+	if msg.err == nil {
+		if p.routingTabs == nil {
+			p.routingTabs = map[string]RoutingTabLoaded{}
+		}
+		p.routingTabs[msg.kind] = msg
+	}
+	if p.tabIdx < 0 || p.tabIdx >= len(p.tabs) || p.tabs[p.tabIdx] != msg.kind {
 		return t, nil
+	}
+	applyRoutingTab(p, msg)
+	return t, nil
+}
+
+func applyRoutingTab(p *Popup, msg RoutingTabLoaded) {
+	if msg.err != nil {
+		p.options, p.values, p.cursor = nil, nil, 0
+		p.styledLines = []string{errorStyle.Render("  config.Load: " + msg.err.Error())}
+		return
 	}
 	if len(msg.available) == 0 {
 		p.options, p.values, p.cursor = nil, nil, 0
 		p.styledLines = []string{hintStyle.Render("  no provider with credentials  add one from the model tab")}
-		return t, nil
+		return
 	}
 
 	prefix := map[string]string{"image": imagePrefix, "decision": decisionPrefix, "stt": sttPrefix, "tts": ttsPrefix}[msg.kind]
@@ -138,5 +157,4 @@ func (t TUI) runRoutingTabLoaded(msg RoutingTabLoaded) (TUI, tea.Cmd) {
 		p.allOptions, p.allValues = options, values
 		p.searchable = true
 	}
-	return t, nil
 }

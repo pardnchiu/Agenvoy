@@ -49,6 +49,11 @@ type SkillsInstallDone struct {
 }
 
 func (t TUI) commandSkills() (TUI, tea.Cmd, bool) {
+	next, cmd := t.openLoading("/skill", skillPopup)
+	return next, cmd, true
+}
+
+func skillPopup() *Popup {
 	installMulti := make(map[int]bool, len(remoteSkills))
 	for i, name := range remoteSkills {
 		if go_pkg_filesystem_reader.Exists(filepath.Join(filesystem.SystemDesignDir, name)) {
@@ -101,6 +106,7 @@ func (t TUI) commandSkills() (TUI, tea.Cmd, bool) {
 	}
 	popup.onTab = func(p *Popup) tea.Cmd {
 		p.cursor = 0
+		p.styledLines = nil
 		if p.tabIdx == 2 {
 			p.kind = popupMultiSelect
 			p.enterAction = ""
@@ -125,8 +131,7 @@ func (t TUI) commandSkills() (TUI, tea.Cmd, bool) {
 		return nil
 	}
 	popup.onTab(popup)
-	t.popup = popup
-	return t, nil, true
+	return popup
 }
 
 func fillAllowSkills(p *Popup) {
@@ -154,6 +159,10 @@ func fillAllowSkills(p *Popup) {
 		}
 	}
 	p.subtitle = "trusted skills pass every read and write without asking; only sudo still asks  " + filesystem.TrustSkillGlobalPath
+	p.styledLines = nil
+	if len(names) == 0 {
+		p.styledLines = []string{hintStyle.Render("  no skill installed yet")}
+	}
 	p.options = optionColumn(labels, settings)
 	p.values = names
 	p.cursor = min(p.cursor, max(len(p.options)-1, 0))

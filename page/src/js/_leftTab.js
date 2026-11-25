@@ -2,6 +2,7 @@ const feature = {
   Roles: "contract",
   Schedule: "schedule",
   Skills: "lightbulb_2",
+  Hooks: "webhook",
 };
 
 const configTab = {

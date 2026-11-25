@@ -1,20 +1,23 @@
 package tui
 
 import (
-	"log/slog"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (t TUI) commandScheduleMenu(_ []string) (TUI, tea.Cmd, bool) {
+	next, cmd := t.openLoading("/schedule", t.schedulePopup)
+	return next, cmd, true
+}
+
+func (t TUI) schedulePopup() *Popup {
 	labels, tails, values := t.scheduleOptions()
 	if len(labels) == 0 {
-		slog.Debug("tui: nothing scheduled")
-		return t, nil, true
+		return messagePopup("/schedule", "nothing scheduled yet  ask the agent to add one")
 	}
 
-	t.popup = &Popup{
+	return &Popup{
 		kind:       popupSingleSelect,
 		title:      "/schedule",
 		subtitle:   "enter fires it now  d deletes it",
@@ -32,7 +35,6 @@ func (t TUI) commandScheduleMenu(_ []string) (TUI, tea.Cmd, bool) {
 			return ScheduleRemovePick{kind: kind, skill: name}
 		},
 	}
-	return t, nil, true
 }
 
 func (t TUI) scheduleOptions() (labels, tails, values []string) {

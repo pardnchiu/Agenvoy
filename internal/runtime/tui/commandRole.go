@@ -21,11 +21,6 @@ type roleEntry struct {
 	Content string `json:"content"`
 }
 
-type RoleListed struct {
-	names []string
-	err   error
-}
-
 type RolePick struct {
 	name string
 }
@@ -53,48 +48,43 @@ type RoleSaved struct {
 }
 
 func (t TUI) commandRole() (TUI, tea.Cmd, bool) {
-	return t, func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), roleTimeout)
-		defer cancel()
-
-		out, err := daemon.Get[map[string][]roleEntry](ctx, "/v1/roles", nil)
-		if err != nil {
-			return RoleListed{err: err}
-		}
-		names := make([]string, 0, len(out["roles"]))
-		for _, one := range out["roles"] {
-			if one.Name != "" {
-				names = append(names, one.Name)
-			}
-		}
-		sort.Strings(names)
-		return RoleListed{names: names}
-	}, true
+	next, cmd := t.openLoading("/role", rolePopup)
+	return next, cmd, true
 }
 
-func (t TUI) runRoleListed(msg RoleListed) (TUI, tea.Cmd) {
-	if msg.err != nil {
-		return t, notice(msgError(fmt.Sprintf("role list: %v", msg.err)) + "\n")
+func rolePopup() *Popup {
+	ctx, cancel := context.WithTimeout(context.Background(), roleTimeout)
+	defer cancel()
+
+	out, err := daemon.Get[map[string][]roleEntry](ctx, "/v1/roles", nil)
+	if err != nil {
+		return errorPopup("/role", fmt.Sprintf("role list: %v", err))
 	}
+	names := make([]string, 0, len(out["roles"]))
+	for _, one := range out["roles"] {
+		if one.Name != "" {
+			names = append(names, one.Name)
+		}
+	}
+	sort.Strings(names)
 
 	options := []string{"New"}
 	values := []string{""}
-	if len(msg.names) > 0 {
+	if len(names) > 0 {
 		options = append(options, "")
 		values = append(values, "")
 	}
 
-	t.popup = &Popup{
+	return &Popup{
 		kind:     popupSingleSelect,
 		title:    "/role",
 		subtitle: "pick one to edit",
-		options:  append(options, msg.names...),
-		values:   append(values, msg.names...),
+		options:  append(options, names...),
+		values:   append(values, names...),
 		onConfirm: func(chosen string) any {
 			return RolePick{name: chosen}
 		},
 	}
-	return t, nil
 }
 
 func (t TUI) runRolePick(msg RolePick) (TUI, tea.Cmd) {

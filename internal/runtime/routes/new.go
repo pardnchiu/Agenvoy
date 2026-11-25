@@ -10,6 +10,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/internal/runtime/routes/handler"
 	completionshandler "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/chatCompletions"
+	runtimerouteshandlerhook "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/hook"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -107,6 +108,11 @@ func New() *gin.Engine {
 	r.GET("/v1/skills", localhostOnly(), handler.ListSkills())
 	r.GET("/v1/skill/*name", localhostOnly(), handler.GetSkill())
 	r.DELETE("/v1/skill", localhostOnly(), handler.DeleteSkill())
+
+	r.GET("/v1/hooks", localhostOnly(), runtimerouteshandlerhook.List())
+	r.GET("/v1/hook/*name", localhostOnly(), runtimerouteshandlerhook.Get())
+	r.PUT("/v1/hook", localhostOnly(), runtimerouteshandlerhook.Save())
+	r.DELETE("/v1/hook", localhostOnly(), runtimerouteshandlerhook.Delete())
 
 	r.GET("/v1/schedule", localhostOnly(), handler.ListSchedules())
 	r.POST("/v1/schedule", localhostOnly(), handler.CreateSchedule())

@@ -113,6 +113,10 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t.runMcpOAuthPaste(msg)
 		case RoutingTabLoaded:
 			return t.runRoutingTabLoaded(msg)
+		case PopupLoaded:
+			return t.runPopupLoaded(msg)
+		case LogStream:
+			return t.runLogStream(msg)
 		case CompatModelsResult:
 			return t.runCompatModelsResult(msg)
 		case RemoteModelsResult:
@@ -141,6 +145,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		t.width = msg.Width
 		t.height = msg.Height
+		if t.popup != nil && t.popup.logView != nil && t.popup.logView.width != msg.Width {
+			renderLogView(t.popup, msg.Width)
+		}
 		t.textarea.SetWidth(msg.Width - 4)
 		if t.renderedWidth == 0 {
 			t.renderedWidth = msg.Width
@@ -500,9 +507,6 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		slog.Debug("mcp reconnected", slog.String("server", msg.server))
 		return t, nil
 
-	case McpPermissionResult:
-		return t.runMcpPermissionResult(msg)
-
 	case McpPermissionPick:
 		return t.runMcpPermissionPick(msg)
 
@@ -694,9 +698,6 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return t, t.botSaveCmd(sid, msg.selfID, msg.name, msg.body)
 
-	case RoleListed:
-		return t.runRoleListed(msg)
-
 	case RolePick:
 		return t.runRolePick(msg)
 
@@ -824,6 +825,13 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case TelegramTokenSubmit:
 		slog.Debug("tui: telegram verifying token")
 		return t, enableTelegram(msg.token)
+
+	case HookOpenPick:
+		return t, openHook(msg.path)
+
+	case HookRemovePick:
+		next, cmd := t.runHookRemove(msg.path)
+		return next, cmd
 
 	case ScheduleTestPick:
 		next, cmd := t.runScheduleTest(msg.skill)
@@ -1089,20 +1097,13 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		slog.Debug("restricted path approved")
 		return t, nil
 
-	case LogDone:
-		if msg.err != nil {
-			return t, tea.Sequence(
-				tea.ClearScreen,
-				tea.Println(headerBlock(t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.currentSessionID)),
-				notice(msgError(fmt.Sprintf("log: %v", msg.err))+"\n"),
-			)
-		}
-		return t, tea.Sequence(
-			tea.ClearScreen,
-			tea.Println(headerBlock(t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.currentSessionID)),
-		)
+	case LogStream:
+		return t.runLogStream(msg)
 
 	case StartupSelectSession:
+		if len(listSessions()) == 0 {
+			return t.runCreateSession("", "")
+		}
 		popup := popupSwitch("")
 		if popup == nil {
 			return t, tea.Println(headerBlock(t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.currentSessionID))

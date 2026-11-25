@@ -1,4 +1,8 @@
 @mixin styles {
+  div.assistant:has(section.hook) > section > footer {
+    opacity: 1;
+  }
+
   div.assistant section.hook {
     display: flex;
     flex-flow: column;

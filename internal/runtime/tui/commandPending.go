@@ -12,8 +12,10 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/tools/interactive"
 )
 
+const noPendingText = "no pending task  it may have been resumed or deleted"
+
 func noPendingNotice() tea.Cmd {
-	return notice(msgLog("no pending task  it may have been resumed or deleted") + "\n")
+	return notice(msgLog(noPendingText) + "\n")
 }
 
 type PendingSelect struct {
@@ -36,14 +38,18 @@ type PendingDeleteConfirm struct {
 
 func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 	sid := strings.TrimSpace(t.currentSessionID)
+	next, cmd := t.openLoading("/pending", func() *Popup { return pendingPopup(sid) })
+	return next, cmd, true
+}
+
+func pendingPopup(sid string) *Popup {
 	if sid == "" {
-		slog.Debug("tui: no active session")
-		return t, nil, true
+		return messagePopup("/pending", "no active session")
 	}
 
 	hashes := interactive.ListResumablePending(sid)
 	if len(hashes) == 0 {
-		return t, noPendingNotice(), true
+		return messagePopup("/pending", noPendingText)
 	}
 
 	options := make([]string, 0, len(hashes))
@@ -68,7 +74,7 @@ func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 	}
 
 	if len(options) == 0 {
-		return t, noPendingNotice(), true
+		return messagePopup("/pending", noPendingText)
 	}
 
 	sessionID := sid
@@ -77,7 +83,7 @@ func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 		labels[h] = options[i]
 	}
 
-	t.popup = &Popup{
+	return &Popup{
 		kind:       popupSingleSelect,
 		title:      "/pending",
 		subtitle:   fmt.Sprintf("%d pending task(s)", len(options)),
@@ -91,7 +97,6 @@ func (t TUI) commandPending() (TUI, tea.Cmd, bool) {
 			return PendingDeletePick{id: sessionID, taskHash: chosen, label: labels[chosen]}
 		},
 	}
-	return t, nil, true
 }
 
 func (t TUI) openPendingDeleteConfirm(msg PendingDeletePick) (TUI, tea.Cmd) {
