@@ -299,6 +299,7 @@ async function renderChat(sessionId) {
       }
       setStream(sessionId, view);
       renderTodo(view, item.todos);
+      renderHooks(view.dom, item.hooks);
       continue;
     }
 
@@ -432,5 +433,6 @@ function newAssisatantItem(item, sessionId) {
   if (item.task) {
     dom.dataset.task = item.task;
   }
+  renderHooks(dom, item.hooks);
   return dom;
 }

@@ -153,6 +153,13 @@ function parseActionLog(content) {
         break;
       }
 
+      case "hook":
+        item = itemOf(task, writer, sendAt);
+        if (body) {
+          item.hooks = (item.hooks || []).concat(body);
+        }
+        break;
+
       case "pending":
         if (owner) {
           owner.paused = true;

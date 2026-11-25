@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 
 	"github.com/pardnchiu/agenvoy/configs"
@@ -14,6 +15,10 @@ import (
 )
 
 func call(ctx context.Context, script Script, meta any) (bool, string, error) {
+	if !go_pkg_filesystem_reader.IsFile(script.Path) {
+		return true, "", nil
+	}
+
 	var stdin []byte
 	// NOTE: 每個 state 的 meta data 不一樣所以用 any
 	if meta != nil {
