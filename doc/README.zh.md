@@ -286,13 +286,14 @@ OpenClaw、Hermes Agent、DeepSeek Harness 與 pi 是 TypeScript 或 Python 專�
 | 三層記憶 | Context window、語意向量搜尋與全文 SQLite 封存；工具失敗與其解法跨 session 保留 |
 | 沙箱執行 | 每一條指令與腳本都在 OS 原生沙箱中執行 —— Linux 用 bubblewrap、macOS 用 sandbox-exec |
 | Skill 與子代理 | 可載入的 markdown 指令包與多 Agent 協作，完成多步驟工作 |
+| 生命週期 Hook | 在任務的七個時間點（送出前、每次工具呼叫前後、`ask_user` 之後、完成／取消）執行 Python 或 JavaScript 腳本，可擋下單次呼叫或中止任務；由 agent 撰寫並測試 |
 | 自我修正 | 工具失敗時重寫並重試；工具動過的每個檔案都有版本，可還原單一版本或整個任務 |
 | 即時語音 | Web 儀表板透過 Gemini Live 即時語音對話，可在它說話中途插話打斷 |
 | 即時輸出與豐富顯示 | 命令進度串流至 TUI 與 Web 儀表板；Web 對話渲染圖表、Mermaid 圖、數學公式與程式碼高亮 |
 | 密鑰遮罩 | 工具輸出中的金鑰與 token 在進入模型或 log 前先遮蓋 |
 | 語音轉錄與圖片 | 音訊與影片轉文字；透過已設定的 provider 生成圖片 |
 
-**37 個內建工具**：相關動作收斂成單一名稱加 `mode` 參數，每次執行只帶七個 schema，其餘按需取得，prompt cache 在整個 session 內得以保留。見[內建工具](https://agenvoy.com/zh/built-in-tools)。
+**40 個內建工具**：相關動作收斂成單一名稱加 `mode` 參數，每次執行只帶七個 schema，其餘按需取得，prompt cache 在整個 session 內得以保留。見[內建工具](https://agenvoy.com/zh/built-in-tools)。
 
 ## 隨處都能與你的 Agent 對話
 
