@@ -361,6 +361,10 @@ func (t TUI) viewPopup() string {
 			visible = cmdSelectorMaxVisible
 		}
 		visible = listRows(visible)
+		if p.rawLines {
+			visible = listRows(max(total, 1))
+			p.visibleRows = visible
+		}
 		start, end := 0, total
 		if visible > 0 && total > visible {
 			if p.readOnly {
@@ -372,6 +376,10 @@ func (t TUI) viewPopup() string {
 		}
 		maxLine := max(width-10, 32)
 		for i := start; i < end; i++ {
+			if p.rawLines {
+				body = append(body, "  "+p.options[i])
+				continue
+			}
 			opt := truncate.StringWithTail(p.options[i], uint(maxLine), "...")
 			marker := "  "
 			var line string

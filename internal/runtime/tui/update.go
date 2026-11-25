@@ -115,6 +115,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t.runRoutingTabLoaded(msg)
 		case PopupLoaded:
 			return t.runPopupLoaded(msg)
+		case LogStream:
+			return t.runLogStream(msg)
 		case CompatModelsResult:
 			return t.runCompatModelsResult(msg)
 		case RemoteModelsResult:
@@ -143,6 +145,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		t.width = msg.Width
 		t.height = msg.Height
+		if t.popup != nil && t.popup.logView != nil && t.popup.logView.width != msg.Width {
+			renderLogView(t.popup, msg.Width)
+		}
 		t.textarea.SetWidth(msg.Width - 4)
 		if t.renderedWidth == 0 {
 			t.renderedWidth = msg.Width
@@ -1092,18 +1097,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		slog.Debug("restricted path approved")
 		return t, nil
 
-	case LogDone:
-		if msg.err != nil {
-			return t, tea.Sequence(
-				tea.ClearScreen,
-				tea.Println(headerBlock(t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.currentSessionID)),
-				notice(msgError(fmt.Sprintf("log: %v", msg.err))+"\n"),
-			)
-		}
-		return t, tea.Sequence(
-			tea.ClearScreen,
-			tea.Println(headerBlock(t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.currentSessionID)),
-		)
+	case LogStream:
+		return t.runLogStream(msg)
 
 	case StartupSelectSession:
 		if len(listSessions()) == 0 {

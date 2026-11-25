@@ -50,8 +50,11 @@ type Popup struct {
 	multi       map[int]bool
 	onToggle    func(p *Popup, index int)
 	maxVisible  int
+	visibleRows int
 	readOnly    bool
+	rawLines    bool
 	enterAction string
+	logView     *logView
 
 	tabs        []string
 	tabIdx      int
@@ -90,6 +93,7 @@ type Popup struct {
 	openLabel string
 	onEnter   func(p *Popup, chosen string) tea.Cmd
 	onCancel  func() any
+	onClose   func()
 	back      *Popup
 
 	oauth *oauthState
@@ -107,6 +111,9 @@ type oauthState struct {
 }
 
 func (t TUI) closePopup() TUI {
+	if t.popup != nil && t.popup.onClose != nil {
+		t.popup.onClose()
+	}
 	t.popup = nil
 	for len(t.popupQueue) > 0 {
 		next := t.popupQueue[0]
@@ -446,6 +453,9 @@ func (t TUI) runPopupChild(msg popupChild) (tea.Model, tea.Cmd) {
 
 func (t TUI) escapePopup() (tea.Model, tea.Cmd) {
 	if back := t.popup.back; back != nil {
+		if t.popup.onClose != nil {
+			t.popup.onClose()
+		}
 		t.popup = back
 		return t, nil
 	}
@@ -529,6 +539,9 @@ func (p *Popup) syncMulti() {
 
 func (p *Popup) scroll(step int) {
 	visible := p.maxVisible
+	if p.visibleRows > 0 {
+		visible = p.visibleRows
+	}
 	if visible <= 0 {
 		visible = cmdSelectorMaxVisible
 	}
