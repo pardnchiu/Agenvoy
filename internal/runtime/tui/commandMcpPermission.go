@@ -21,40 +21,28 @@ func mcpToolPrefix(server string) string {
 	return "mcp__" + server + "__"
 }
 
-type McpPermissionResult struct {
-	server string
-	tools  []mcp.Tool
-	err    error
-	back   *Popup
-}
-
 type McpPermissionPick struct {
 	server  string
 	entries []string
 }
 
 func (t TUI) openMcpPermission(name string) (TUI, tea.Cmd) {
-	back := t.popupOrigin
-	return t, func() tea.Msg {
+	title := "MCP  " + name + "  tools"
+	return t.openLoading(title, func() *Popup {
 		result, err := ipcClient.Load().MCP("tools", name)
 		if err != nil {
-			return McpPermissionResult{server: name, err: err, back: back}
+			return errorPopup(title, fmt.Sprintf("%s tools: %v", name, err))
 		}
-		return McpPermissionResult{server: name, tools: result.Tools, back: back}
-	}
+		if len(result.Tools) == 0 {
+			return messagePopup(title, "this server exposes no tools")
+		}
+		return mcpPermissionPopup(title, name, result.Tools)
+	})
 }
 
-func (t TUI) runMcpPermissionResult(msg McpPermissionResult) (TUI, tea.Cmd) {
-	if msg.err != nil {
-		return t, notice(msgError(fmt.Sprintf("%s tools: %v", msg.server, msg.err)) + "\n")
-	}
-	if len(msg.tools) == 0 {
-		slog.Debug("tui: server exposes no tools", slog.String("server", msg.server))
-		return t, nil
-	}
-
-	nameSummary := make(map[string]string, len(msg.tools))
-	for _, tool := range msg.tools {
+func mcpPermissionPopup(title, server string, tools []mcp.Tool) *Popup {
+	nameSummary := make(map[string]string, len(tools))
+	for _, tool := range tools {
 		if trimmed := strings.TrimSpace(tool.Name); trimmed != "" {
 			nameSummary[trimmed], _, _ = strings.Cut(strings.TrimSpace(tool.Description), "\n")
 		}
@@ -66,7 +54,7 @@ func (t TUI) runMcpPermissionResult(msg McpPermissionResult) (TUI, tea.Cmd) {
 	}
 
 	granted := agentsexecallowtool.Load()
-	all := allowAllEntry(msg.server)
+	all := allowAllEntry(server)
 
 	options := make([]string, 0, len(names)+1)
 	values := make([]string, 0, len(names)+1)
@@ -80,7 +68,7 @@ func (t TUI) runMcpPermissionResult(msg McpPermissionResult) (TUI, tea.Cmd) {
 
 	options = append(options, optionColumn(names, summaries)...)
 	for _, name := range names {
-		entry := mcpToolPrefix(msg.server) + name
+		entry := mcpToolPrefix(server) + name
 		values = append(values, entry)
 		if granted[entry] {
 			multi[len(values)-1] = true
@@ -101,16 +89,14 @@ func (t TUI) runMcpPermissionResult(msg McpPermissionResult) (TUI, tea.Cmd) {
 		}
 	}
 
-	server := msg.server
-	t.popup = &Popup{
+	return &Popup{
 		kind:     popupMultiSelect,
-		title:    "MCP  " + server + "  tools",
+		title:    title,
 		subtitle: "selected tools skip the confirmation prompt in every work directory",
 		options:  options,
 		values:   values,
 		multi:    multi,
 		onToggle: syncAllRow,
-		back:     msg.back,
 		onConfirm: func(chosen string) any {
 			pick := McpPermissionPick{server: server}
 			if chosen != "" {
@@ -119,7 +105,6 @@ func (t TUI) runMcpPermissionResult(msg McpPermissionResult) (TUI, tea.Cmd) {
 			return pick
 		},
 	}
-	return t, nil
 }
 
 func syncAllRow(p *Popup, index int) {

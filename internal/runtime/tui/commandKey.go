@@ -35,16 +35,11 @@ type KeyDeleteConfirm struct {
 }
 
 func (t TUI) commandKey(parts []string) (TUI, tea.Cmd, bool) {
-	cfg, err := config.Load()
-	if err != nil {
-		return t, notice(msgError(fmt.Sprintf("session.Load: %v", err)) + "\n"), true
-	}
-	if len(cfg.Keys) == 0 {
-		slog.Debug("tui: no keys recorded")
-		return t, nil, true
-	}
-
 	if len(parts) > 1 {
+		cfg, err := config.Load()
+		if err != nil {
+			return t, notice(msgError(fmt.Sprintf("session.Load: %v", err)) + "\n"), true
+		}
 		target := strings.TrimSpace(parts[1])
 		if !slices.Contains(cfg.Keys, target) {
 			return t, notice(msgError(fmt.Sprintf("key not recorded: %q", target)) + "\n"), true
@@ -53,7 +48,20 @@ func (t TUI) commandKey(parts []string) (TUI, tea.Cmd, bool) {
 		return next, cmd, true
 	}
 
-	t.popup = &Popup{
+	next, cmd := t.openLoading("/key", keyPopup)
+	return next, cmd, true
+}
+
+func keyPopup() *Popup {
+	cfg, err := config.Load()
+	if err != nil {
+		return errorPopup("/key", fmt.Sprintf("session.Load: %v", err))
+	}
+	if len(cfg.Keys) == 0 {
+		return messagePopup("/key", "no key recorded yet")
+	}
+
+	return &Popup{
 		kind:        popupSingleSelect,
 		title:       "/key",
 		subtitle:    "update keychain value",
@@ -67,7 +75,6 @@ func (t TUI) commandKey(parts []string) (TUI, tea.Cmd, bool) {
 			return KeyDeletePick{key: chosen}
 		},
 	}
-	return t, nil, true
 }
 
 func (t TUI) openKeyDeleteConfirm(key string) (TUI, tea.Cmd) {

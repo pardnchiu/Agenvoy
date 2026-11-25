@@ -37,7 +37,7 @@ type CompactDone struct {
 func (t TUI) commandCompactReset(tab int) (TUI, tea.Cmd, bool) {
 	sid := strings.TrimSpace(t.currentSessionID)
 	if sid == "" {
-		slog.Debug("tui: no active session")
+		t.popup = messagePopup("/compact", "no active session")
 		return t, nil, true
 	}
 

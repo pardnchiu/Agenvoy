@@ -331,6 +331,31 @@
             </footer>
           </form>
         </section>
+
+        <section :elif="params.tab == Hooks" class="editor">
+          <div class="side">
+            <details class="group" open>
+              <summary>
+                Hooks
+                <span class="material-symbols-outlined"> keyboard_arrow_down </span>
+              </summary>
+              <div class="list" id="hook-list"></div>
+            </details>
+          </div>
+          <form id="hook-form">
+            <label for="hook-name">
+              <span>Name</span>
+              <input id="hook-name" type="text" disabled />
+            </label>
+            <nav class="tab" id="hook-files"></nav>
+            <textarea id="hook-content" rows="20" spellcheck="false"></textarea>
+            <footer>
+              <button type="button" class="remove" @click="hook_delete">delete</button>
+              <button type="button" class="test" @click="hook_open">open</button>
+              <button type="button" class="submit" @click="hook_save">save</button>
+            </footer>
+          </form>
+        </section>
       </section>
       <!---->
       <section :elif="params.page == config" class="config">

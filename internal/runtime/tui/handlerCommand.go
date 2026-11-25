@@ -64,6 +64,9 @@ func (t TUI) handleCommand(cmd string) (TUI, tea.Cmd, bool) {
 	case "/config":
 		return t.commandConfig()
 
+	case "/hook":
+		return t.commandHook()
+
 	case "/schedule":
 		return t.commandScheduleMenu(parts)
 

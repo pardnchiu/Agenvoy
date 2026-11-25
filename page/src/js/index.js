@@ -231,6 +231,15 @@ document.addEventListener("DOMContentLoaded", async function () {
       skill_open: function () {
         openSkillFolder();
       },
+      hook_save: function () {
+        saveHookTab();
+      },
+      hook_delete: function () {
+        deleteHookTab();
+      },
+      hook_open: function () {
+        openHookFile();
+      },
       role_pick: function () {
         openRolePicker();
       },
@@ -467,6 +476,9 @@ document.addEventListener("DOMContentLoaded", async function () {
           if (params.tab === "Schedule") {
             resetSchedule();
             renderSchedule();
+          }
+          if (params.tab === "Hooks") {
+            renderHookTab();
           }
         }
       },
