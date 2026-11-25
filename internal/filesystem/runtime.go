@@ -133,13 +133,18 @@ func LoadRuntime() error {
 		DeniedCommand = merge(nil, user)
 	}
 
+	var deniedPaths []string
+	if err := json.Unmarshal(configs.DeniedPath, &deniedPaths); err != nil {
+		return utilsmsg.Wrap(utilsmsg.Internal, "json: Unmarshal", "embedded denied_path", err)
+	}
 	if data, ok := raw["denied_path"]; ok && len(data) > 0 {
 		var user []string
 		if err := json.Unmarshal(data, &user); err != nil {
 			return utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "denied_path", err)
 		}
-		DeniedPath = normalizePaths("denied_path", user)
+		deniedPaths = append(deniedPaths, user...)
 	}
+	DeniedPath = normalizePaths("denied_path", deniedPaths)
 
 	ReadablePath = nil
 	if data, ok := raw["readable_path"]; ok && len(data) > 0 {

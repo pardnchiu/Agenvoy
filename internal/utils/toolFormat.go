@@ -28,6 +28,7 @@ var eventLabel = map[string]string{
 	"public_api_list":       "API",
 	"calculate":             "Calc",
 	"test_tool":             "Test",
+	"test_hook":             "Test",
 	"send_to_chatbot":       "Push",
 	"list_chatbot":          "Chatbots",
 	"mcp__kura__search_rag": "RAG",
@@ -66,6 +67,7 @@ var eventModeLabel = map[string]map[string]string{
 	"schedules":  {"list": "Schedules", "write": "Write", "patch": "Edit", "remove": "Remove"},
 	"write_file": {"write": "Write", "patch": "Edit"},
 	"edit_skill": {"write": "Write", "patch": "Edit", "remove": "Remove"},
+	"write_hook": {"write": "Write", "patch": "Edit", "remove": "Remove"},
 	"edit_tool":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
 }
 
@@ -195,7 +197,10 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 	case "edit_skill":
 		return arg("path", "name")
 
-	case "edit_tool", "test_tool":
+	case "edit_tool", "test_tool", "write_hook", "test_hook":
+		return arg("name")
+
+	case "read_hook":
 		return arg("name")
 
 	case "reasoning_guide":
@@ -294,7 +299,7 @@ func eventMode(name string, argMap map[string]any) string {
 			return "write"
 		}
 
-	case "edit_skill", "edit_tool":
+	case "edit_skill", "edit_tool", "write_hook":
 		if content, _ := argMap["content"].(string); content != "" {
 			return "write"
 		}

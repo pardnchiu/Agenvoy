@@ -44,36 +44,6 @@
     --alert-important: #ab7df8;
     --alert-warning: #d29922;
     --alert-caution: #f85149;
-
-    pre.prettyprint {
-      .pln {
-        color: var(--text);
-      }
-      .kwd,
-      .tag {
-        color: #7aa2f7;
-      }
-      .str,
-      .atv {
-        color: #9ece6a;
-      }
-      .com {
-        color: #8d98a2;
-      }
-      .typ,
-      .atn {
-        color: #c0a3f5;
-      }
-      .lit,
-      .dec {
-        color: #f7a26a;
-      }
-      .pun,
-      .opn,
-      .clo {
-        color: #c8b26a;
-      }
-    }
   }
 
   img[src$="logo-min.svg"] {

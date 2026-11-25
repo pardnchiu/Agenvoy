@@ -111,6 +111,11 @@ function parseEvent(event) {
   const sessionId = event.session || subscribedSession;
   const active = sessionId === currentSessionId;
 
+  if (event.type === "EventHookLog") {
+    renderHookEvent(event, sessionId);
+    return;
+  }
+
   if (event.task_hash) {
     setTask(sessionId, event.task_hash);
   }
@@ -217,6 +222,9 @@ function parseEvent(event) {
   if (event.type === "EventTodoUpdate") {
     renderTodo(view, event.todos || []);
     return;
+  }
+  if (event.type === "EventCanceled" && event.text) {
+    appendHook(view.dom, event.text.trim(), sessionId);
   }
   if (terminal) {
     assistantViews.delete(view.dom);

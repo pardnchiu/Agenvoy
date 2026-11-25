@@ -40,7 +40,7 @@ func refusalDic() map[string]map[string]string {
 func checkRefusal(lang string) {
 	for rule, dic := range currentRefusal {
 		if text, ok := dic[lang]; ok && text == "" {
-			slog.Error(fmt.Sprintf("[Invalid] refusal_messages.json: %s/%s is empty, fallback to en", rule, lang))
+			slog.Error(fmt.Sprintf("[Invalid] jsons/locale/refusal_messages.json: %s/%s is empty, fallback to en", rule, lang))
 			delete(dic, lang)
 		}
 	}

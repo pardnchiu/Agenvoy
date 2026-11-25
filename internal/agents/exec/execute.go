@@ -22,6 +22,7 @@ import (
 	agentsexecallowskill "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/skill"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/compact"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/fast"
+	agentsexechook "github.com/pardnchiu/agenvoy/internal/agents/exec/hook"
 	execmodel "github.com/pardnchiu/agenvoy/internal/agents/exec/model"
 	"github.com/pardnchiu/agenvoy/internal/agents/exec/retryHandler"
 	agentimage "github.com/pardnchiu/agenvoy/internal/agents/image"
@@ -93,6 +94,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	}
 
 	execCtx = context.WithValue(execCtx, AllowAllCtxKey{}, allowAll)
+	hooks := agentsexechook.Load(data.WorkDir)
 
 	if events != nil {
 		execCtx = context.WithValue(execCtx, ParentEventsKey{}, events)
@@ -433,6 +435,49 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	oldHistoriesCompacted := false
 	firstAttempt := true
 
+	hookMeta := agentsexechook.Meta{
+		SessionID: session.ID,
+		TaskHash:  exec.PendingTask,
+		Input:     exec.Objective,
+		Events:    events,
+	}
+	entryHook := agentsexechook.BeforeUserSend
+	if data.PendingTask != "" {
+		entryHook = agentsexechook.AfterAskUser
+		questions, answers := interactive.LoadPendingAnswers(session.ID, data.PendingTask)
+		for i, q := range questions {
+			hookMeta.Answers = append(hookMeta.Answers, agentsexechook.Answer{Question: q, Answer: answers[i]})
+		}
+	}
+	if pass, message := agentsexechook.Run(execCtx, hooks, entryHook, hookMeta); !pass {
+		keepPending = false
+		stop := &agentsexechook.StopError{State: entryHook, Message: message}
+		events <- agenttypes.Event{Type: agenttypes.EventCanceled, Text: stop.Reason(), Model: data.Agent.Name(), Duration: time.Since(execStart)}
+		return nil
+	}
+
+	askInterrupted := false
+	hookStopped := false
+	defer func() {
+		if askInterrupted || hookStopped {
+			return
+		}
+		switch {
+		case errors.Is(execErr, context.Canceled) && errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled):
+			cancelMeta := hookMeta
+			cancelMeta.Error = errors.New("user cancel it")
+			cancelMeta.InputTotals, cancelMeta.HitTotals = agenttypes.InputTotals(&usage)
+			cancelMeta.OutputTotals = usage.Output
+			agentsexechook.Run(execCtx, hooks, agentsexechook.AfterTaskCancel, cancelMeta)
+		case execErr == nil:
+			doneMeta := hookMeta
+			doneMeta.InputTotals, doneMeta.HitTotals = agenttypes.InputTotals(&usage)
+			doneMeta.OutputTotals = usage.Output
+			doneMeta.Duration = time.Since(execStart)
+			agentsexechook.Run(execCtx, hooks, agentsexechook.AfterTaskDone, doneMeta)
+		}
+	}()
+
 	go compact.Warm(context.WithoutCancel(execCtx))
 
 	compactHistory := func() {
@@ -755,10 +800,23 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				}
 			}
 
-			session, alreadyCall, err = toolCall(execCtx, exec, choice, session, events, allowAll, alreadyCall, &turnAllowAll)
+			session, alreadyCall, err = toolCall(execCtx, exec, hooks, choice, session, events, resp.Usage, usage, allowAll, alreadyCall, &turnAllowAll)
 			if err != nil {
 				if errors.Is(err, ErrAskUserInterrupted) {
+					askInterrupted = true
 					return nil
+				}
+				if stop, ok := errors.AsType[*agentsexechook.StopError](err); ok {
+					hookStopped = true
+					events <- agenttypes.Event{Type: agenttypes.EventCanceled, Text: stop.Reason(), Model: data.Agent.Name(), Duration: time.Since(execStart)}
+					return nil
+				}
+				if execCtx.Err() != nil {
+					events <- agenttypes.Event{Type: agenttypes.EventCanceled, Model: data.Agent.Name(), Duration: time.Since(execStart)}
+					if errors.Is(context.Cause(execCtx), runtime.ErrUserCanceled) {
+						interactive.CancelPending(session.ID, exec.PendingTask)
+					}
+					return execCtx.Err()
 				}
 				return err
 			}
@@ -789,6 +847,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				sendText(events, refusal)
 				emitChangedFiles()
 				events <- agenttypes.DoneEvent(data.Agent.Name(), &usage, time.Since(execStart), sendElapsedTotal)
+				hookMeta.Result = refusal
 				interactive.FinalizePending(session.ID, exec.PendingTask, refusal)
 				keepPending = false
 				return nil
@@ -815,6 +874,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				interactive.CommitBackgroundReport(session.ID, data.PendingTask, data.HistoryContent)
 			}
 
+			hookMeta.Result = responseText
 			interactive.FinalizePending(session.ID, exec.PendingTask, responseText)
 
 			if pending := getSteer(session.ID); len(pending) > 0 {
@@ -872,6 +932,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 				sendText(events, refusal)
 				emitChangedFiles()
 				events <- agenttypes.DoneEvent(data.Agent.Name(), &usage, time.Since(execStart), sendElapsedTotal)
+				hookMeta.Result = refusal
 				interactive.FinalizePending(session.ID, exec.PendingTask, refusal)
 				keepPending = false
 				return nil
@@ -879,6 +940,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 			sendText(events, summaryStripped)
 			emitChangedFiles()
 			events <- agenttypes.DoneEvent(data.Agent.Name(), &usage, time.Since(execStart), sendElapsedTotal)
+			hookMeta.Result = summaryStripped
 			interactive.FinalizePending(session.ID, exec.PendingTask, summaryStripped)
 			keepPending = false
 			return nil

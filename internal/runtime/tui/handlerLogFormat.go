@@ -109,6 +109,9 @@ func renderActionLine(p parsedAction, width int) string {
 	case "canceled":
 		return ""
 
+	case "hook":
+		return renderEvent(agenttypes.Event{Type: agenttypes.EventHookLog, Text: body}, width)
+
 	case "skill_result":
 		str := strings.TrimSpace(body)
 		if str == "" {
