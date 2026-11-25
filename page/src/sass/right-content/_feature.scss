@@ -19,7 +19,7 @@ body[data-rendered="1"] section.right-content section.feature {
     overflow: scroll;
 
     header {
-      @include mixin.contentNav((Roles, Skills, Schedule));
+      @include mixin.contentNav((Roles, Skills, Schedule, Hooks));
     }
 
     section.editor {
@@ -156,7 +156,8 @@ body[data-rendered="1"] section.right-content section.feature {
       }
 
       form#skill-form > nav.tab,
-      form#schedule-form > nav.tab {
+      form#schedule-form > nav.tab,
+      form#hook-form > nav.tab {
         flex-flow: row wrap;
         gap: 0.5rem;
       }
