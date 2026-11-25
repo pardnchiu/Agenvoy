@@ -16,6 +16,9 @@ import (
 
 func Register() {
 	registEditSkill()
+	registWriteHook()
+	registReadHook()
+	registTestHook()
 	registEditTool()
 	registTestTool()
 }

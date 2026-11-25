@@ -13,7 +13,7 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-var topicNames = []string{"tool_generate", "tool_error", "web_search", "market_analysis", "targeted_read", "ask_user", "subagent_dispatch", "write_todo", "html_render", "office", "figure"}
+var topicNames = []string{"tool_generate", "tool_error", "web_search", "market_analysis", "targeted_read", "ask_user", "subagent_dispatch", "write_todo", "html_render", "office", "figure", "hook"}
 
 var topicGuides = map[string]string{
 	"tool_generate":     configs.GuideToolGenerate,
@@ -27,6 +27,7 @@ var topicGuides = map[string]string{
 	"html_render":       configs.GuideHtmlRender,
 	"office":            configs.GuideOffice,
 	"figure":            configs.GuideFigure,
+	"hook":              configs.GuideHook,
 }
 
 func registReasoningGuide() {
@@ -46,7 +47,8 @@ func registReasoningGuide() {
 - write_todo: analysis / research / evaluation, or work needing more than one round of tool calls — before the first tool call; an active Skill follows the Skill Execution Rules.
 - html_render: an HTML deliverable, before writing any markup.
 - office: creating or modifying .docx / .xlsx / .pptx, before writing the file.
-- figure: an answer that carries a chart, flowchart, diagram or formula, before writing it.`,
+- figure: an answer that carries a chart, flowchart, diagram or formula, before writing it.
+- hook: the user wants something checked, blocked or reported automatically on every task (before sending input, around tool calls, after ask_user, when a task ends or is canceled), before writing the hook script.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -46,6 +46,7 @@ var (
 	ScheduleSkillsDir       string
 	ScheduleSkillTrashDir   string
 	SkillTrashDir           string
+	HookTrashDir            string
 	DownloadDir             string
 	DownloadTrashDir        string
 	SessionsTrashDir        string
@@ -90,6 +91,7 @@ func Init() error {
 		SessionsDir = filepath.Join(AgenvoyDir, "sessions")
 		ToolsDir = filepath.Join(AgenvoyDir, "tools")
 		HooksDir = filepath.Join(AgenvoyDir, "hooks")
+		HookTrashDir = filepath.Join(HooksDir, ".Trash")
 		ScriptToolsDir = filepath.Join(ToolsDir, "script")
 		SystemToolsDir = filepath.Join(ToolsDir, ".system")
 		ExtensionScriptToolsDir = filepath.Join(ToolsDir, ".extension", "script")

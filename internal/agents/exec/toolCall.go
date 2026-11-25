@@ -225,6 +225,7 @@ func invalidateReadFileCache(alreadyCall map[string]string, writeArgsJSON string
 var isWriteLikeTool = map[string]bool{
 	"write_file":   true,
 	"edit_skill":   true,
+	"write_hook":   true,
 	"edit_tool":    true,
 	"write_result": true,
 }
@@ -814,7 +815,8 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, hooks map[string
 	hookMeta := agentsexechook.Meta{SessionID: exec.SessionID, TaskHash: exec.PendingTask, ToolName: s.name, ToolArgs: s.args, OutputTotals: totals.Output, Events: events}
 	hookMeta.InputTotals, hookMeta.HitTotals = agenttypes.InputTotals(&totals)
 	if pass, message := agentsexechook.Run(ctx, hooks, agentsexechook.BeforeToolCall, hookMeta); !pass {
-		failToolEvent(exec, s, events, &agentsexechook.StopError{State: agentsexechook.BeforeToolCall, Message: message})
+		// NOTE: 不停止任務，而是不繼續呼叫當前工具
+		failToolEvent(exec, s, events, hookToolStop(agentsexechook.BeforeToolCall, s.name, message))
 		return
 	}
 	toolStart := time.Now()
@@ -832,8 +834,11 @@ func runToolExec(ctx context.Context, exec *tooltypes.Executor, hooks map[string
 	hookMeta.Duration = time.Since(toolStart)
 	hookMeta.InputTokens, hookMeta.Hit = agenttypes.InputTotals(&usage)
 	hookMeta.OutputTokens = usage.Output
-	s.stopErr = agentsexechook.Stop(ctx, hooks, agentsexechook.AfterToolCall, hookMeta)
-	if s.stopErr == nil && s.name == "ask_user" {
+	// NOTE: 不停止任務，而是告知當前工具停止呼叫
+	if pass, message := agentsexechook.Run(ctx, hooks, agentsexechook.AfterToolCall, hookMeta); !pass {
+		AppendSteer(exec.SessionID, agenttypes.WindowHash(ctx), hookToolStop(agentsexechook.AfterToolCall, s.name, message).Error())
+	}
+	if s.name == "ask_user" {
 		hookMeta.Answers = agentsexechook.Answers(s.args, result)
 		s.stopErr = agentsexechook.Stop(ctx, hooks, agentsexechook.AfterAskUser, hookMeta)
 	}
@@ -1038,4 +1043,11 @@ func outsideHome(paths []string) []string {
 		}
 	}
 	return list
+}
+
+func hookToolStop(state agentsexechook.State, toolName, message string) error {
+	if message == "" {
+		return utilsmsg.New(utilsmsg.Denied, "hook "+state.String(), "tool %s stopped", toolName)
+	}
+	return utilsmsg.New(utilsmsg.Denied, "hook "+state.String(), "tool %s stopped: %s", toolName, message)
 }

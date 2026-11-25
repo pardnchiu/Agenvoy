@@ -79,3 +79,11 @@ func call(ctx context.Context, script Script, meta any) (bool, string, error) {
 	}
 	return false, out.Debug, nil
 }
+
+func Test(ctx context.Context, name string, input json.RawMessage) (bool, string, error) {
+	script, ok := Load("")[name]
+	if !ok {
+		return false, "", utilsmsg.New(utilsmsg.NotFound, "hook", "%q is not installed", name)
+	}
+	return call(ctx, script, input)
+}

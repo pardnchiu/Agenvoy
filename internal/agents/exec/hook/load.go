@@ -76,3 +76,7 @@ func (s State) String() string {
 	}
 	return strings.Join(parts, "")
 }
+
+func Names() []string {
+	return slices.Clone(hookStateKey[:])
+}

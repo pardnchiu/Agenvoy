@@ -276,6 +276,9 @@ var GuideOffice string
 //go:embed prompts/guide/figure.md
 var GuideFigure string
 
+//go:embed prompts/guide/hook.md
+var GuideHook string
+
 // * Configs
 
 //go:embed jsons/exclude_list.json
