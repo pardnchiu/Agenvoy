@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
@@ -52,11 +51,8 @@ A file at a chosen path, or changing an existing file → write_file; worked HTM
 			ext := "md"
 			if utils.IsHTMLDocument(newContent) {
 				ext = "html"
-				if problems, quickUI := checkHTML(newContent); len(problems) > 0 {
+				if problems := checkHTML(newContent); len(problems) > 0 {
 					msg := "html check failed, nothing written; fix every item and call write_result again:\n- " + strings.Join(problems, "\n- ")
-					if !quickUI {
-						msg += "\n\nThe page was not built per html_render; rebuild it against these rules:\n\n## html_render\n\n" + strings.TrimSpace(configs.GuideHtmlRender)
-					}
 					return "", utilsmsg.New(utilsmsg.Invalid, "content", "%s", msg)
 				}
 			}

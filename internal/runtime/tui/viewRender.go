@@ -552,6 +552,9 @@ func renderAgentEvent(ev agenttypes.Event, sessionLabel, cwd string, width int, 
 		}
 		return errorStyle.Render("  ⎿ " + srcPrefix + fmt.Sprintf("error: %v", ev.Err)), true
 
+	case agenttypes.EventHookLog:
+		return okayStyle.Render("⏺ ") + strings.ReplaceAll(wrapText(ev.Text, width-2), "\n", "\n  "), true
+
 	case agenttypes.EventSummaryGenerate:
 		return hintStyle.Render("⏵ " + srcPrefix + "summarizing..."), true
 
@@ -652,7 +655,7 @@ func buildToolLine(bullet, source, name, args string, width int) string {
 	header := style.Render(line)
 
 	switch name {
-	case "write_file", "edit_tool", "edit_skill":
+	case "write_file", "edit_tool", "edit_skill", "write_hook":
 		hunks := utils.FormatPatchDiff(args)
 		if len(hunks) == 0 {
 			return writeDiffLine(header, args, width)

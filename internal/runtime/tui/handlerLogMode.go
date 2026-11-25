@@ -87,6 +87,7 @@ func newActionTailer(ctx context.Context, sid string) {
 	}
 
 	lastSize := fileSize(path)
+	prevKind := ""
 	pollTicker := time.NewTicker(300 * time.Millisecond)
 	defer pollTicker.Stop()
 
@@ -110,7 +111,7 @@ func newActionTailer(ctx context.Context, sid string) {
 			if ev.Has(fsnotify.Create) {
 				_ = w.Add(path)
 			}
-			lastSize = drainNew(path, lastSize)
+			lastSize = drainNew(path, lastSize, &prevKind)
 		case err, ok := <-w.Errors:
 			if !ok {
 				return
@@ -119,12 +120,12 @@ func newActionTailer(ctx context.Context, sid string) {
 				slog.String("session", sid),
 				slog.String("error", err.Error()))
 		case <-pollTicker.C:
-			lastSize = drainNew(path, lastSize)
+			lastSize = drainNew(path, lastSize, &prevKind)
 		}
 	}
 }
 
-func drainNew(path string, lastSize int64) int64 {
+func drainNew(path string, lastSize int64, prevKind *string) int64 {
 	current := fileSize(path)
 	if current <= lastSize {
 		return current
@@ -159,9 +160,13 @@ func drainNew(path string, lastSize int64) int64 {
 		if line != "" && parsed.kind == "user" {
 			line += "\n"
 		}
+		if line != "" && parsed.kind == "hook" && *prevKind != "done" && *prevKind != "canceled" {
+			line = "\n" + line
+		}
 		if line == "" && parsed.kind != "pending" && parsed.kind != "canceled" {
 			continue
 		}
+		*prevKind = parsed.kind
 		send(tailLine{
 			kind:    parsed.kind,
 			body:    strings.TrimSpace(parsed.body),

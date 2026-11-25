@@ -40,7 +40,7 @@ func checkChatbotCode(lang string) {
 		return
 	}
 	if slices.Contains([]string{text.VerifyPrompt, text.PendingResolved, text.STTMissing}, "") {
-		slog.Error(fmt.Sprintf("[Invalid] confirm/chatbot_notice.json: %s has an empty text field, fallback to en", lang))
+		slog.Error(fmt.Sprintf("[Invalid] jsons/locale/chatbot_notice.json: %s has an empty text field, fallback to en", lang))
 		delete(currentChatbotCodeDic, lang)
 	}
 }

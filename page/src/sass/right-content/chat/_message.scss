@@ -1,3 +1,4 @@
+@use "../hook";
 @use "../md-render";
 @use "../pending";
 @use "../todo";
@@ -374,6 +375,7 @@
     }
 
     @include todo.styles;
+    @include hook.styles;
     @include pending.styles;
   }
 }

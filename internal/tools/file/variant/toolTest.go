@@ -19,7 +19,6 @@ func registTestTool() {
 	toolregister.Regist(toolregister.Def{
 		Name:        "test_tool",
 		AlwaysAllow: true,
-		Concurrent:  true,
 		Description: `Runs a script tool's script.py in the sandbox (60s limit) with JSON on stdin and returns its stdout, or its stderr as the error; tool.json is not checked.
 Use for "test this tool", "check the script works", and after every edit_tool write or patch before the tool is used for real.
 It fails → edit_tool(mode=patch), then test again; checking tool.json or editing the tool → edit_tool.`,

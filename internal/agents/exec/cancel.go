@@ -17,6 +17,7 @@ func Cancel(taskHash string, cause error) bool {
 	if !ok {
 		return false
 	}
+
 	fn(cause)
 	return true
 }

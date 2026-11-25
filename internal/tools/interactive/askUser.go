@@ -600,6 +600,18 @@ func LoadPendingQuestions(sessionID, taskHash string) ([]runtime.Question, error
 	return meta.Questions, nil
 }
 
+func LoadPendingAnswers(sessionID, taskHash string) (questions, answers []string) {
+	meta, err := readPending(filesystem.PendingMetaPath(sessionID, taskHash))
+	if err != nil {
+		return nil, nil
+	}
+	for _, a := range meta.Answer {
+		questions = append(questions, a.Question)
+		answers = append(answers, a.Answer)
+	}
+	return questions, answers
+}
+
 func buildResumeAnswer(answer any) string {
 	switch v := answer.(type) {
 	case string:

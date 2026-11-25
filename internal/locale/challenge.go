@@ -41,7 +41,7 @@ func checkChallenge(lang string) {
 		return
 	}
 	if text.Title == "" || text.Content == "" || text.Enable == "" || text.Skip == "" {
-		slog.Error(fmt.Sprintf("[Invalid] confirm/fetch_challenge.json: %s has an empty text field, fallback to en", lang))
+		slog.Error(fmt.Sprintf("[Invalid] jsons/locale/fetch_challenge.json: %s has an empty text field, fallback to en", lang))
 		delete(currentChallenageDic, lang)
 	}
 }

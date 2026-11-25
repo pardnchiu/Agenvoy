@@ -113,7 +113,9 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 		"restore_file",
 		"edit_tool",
 		"test_tool",
+		"test_hook",
 		"edit_skill",
+		"write_hook",
 		"write_result",
 		"html_template",
 		"generate*",
@@ -125,7 +127,9 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 		baseExclude = []string{
 			"edit_tool",
 			"test_tool",
+			"test_hook",
 			"edit_skill",
+			"write_hook",
 			"schedules",
 			"store_secret",
 		}

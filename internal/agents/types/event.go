@@ -49,6 +49,7 @@ var eventTypeByName = map[string]EventType{
 	"EventClientToolCall":  EventClientToolCall,
 	"EventFileChanged":     EventFileChanged,
 	"EventAskPrompt":       EventAskPrompt,
+	"EventHookLog":         EventHookLog,
 }
 
 func (e *EventType) UnmarshalJSON(data []byte) error {
@@ -97,6 +98,7 @@ const (
 	EventToolProgress
 	EventPendingEnd
 	EventAskPrompt
+	EventHookLog
 )
 
 func (e EventType) String() string {
@@ -167,6 +169,8 @@ func (e EventType) String() string {
 		return "EventPendingEnd"
 	case EventClientToolCall:
 		return "EventClientToolCall"
+	case EventHookLog:
+		return "EventHookLog"
 	default:
 		return "EventUnknown"
 	}

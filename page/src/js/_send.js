@@ -190,6 +190,7 @@ function taskStream(sessionId, task) {
   const upgraded = newStreamItem({ model: item.meta.model, trace: item.Reasoning, text: item.content, task: task }, sessionId);
   last.replaceWith(upgraded.dom);
   renderTodo(upgraded, item.todos);
+  renderHooks(upgraded.dom, item.hooks);
   return upgraded;
 }
 

@@ -55,6 +55,10 @@ func Record(sessionID string, event agenttypes.Event) {
 
 	flushAssistant(sessionID, event)
 
+	if event.Type == agenttypes.EventCanceled && strings.TrimSpace(event.Text) != "" {
+		appendAction(sessionID, withTimestamp(event.WindowHash, "hook", event.TaskHash, flatten(event.Text)))
+	}
+
 	line := formatActionEvent(event)
 	if line == "" {
 		return

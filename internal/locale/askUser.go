@@ -58,7 +58,7 @@ func checkAskUser(lang string) {
 		return
 	}
 	if slices.Contains([]string{text.Progress, text.Placeholder, text.Next, text.Send, text.Skip, text.SecretRequired, text.DiscordSecret, text.TelegramSecret, text.HintConfirm, text.HintToggle, text.HintNewline, text.HintHidden}, "") {
-		slog.Error(fmt.Sprintf("[Invalid] confirm/ask_user.json: %s has an empty text field, fallback to en", lang))
+		slog.Error(fmt.Sprintf("[Invalid] jsons/locale/ask_user.json: %s has an empty text field, fallback to en", lang))
 		delete(currentAskUserDic, lang)
 	}
 }

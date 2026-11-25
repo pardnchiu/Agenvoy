@@ -61,6 +61,9 @@ func formatActionEvent(event agenttypes.Event) string {
 	case agenttypes.EventPending:
 		return withTimestamp(hash, "pending", event.TaskHash, event.Text)
 
+	case agenttypes.EventHookLog:
+		return withTimestamp(hash, "hook", event.TaskHash, flatten(event.Text))
+
 	case agenttypes.EventExecError, agenttypes.EventError:
 		body := ""
 		if event.Err != nil {

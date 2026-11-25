@@ -51,8 +51,10 @@ const (
 	CONFIRM_EXPLAIN_TIMEOUT = 10 * time.Second
 	CONFIRM_EXPLAIN_RUNES   = 240
 	DEFAULT_TOOL_TIMEOUT    = 15 * time.Minute
-	RUN_COMMAND_TIMEOUT     = 30 * time.Minute
-	MAX_WATCH_SCRIPT_DEPTH  = 4
+	// NOTE: not for heave task design, so use 30s for test
+	HOOK_TIMEOUT           = 30 * time.Second
+	RUN_COMMAND_TIMEOUT    = 30 * time.Minute
+	MAX_WATCH_SCRIPT_DEPTH = 4
 
 	// * Followup
 	FOLLOWUP_TIMEOUT        = 30 * time.Second
@@ -277,6 +279,9 @@ var GuideOffice string
 //go:embed prompts/guide/figure.md
 var GuideFigure string
 
+//go:embed prompts/guide/hook.md
+var GuideHook string
+
 // * Configs
 
 //go:embed jsons/exclude_list.json
@@ -285,10 +290,13 @@ var ExcludeList []byte
 //go:embed jsons/read_only_command.json
 var ReadOnlyCommand []byte
 
+//go:embed jsons/denied_path.json
+var DeniedPath []byte
+
 //go:embed jsons/tui_tools.json
 var TUITools []byte
 
-//go:embed jsons/reply_lang.json
+//go:embed jsons/locale/reply_lang.json
 var ReplyLang []byte
 
 //go:embed jsons/local_compat.json
@@ -297,7 +305,7 @@ var LocalCompat []byte
 //go:embed jsons/guardrail_rules.json
 var GuardrailRules []byte
 
-//go:embed jsons/refusal_messages.json
+//go:embed jsons/locale/refusal_messages.json
 var RefusalMessages []byte
 
 //go:embed jsons/secret_patterns.json
@@ -305,16 +313,16 @@ var SecretPatterns []byte
 
 // * Confirm
 
-//go:embed confirm/fetch_challenge.json
+//go:embed jsons/locale/fetch_challenge.json
 var ConfirmFetchChallenge []byte
 
-//go:embed confirm/tool_confirm.json
+//go:embed jsons/locale/tool_confirm.json
 var ConfirmTool []byte
 
-//go:embed confirm/ask_user.json
+//go:embed jsons/locale/ask_user.json
 var ConfirmAskUser []byte
 
-//go:embed confirm/chatbot_notice.json
+//go:embed jsons/locale/chatbot_notice.json
 var ConfirmChatbotNotice []byte
 
 // * Official Guide

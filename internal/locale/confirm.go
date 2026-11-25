@@ -81,14 +81,14 @@ func checkConfirmDic(lang string) {
 	buttons := append(text.Options(), text.SkipWithoutReason, text.SkipWriteReason)
 	for _, label := range buttons {
 		if label == "" || len(label) > maxConfirmLabelBytes {
-			slog.Error(fmt.Sprintf("[Invalid] confirm/tool_confirm.json: %s label %q must be 1-%d bytes, fallback to en", lang, label, maxConfirmLabelBytes))
+			slog.Error(fmt.Sprintf("[Invalid] jsons/locale/tool_confirm.json: %s label %q must be 1-%d bytes, fallback to en", lang, label, maxConfirmLabelBytes))
 			delete(currentConfirmDic, lang)
 			return
 		}
 	}
 
 	if slices.Contains([]string{text.Title, text.TitleRestricted, text.PasswordRequired, text.PasswordCached, text.ChatRestricted, text.Password, text.PasswordEmpty, text.PasswordRejected, text.Reason, text.Send, text.SkipHeader, text.SkipReasonHeader}, "") {
-		slog.Error(fmt.Sprintf("[Invalid] confirm/tool_confirm.json: %s has an empty text field, fallback to en", lang))
+		slog.Error(fmt.Sprintf("[Invalid] jsons/locale/tool_confirm.json: %s has an empty text field, fallback to en", lang))
 		delete(currentConfirmDic, lang)
 	}
 }

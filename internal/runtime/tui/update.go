@@ -352,8 +352,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			payload := &ipc.Payload{Input: raw, WorkDir: t.cwd, AllowAll: t.allowAll}
 			go runExec(ipc.Frame{Type: ipc.FrameRun, SessionID: t.currentSessionID, Rayload: payload})
 
+			t.gap = true
 			cmds = append(cmds,
-				tea.Println(messageBlock(raw)+"\n"),
+				tea.Println(messageBlock(raw)),
 				t.spinner.Tick,
 			)
 			return t, tea.Batch(cmds...)
