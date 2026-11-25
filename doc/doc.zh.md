@@ -273,7 +273,7 @@ auto 欄的「確認」來自寫死的安全規則（工作目錄外的目標、
 
 ### 受限路徑與受限指令
 
-`$HOME` 以外的路徑與敏感清單內的路徑（go-pkg `filesystem/jsons/sensitive_path.json`，可由 `config.json` 的 `sensitive_path` 擴充；涵蓋金鑰與憑證檔、`.git`、`.claude`、shell 啟動檔與 `.mcp.json`）不會直接被拒絕：`boundary.Restricted` 會收集它們並發出確認。`$HOME` 以外的路徑另要求作業系統密碼（TUI 與 Web 確認框皆為密碼欄，由 daemon 驗證），`$HOME` 內的敏感路徑只需確認；`run_command`、`background_command` 以 argv `['sudo', ...]` 或 `sandbox: false` 執行時也走同一道關卡，任何權限模式都一樣；驗證通過後 `sudo` 以 `sudo -n` 沿用驗證留下的授權執行。TUI 的 `!` shell 指令含 `sudo` 且沒有有效授權時，會先跳出密碼框。核准綁定該 session 與該路徑，於 daemon 存續期間有效；密碼欄是否出現依 sudo 自己的 timestamp（`sudo -n -v`），該 ticket 仍有效時彈窗不會再出現密碼欄。密碼錯誤時彈窗保留並顯示錯誤，可重新輸入，驗證成功才關閉。需要密碼的確認不提供 **Yes, don't ask again** 與 **Yes, allow this turn**。`config.json` 的 `denied_path` 與 `denied_command` 為硬拒，任何核准都解不開；不在 `denied_command` 的指令一律可執行，但仍會經過 `run_command` 的一般確認。
+`$HOME` 以外的路徑與敏感清單內的路徑（go-pkg `filesystem/jsons/sensitive_path.json`，可由 `config.json` 的 `sensitive_path` 擴充；涵蓋金鑰與憑證檔、`.git`、`.claude`、shell 啟動檔與 `.mcp.json`）不會直接被拒絕：`boundary.Restricted` 會收集它們並發出確認。`$HOME` 以外的路徑另要求作業系統密碼（TUI 與 Web 確認框皆為密碼欄，由 daemon 驗證），`$HOME` 內的敏感路徑只需確認；`run_command`、`background_command` 以 argv `['sudo', ...]` 或 `sandbox: false` 執行時也走同一道關卡，任何權限模式都一樣；驗證通過後 `sudo` 以 `sudo -n` 沿用驗證留下的授權執行。TUI 的 `!` shell 指令含 `sudo` 且沒有有效授權時，會先跳出密碼框。核准綁定該 session 與該路徑，於 daemon 存續期間有效；密碼欄是否出現依 sudo 自己的 timestamp（`sudo -n -v`），該 ticket 仍有效時彈窗不會再出現密碼欄。密碼錯誤時彈窗保留並顯示錯誤，可重新輸入，驗證成功才關閉。需要密碼的確認不提供 **Yes, don't ask again** 與 **Yes, allow this turn**。`config.json` 的 `denied_path` 與 `denied_command` 為硬拒，任何核准都解不開；另有內建清單（`configs/jsons/denied_path.json`）固定併入 `denied_path`：`~/.config/agenvoy` 底下 Agenvoy 自身的狀態（`.store`、`.secrets`、`daemon.sock`、allow／trust 清單、排程、頻道授權、`runtime.uid`）、瀏覽器設定檔與 cookie、Mail 與 Messages、密碼管理器，以及其他 CLI 的憑證檔；不在 `denied_command` 的指令一律可執行，但仍會經過 `run_command` 的一般確認。
 
 自動化之前要知道的事項：
 
@@ -318,6 +318,22 @@ Agenvoy 本身也是 MCP server，走 stdio：`agen` 的 stdin 不是 TTY（有�
 command = "agen"
 ```
 
+### 生命週期 Hook
+
+Hook 是在任務固定時間點執行的 Python 或 JavaScript 腳本，可以中止任務。檔名為 `<state>.py` 或 `<state>.js`，放在 `~/.config/agenvoy/hooks/`（全域）或 `<workDir>/.config/agenvoy/hooks/`（專案，同一個 state 時覆蓋全域）；同一目錄兩者都有時執行 `.py`。可直接請 agent 新增或修改（以 `read_hook` 讀取該 state、`write_hook` 寫入、`test_hook` 驗證），或在 TUI 的 `/hook`、Web UI 的 **Hooks** 管理檔案。Release 壓縮檔在 `hooks/demo` 附上每個 state 的範例，`make build` 會複製到 `~/.config/agenvoy/hooks/demo`；範例不會執行，只用來說明各 state 收到的欄位。
+
+| State | 執行時機 | stdin 欄位 | `success: 0` 時 |
+| --- | --- | --- | --- |
+| `before_user_send` | 新請求執行前 | `session`、`task_hash`、`input`、`time` | 以該原因取消任務 |
+| `before_tool_call` | 每次工具呼叫前 | `session`、`task_hash`、`tool_name`、`tool_args`、`input_totals`、`output_totals`、`hit_totals`、`time` | 該次呼叫以該原因失敗，任務繼續 |
+| `after_tool_call` | 工具呼叫成功後 | `before_tool_call` 的欄位，另加 `tool_result`、`input_tokens`、`output_tokens`、`hit`、`during_ms` | 告知模型停止呼叫該工具，任務繼續 |
+| `after_tool_error` | 工具呼叫失敗後 | `session`、`task_hash`、`tool_name`、`tool_args`、`error`、`time` | 停止任務 |
+| `after_ask_user` | `ask_user` 取得回答後；pending 任務恢復時取代 `before_user_send` | `session`、`task_hash`、`answers`（`[{question, answer}]`）、`time` | 停止任務 |
+| `after_task_done` | 任務完成後 | `session`、`task_hash`、`input`、`result`、`input_totals`、`output_totals`、`hit_totals`、`during_ms`、`time` | 忽略 |
+| `after_task_cancel` | 使用者取消任務後 | `session`、`task_hash`、`input`、`error`、`input_totals`、`output_totals`、`hit_totals`、`time` | 忽略 |
+
+腳本從 stdin 讀取上述 JSON，在 `run_command` 的沙箱中執行（允許網路），工作目錄為任務的工作目錄（沒有時為 `$HOME`），時限 30 秒（`HOOK_TIMEOUT`）。stdout 最後一行必須是 `{"success": 1|0, "debug": "...", "error": "..."}`；`error` 非空同樣中止。崩潰、逾時或最後一行格式不符，都視為 `success: 0`，以該錯誤為原因。之前的 stdout 行與 stderr 以 `DEBUG` 寫入 daemon log。通過的 hook 若有 `debug`，會以 hook 行顯示在 TUI 與 Web 對話中，並保存在 session log。沒有腳本或檔案已移除的 state 一律通過。
+
 ### Session 分類
 
 TUI 的 `/session` 選擇器會依 ID 前綴分類：`cli-` 代表本機 CLI、`tg-` 代表 Telegram、`dc-` 代表 Discord、`chat-` 代表 Web／API；`temp-`（短期工作）的 session 不會列出。偵測到至少兩個群組時，選擇器會顯示 `all` 與各前綴分頁，並將目前 session 排在最前。Daemon 會以 `fsnotify` 監看新建立的 session 目錄，將 session ID 與設定名稱寫入 daemon log。
@@ -332,7 +348,7 @@ Session persona 現存於 history SQLite 資料庫。`self_id` 會正規化為�
 agen
 ```
 
-直接輸入文字即在當前 session 執行；配色依終端的亮／暗背景調整，啟動時偵測一次，每次按 Enter 送出時再檢查。其餘皆為斜線指令，只打 `/` 會開啟選單，其中也包含已安裝的 skill 與排程項目。
+尚無任何 session 時，TUI 啟動會直接建立一個隨機 id 的 session，不再詢問。直接輸入文字即在當前 session 執行；配色依終端的亮／暗背景調整，啟動時偵測一次，每次按 Enter 送出時再檢查。其餘皆為斜線指令，只打 `/` 會開啟選單，其中也包含已安裝的 skill 與排程項目。
 
 | 指令                       | 用途                                                                                                                                                                                                                                                                                                |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -346,7 +362,8 @@ agen
 | `/config`                  | 可搜尋的設定清單，`enter` 修改游標所在項目：登入時自動啟動 daemon（macOS 走 launchd agent，Linux 走 systemd user unit）、回覆語言（`auto` 跟隨每則訊息）、輸出資料夾（產生的檔案存放位置；留空為 `~/Downloads`）、channel admin（接收新對話驗證碼的已授權對話；留空則只寫 log）與 official guide（是否注入官方模型指引） |
 | `/schedule`                | 週期（cron）與單次（task）排程合併為一個清單；`enter` 立即執行、`d` 刪除；新增或編輯請直接交代 agent                                                                                                                                                                                                |
 | `/pending`                 | 列出並恢復中斷的任務（`ask_user`、錯誤復原）；`d` 經確認後移除                                                                                                                                                                                                                                      |
-| `/resume` `/log` `/usage`  | 重載可見對話、以 `$PAGER` 追蹤 `daemon.log`、查看各模型 token 用量（上方為本 session、下方為全部 session，24h／7d／28d）                                                                                                                                                                            |
+| `/hook`                    | 列出已安裝的 hook 腳本（`.py` 與 `.js`；同一 state 兩者都有時，以 `(primary)` 標出實際執行的 `.py`）；`enter` 開啟檔案，`d` 移到 `~/.config/agenvoy/hooks/.Trash`；尚未安裝任何 hook 時，`enter` 開啟 hooks 資料夾。見[生命週期 Hook](#生命週期-hook) |
+| `/resume` `/log` `/usage`  | 重載可見對話；以 popup 開啟 `daemon.log`（最後 256 KiB、最多 2000 筆，解析成時間／層級／訊息，換行對齊訊息欄，層級配色與 Web UI 一致；開啟期間即時串流新行，未往上捲時停在最底）；查看各模型 token 用量（上方為本 session、下方為全部 session，24h／7d／28d） |
 | `/key`                     | 編輯已儲存的憑證（`d` 刪除）                                                                                                                                                                                                                                                                        |
 | `/update`                  | 確認後停止 daemon、執行 `agen update`（下載最新預先建置的 release）並離開                                                                                                                                                                                                                           |
 | `/clear` `/exit` `/quit`   | 清除可見對話，或離開 TUI（`/quit` 為 `/exit` 的別名；daemon 繼續執行）                                                                                                                                                                                                                              |
@@ -363,7 +380,7 @@ agen
 | `Shift+G`             | 切換是否載入工作目錄的 `CLAUDE.md`／`AGENTS.md` 專案指引；開啟時狀態列顯示檔名 |
 | `Shift+Tab`           | 切換 `⏵⏵ auto`／`⏸ safe`（見[權限模式](#權限模式)）；只要沒有任務在執行且未開啟指令選單即可使用 |
 
-在彈出視窗中，`esc` 會回到開啟它的上一頁，只有第一頁才會關閉；確認、密碼與 `ask_user` 視窗不理會 `esc`，須選擇選項；`/usage` 這類純列表視窗以 ↑／↓ 捲動而非選取。
+需要讀取資料的彈出視窗會先開啟並顯示 `loading...`，讀取完成後填入內容，沒有資料時直接在視窗內說明。在彈出視窗中，`esc` 會回到開啟它的上一頁，只有第一頁才會關閉；確認、密碼與 `ask_user` 視窗不理會 `esc`，須選擇選項；`/usage` 這類純列表視窗以 ↑／↓ 捲動而非選取。
 
 任務執行中按 `esc`：尚未輸出任何內容時直接取消，否則詢問 **No**／**Yes cancel**／**Pause keep pending**。取消（含 `ctrl+c`、確認框中的 **Cancel task**，以及 `POST /v1/session/:id/cancel/:task_hash`）會結束任務，並以 `[Canceled]` 回覆保留在對話歷史中（任務原本失敗時附上最後的錯誤）；取消背景 job 不會影響仍在執行的母任務；暫停、確認框中的 **Abort task** 與其他中斷（逾時、視窗關閉等）只停止執行並保留 pending，可從 `/pending` 恢復。任務執行中只能送一般文字作為 steer，`/` 指令不會列出也不會送出。非彈窗狀態下 `esc` 依序為：先關閉 `/` 指令選單，再關閉 notice 區塊，再取消任務，再清空輸入，最後開啟背景任務選單。本 session 有背景任務在跑時，輸入框上方顯示 `N background task(s) running`；輸入框為空且沒有任務執行時按 `esc` 會列出 **No**、各背景任務與 **All**（兩個以上才有），選定後再確認一次即取消，其輸出不再回報。狀態列顯示 `Connecting` 時，一般訊息、Skill、`/pending` 與 cron 派發都不會送出；本機 `/` 指令照常可用。
 
@@ -545,6 +562,10 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | `GET`                   | `/v1/skills`      | **local** — 列出已安裝的 skill                                  |
 | `GET`                   | `/v1/skill/*name` | **local** — 讀取單一已安裝的 skill                              |
 | `DELETE`                | `/v1/skill`       | **local** — 移除單一已安裝的 skill                              |
+| `GET`                   | `/v1/hooks`       | **local** — 全部七個 hook state，格式為 `{name, label, files}`；`files` 含 `py` 與 `js` 兩筆，各帶 `path`、`exists` 與 `primary`（實際執行的那一個） |
+| `GET`                   | `/v1/hook/*name`  | **local** — 單一 state，附各檔案的 `content`；尚不存在的檔案帶入其範例腳本。不存在的 state 回 404 |
+| `PUT`                   | `/v1/hook`        | **local** — `{name, ext, content}` 寫入 `~/.config/agenvoy/hooks/<name>.<ext>`；state 或副檔名不合法、`content` 為空時回 400 |
+| `DELETE`                | `/v1/hook`        | **local** — `{name, ext}` 將該腳本移到 `hooks/.Trash`；不存在時回 404 |
 
 **排程與自動化**
 
@@ -588,7 +609,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 
 ## 工具參考
 
-註冊表有 31 個工具固定可用（含內部用的 `run_tool`），另有 6 個依前置條件註冊或從執行中排除。涵蓋多種相關動作的工具以 `mode` 參數區分，而不是拆成多個名稱。
+註冊表有 34 個工具固定可用（含內部用的 `run_tool`），另有 6 個依前置條件註冊或從執行中排除。涵蓋多種相關動作的工具以 `mode` 參數區分，而不是拆成多個名稱。
 
 | 分類       | 工具                              | 用途                                                                                                                                                                                                                                                                                      |
 | ---------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -598,6 +619,9 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 |            | `test_tool`                       | 上線前在沙箱內執行 script 工具                                                                                                                                                                                                                                                            |
 | Skill      | `run_skill`                       | 載入具名 skill 的參考素材                                                                                                                                                                                                                                                                 |
 |            | `edit_skill`                      | 編寫 skills 目錄底下的檔案（`mode=write\|patch\|remove`）                                                                                                                                                                                                                                 |
+| Hook       | `read_hook`                       | 回傳單一 state 的範例腳本（列出所有 stdin 欄位）與目前安裝的 hook，沒有時為 `(none)` |
+|            | `write_hook`                      | 在 `~/.config/agenvoy/hooks/` 建立、修改或移除 hook 腳本（`mode=write\|patch\|remove`）；新 hook 預設為 Python，指定時才用 JavaScript |
+|            | `test_hook`                       | 以指定的 stdin JSON 照任務實際方式執行一次已安裝的 hook，回傳 `success` 與 `debug`／`error` |
 | 排程       | `schedules`                       | 查詢、改期或取消定時與週期任務（`mode=list\|patch\|remove\|write`）                                                                                                                                                                                                                       |
 | 檔案       | `find_files`                      | 以目錄、檔名樣式或內容定位（`mode=list\|glob\|search`）；glob 依修改時間由新到舊排列；search 以 `offset`／`limit` 分頁（每頁 256），回傳符合的路徑、次數與前 5 個命中行號（`output=files`），或帶行號的符合行，可加 `context_lines` 前後文（`output=content`）；`multiline` 讓 regex 可跨行比對 |
 |            | `read_files`                      | 批次讀取文字、PDF、DOCX、PPTX、CSV／TSV、圖片與音訊／影片（回傳逐字稿）；預設 2048 行，文字檔被截斷時結尾會標示下一個 `offset`；`lines` 讀取文字檔指定行號前後各 `context_lines` 行（預設 64）；`full: true` 回傳完整檔案，不經 decision model 篩選；同一路徑可在一次呼叫中重複出現 |

@@ -286,13 +286,14 @@ OpenClaw, Hermes Agent, DeepSeek Harness and pi are TypeScript or Python project
 | 3-tier memory | Context window, semantic vector search and full-text SQLite archive; tool failures and their fixes persist across sessions |
 | Sandboxed execution | Every command and script runs in an OS-native sandbox — bubblewrap on Linux, sandbox-exec on macOS |
 | Skills & sub-agents | Loadable markdown instruction packs and multi-agent collaboration for multi-step work |
+| Lifecycle hooks | Python or JavaScript scripts at seven points of a task (before send, around each tool call, after `ask_user`, on done / cancel) can block a call or stop the task; the agent writes and tests them |
 | Self-improvement | Rewrites and retries a failing tool; every file the tools touch is versioned, so a version or a whole task can be restored |
 | Realtime voice | The Web dashboard talks with you live through Gemini Live and lets you cut in mid-sentence |
 | Live output & rich chat | Command progress streams to the TUI and Web dashboard; Web chat renders charts, Mermaid diagrams, math and highlighted code |
 | Secret masking | Keys and tokens in tool output are masked before the model or logs see them |
 | Transcription & images | Audio and video to text; image generation through a configured provider |
 
-**37 built-in tools**: related actions sit behind one name and a `mode` argument, and only seven schemas ride along with every run — the rest are fetched on demand, so the prompt cache survives the whole session. See [Built-in Tools](https://agenvoy.com/built-in-tools).
+**40 built-in tools**: related actions sit behind one name and a `mode` argument, and only seven schemas ride along with every run — the rest are fetched on demand, so the prompt cache survives the whole session. See [Built-in Tools](https://agenvoy.com/built-in-tools).
 
 ## Talk to your agent anywhere
 

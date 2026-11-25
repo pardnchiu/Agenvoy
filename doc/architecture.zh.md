@@ -51,7 +51,7 @@ graph TB
 
 ## 模組：Daemon、Web 與 HTTP API
 
-Daemon 依序載入 runtime 設定、初始化 ToriiDB、清除過期的執行中標記、開啟 SQLite 歷史資料庫與用量表；接著設定 STT 轉錄並註冊聊天工具（其餘內建工具含圖片與音訊生成，在每個程序的 package init 註冊）、同步 Web 資源、檢查沙箱、註冊 subagent 與 Skill scanner，MCP 在背景非同步連線；再啟動排程器與兩個系統 cron（每 15 分鐘產生摘要、每 30 分鐘清理 session）、config 與 session 監看及 Telegram／Discord；最後依序註冊 Web 確認 listener、開啟 IPC socket 與 HTTP API。Dashboard 嵌入二進位檔後由 `/` 提供，開發時可用 `AGENVOY_PAGE_DIR` 改讀磁碟。HTTP API 只監聽 `127.0.0.1` 與 `[::1]`；另外，`localhostOnly()` 保護 session 管理、模型路由／tier／優先序、provider 與憑證、MCP 設定、角色（`/v1/role`，`/v1/rule` 為舊別名）、Skill、排程、白名單、runtime 設定、檔案、用量、頻道、語音、錯誤記憶、daemon log 與系統更新。Agent 執行（`/v1/send`、`/v1/chat/completions`）、確認、取消、pending 工作、session 清單、模型清單（`/v1/models`）、版本、SSE log、`/v1/mcp/tools` 與 Dashboard 靜態資源則不加守衛。
+Daemon 依序載入 runtime 設定、初始化 ToriiDB、清除過期的執行中標記、開啟 SQLite 歷史資料庫與用量表；接著設定 STT 轉錄並註冊聊天工具（其餘內建工具含圖片與音訊生成，在每個程序的 package init 註冊）、同步 Web 資源、檢查沙箱、註冊 subagent 與 Skill scanner，MCP 在背景非同步連線；再啟動排程器與兩個系統 cron（每 15 分鐘產生摘要、每 30 分鐘清理 session）、config 與 session 監看及 Telegram／Discord；最後依序註冊 Web 確認 listener、開啟 IPC socket 與 HTTP API。Dashboard 嵌入二進位檔後由 `/` 提供，開發時可用 `AGENVOY_PAGE_DIR` 改讀磁碟。HTTP API 只監聽 `127.0.0.1` 與 `[::1]`；另外，`localhostOnly()` 保護 session 管理、模型路由／tier／優先序、provider 與憑證、MCP 設定、角色（`/v1/role`，`/v1/rule` 為舊別名）、Skill、hook、排程、白名單、runtime 設定、檔案、用量、頻道、語音、錯誤記憶、daemon log 與系統更新。Agent 執行（`/v1/send`、`/v1/chat/completions`）、確認、取消、pending 工作、session 清單、模型清單（`/v1/models`）、版本、SSE log、`/v1/mcp/tools` 與 Dashboard 靜態資源則不加守衛。
 
 ```mermaid
 graph TB
@@ -104,6 +104,7 @@ graph TB
 
 - **`exec/model`**：`Route` 決定指定模型、session 模型或選模器（`selectWithLLM`／`selectWithDecision`，開啟 decision dispatcher 時兩者同時執行；`config.SelectionPrompt` 產生的選模 prompt 會讓與 X 相關的請求優先選可搜尋 X 的 `grok`／`grok-oauth` 模型），並建立 fallback 清單；`Next` 在失敗時挑下一個候選並以 `CheckAlive` 做健康檢查（compat 端點打 `/models`，其他 provider 走 probe 或 health endpoint）。
 - **`exec/subagent`**：`Exec` 建立或接回子 session（`temp-` session 不讀歷史）、繼承父層工作目錄、allow-all（不受工作目錄限制）與 `DeliverTo`，排除寫檔與有持久副作用的工具後以 `exec.Run(..., isSub=true)` 執行，最多 `min(MAX_CONCURRENT_TOOLS, MAX_CONCURRENT_SUBAGENTS)` 條並行（CPU 核心數的一半，至少 3）；遇到提問時由 `waitResume` 等待回答。
+- **`exec/hook`**：每次 `exec.Run` 由 `Load` 依序收集 `~/.config/agenvoy/hooks` 與 `<workDir>/.config/agenvoy/hooks` 的 `<state>.py`／`<state>.js`（專案覆蓋全域，同一目錄 `.py` 優先於 `.js`）；`Run` 經 `go_pkg_sandbox.Wrap` 以 stdin 傳入該 state 的 JSON、套用 `HOOK_TIMEOUT`，並解析 stdout 最後一行 `{success, debug, error}`。`before_user_send`（恢復時為 `after_ask_user`）取消任務，`before_tool_call` 只讓該次呼叫失敗，`after_tool_call` 引導模型停用該工具，`after_tool_error` 與 `after_ask_user` 以 `StopError` 停止任務，`after_task_done`／`after_task_cancel` 僅通知；通過的 hook 的 `debug` 以 `EventHookLog` 送到 TUI、Web 對話與 session log
 - **`exec/chatbot`**：新對話的驗證碼除了寫入 daemon log，也會轉發到 `config.json` 設定的 admin 對話（`tg@<id>`／`dc@<id>`，須已授權）。
 - **`exec/summary` 與 `exec.Reset`**：daemon 每 15 分鐘產生滾動摘要，優先用 summary 模型，冷卻中或內容過大時退回主模型；有 decision model 時，合併前先移除雜訊對話與過時的 `key_decisions`／`past_discussions`；`Reset(withSummary)` 先重建摘要，產生不了就中止以免遺失 context。
 - **`exec/compact`**：非第一輪且上一輪 input tokens 達上限 80% 時，先萃取舊歷史再壓縮工具歷史；context 超長錯誤走 `TrimRatio`：先由 decision model 移除請求已不需要的工具步驟（保留最新一步與 `write_todo`），再以 `TrimFallback` 依最舊優先刪減；換模型時先試 `RawToolFallback`，不行才清空工具歷史。
@@ -128,6 +129,8 @@ graph TB
     Sub -->|isSub=true| Run
     Cron[系統 cron] --> Summary[exec/summary]
     Execute --> Msg[utils/msg 錯誤標示]
+    Execute --> Hook[exec/hook 生命週期腳本]
+    Tools --> Hook
 ```
 
 ## 模組：工具註冊表與沙箱
@@ -222,6 +225,8 @@ sequenceDiagram
 ## 安全邊界
 
 - Daemon 只監聽 `127.0.0.1` 與 `[::1]`；管理類 endpoint 另有 `localhostOnly()` 守衛。
+- 內建的 `configs/jsons/denied_path.json`（`~/.config/agenvoy` 底下 Agenvoy 自身的狀態、瀏覽器設定檔、郵件與密碼管理器、其他 CLI 的憑證）固定併入 `denied_path`，agent 無法放寬自己的閘門，也連不到 `daemon.sock`；Agenvoy 本身在程序內讀寫這些檔案。
+- Hook 腳本與 `run_command` 在同一個 OS 沙箱中執行（允許網路，時限 30 秒）。
 - denied path 與 denied command 會直接拒絕；`$HOME` 內的敏感路徑要求確認，檔案工具在 `$HOME` 外的讀取與寫入（`read_files`、`find_files`、`file_history`、`write_file`、`remove_file`、`restore_file`、`open_file`）、`sudo` 與 `sandbox: false` 另要求系統密碼；核准範圍限於該 session 與所請求的路徑或執行檔。`read_files` 與 `find_files` 讀取 go-pkg 可讀清單內的系統與套件位置及 `readable_path` 項目時不需確認。
 - 確認依三種信任層級，由 `toolCall` 逐次判斷：
   - `⏸ safe`：寫入、指令與非唯讀工具都先詢問。
@@ -257,6 +262,8 @@ flowchart LR
     Skills[~/.config/agenvoy/skills] --> Scanner[Skill Scanner]
     SystemSkills[skills/.system] -->|make build| Scanner
     DesignSkills[skills/.system_design] -->|/skill| Scanner
+    Hooks[~/.config/agenvoy/hooks + workDir/.config/agenvoy/hooks] --> HookRun[exec/hook]
+    HookDemo[hooks/demo] -->|make build / release| ReadHook[read_hook／Web UI 範本]
     Schedules[crons.json／tasks.json] --> Scheduler[Scheduler]
     Auth[.telegram／.discord] --> Channels[已授權頻道]
     Allow[trust_skill／allow_tool／.agenvoy/allow_list] --> Confirm[免確認規則]
