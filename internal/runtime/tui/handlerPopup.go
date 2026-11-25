@@ -53,9 +53,10 @@ type Popup struct {
 	readOnly    bool
 	enterAction string
 
-	tabs   []string
-	tabIdx int
-	onTab  func(p *Popup) tea.Cmd
+	tabs        []string
+	tabIdx      int
+	onTab       func(p *Popup) tea.Cmd
+	routingTabs map[string]RoutingTabLoaded
 
 	searchable bool
 	allOptions []string
@@ -362,7 +363,7 @@ func (t TUI) updateSingleSelectPopup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "t":
 			action = p.onTag
 		}
-		if action == nil {
+		if action == nil || p.cursor >= len(p.options) {
 			break
 		}
 		chosen := p.options[p.cursor]

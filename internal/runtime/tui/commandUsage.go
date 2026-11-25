@@ -13,8 +13,13 @@ import (
 )
 
 func (t TUI) commandUsage() (TUI, tea.Cmd, bool) {
-	now := time.Now()
 	sessionID := strings.TrimSpace(t.currentSessionID)
+	next, cmd := t.openLoading("/usage", func() *Popup { return usagePopup(sessionID) })
+	return next, cmd, true
+}
+
+func usagePopup(sessionID string) *Popup {
+	now := time.Now()
 
 	sessions := make([]map[string]usagelog.ModelUsage, len(configs.USAGE_PERIODS))
 	totals := make([]map[string]usagelog.ModelUsage, len(configs.USAGE_PERIODS))
@@ -24,13 +29,13 @@ func (t TUI) commandUsage() (TUI, tea.Cmd, bool) {
 		if sessionID != "" {
 			summary, err := usagelog.Usage(sessionID, period.Days, now)
 			if err != nil {
-				return t, notice(msgError(fmt.Sprintf("usage: %v", err)) + "\n"), true
+				return errorPopup("/usage", fmt.Sprintf("usage: %v", err))
 			}
 			sessions[i] = summary
 		}
 		total, err := usagelog.Total(period.Days, now)
 		if err != nil {
-			return t, notice(msgError(fmt.Sprintf("usage: %v", err)) + "\n"), true
+			return errorPopup("/usage", fmt.Sprintf("usage: %v", err))
 		}
 		totals[i] = total
 	}
@@ -50,8 +55,7 @@ func (t TUI) commandUsage() (TUI, tea.Cmd, bool) {
 	}
 	popup.onTab(popup)
 
-	t.popup = popup
-	return t, nil, true
+	return popup
 }
 
 const usageMaxVisible = 16

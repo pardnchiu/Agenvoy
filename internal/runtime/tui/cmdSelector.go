@@ -43,6 +43,7 @@ var commands = []Command{
 	{"role", "list / add / edit role  title + description"},
 	{"channel", "enable / disable Telegram or Discord bot  token validated on enable"},
 	{"config", "search settings  startup on login  reply language  output dir"},
+	{"hook", "installed lifecycle hooks (.py / .js)  enter opens it  d moves it to Trash  .py wins when both exist"},
 	{"schedule", "recurring (cron) and one-shot (task) in one list  enter fires it now  d deletes it  add / edit by asking the agent"},
 	{"update", "update / upgrade  fetch latest release  rebuild  quit TUI"},
 	{"resume", "reload visible transcript  last 100 entries from action.log"},

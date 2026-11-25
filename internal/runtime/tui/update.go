@@ -113,6 +113,8 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t.runMcpOAuthPaste(msg)
 		case RoutingTabLoaded:
 			return t.runRoutingTabLoaded(msg)
+		case PopupLoaded:
+			return t.runPopupLoaded(msg)
 		case CompatModelsResult:
 			return t.runCompatModelsResult(msg)
 		case RemoteModelsResult:
@@ -500,9 +502,6 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		slog.Debug("mcp reconnected", slog.String("server", msg.server))
 		return t, nil
 
-	case McpPermissionResult:
-		return t.runMcpPermissionResult(msg)
-
 	case McpPermissionPick:
 		return t.runMcpPermissionPick(msg)
 
@@ -694,9 +693,6 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return t, t.botSaveCmd(sid, msg.selfID, msg.name, msg.body)
 
-	case RoleListed:
-		return t.runRoleListed(msg)
-
 	case RolePick:
 		return t.runRolePick(msg)
 
@@ -824,6 +820,13 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case TelegramTokenSubmit:
 		slog.Debug("tui: telegram verifying token")
 		return t, enableTelegram(msg.token)
+
+	case HookOpenPick:
+		return t, openHook(msg.path)
+
+	case HookRemovePick:
+		next, cmd := t.runHookRemove(msg.path)
+		return next, cmd
 
 	case ScheduleTestPick:
 		next, cmd := t.runScheduleTest(msg.skill)
@@ -1103,6 +1106,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		)
 
 	case StartupSelectSession:
+		if len(listSessions()) == 0 {
+			return t.runCreateSession("", "")
+		}
 		popup := popupSwitch("")
 		if popup == nil {
 			return t, tea.Println(headerBlock(t.daemonStatus, t.httpStatus, t.discordStatus, t.telegramStatus, t.currentSessionID))
