@@ -1,10 +1,13 @@
 package routes
 
 import (
+	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
 
@@ -14,11 +17,26 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
+var lanNets atomic.Pointer[[]*net.IPNet]
+
+func SetLAN(nets []*net.IPNet) {
+	lanNets.Store(&nets)
+}
+
+func inLAN(ip net.IP) bool {
+	nets := lanNets.Load()
+	if ip == nil || nets == nil {
+		return false
+	}
+	return slices.ContainsFunc(*nets, func(n *net.IPNet) bool { return n.Contains(ip) })
+}
+
 func New() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(hostOnly())
 	r.Use(cors())
 
 	pageIndex := registPage(r)
@@ -163,11 +181,29 @@ func allowOrigin(origin string) bool {
 	if err != nil {
 		return false
 	}
-	switch parsed.Hostname() {
+	return isLocalName(parsed.Hostname())
+}
+
+func isLocalName(name string) bool {
+	switch name {
 	case "localhost", "127.0.0.1", "::1":
 		return true
 	}
-	return false
+	return inLAN(net.ParseIP(name))
+}
+
+func hostOnly() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		host := c.Request.Host
+		if name, _, err := net.SplitHostPort(host); err == nil {
+			host = name
+		}
+		if !isLocalName(strings.Trim(host, "[]")) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": gin.H{"message": "[Denied] host: " + strconv.Quote(c.Request.Host) + " is not a local name", "type": "forbidden"}})
+			return
+		}
+		c.Next()
+	}
 }
 
 func cors() gin.HandlerFunc {
@@ -212,7 +248,11 @@ func jsonOnly() gin.HandlerFunc {
 
 func localhostOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !utils.IsLoopback(c.Request.RemoteAddr) {
+		host, _, err := net.SplitHostPort(c.Request.RemoteAddr)
+		if err != nil {
+			host = c.Request.RemoteAddr
+		}
+		if !utils.IsLoopback(c.Request.RemoteAddr) && !inLAN(net.ParseIP(host)) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": gin.H{"message": "localhost only", "type": "forbidden"}})
 			return
 		}

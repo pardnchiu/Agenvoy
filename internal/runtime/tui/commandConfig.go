@@ -19,6 +19,7 @@ const (
 	configOfficial  = "official_guide"
 	configCmdNet    = "command_network"
 	configHookNet   = "hook_network"
+	configLAN       = "lan_access"
 )
 
 type ConfigSelect struct {
@@ -43,6 +44,7 @@ func (t TUI) openConfig(focus string) TUI {
 	officialValue := okayStyle.Render("enable")
 	cmdNetValue := okayStyle.Render("enable")
 	hookNetValue := okayStyle.Render("enable")
+	lanValue := hintStyle.Render("disable")
 	if cfg, err := config.Load(); err == nil {
 		if cfg.OfficialGuideOff {
 			officialValue = hintStyle.Render("disable")
@@ -53,9 +55,12 @@ func (t TUI) openConfig(focus string) TUI {
 		if cfg.HookNetOff {
 			hookNetValue = hintStyle.Render("disable")
 		}
+		if cfg.LANAccess {
+			lanValue = warnStyle.Render("enable  do not leave it on")
+		}
 	}
 
-	names := []string{"Startup on login", "Reply language", "Output dir", "Admin Channel", "Official guide", "Command network", "Hook network"}
+	names := []string{"Startup on login", "Reply language", "Output dir", "Admin Channel", "Official guide", "Command network", "Hook network", "LAN access"}
 	settings := []string{
 		startupValue,
 		whiteStyle.Render(filesystem.CanonicalReplyLang(filesystem.GetReplyLang())),
@@ -64,8 +69,9 @@ func (t TUI) openConfig(focus string) TUI {
 		officialValue,
 		cmdNetValue,
 		hookNetValue,
+		lanValue,
 	}
-	values := []string{configStartup, configReplyLang, configOutputDir, configAdminChat, configOfficial, configCmdNet, configHookNet}
+	values := []string{configStartup, configReplyLang, configOutputDir, configAdminChat, configOfficial, configCmdNet, configHookNet, configLAN}
 	options := optionColumn(names, settings)
 
 	input := newPopupInput("", false)
@@ -120,6 +126,9 @@ func (t TUI) runConfigSelect(key string) (TUI, tea.Cmd) {
 
 	case configHookNet:
 		return t.toggleHookNetwork()
+
+	case configLAN:
+		return t.openLANAccess()
 	}
 	return t, nil
 }
@@ -185,4 +194,51 @@ func (t TUI) toggleHookNetwork() (TUI, tea.Cmd) {
 		return t, notice(msgError(fmt.Sprintf("hook-network: %v", err)) + "\n")
 	}
 	return t.openConfig(configHookNet), nil
+}
+
+type ConfigLANChoice struct {
+	choice string
+}
+
+func (t TUI) openLANAccess() (TUI, tea.Cmd) {
+	cfg, err := config.Load()
+	if err != nil {
+		return t, notice(msgError(fmt.Sprintf("lan-access: %v", err)) + "\n")
+	}
+	if cfg.LANAccess {
+		return t.setLANAccess(false)
+	}
+	t.popup = &Popup{
+		kind:     popupSingleSelect,
+		title:    "LAN access lets any device on your network use the API without a password",
+		subtitle: "for short use only  do not leave it on  turn it off when done",
+		options:  []string{"Cancel", "Enable"},
+		values:   []string{"cancel", "enable"},
+		onConfirm: func(chosen string) any {
+			return ConfigLANChoice{choice: chosen}
+		},
+	}
+	return t, nil
+}
+
+func (t TUI) runLANChoice(choice string) (TUI, tea.Cmd) {
+	if choice == "enable" {
+		return t.setLANAccess(true)
+	}
+	return t.openConfig(configLAN), nil
+}
+
+func (t TUI) setLANAccess(enable bool) (TUI, tea.Cmd) {
+	dic, err := config.Get()
+	if err != nil {
+		return t, notice(msgError(fmt.Sprintf("lan-access: %v", err)) + "\n")
+	}
+	dic["lan_access_enabled"] = enable
+	if err := config.Write(dic); err != nil {
+		return t, notice(msgError(fmt.Sprintf("lan-access: %v", err)) + "\n")
+	}
+	if enable {
+		return t.openConfig(configLAN), notice(msgWarn("LAN access enabled: any device on your network can use the API without a password; turn it off when done") + "\n")
+	}
+	return t.openConfig(configLAN), nil
 }

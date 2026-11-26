@@ -30,6 +30,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime/webapp"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
 	usagelog "github.com/pardnchiu/agenvoy/internal/session/usage"
@@ -225,6 +226,15 @@ func Daemon() {
 			serveErr <- nil
 		}(listener)
 	}
+
+	syncLAN := func() {
+		cfg, err := config.Load()
+		lan := err == nil && cfg.LANAccess
+		routes.SetLAN(app.SyncLANListeners(server, filesystem.Port, lan))
+	}
+	syncLAN()
+	stopLANWatcher := app.WatchConfig(context.Background(), syncLAN)
+	defer stopLANWatcher()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
