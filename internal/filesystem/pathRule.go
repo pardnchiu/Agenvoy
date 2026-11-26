@@ -20,6 +20,25 @@ func IsDeniedPath(absPath string) bool {
 	})
 }
 
+func IsReadOnlyPath(absPath string) bool {
+	absPath = filepath.Clean(strings.TrimSpace(absPath))
+	if absPath == "" || absPath == "." {
+		return false
+	}
+	sep := string(filepath.Separator)
+	deepest := func(list []string) int {
+		depth := -1
+		for _, one := range list {
+			if absPath == one || strings.HasPrefix(absPath, one+sep) {
+				depth = max(depth, len(one))
+			}
+		}
+		return depth
+	}
+	readOnly := deepest(ReadOnlyPath)
+	return readOnly >= 0 && readOnly > deepest(WritablePath)
+}
+
 func IsReadablePath(absPath string) bool {
 	absPath = filepath.Clean(strings.TrimSpace(absPath))
 	if !filepath.IsAbs(absPath) {
@@ -101,5 +120,5 @@ func WorkDirAllowsAll(workDir string) bool {
 	if err != nil {
 		return false
 	}
-	return IsWithin(home, dir) && dir != filepath.Clean(home) && !IsDeniedPath(dir) && !IsSensitivePath(dir)
+	return IsWithin(home, dir) && dir != filepath.Clean(home) && !IsDeniedPath(dir) && !IsReadOnlyPath(dir) && !IsSensitivePath(dir)
 }

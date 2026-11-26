@@ -15,6 +15,7 @@ import (
 	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -67,6 +68,9 @@ func Generate(ctx context.Context, req Request) (string, error) {
 	}
 
 	path := outputPath(req, result.MimeType)
+	if err := boundary.CheckWrite(path); err != nil {
+		return "", err
+	}
 	if err := go_pkg_filesystem.CheckDir(filepath.Dir(path), true); err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.CheckDir", filepath.Dir(path), err)
 	}

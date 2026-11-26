@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 
@@ -22,11 +23,18 @@ var (
 	SensitivePath   go_pkg_filesystem.SensitiveDic
 	DeniedCommand   []string
 	DeniedPath      []string
+	ReadOnlyPath    []string
+	WritablePath    []string
 	NetWhiteList    []string
 	ReadOnlyCommand []string
 	ReadablePath    []string
 	ConfigOutputDir string
 )
+
+var DEFAULT_WRITABLE_PATH = []string{
+	"/skills",
+	"/download",
+}
 
 var (
 	replyLangMu     sync.RWMutex
@@ -62,12 +70,20 @@ func LoadRuntime() error {
 	}
 
 	raw := map[string]json.RawMessage{}
+	var rawErr error
 	if go_pkg_filesystem_reader.Exists(ConfigPath) {
 		loaded, err := go_pkg_filesystem.ReadJSON[map[string]json.RawMessage](ConfigPath)
 		if err != nil {
-			return utilsmsg.Wrap(utilsmsg.Invalid, "go_pkg_filesystem.ReadJSON", ConfigPath, err)
+			rawErr = utilsmsg.Wrap(utilsmsg.Invalid, "go_pkg_filesystem.ReadJSON", ConfigPath, err)
+		} else {
+			raw = loaded
 		}
-		raw = loaded
+	}
+	if err := loadPathRules(raw); err != nil {
+		return err
+	}
+	if rawErr != nil {
+		return rawErr
 	}
 
 	var limits RuntimeLimits
@@ -135,19 +151,6 @@ func LoadRuntime() error {
 		DeniedCommand = merge(nil, user)
 	}
 
-	var deniedPaths []string
-	if err := json.Unmarshal(configs.DeniedPath, &deniedPaths); err != nil {
-		return utilsmsg.Wrap(utilsmsg.Internal, "json: Unmarshal", "embedded denied_path", err)
-	}
-	if data, ok := raw["denied_path"]; ok && len(data) > 0 {
-		var user []string
-		if err := json.Unmarshal(data, &user); err != nil {
-			return utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "denied_path", err)
-		}
-		deniedPaths = append(deniedPaths, user...)
-	}
-	DeniedPath = normalizePaths("denied_path", deniedPaths)
-
 	ReadablePath = nil
 	if data, ok := raw["readable_path"]; ok && len(data) > 0 {
 		var user []string
@@ -174,10 +177,6 @@ func LoadRuntime() error {
 			return utilsmsg.Wrap(utilsmsg.Invalid, "json.Unmarshal", "read_only_command", err)
 		}
 		ReadOnlyCommand = merge(ReadOnlyCommand, user)
-	}
-
-	if err := applySandboxDenied(); err != nil {
-		return err
 	}
 
 	if err := go_pkg_filesystem.New(go_pkg_filesystem.Policy{
@@ -246,10 +245,13 @@ func normalizePaths(field string, list []string) []string {
 }
 
 func applySandboxDenied() error {
-	if len(DeniedPath) == 0 {
+	if len(DeniedPath) == 0 && len(ReadOnlyPath) == 0 {
 		return nil
 	}
 	payload := buildDeniedPayload(DeniedPath, runtime.GOOS)
+	readOnly := buildDeniedPayload(ReadOnlyPath, runtime.GOOS)
+	payload.ReadOnlyDirs, payload.ReadOnlyFiles = readOnly.Dirs, readOnly.Files
+	payload.WritableDirs = buildDeniedPayload(WritablePath, runtime.GOOS).Dirs
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return utilsmsg.Wrap(utilsmsg.Internal, "json.Marshal", "denied_path", err)
@@ -259,8 +261,11 @@ func applySandboxDenied() error {
 }
 
 type deniedPayload struct {
-	Dirs  []string `json:"dirs"`
-	Files []string `json:"files"`
+	Dirs          []string `json:"dirs"`
+	Files         []string `json:"files"`
+	ReadOnlyDirs  []string `json:"readonly_dirs,omitempty"`
+	ReadOnlyFiles []string `json:"readonly_files,omitempty"`
+	WritableDirs  []string `json:"writable_dirs,omitempty"`
 }
 
 func buildDeniedPayload(paths []string, goos string) deniedPayload {
@@ -306,4 +311,52 @@ func merge(base, extra []string) []string {
 		out = append(out, v)
 	}
 	return out
+}
+
+func agenvoyPaths(list []string) []string {
+	out := make([]string, 0, len(list))
+	for _, one := range list {
+		rel := filepath.Clean("/" + strings.TrimSpace(one))
+		if rel == "/" {
+			slog.Warn("[Invalid] writable_path: entry dropped, the whole Agenvoy directory cannot be writable",
+				slog.String("entry", one))
+			continue
+		}
+		out = append(out, filepath.Join(AgenvoyDir, rel))
+	}
+	return out
+}
+
+func loadPathRules(raw map[string]json.RawMessage) error {
+	var deniedPaths []string
+	if err := json.Unmarshal(configs.DeniedPath, &deniedPaths); err != nil {
+		return utilsmsg.Wrap(utilsmsg.Internal, "json: Unmarshal", "embedded denied_path", err)
+	}
+	DeniedPath = normalizePaths("denied_path", append(deniedPaths, userPaths(raw, "denied_path")...))
+	ReadOnlyPath = normalizePaths("readonly_path", []string{AgenvoyDir})
+	WritablePath = normalizePaths("writable_path", agenvoyPaths(append(slices.Clone(DEFAULT_WRITABLE_PATH), userPaths(raw, "writable_path")...)))
+	return applySandboxDenied()
+}
+
+func userPaths(raw map[string]json.RawMessage, field string) []string {
+	data, ok := raw[field]
+	if !ok || len(data) == 0 {
+		return nil
+	}
+	var user []string
+	if err := json.Unmarshal(data, &user); err != nil {
+		slog.Warn("[Invalid] "+field+": not a string array, user entries ignored",
+			slog.String("error", err.Error()))
+		return nil
+	}
+	return user
+}
+
+func ResetConfig() error {
+	if go_pkg_filesystem_reader.Exists(ConfigPath) {
+		if err := os.Rename(ConfigPath, ConfigPath+".corrupt"); err != nil {
+			return utilsmsg.Wrap(utilsmsg.Internal, "os.Rename", ConfigPath, err)
+		}
+	}
+	return LoadRuntime()
 }

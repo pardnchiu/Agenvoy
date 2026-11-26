@@ -53,9 +53,9 @@ Finding the version to restore → file_history; any other change → write_file
 
 			var narrow []string
 			if params.Version == 0 && params.Filename != "" {
-				absPath, err := boundary.ResolveIn(e.SessionID, e.WorkDir, params.Filename)
+				absPath, err := boundary.ResolveWriteIn(e.SessionID, e.WorkDir, params.Filename)
 				if err != nil {
-					return "", utilsmsg.Trace("tools/file/boundary: ResolveIn", "", err)
+					return "", utilsmsg.Trace("tools/file/boundary: ResolveWriteIn", "", err)
 				}
 				narrow = []string{absPath}
 			}

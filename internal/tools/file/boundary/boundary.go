@@ -73,6 +73,46 @@ func deniedErr(absPath string) error {
 	return utilsmsg.New(utilsmsg.Denied, "path", "%s is on denied_path and is permanently off limits for both reads and writes; it cannot be approved and retrying the same path fails the same way", absPath)
 }
 
+func readOnlyErr(absPath string) error {
+	return utilsmsg.New(utilsmsg.Denied, "path", "%s is read-only: it can be read but never written, moved or removed; it cannot be approved and retrying the same path fails the same way", absPath)
+}
+
+func ResolveWriteIn(sessionID, workDir, path string) (string, error) {
+	return ResolveWrite(sessionID, BaseDir(workDir), path)
+}
+
+func ResolveWrite(sessionID, baseDir, path string) (string, error) {
+	abs, err := Resolve(sessionID, baseDir, strings.TrimSpace(path))
+	if err != nil {
+		return "", err
+	}
+	if abs == "" {
+		return "", utilsmsg.New(utilsmsg.Invalid, "path", "required")
+	}
+	if err := CheckWrite(abs); err != nil {
+		return "", err
+	}
+	return abs, nil
+}
+
+func CheckWrite(absPath string) error {
+	list := []string{absPath}
+	if real, err := go_pkg_filesystem.RealPath(absPath); err == nil {
+		list = append(list, real)
+	} else if dir, err := go_pkg_filesystem.RealPath(filepath.Dir(absPath)); err == nil {
+		list = append(list, filepath.Join(dir, filepath.Base(absPath)))
+	}
+	for _, one := range list {
+		if filesystem.IsDeniedPath(one) {
+			return deniedErr(one)
+		}
+		if filesystem.IsReadOnlyPath(one) {
+			return readOnlyErr(one)
+		}
+	}
+	return nil
+}
+
 func ResolveIn(sessionID, workDir, path string) (string, error) {
 	absPath, err := Resolve(sessionID, BaseDir(workDir), strings.TrimSpace(path))
 	if err != nil {
@@ -169,6 +209,9 @@ func WriteBinds(sessionID, baseDir string, list []string) ([]string, error) {
 			if filesystem.IsDeniedPath(home) {
 				return nil, deniedErr(home)
 			}
+			if filesystem.IsReadOnlyPath(home) {
+				return nil, readOnlyErr(home)
+			}
 			continue
 		}
 
@@ -178,6 +221,9 @@ func WriteBinds(sessionID, baseDir string, list []string) ([]string, error) {
 		}
 		if filesystem.IsDeniedPath(abs) {
 			return nil, deniedErr(abs)
+		}
+		if filesystem.IsReadOnlyPath(abs) {
+			return nil, readOnlyErr(abs)
 		}
 		if !isGranted(sessionID, abs) {
 			return nil, utilsmsg.New(utilsmsg.Denied, "write_paths", "write path %s was not approved — it has to be approved in this call's prompt; retrying without that changes nothing", abs)

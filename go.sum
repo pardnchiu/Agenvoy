@@ -132,8 +132,8 @@ github.com/pardnchiu/go-browser v0.3.8 h1:Mq0F24HkfcAU8FtDqMMwT27eJgxXVdVMCTjjM2
 github.com/pardnchiu/go-browser v0.3.8/go.mod h1:zNpuRLCLzPD4kbdVEUtL59RydzlpuAeNEnfv6kSYCX8=
 github.com/pardnchiu/go-llm-router v0.10.5 h1:GCkDl7wl2dB3U4U43o6FmSmvW/DEdZGG9ZQzP5lcEFE=
 github.com/pardnchiu/go-llm-router v0.10.5/go.mod h1:D6Z8WFFiuzEjrx/11XhKlf88J0Un0uF9beIpJXbeZJU=
-github.com/pardnchiu/go-pkg v0.14.0 h1:M9J9EOBUBUGPSm0Zo70h2Pth6PPkSbna5AyKYn5bKog=
-github.com/pardnchiu/go-pkg v0.14.0/go.mod h1:DUCX9mbGQ2YCULGvoMOgagVJBMjSyiTzuwt29fw1qfQ=
+github.com/pardnchiu/go-pkg v0.14.1 h1:bcktXkBRrrW/wlDw+/4qVcJ9xqLdMMsjqC4YEYuFRrs=
+github.com/pardnchiu/go-pkg v0.14.1/go.mod h1:DUCX9mbGQ2YCULGvoMOgagVJBMjSyiTzuwt29fw1qfQ=
 github.com/pardnchiu/go-scheduler v1.2.0 h1:DBmFWOPjGUzQEKYHZNeLS9v9PmJrKk/VwxQeVO754Ns=
 github.com/pardnchiu/go-scheduler v1.2.0/go.mod h1:JtHqK0I/ha8E9Eo86rVaw+cvLgREcL5LfT8p9DmY3Lg=
 github.com/pardnchiu/go-sqlkit v0.1.2 h1:RvvkzwBip8rQ+NKuOrH1LOe7O8SwvC+FKnqQCUG4hVU=

@@ -24,4 +24,4 @@ The last stdout line must be `{"success": 1|0, "debug": "...", "error": "..."}` 
 - Earlier stdout lines and stderr go to the debug log only; use them for tracing.
 - A crash, a non-JSON last line, or running past 30 seconds counts as a block.
 
-The script runs sandboxed in the task's work directory and may only write under the home directory; keep it to standard-library Python.
+The script runs sandboxed in the task's work directory and may only write under the home directory, never inside ~/.config/agenvoy (read-only); keep it to standard-library Python.

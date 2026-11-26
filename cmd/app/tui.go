@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
@@ -33,8 +35,16 @@ func TUI() {
 		return
 	}
 	if err := filesystem.LoadRuntime(); err != nil {
-		slog.Warn("filesystem.LoadRuntime",
-			slog.String("error", err.Error()))
+		fmt.Fprintf(os.Stderr, "%v\nReset %s to the initial config? The current file is kept as config.json.corrupt [y/N]: ", err, filesystem.ConfigPath)
+		answer, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+		if !strings.EqualFold(strings.TrimSpace(answer), "y") {
+			fmt.Fprintf(os.Stderr, "fix %s, then start again\n", filesystem.ConfigPath)
+			os.Exit(1)
+		}
+		if err := filesystem.ResetConfig(); err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
 	}
 	if err := filesystem.OpenDB(); err != nil {
 		slog.Error("filesystem.OpenDB",

@@ -19,9 +19,9 @@ import (
 )
 
 func writeToPath(ctx context.Context, e *tooltypes.Executor, targetPath, newContent, tool string) (string, error) {
-	absPath, err := boundary.ResolveIn(e.SessionID, e.WorkDir, targetPath)
+	absPath, err := boundary.ResolveWriteIn(e.SessionID, e.WorkDir, targetPath)
 	if err != nil {
-		return "", utilsmsg.Trace("tools/file/boundary: ResolveIn", "", err)
+		return "", utilsmsg.Trace("tools/file/boundary: ResolveWriteIn", "", err)
 	}
 
 	info, err := os.Stat(absPath)

@@ -76,7 +76,7 @@ func commandProperties() map[string]any {
 		},
 		"write_paths": map[string]any{
 			"type":        "array",
-			"description": "Absolute paths outside $HOME this command writes to, e.g. ['/usr/local'] for a system install; paths under $HOME are always writable and need not be listed. The sandbox only allows writes under $HOME, so a missing entry fails with a permission error that looks like file ownership and is not one: list the path here instead of running chown or chmod. A path still denied while listed is root-owned → argv ['sudo', ...]. Ignored when argv starts with sudo.",
+			"description": "Absolute paths outside $HOME this command writes to, e.g. ['/usr/local'] for a system install; paths under $HOME are writable and need not be listed, except ~/.config/agenvoy, which is read-only (its skills/ and download/ stay writable) and cannot be listed. The sandbox only allows writes under $HOME, so a missing entry fails with a permission error that looks like file ownership and is not one: list the path here instead of running chown or chmod. A path still denied while listed is root-owned → argv ['sudo', ...]. Ignored when argv starts with sudo.",
 			"items":       map[string]any{"type": "string"},
 		},
 		"sandbox": map[string]any{
