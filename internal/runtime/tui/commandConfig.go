@@ -18,6 +18,7 @@ const (
 	configAdminChat = "admin_chat"
 	configOfficial  = "official_guide"
 	configCmdNet    = "command_network"
+	configHookNet   = "hook_network"
 )
 
 type ConfigSelect struct {
@@ -41,6 +42,7 @@ func (t TUI) openConfig(focus string) TUI {
 	}
 	officialValue := okayStyle.Render("enable")
 	cmdNetValue := okayStyle.Render("enable")
+	hookNetValue := okayStyle.Render("enable")
 	if cfg, err := config.Load(); err == nil {
 		if cfg.OfficialGuideOff {
 			officialValue = hintStyle.Render("disable")
@@ -48,8 +50,12 @@ func (t TUI) openConfig(focus string) TUI {
 		if cfg.CommandNetOff {
 			cmdNetValue = hintStyle.Render("disable")
 		}
+		if cfg.HookNetOff {
+			hookNetValue = hintStyle.Render("disable")
+		}
 	}
-	names := []string{"Startup on login", "Reply language", "Output dir", "Admin Channel", "Official guide", "Command network"}
+
+	names := []string{"Startup on login", "Reply language", "Output dir", "Admin Channel", "Official guide", "Command network", "Hook network"}
 	settings := []string{
 		startupValue,
 		whiteStyle.Render(filesystem.CanonicalReplyLang(filesystem.GetReplyLang())),
@@ -57,8 +63,9 @@ func (t TUI) openConfig(focus string) TUI {
 		adminChatValue(),
 		officialValue,
 		cmdNetValue,
+		hookNetValue,
 	}
-	values := []string{configStartup, configReplyLang, configOutputDir, configAdminChat, configOfficial, configCmdNet}
+	values := []string{configStartup, configReplyLang, configOutputDir, configAdminChat, configOfficial, configCmdNet, configHookNet}
 	options := optionColumn(names, settings)
 
 	input := newPopupInput("", false)
@@ -110,6 +117,9 @@ func (t TUI) runConfigSelect(key string) (TUI, tea.Cmd) {
 
 	case configCmdNet:
 		return t.toggleCommandNetwork()
+
+	case configHookNet:
+		return t.toggleHookNetwork()
 	}
 	return t, nil
 }
@@ -159,4 +169,20 @@ func (t TUI) toggleCommandNetwork() (TUI, tea.Cmd) {
 		return t, notice(msgError(fmt.Sprintf("command-network: %v", err)) + "\n")
 	}
 	return t.openConfig(configCmdNet), nil
+}
+
+func (t TUI) toggleHookNetwork() (TUI, tea.Cmd) {
+	cfg, err := config.Load()
+	if err != nil {
+		return t, notice(msgError(fmt.Sprintf("hook-network: %v", err)) + "\n")
+	}
+	dic, err := config.Get()
+	if err != nil {
+		return t, notice(msgError(fmt.Sprintf("hook-network: %v", err)) + "\n")
+	}
+	dic["hook_network_disabled"] = !cfg.HookNetOff
+	if err := config.Write(dic); err != nil {
+		return t, notice(msgError(fmt.Sprintf("hook-network: %v", err)) + "\n")
+	}
+	return t.openConfig(configHookNet), nil
 }

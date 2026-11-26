@@ -30,6 +30,7 @@ type Config struct {
 	OutputDir        string            `json:"output_dir"`
 	OfficialGuideOff bool              `json:"official_guide_disabled"`
 	CommandNetOff    bool              `json:"command_network_disabled"`
+	HookNetOff       bool              `json:"hook_network_disabled"`
 	SkillSourceOff   []string          `json:"skill_source_disabled"`
 	ModelTag         map[string]string `json:"model_tag"`
 }
