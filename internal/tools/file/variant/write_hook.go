@@ -13,11 +13,10 @@ import (
 
 func registWriteHook() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "write_hook",
-		AlwaysAllow: true,
+		Name: "write_hook",
 		Description: `Edits a hook script under the hooks directory: create or rewrite it (write), replace a string inside the installed one (patch), or trash the installed one (remove); returns the affected path.
 Use for "block X before sending", "stop when tokens exceed N", "notify me when a task finishes", "change / delete that hook" — read reasoning_guide(hook) and read_hook first; patch and remove need the hook read_hook shows under current; after write or patch, run test_hook.
-Skills → edit_skill; script tools → edit_tool; any other file → write_file.`,
+Skills → write_skill; script tools → write_tool; any other file → write_file.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

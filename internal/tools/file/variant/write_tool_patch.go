@@ -8,7 +8,7 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func patchSkillFile(ctx context.Context, e *tooltypes.Executor, path, oldString, newString string, replaceAll bool) (string, error) {
+func writeToolPatch(ctx context.Context, e *tooltypes.Executor, name, tag, oldString, newString string, replaceAll bool) (string, error) {
 	if oldString == "" {
 		return "", utilsmsg.New(utilsmsg.Invalid, "old_string", "required when mode=patch")
 	}
@@ -16,16 +16,16 @@ func patchSkillFile(ctx context.Context, e *tooltypes.Executor, path, oldString,
 		return "", utilsmsg.New(utilsmsg.Invalid, "new_string", "no edit needed")
 	}
 
-	absPath, err := skillPath(path)
+	target, err := toolTarget(name, tag, true)
 	if err != nil {
 		return "", err
 	}
 
-	change := capture(absPath)
-	if err := patch(absPath, oldString, newString, replaceAll); err != nil {
+	change := capture(target)
+	if err := patch(target, oldString, newString, replaceAll); err != nil {
 		return "", err
 	}
-	record(ctx, e, change, "", "edit_skill")
+	record(ctx, e, change, "", "write_tool")
 
-	return fmt.Sprintf("updated: %s", absPath), nil
+	return fmt.Sprintf("updated: %s", target), nil
 }

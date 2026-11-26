@@ -12,7 +12,7 @@
 Repair the tool in place; a workaround leaves it broken for the next call. `ext_*` tools are installed extensions and cannot be patched — they use the retry loop above.
 
 1. Classify the error: runtime exception, URL, auth or endpoint → `tag=script`; parameter/schema mismatch → `tag=json`.
-2. `edit_tool(mode=patch, name, tag, old_string, new_string)`.
+2. `write_tool(mode=patch, name, tag, old_string, new_string)`.
 3. Retry the same call (counts toward the 3 attempts).
 
 `http_request`, `run_command curl ...` or `run_command python3 -c "..."` bypass the tool instead of repairing it.

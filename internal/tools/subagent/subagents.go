@@ -57,7 +57,7 @@ func invokeProperties() map[string]any {
 		"exclude_tools": map[string]any{
 			"type":        "array",
 			"items":       map[string]any{"type": "string"},
-			"description": "Extra tool names to exclude on top of the fixed set, which cannot be lifted: subagents, background_subagents, write_file, edit_tool, edit_skill, write_hook, test_tool, test_hook, write_result, html_template, generate*, open_file, schedules, store_secret, the TUI-only tools, and ask_user for background legs.",
+			"description": "Extra tool names to exclude on top of the fixed set, which cannot be lifted: subagents, background_subagents, write_file, write_tool, write_skill, write_hook, test_tool, test_hook, write_result, html_template, generate*, open_file, schedules, store_secret, the TUI-only tools, and ask_user for background legs.",
 			"default":     []string{},
 		},
 	}

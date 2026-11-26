@@ -16,7 +16,7 @@ func registRemoveFile() {
 		Name: "remove_file",
 		Description: `Moves one file aside instead of deleting it and returns where it went; restore_file puts it back.
 Use for "delete this file", "remove that file", and for delete / rm on a single file; only on explicit request or a Skill step.
-Several files at once → run_command rm, which moves them aside the same way; undoing a change or reverting a version → restore_file; a skill or script tool → edit_skill / edit_tool with mode=remove.`,
+Several files at once → run_command rm, which moves them aside the same way; undoing a change or reverting a version → restore_file; a skill or script tool → write_skill / write_tool with mode=remove.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

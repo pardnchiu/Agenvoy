@@ -62,13 +62,13 @@ var primaryArgKeys = []string{
 }
 
 var eventModeLabel = map[string]map[string]string{
-	"subagents":  {"list": "Subagents", "invoke": "Subagent"},
-	"find_files": {"list": "Files", "glob": "Search", "search": "Search"},
-	"schedules":  {"list": "Schedules", "write": "Write", "patch": "Edit", "remove": "Remove"},
-	"write_file": {"write": "Write", "patch": "Edit"},
-	"edit_skill": {"write": "Write", "patch": "Edit", "remove": "Remove"},
-	"write_hook": {"write": "Write", "patch": "Edit", "remove": "Remove"},
-	"edit_tool":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
+	"subagents":   {"list": "Subagents", "invoke": "Subagent"},
+	"find_files":  {"list": "Files", "glob": "Search", "search": "Search"},
+	"schedules":   {"list": "Schedules", "write": "Write", "patch": "Edit", "remove": "Remove"},
+	"write_file":  {"write": "Write", "patch": "Edit"},
+	"write_skill": {"write": "Write", "patch": "Edit", "remove": "Remove"},
+	"write_hook":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
+	"write_tool":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
 }
 
 func FormatToolEvent(name, raw string) string {
@@ -194,10 +194,10 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 	case "run_skill":
 		return arg("skill", "name")
 
-	case "edit_skill":
+	case "write_skill":
 		return arg("path", "name")
 
-	case "edit_tool", "test_tool", "write_hook", "test_hook":
+	case "write_tool", "test_tool", "write_hook", "test_hook":
 		return arg("name")
 
 	case "read_hook":
@@ -299,7 +299,7 @@ func eventMode(name string, argMap map[string]any) string {
 			return "write"
 		}
 
-	case "edit_skill", "edit_tool", "write_hook":
+	case "write_skill", "write_tool", "write_hook":
 		if content, _ := argMap["content"].(string); content != "" {
 			return "write"
 		}

@@ -19,7 +19,7 @@ description: |
   流程：解析訊息抽出「要做什麼」「何時觸發」→ 缺項用 ask_user 補問 → 生成 skill 檔案至 ~/.config/agenvoy/skills/scheduler/<short>-<hash8>/SKILL.md（無 scheduler- 前綴，hash 用於避免命名衝突）→ 呼叫 schedules(mode=write) 綁定時間 → 回報。
 ---
 
-> **本 Skill 為 Agenvoy 內部最佳化版本**，依 Agenvoy 的執行環境撰寫（`run_command` 的 CWD、`~/.config/agenvoy/skills/.system/` 安裝位置、`edit_skill`／`schedules`／`find_edit_tool` 等工具、subagent 與排程的觸發路徑），**不保證適配其他 AI harness**。
+> **本 Skill 為 Agenvoy 內部最佳化版本**，依 Agenvoy 的執行環境撰寫（`run_command` 的 CWD、`~/.config/agenvoy/skills/.system/` 安裝位置、`write_skill`／`schedules`／`find_edit_tool` 等工具、subagent 與排程的觸發路徑），**不保證適配其他 AI harness**。
 
 # Scheduler Skill 建立器
 
@@ -115,7 +115,7 @@ scheduler 採 skill-based 觸發：到時間時，daemon 讀 `scheduler/<short>/
 
 > **腳本路徑**：`run_command` 的 CWD 是使用者的工作目錄，**不是本 skill 目錄**，相對路徑 `scripts/...` 必定找不到（實測會讓 agent 反覆 glob 找檔案，白燒數輪）。本 skill 只服務 Agenvoy、安裝位置固定，一律用絕對路徑 `~/.config/agenvoy/skills/.system/scheduler-skill-creator/scripts/`。
 
-> **禁止直接用 `edit_skill(mode=write)`／`write_file(mode=write)` 建立 SKILL.md** —— LLM 容易寫成 `<short>.md` 而非 `<short>/SKILL.md`，或誤加 `scheduler-` 前綴；也無法自行產生 hash suffix。必須先跑 init 腳本。
+> **禁止直接用 `write_skill(mode=write)`／`write_file(mode=write)` 建立 SKILL.md** —— LLM 容易寫成 `<short>.md` 而非 `<short>/SKILL.md`，或誤加 `scheduler-` 前綴；也無法自行產生 hash suffix。必須先跑 init 腳本。
 
 用 `run_command` 執行：
 
@@ -149,7 +149,7 @@ python3 ~/.config/agenvoy/skills/.system/scheduler-skill-creator/scripts/init_sc
 | 一：透過具體範例理解 | 已由步驟 1 完成，把結果直接給它，**不要再問一次** |
 | 二：規劃可重用內容 | 決定要不要 `scripts/` |
 | **二點五：工具／Skill 搭配探索** | 讀 `## Skills` → `find_edit_tool(mode=search)` → 都沒有才寫 `scripts/*.py` |
-| 四：編輯 | `edit_skill(mode=patch)` 取代模板的 `[TODO: ...]` |
+| 四：編輯 | `write_skill(mode=patch)` 取代模板的 `[TODO: ...]` |
 
 **這裡的額外約束**（`/skill-creator` 不知道排程的規則，必須由你把關）：
 
@@ -157,7 +157,7 @@ python3 ~/.config/agenvoy/skills/.system/scheduler-skill-creator/scripts/init_sc
 - **不准改名、不准搬位置** —— 名稱固定 `<short>-<hash8>`，位置固定 `~/.config/agenvoy/skills/scheduler/<short>-<hash8>/`
 - **不准跑步驟五（打包）** —— 排程 skill 不外流
 - **body 引用的 skill／tool 必須確認存在**：skill 以 system prompt 的 `## Skills` 清單為準（那份清單已在 context 裡，**不要用 `run_skill` activate 驗證** —— 每次 activate 都是一輪往返加一整份 SKILL.md 進 context）；tool 名稱以 `find_edit_tool(mode=search)` 的回傳為準。觸發時 subagent 找不到會直接 abort，使用者拿不到結果也看不到原因
-- **`scripts/` 寫進 `scheduler/<short>-<hash8>/scripts/`**，不用 `edit_tool` 產全域工具
+- **`scripts/` 寫進 `scheduler/<short>-<hash8>/scripts/`**，不用 `write_tool` 產全域工具
 
 **必填欄位**：
 
@@ -255,7 +255,7 @@ stdout：
 
 抓出 full name `tsmc-stock-watch-a3f9b2c1`。
 
-**步驟 4** `edit_skill(mode=patch)` 填入（frontmatter `name` 用 full name）：
+**步驟 4** `write_skill(mode=patch)` 填入（frontmatter `name` 用 full name）：
 
 ```markdown
 ---
@@ -280,11 +280,11 @@ description: 每 5 分鐘抓取台積電 2330.TW 即時股價並提醒。
 
 ## 不做的事
 
-- **不**用 `edit_skill(mode=write)`／`write_file(mode=write)` 直接建立 SKILL.md —— 必須走 `init_scheduler_skill.py`，避免結構錯誤（`<name>.md` vs `<name>/SKILL.md`）
+- **不**用 `write_skill(mode=write)`／`write_file(mode=write)` 直接建立 SKILL.md —— 必須走 `init_scheduler_skill.py`，避免結構錯誤（`<name>.md` vs `<name>/SKILL.md`）
 - **不**在 short name、frontmatter、skill_name 任何位置加 `scheduler-` 前綴
 - **不**留 `[TODO: ...]` 佔位符在最終 skill —— 步驟 4 須把所有 TODO 替換為具體內容
 - 時間以使用者說的為準；沒說就用 `ask_user` 問，不用預設值或推測補齊
 - **不**跳過步驟 5 的 `schedules(mode=write)` —— skill 建立但沒綁時間 = 排程不會觸發
 - **不**在 body 引用未經 `find_edit_tool(mode=search)` 確認存在的 tool name —— 觸發時 subagent 找不到 tool 會直接 abort，使用者拿不到結果也看不到錯誤原因
-- **不**用 `edit_tool` 產全域 `script_*` 工具 —— 排程要的腳本寫進自己的 `scripts/`（步驟 4），全域工具是 tool generate 的職責，兩者不混用
+- **不**用 `write_tool` 產全域 `script_*` 工具 —— 排程要的腳本寫進自己的 `scripts/`（步驟 4），全域工具是 tool generate 的職責，兩者不混用
 - **不**讓步驟 4 委派出去的 `/skill-creator` 跑 `init_skill.py` 或 `package_skill.py` —— 前者會用它自己的命名規則在 `skills/` 底下另開目錄（排程綁的是 `scheduler/<short>-<hash8>`，綁不到就不會觸發），後者產出的 `.skill` 排程用不到

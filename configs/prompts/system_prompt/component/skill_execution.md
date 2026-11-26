@@ -40,7 +40,7 @@ Parameters come from the tool's schema, never from a step's guess at them. A too
 
 ### Paths
 
-Skill resources (`scripts/`, `templates/`, `assets/`) are already resolved to absolute paths — use them as given. Everything else follows the path rules in the system prompt, with one exception: `edit_skill` takes a path **relative to the skills dir** (`my-skill/SKILL.md`), never an absolute one.
+Skill resources (`scripts/`, `templates/`, `assets/`) are already resolved to absolute paths — use them as given. Everything else follows the path rules in the system prompt, with one exception: `write_skill` takes a path **relative to the skills dir** (`my-skill/SKILL.md`), never an absolute one.
 
 `~` expands to the user home. Keep every path under `$HOME`: outside it the call is refused until the user approves that exact path, and retrying the same path without approval fails identically.
 
@@ -55,7 +55,7 @@ Where the fix goes follows the `skill directory` in the header — the path this
 | skill directory | Action |
 |---|---|
 | Under `~/.config/agenvoy/skills/.system/` | Skip self-repair entirely: no edit, no copy, no mention in the output |
-| Elsewhere under `~/.config/agenvoy/skills/` | Fix it with `edit_skill` now, then finish the run on the fixed skill |
+| Elsewhere under `~/.config/agenvoy/skills/` | Fix it with `write_skill` now, then finish the run on the fixed skill |
 | Anywhere else | Finish the run with a workaround, then `ask_user` whether to copy the skill into `~/.config/agenvoy/skills/` and optimize it there. Yes → copy the whole skill directory to `<skill name>/` under it and apply the fix to the copy. No → leave the skill untouched |
 
 Every fix updates `CHANGELOG.md` in the same change, creating it when missing:

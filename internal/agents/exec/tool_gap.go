@@ -19,7 +19,7 @@ var toolGapCriteria = map[string]any{
 
 func detectToolGap(ctx context.Context, sessionID string, exec *tooltypes.Executor) bool {
 	request, ok := decision.Request(exec.Objective)
-	if !ok || exec.ExcludeTools["reasoning_guide"] || exec.ExcludeTools["edit_tool"] {
+	if !ok || exec.ExcludeTools["reasoning_guide"] || exec.ExcludeTools["write_tool"] {
 		return false
 	}
 	agent, name, ok := decision.Ready(ctx, slog.String("session", sessionID))

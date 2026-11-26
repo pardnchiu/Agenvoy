@@ -81,7 +81,7 @@ func addGuide(box *toolbox) {
 		Name: "tool_generate_guide",
 		Description: `You MUST call this tool before refusing any user request: no other tool here covers it (weather, prices, data lookup, conversion, scraping, analysis, etc.) → call this for instructions to build one on the fly, never say 'I cannot' or 'no tool available'.
 Starts with public_api_list: a fitting API is read and called directly; only without one does a Python script tool get built (also for a user-supplied API that needs a key).
-After reading the guide: edit_tool(mode=write) -> test_tool -> call the new tool to answer.`,
+After reading the guide: write_tool(mode=write) -> test_tool -> call the new tool to answer.`,
 		InputSchema: emptySchema,
 	})
 
@@ -96,7 +96,7 @@ After reading the guide: edit_tool(mode=write) -> test_tool -> call the new tool
 
 var bridgedTools = []string{
 	"public_api_list",
-	"edit_tool",
+	"write_tool",
 	"test_tool",
 	"store_secret",
 }

@@ -3,7 +3,7 @@ name: skill-creator
 description: Create, edit, improve, or audit AgentSkills. Use when creating a new skill from scratch or when asked to improve, review, audit, tidy up, or clean up an existing skill or SKILL.md file. Also use when editing or restructuring a skill directory.
 ---
 
-> **本 Skill 為 Agenvoy 內部最佳化版本**，依 Agenvoy 的執行環境撰寫（`run_command` 的 CWD、`~/.config/agenvoy/skills/.system/` 安裝位置、`edit_skill`／`schedules`／`find_edit_tool` 等工具、subagent 與排程的觸發路徑），**不保證適配其他 AI harness**。
+> **本 Skill 為 Agenvoy 內部最佳化版本**，依 Agenvoy 的執行環境撰寫（`run_command` 的 CWD、`~/.config/agenvoy/skills/.system/` 安裝位置、`write_skill`／`schedules`／`find_edit_tool` 等工具、subagent 與排程的觸發路徑），**不保證適配其他 AI harness**。
 
 # Skill 建立器
 
@@ -24,8 +24,8 @@ description: Create, edit, improve, or audit AgentSkills. Use when creating a ne
 > **本 Skill 自己的腳本路徑**：`run_command` 的 CWD 是使用者的工作目錄，**不是本 Skill 目錄**，相對路徑 `scripts/...` 必定找不到（實測會讓 agent 反覆 glob 找檔案，白燒數輪）。本 Skill 只服務 Agenvoy、安裝位置固定，一律用絕對路徑 `~/.config/agenvoy/skills/.system/skill-creator/scripts/`。
 
 > **⚠️ 強制執行規則（不可繞過）**：
-> - **建立全新 Skill** — 禁止直接用 `edit_skill(mode=write)`／`write_file(mode=write)` 建立目錄或 SKILL.md，必須先以 `run_command` 執行 `~/.config/agenvoy/skills/.system/skill-creator/scripts/init_skill.py`初始化目錄結構，再用 `edit_skill(mode=write)` 或 `edit_skill(mode=patch)` 編輯產生的模板內容。跳過此步驟會導致目錄結構錯誤（生成 `skill-name.md` 而非 `skill-name/SKILL.md`）。
-> - **編輯現有 Skill** — 直接使用 `edit_skill(mode=write)` 或 `edit_skill(mode=patch)` 修改 `skill-name/SKILL.md` 及其資源檔案，不需要執行 `init_skill.py`。
+> - **建立全新 Skill** — 禁止直接用 `write_skill(mode=write)`／`write_file(mode=write)` 建立目錄或 SKILL.md，必須先以 `run_command` 執行 `~/.config/agenvoy/skills/.system/skill-creator/scripts/init_skill.py`初始化目錄結構，再用 `write_skill(mode=write)` 或 `write_skill(mode=patch)` 編輯產生的模板內容。跳過此步驟會導致目錄結構錯誤（生成 `skill-name.md` 而非 `skill-name/SKILL.md`）。
+> - **編輯現有 Skill** — 直接使用 `write_skill(mode=write)` 或 `write_skill(mode=patch)` 修改 `skill-name/SKILL.md` 及其資源檔案，不需要執行 `init_skill.py`。
 
 此 Skill 提供建立有效 Skill 的完整指引。
 
@@ -96,7 +96,7 @@ skill-name/
 - **範例**：`scripts/rotate_pdf.py` 用於 PDF 旋轉任務
 - **優點**：Token 效率高、確定性強、可不載入 Context 直接執行
 - **注意**：腳本仍可能需要被 Agent 讀取以進行 Patch 或環境特定調整
-- **邊界**：這裡的腳本只服務這個 Skill 自己，用 `edit_skill(mode=write)` 寫進該 Skill 的 `scripts/`。**不要**用 `edit_tool` 產全域 `script_*` 工具 —— 那是 tool generate 的職責，兩者不混用：全域工具的 description 每個 session 每次請求都付 Token，而且刪掉 Skill 時不會一併清掉，會留成孤兒
+- **邊界**：這裡的腳本只服務這個 Skill 自己，用 `write_skill(mode=write)` 寫進該 Skill 的 `scripts/`。**不要**用 `write_tool` 產全域 `script_*` 工具 —— 那是 tool generate 的職責，兩者不混用：全域工具的 description 每個 session 每次請求都付 Token，而且刪掉 Skill 時不會一併清掉，會留成孤兒
 
 ##### References（`references/`）
 
@@ -280,7 +280,7 @@ bigquery-skill/
    find_tools({"mode": "search", "query": "pdf page"})
    ```
 
-3. **兩者都沒有，才寫 `scripts/`**：用 `edit_skill(mode=write)` 寫進**這個 Skill 自己的** `scripts/`（邊界見「打包資源 → Scripts」）。**不要**用 `edit_tool` 產全域工具。
+3. **兩者都沒有，才寫 `scripts/`**：用 `write_skill(mode=write)` 寫進**這個 Skill 自己的** `scripts/`（邊界見「打包資源 → Scripts」）。**不要**用 `write_tool` 產全域工具。
 
 **判定原則**：
 

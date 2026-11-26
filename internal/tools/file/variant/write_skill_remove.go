@@ -13,22 +13,22 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func removeToolDir(ctx context.Context, e *tooltypes.Executor, name string) (string, error) {
+func writeSkillRemove(ctx context.Context, e *tooltypes.Executor, name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || strings.ContainsAny(name, `/\`) || strings.Contains(name, "..") {
-		return "", utilsmsg.New(utilsmsg.Invalid, "name", "invalid tool name: %q", name)
+		return "", utilsmsg.New(utilsmsg.Invalid, "name", "invalid skill name: %q", name)
 	}
 
-	dir := filepath.Join(filesystem.ScriptToolsDir, name)
+	dir := filepath.Join(filesystem.SkillsDir, name)
 	if !go_pkg_filesystem_reader.IsDir(dir) {
-		return "", utilsmsg.New(utilsmsg.NotFound, "tool", "%q does not exist", name)
+		return "", utilsmsg.New(utilsmsg.NotFound, "skill", "%q does not exist", name)
 	}
 
-	trashPath, err := filesystem.TrashDir(dir, filesystem.ScriptToolTrashDir, name)
+	trashPath, err := filesystem.TrashDir(dir, filesystem.SkillTrashDir, name)
 	if err != nil {
 		return "", err
 	}
-	recordRemoval(ctx, e, dir, trashPath, "edit_tool")
+	recordRemoval(ctx, e, dir, trashPath, "write_skill")
 
 	return fmt.Sprintf("trashed: %s", dir), nil
 }

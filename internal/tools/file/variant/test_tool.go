@@ -20,14 +20,14 @@ func registTestTool() {
 		Name:        "test_tool",
 		AlwaysAllow: true,
 		Description: `Runs a script tool's script.py in the sandbox (60s limit) with JSON on stdin and returns its stdout, or its stderr as the error; tool.json is not checked.
-Use for "test this tool", "check the script works", and after every edit_tool write or patch before the tool is used for real.
-It fails → edit_tool(mode=patch), then test again; checking tool.json or editing the tool → edit_tool.`,
+Use for "test this tool", "check the script works", and after every write_tool write or patch before the tool is used for real.
+It fails → write_tool(mode=patch), then test again; checking tool.json or editing the tool → write_tool.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"name": map[string]any{
 					"type":        "string",
-					"description": "Tool directory name in snake_case without the 'script_' prefix, as given to edit_tool, e.g. 'ip_geolocation_lookup'.",
+					"description": "Tool directory name in snake_case without the 'script_' prefix, as given to write_tool, e.g. 'ip_geolocation_lookup'.",
 				},
 				"input": map[string]any{
 					"type":        "string",

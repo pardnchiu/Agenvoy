@@ -224,9 +224,9 @@ func invalidateReadFileCache(alreadyCall map[string]string, writeArgsJSON string
 
 var isWriteLikeTool = map[string]bool{
 	"write_file":   true,
-	"edit_skill":   true,
+	"write_skill":  true,
 	"write_hook":   true,
-	"edit_tool":    true,
+	"write_tool":   true,
 	"write_result": true,
 }
 

@@ -17,7 +17,7 @@ func registWriteFile() {
 		Name: "write_file",
 		Description: `Writes one file whole (write) or edits regions of it (patch). Both need a read_files of an existing file this turn, unchanged on disk since.
 Use for "write this to a file", "change this part", edit_file / patch_file; only on explicit request or a Skill step, never to park a short answer, tool result or calculation.
-Delete → remove_file; undo or revert → restore_file; past versions → file_history; skills → edit_skill; hooks → write_hook; script tools → edit_tool; a long report or page for the user → write_result.`,
+Delete → remove_file; undo or revert → restore_file; past versions → file_history; skills → write_skill; hooks → write_hook; script tools → write_tool; a long report or page for the user → write_result.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
