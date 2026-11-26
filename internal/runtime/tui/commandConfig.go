@@ -17,6 +17,7 @@ const (
 	configOutputDir = "output_dir"
 	configAdminChat = "admin_chat"
 	configOfficial  = "official_guide"
+	configCmdNet    = "command_network"
 )
 
 type ConfigSelect struct {
@@ -39,18 +40,25 @@ func (t TUI) openConfig(focus string) TUI {
 		startupValue = okayStyle.Render("enable")
 	}
 	officialValue := okayStyle.Render("enable")
-	if cfg, err := config.Load(); err == nil && cfg.OfficialGuideOff {
-		officialValue = hintStyle.Render("disable")
+	cmdNetValue := okayStyle.Render("enable")
+	if cfg, err := config.Load(); err == nil {
+		if cfg.OfficialGuideOff {
+			officialValue = hintStyle.Render("disable")
+		}
+		if cfg.CommandNetOff {
+			cmdNetValue = hintStyle.Render("disable")
+		}
 	}
-	names := []string{"Startup on login", "Reply language", "Output dir", "Admin Channel", "Official guide"}
+	names := []string{"Startup on login", "Reply language", "Output dir", "Admin Channel", "Official guide", "Command network"}
 	settings := []string{
 		startupValue,
 		whiteStyle.Render(filesystem.CanonicalReplyLang(filesystem.GetReplyLang())),
 		whiteStyle.Render(filesystem.OutputDir()),
 		adminChatValue(),
 		officialValue,
+		cmdNetValue,
 	}
-	values := []string{configStartup, configReplyLang, configOutputDir, configAdminChat, configOfficial}
+	values := []string{configStartup, configReplyLang, configOutputDir, configAdminChat, configOfficial, configCmdNet}
 	options := optionColumn(names, settings)
 
 	input := newPopupInput("", false)
@@ -99,6 +107,9 @@ func (t TUI) runConfigSelect(key string) (TUI, tea.Cmd) {
 
 	case configOfficial:
 		return t.toggleOfficialGuide()
+
+	case configCmdNet:
+		return t.toggleCommandNetwork()
 	}
 	return t, nil
 }
@@ -132,4 +143,20 @@ func (t TUI) toggleOfficialGuide() (TUI, tea.Cmd) {
 		return t, notice(msgError(fmt.Sprintf("official-guide: %v", err)) + "\n")
 	}
 	return t.openConfig(configOfficial), nil
+}
+
+func (t TUI) toggleCommandNetwork() (TUI, tea.Cmd) {
+	cfg, err := config.Load()
+	if err != nil {
+		return t, notice(msgError(fmt.Sprintf("command-network: %v", err)) + "\n")
+	}
+	dic, err := config.Get()
+	if err != nil {
+		return t, notice(msgError(fmt.Sprintf("command-network: %v", err)) + "\n")
+	}
+	dic["command_network_disabled"] = !cfg.CommandNetOff
+	if err := config.Write(dic); err != nil {
+		return t, notice(msgError(fmt.Sprintf("command-network: %v", err)) + "\n")
+	}
+	return t.openConfig(configCmdNet), nil
 }

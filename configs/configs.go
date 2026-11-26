@@ -311,6 +311,9 @@ var RefusalMessages []byte
 //go:embed jsons/secret_patterns.json
 var SecretPatterns []byte
 
+//go:embed jsons/network_error.json
+var NetworkError []byte
+
 // * Confirm
 
 //go:embed jsons/locale/fetch_challenge.json

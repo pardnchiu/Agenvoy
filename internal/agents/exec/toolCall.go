@@ -26,6 +26,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/command"
@@ -138,6 +139,20 @@ type toolSlot struct {
 	execErr    string
 	execErrVal error
 	stopErr    error
+}
+
+func isNetworkCommand(toolName, toolArgs string) bool {
+	if toolName != "run_command" && toolName != "background_command" {
+		return false
+	}
+	var p struct {
+		Network bool  `json:"network"`
+		Sandbox *bool `json:"sandbox"`
+	}
+	if json.Unmarshal([]byte(toolArgs), &p) != nil {
+		return false
+	}
+	return p.Network && (p.Sandbox == nil || *p.Sandbox)
 }
 
 func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, turnAllowAll bool) bool {
@@ -419,6 +434,20 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]ag
 			slots[i].state = slotValidateFailed
 			slots[i].preMsg = content
 			continue
+		}
+
+		if isNetworkCommand(toolName, toolArg) {
+			if cfg, err := config.Load(); err == nil && cfg.CommandNetOff {
+				events <- agenttypes.Event{
+					Type:     agenttypes.EventToolCall,
+					ToolName: toolName,
+					ToolArgs: toolArg,
+					ToolID:   toolID,
+				}
+				slots[i].state = slotValidateFailed
+				slots[i].preMsg = fmt.Sprintf("tool=%s failed: [Denied] network: Command network is disabled by the user (/config → Command network), so network: true is not allowed and this call was not run; retry only with network: false", toolName)
+				continue
+			}
 		}
 
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)

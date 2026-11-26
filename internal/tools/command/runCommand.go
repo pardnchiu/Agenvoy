@@ -21,10 +21,12 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	toolsfile "github.com/pardnchiu/agenvoy/internal/tools/file"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 	"github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
@@ -211,6 +213,11 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 	err = go_pkg_sandbox.Run(cmd)
 	output := sink.text()
 	if err != nil {
+		if !unsandboxed && !network && utils.IsNetworkError(output) {
+			if cfg, cfgErr := config.Load(); cfgErr == nil && cfg.CommandNetOff {
+				return fmt.Sprintf("%s\nError: %s\n\n[agenvoy] this failed because it needs the network and Command network is disabled by the user (/config → Command network); network: true is not allowed, so do not retry it. Tell the user this step needs network.", output, err.Error()), nil
+			}
+		}
 		return fmt.Sprintf("%s\nError: %s%s", output, err.Error(), sandboxWriteHint(output, binds, unsandboxed)), nil
 	}
 

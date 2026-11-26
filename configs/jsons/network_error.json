@@ -1,0 +1,21 @@
+[
+  "could not resolve host",
+  "name or service not known",
+  "nodename nor servname provided",
+  "temporary failure in name resolution",
+  "no address associated with hostname",
+  "getaddrinfo",
+  "enotfound",
+  "eai_again",
+  "econnrefused",
+  "enetunreach",
+  "network is unreachable",
+  "urlopen error",
+  "failed to establish a new connection",
+  "max retries exceeded with url",
+  "fetch failed",
+  "operation not permitted (connect",
+  "connect: operation not permitted",
+  "connection refused",
+  "no route to host"
+]
