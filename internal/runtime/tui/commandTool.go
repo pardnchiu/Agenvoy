@@ -43,7 +43,6 @@ func scriptToolbox() *scriptadapter.Translator {
 	for _, dir := range []string{
 		filesystem.SystemToolsDir,
 		filesystem.ScriptToolsDir,
-		filesystem.WorkScriptToolsDir,
 	} {
 		box.Scan(dir)
 	}
@@ -75,7 +74,7 @@ func fillAllowTools(p *Popup) {
 			settings[i] = hintStyle.Render("ask")
 		}
 	}
-	p.subtitle = "allowed script tools run without asking  " + filesystem.AllowToolGlobalPath
+	p.subtitle = "allowed script tools run without asking  " + filesystem.AllowToolPath
 	p.styledLines = nil
 	if len(names) == 0 {
 		p.styledLines = []string{hintStyle.Render("  no script tool installed yet")}

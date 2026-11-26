@@ -13,22 +13,13 @@ import (
 )
 
 // add/remove form list
-func Toggle(skillName string, workDir ...string) (bool, error) {
+func Toggle(skillName string) (bool, error) {
 	name := strings.TrimSpace(skillName)
 	if name == "" {
 		return false, utilsmsg.New(utilsmsg.Invalid, "skill name", "empty")
 	}
 
-	// default is global, if assign path, then path
-	src, path := globalPath(), filesystem.TrustSkillGlobalPath
-	if len(workDir) > 0 {
-		if strings.TrimSpace(workDir[0]) == "" {
-			return false, utilsmsg.New(utilsmsg.Invalid, "work dir", "empty")
-		}
-		src, path = projectPath(workDir[0]), filesystem.TrustSkillProjectPath(workDir[0])
-	}
-
-	dic := read(src)
+	dic := read(trustSkillPath())
 	added := false
 	if dic[name] {
 		delete(dic, name)
@@ -36,7 +27,7 @@ func Toggle(skillName string, workDir ...string) (bool, error) {
 		dic[name] = true
 		added = true
 	}
-	return added, write(path, dic)
+	return added, write(filesystem.TrustSkillPath, dic)
 }
 
 // update list in local
@@ -69,28 +60,16 @@ func write(path string, allowMap map[string]bool) error {
 	return nil
 }
 
-func Revoke(skillName, workDir string) (bool, error) {
+func Revoke(skillName string) (bool, error) {
 	name := strings.TrimSpace(skillName)
 	if name == "" {
 		return false, utilsmsg.New(utilsmsg.Invalid, "skill name", "empty")
 	}
 
-	targets := [][2]string{{globalPath(), filesystem.TrustSkillGlobalPath}}
-	if strings.TrimSpace(workDir) != "" {
-		targets = append(targets, [2]string{projectPath(workDir), filesystem.TrustSkillProjectPath(workDir)})
+	dic := read(trustSkillPath())
+	if !dic[name] {
+		return false, nil
 	}
-
-	revoked := false
-	for _, one := range targets {
-		dic := read(one[0])
-		if !dic[name] {
-			continue
-		}
-		delete(dic, name)
-		if err := write(one[1], dic); err != nil {
-			return revoked, err
-		}
-		revoked = true
-	}
-	return revoked, nil
+	delete(dic, name)
+	return true, write(filesystem.TrustSkillPath, dic)
 }

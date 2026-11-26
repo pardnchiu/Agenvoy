@@ -50,15 +50,11 @@ var (
 	DownloadDir             string
 	DownloadTrashDir        string
 	SessionsTrashDir        string
-	TrustSkillGlobalPath    string
+	TrustSkillPath          string
 	LegacyAllowSkillPath    string
-	AllowToolGlobalPath     string
+	AllowToolPath           string
 	PromptsDir              string
 	VendorDir               string
-
-	WorkAgenvoyDir     string
-	WorkScriptToolsDir string
-	WorkSkillsDir      string
 )
 
 const (
@@ -70,11 +66,6 @@ func Init() error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return utilsmsg.Wrap(utilsmsg.Internal, "os.UserHomeDir", "", err)
-	}
-
-	workDir, err := os.Getwd()
-	if err != nil {
-		return utilsmsg.Wrap(utilsmsg.Internal, "os.Getwd", "", err)
 	}
 
 	filesystemOnce.Do(func() {
@@ -112,15 +103,11 @@ func Init() error {
 		DownloadDir = filepath.Join(AgenvoyDir, "download")
 		DownloadTrashDir = filepath.Join(DownloadDir, ".Trash")
 		SessionsTrashDir = filepath.Join(SessionsDir, ".Trash")
-		TrustSkillGlobalPath = filepath.Join(AgenvoyDir, "trust_skill")
+		TrustSkillPath = filepath.Join(AgenvoyDir, "trust_skill")
 		LegacyAllowSkillPath = filepath.Join(AgenvoyDir, "allow_skill")
-		AllowToolGlobalPath = filepath.Join(AgenvoyDir, "allow_tool")
+		AllowToolPath = filepath.Join(AgenvoyDir, "allow_tool")
 		PromptsDir = filepath.Join(AgenvoyDir, "prompts")
 		VendorDir = filepath.Join(AgenvoyDir, "vendor")
-
-		WorkAgenvoyDir = filepath.Join(workDir, ".config", projectName)
-		WorkScriptToolsDir = filepath.Join(WorkAgenvoyDir, "tools", "script")
-		WorkSkillsDir = filepath.Join(WorkAgenvoyDir, "skills")
 	})
 
 	for _, dir := range []string{
@@ -182,22 +169,6 @@ func PendingDir(sessionID string) string {
 
 func PendingMetaPath(sessionID, taskHash string) string {
 	return filepath.Join(PendingDir(sessionID), taskHash+".json")
-}
-
-func TrustSkillProjectPath(workDir string) string {
-	return filepath.Join(workDir, "."+projectName, "trust_skill")
-}
-
-func LegacyAllowSkillProjectPath(workDir string) string {
-	return filepath.Join(workDir, "."+projectName, "allow_skill")
-}
-
-func WorkHooksDir(workDir string) string {
-	return filepath.Join(workDir, ".config", projectName, "hooks")
-}
-
-func AllowToolPath(workDir string) string {
-	return filepath.Join(workDir, "."+projectName, "allow_list")
 }
 
 func ScheduleSkillDir(name string) string {

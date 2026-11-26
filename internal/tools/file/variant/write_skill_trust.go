@@ -36,13 +36,13 @@ func revokeSkillTrust(e *tooltypes.Executor, path string) string {
 		names = append(names, one.Name)
 	}
 
-	trusted := agentsexecallowskill.Load(e.WorkDir)
+	trusted := agentsexecallowskill.Load()
 	var revoked []string
 	for _, name := range names {
 		if !trusted[name] {
 			continue
 		}
-		ok, err := agentsexecallowskill.Revoke(name, e.WorkDir)
+		ok, err := agentsexecallowskill.Revoke(name)
 		if err != nil {
 			slog.Warn("[Internal] agents/exec/allow/skill: Revoke",
 				slog.String("skill", name),

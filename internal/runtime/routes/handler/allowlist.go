@@ -15,8 +15,6 @@ import (
 )
 
 func allowSkillBlock(c *gin.Context) (gin.H, bool) {
-	scope := c.DefaultQuery("scope", "global")
-	workDir := strings.TrimSpace(c.Query("work_dir"))
 
 	scanner := agents.Scanner()
 	if scanner == nil {
@@ -27,20 +25,7 @@ func allowSkillBlock(c *gin.Context) (gin.H, bool) {
 	names := scanner.List()
 	sort.Strings(names)
 
-	var allowed map[string]bool
-	switch scope {
-	case "global":
-		allowed = agentsexecallowskill.Load()
-	case "project":
-		if workDir == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "work_dir required for scope=project"})
-			return nil, false
-		}
-		allowed = agentsexecallowskill.Load(workDir)
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "unknown scope: " + scope})
-		return nil, false
-	}
+	allowed := agentsexecallowskill.Load()
 
 	source := make(map[string]string, len(names))
 	for _, name := range names {
@@ -48,7 +33,7 @@ func allowSkillBlock(c *gin.Context) (gin.H, bool) {
 			source[name] = runtime.SkillSource(sk.AbsPath)
 		}
 	}
-	return gin.H{"scope": scope, "skills": names, "allowed": allowed, "source": source}, true
+	return gin.H{"skills": names, "allowed": allowed, "source": source}, true
 }
 
 func allowToolBlock(c *gin.Context) gin.H {
@@ -78,9 +63,7 @@ func SetAllowlist() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body struct {
 			Skill *struct {
-				Name    string `json:"name"`
-				Scope   string `json:"scope"`
-				WorkDir string `json:"work_dir"`
+				Name string `json:"name"`
 			} `json:"skill"`
 			Tool *struct {
 				Prefix  string   `json:"prefix"`
@@ -132,22 +115,7 @@ func SetAllowlist() gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "skill.name is required"})
 				return
 			}
-			var added bool
-			var err error
-			switch body.Skill.Scope {
-			case "global", "":
-				added, err = agentsexecallowskill.Toggle(name)
-			case "project":
-				workDir := strings.TrimSpace(body.Skill.WorkDir)
-				if workDir == "" {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "skill.work_dir required for scope=project"})
-					return
-				}
-				added, err = agentsexecallowskill.Toggle(name, workDir)
-			default:
-				c.JSON(http.StatusBadRequest, gin.H{"error": "unknown scope: " + body.Skill.Scope})
-				return
-			}
+			added, err := agentsexecallowskill.Toggle(name)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return

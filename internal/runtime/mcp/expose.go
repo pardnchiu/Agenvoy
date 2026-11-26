@@ -29,7 +29,6 @@ func scanTools() *toolbox {
 	for _, dir := range []string{
 		filesystem.SystemToolsDir,
 		filesystem.ScriptToolsDir,
-		filesystem.WorkScriptToolsDir,
 	} {
 		if err := box.scriptBox.Scan(dir); err != nil {
 			slog.Warn("scriptBox.Scan",

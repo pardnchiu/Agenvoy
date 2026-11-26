@@ -88,7 +88,7 @@ func Execute(ctx context.Context, data ExecuteMeta, session *agenttypes.Session,
 	execCtx := go_llm_router.WithSessionID(agenttypes.WithSessionID(ctx, session.ID), session.ID)
 	execStart := time.Now()
 
-	if data.Skill != nil && strings.TrimSpace(data.Skill.Content) != "" && agentsexecallowskill.Match(data.WorkDir, data.Skill.Name) {
+	if data.Skill != nil && strings.TrimSpace(data.Skill.Content) != "" && agentsexecallowskill.Match(data.Skill.Name) {
 		allowAll = true
 		execCtx = context.WithValue(execCtx, TrustCtxKey{}, true)
 	}

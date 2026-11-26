@@ -31,7 +31,6 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 	for _, dir := range []string{
 		filesystem.SystemToolsDir,
 		filesystem.ScriptToolsDir,
-		filesystem.WorkScriptToolsDir,
 	} {
 		scriptToolbox.Scan(dir)
 	}

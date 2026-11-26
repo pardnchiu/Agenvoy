@@ -158,7 +158,7 @@ func fillAllowSkills(p *Popup) {
 			settings[i] = okayStyle.Render("trust")
 		}
 	}
-	p.subtitle = "trusted skills pass every read and write without asking; only sudo still asks  " + filesystem.TrustSkillGlobalPath
+	p.subtitle = "trusted skills pass every read and write without asking; only sudo still asks  " + filesystem.TrustSkillPath
 	p.styledLines = nil
 	if len(names) == 0 {
 		p.styledLines = []string{hintStyle.Render("  no skill installed yet")}

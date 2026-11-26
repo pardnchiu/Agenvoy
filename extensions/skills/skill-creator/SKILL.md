@@ -13,11 +13,8 @@ description: Create, edit, improve, or audit AgentSkills. Use when creating a ne
 > |---|---|---|
 > | Agenvoy 全域（預設）| `~/.config/agenvoy/skills` | 只能用 `write_skill`（`run_command`、`write_file` 對這裡唯讀） |
 > | 跨工具共用（Claude Code 也要看得到）| `~/.claude/skills` | `write_file` |
-> | 只服務單一專案 | `<專案根>/.skills` 或 `<專案根>/.claude/skills` —— **有前提，見下** | `write_file` |
 >
-> 使用者沒指定時問一次再決定；把只服務單一專案的 Skill 塞進全域會污染每個 session 的 Skill 清單，反之放進專案目錄則換專案就用不到。
->
-> **專案目錄的前提**：scanner 的 `<專案根>` 取自**行程啟動當下**的 `os.Getwd()`（`internal/runtime/skill.go:35`），之後不再更新。從專案目錄啟動的 TUI 讀得到；但 daemon 由 launchd／systemd 啟動時 cwd 是 `$HOME`，所以**排程、Web、Telegram、Discord 觸發的執行讀不到專案目錄的 Skill**。要被那些入口用到就別放專案目錄。
+> 使用者沒指定時用 Agenvoy 全域。專案目錄（`<專案根>/.skills`、`<專案根>/.claude/skills`）不會被載入。
 >
 > （scanner 另外也掃 `~/.codex/skills`、`~/.opencode/skills`、`~/.copilot/skills`、`~/.agents/skills`，但那些是別的 harness 的位置，本 Skill 不往那裡寫。）
 
