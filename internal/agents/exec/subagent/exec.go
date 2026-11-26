@@ -109,7 +109,6 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 		"subagents",
 		"background_subagents",
 		"write_file",
-		"remove_file",
 		"restore_file",
 		"write_tool",
 		"test_tool",

@@ -147,7 +147,7 @@ func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, 
 	if toolName == "read_files" && isSensitiveReadFile(toolArgs) {
 		return true
 	}
-	if toolName == "remove_file" || toolName == "restore_file" || isDestructiveMode(toolArgs) {
+	if toolName == "restore_file" || isDestructiveMode(toolArgs) {
 		return true
 	}
 	if toolName == "open_file" && isOpenFileURL(toolArgs) {
@@ -708,7 +708,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]ag
 			}
 		}
 
-		if (s.name == "write_file" || s.name == "remove_file" || s.name == "restore_file") && s.execErr == "" {
+		if (s.name == "write_file" || s.name == "restore_file") && s.execErr == "" {
 			invalidateReadFileCache(alreadyCall, s.args)
 		}
 		if isWriteLikeTool[s.name] && s.execErr == "" {

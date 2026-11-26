@@ -19,7 +19,6 @@ var eventLabel = map[string]string{
 	"background_command":    "Background",
 	"background_subagents":  "Background Subagents",
 	"open_file":             "Open",
-	"remove_file":           "Remove",
 	"restore_file":          "Restore",
 	"download_file":         "Download",
 	"search_web":            "Search",
@@ -65,7 +64,7 @@ var eventModeLabel = map[string]map[string]string{
 	"subagents":   {"list": "Subagents", "invoke": "Subagent"},
 	"find_files":  {"list": "Files", "glob": "Search", "search": "Search"},
 	"schedules":   {"list": "Schedules", "write": "Write", "patch": "Edit", "remove": "Remove"},
-	"write_file":  {"write": "Write", "patch": "Edit"},
+	"write_file":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
 	"write_skill": {"write": "Write", "patch": "Edit", "remove": "Remove"},
 	"write_hook":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
 	"write_tool":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
@@ -135,7 +134,7 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 	case "read_files":
 		return joinPaths(argMap)
 
-	case "write_file", "remove_file":
+	case "write_file":
 		return arg("filename")
 
 	case "restore_file":
@@ -479,7 +478,6 @@ var toolDisplayName = map[string]string{
 	"read_files":           "Read",
 	"write_result":         "Write",
 	"write_file":           "Write",
-	"remove_file":          "Remove",
 	"restore_file":         "Restore",
 	"run_command":          "Run",
 	"run_skill":            "Run",

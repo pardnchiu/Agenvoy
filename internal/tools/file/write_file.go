@@ -15,16 +15,16 @@ import (
 func registWriteFile() {
 	toolregister.Regist(toolregister.Def{
 		Name: "write_file",
-		Description: `Writes one file whole (write) or edits regions of it (patch). Both need a read_files of an existing file this turn, unchanged on disk since.
-Use for "write this to a file", "change this part", edit_file / patch_file; only on explicit request or a Skill step, never to park a short answer, tool result or calculation.
-Delete → remove_file; undo or revert → restore_file; past versions → file_history; skills → write_skill; hooks → write_hook; script tools → write_tool; a long report or page for the user → write_result.`,
+		Description: `Writes one file whole (write), edits regions of it (patch), or moves it aside instead of deleting it (remove; restore_file puts it back). write and patch need a read_files of an existing file this turn, unchanged on disk since.
+Use for "write this to a file", "change this part", "delete this file", edit_file / patch_file / remove_file; only on explicit request or a Skill step, never to park a short answer, tool result or calculation.
+Several files at once → run_command rm, which moves them aside the same way; undo or revert → restore_file; past versions → file_history; skills → write_skill; hooks → write_hook; script tools → write_tool; a long report or page for the user → write_result.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"mode": map[string]any{
 					"type":        "string",
-					"enum":        []string{"write", "patch"},
-					"description": "write: a first version or a deliberate full replacement. patch: every other change, since a whole-file rewrite discards already-correct text.",
+					"enum":        []string{"write", "patch", "remove"},
+					"description": "write: a first version or a deliberate full replacement. patch: every other change, since a whole-file rewrite discards already-correct text. remove: move the file aside; only on explicit request or a Skill step.",
 				},
 				"filename": map[string]any{
 					"type":        "string",
@@ -104,15 +104,22 @@ Delete → remove_file; undo or revert → restore_file; past versions → file_
 			switch mode {
 			// NOTE: for ensuring wont send mode empty and write_content empty
 			case "":
-				return "", utilsmsg.New(utilsmsg.Invalid, "mode", "required; available: write, patch")
+				return "", utilsmsg.New(utilsmsg.Invalid, "mode", "required; available: write, patch, remove")
 
 			case "write":
 				return writeToPath(ctx, e, params.Filename, params.WriteContent, "write_file")
 
 			case "patch":
 				return patchContents(ctx, e, params.Filename, params.PatchContents)
+
+			case "remove":
+				path := strings.TrimSpace(params.Filename)
+				if path == "" {
+					return "", utilsmsg.New(utilsmsg.Invalid, "filename", "required")
+				}
+				return MoveToTrash(ctx, e, []string{path}, "write_file")
 			}
-			return "", utilsmsg.New(utilsmsg.Invalid, "mode", "unknown %q; available: write, patch", mode)
+			return "", utilsmsg.New(utilsmsg.Invalid, "mode", "unknown %q; available: write, patch, remove", mode)
 		},
 	})
 }

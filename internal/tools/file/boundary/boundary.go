@@ -270,7 +270,7 @@ func rawPaths(toolName, toolArgs string) []string {
 		}
 		return []string{p.Path}
 
-	case "write_file", "remove_file", "restore_file":
+	case "write_file", "restore_file":
 		var p struct {
 			Filename string `json:"filename"`
 		}
