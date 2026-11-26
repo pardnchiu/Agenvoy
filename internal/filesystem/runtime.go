@@ -3,7 +3,9 @@ package filesystem
 import (
 	"encoding/json"
 	"log/slog"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -247,23 +249,43 @@ func applySandboxDenied() error {
 	if len(DeniedPath) == 0 {
 		return nil
 	}
-	payload := struct {
-		Dirs  []string `json:"dirs"`
-		Files []string `json:"files"`
-	}{}
-	for _, one := range DeniedPath {
-		if go_pkg_filesystem_reader.IsFile(one) {
-			payload.Files = append(payload.Files, one)
-			continue
-		}
-		payload.Dirs = append(payload.Dirs, one)
-	}
+	payload := buildDeniedPayload(DeniedPath, runtime.GOOS)
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return utilsmsg.Wrap(utilsmsg.Internal, "json.Marshal", "denied_path", err)
 	}
 	go_pkg_sandbox.New(raw)
 	return nil
+}
+
+type deniedPayload struct {
+	Dirs  []string `json:"dirs"`
+	Files []string `json:"files"`
+}
+
+func buildDeniedPayload(paths []string, goos string) deniedPayload {
+	var payload deniedPayload
+	for _, one := range paths {
+		if goos != "darwin" {
+			linfo, err := os.Lstat(one)
+			if err != nil || linfo.Mode()&os.ModeSymlink != 0 {
+				continue
+			}
+		}
+		info, err := os.Stat(one)
+		if err != nil {
+			if goos == "darwin" {
+				payload.Dirs = append(payload.Dirs, one)
+			}
+			continue
+		}
+		if !info.IsDir() {
+			payload.Files = append(payload.Files, one)
+			continue
+		}
+		payload.Dirs = append(payload.Dirs, one)
+	}
+	return payload
 }
 
 func merge(base, extra []string) []string {
