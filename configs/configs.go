@@ -290,6 +290,9 @@ var ReadOnlyCommand []byte
 //go:embed jsons/denied_path.json
 var DeniedPath []byte
 
+//go:embed jsons/writable_path.json
+var WritablePath []byte
+
 //go:embed jsons/tui_tools.json
 var TUITools []byte
 

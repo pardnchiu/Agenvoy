@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 	"sync"
 
@@ -30,11 +29,6 @@ var (
 	ReadablePath    []string
 	ConfigOutputDir string
 )
-
-var DEFAULT_WRITABLE_PATH = []string{
-	"/skills",
-	"/download",
-}
 
 var (
 	replyLangMu     sync.RWMutex
@@ -313,20 +307,6 @@ func merge(base, extra []string) []string {
 	return out
 }
 
-func agenvoyPaths(list []string) []string {
-	out := make([]string, 0, len(list))
-	for _, one := range list {
-		rel := filepath.Clean("/" + strings.TrimSpace(one))
-		if rel == "/" {
-			slog.Warn("[Invalid] writable_path: entry dropped, the whole Agenvoy directory cannot be writable",
-				slog.String("entry", one))
-			continue
-		}
-		out = append(out, filepath.Join(AgenvoyDir, rel))
-	}
-	return out
-}
-
 func loadPathRules(raw map[string]json.RawMessage) error {
 	var deniedPaths []string
 	if err := json.Unmarshal(configs.DeniedPath, &deniedPaths); err != nil {
@@ -334,7 +314,11 @@ func loadPathRules(raw map[string]json.RawMessage) error {
 	}
 	DeniedPath = normalizePaths("denied_path", append(deniedPaths, userPaths(raw, "denied_path")...))
 	ReadOnlyPath = normalizePaths("readonly_path", []string{AgenvoyDir})
-	WritablePath = normalizePaths("writable_path", agenvoyPaths(append(slices.Clone(DEFAULT_WRITABLE_PATH), userPaths(raw, "writable_path")...)))
+	var writablePaths []string
+	if err := json.Unmarshal(configs.WritablePath, &writablePaths); err != nil {
+		return utilsmsg.Wrap(utilsmsg.Internal, "json: Unmarshal", "embedded writable_path", err)
+	}
+	WritablePath = normalizePaths("writable_path", writablePaths)
 	return applySandboxDenied()
 }
 
