@@ -501,7 +501,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]ag
 					missing = append(missing, "enable_edit: true (this run is read-only: writes and non-read-only commands are refused)")
 				}
 				if len(restrictedList) > 0 && mode&agenttypes.AutoModeSkipSandbox == 0 {
-					missing = append(missing, "enable_sandbox: false (paths outside $HOME, sudo, sandbox: false)")
+					missing = append(missing, "agen -p --skip-sandbox in a terminal (paths outside $HOME, sudo, sandbox: false; not available over HTTP)")
 				}
 				if len(missing) == 0 {
 					approved = true

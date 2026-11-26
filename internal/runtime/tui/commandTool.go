@@ -52,7 +52,7 @@ func scriptToolbox() *scriptadapter.Translator {
 func fillAllowTools(p *Popup) {
 	box := scriptToolbox()
 	fixed := box.AlwaysAllowNames()
-	allowed := agentsexecallowtool.Load()
+	allowed := agentsexecallowtool.Read()
 
 	var names []string
 	for _, tool := range box.GetTools() {

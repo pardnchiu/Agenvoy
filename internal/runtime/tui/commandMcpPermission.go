@@ -53,7 +53,7 @@ func mcpPermissionPopup(title, server string, tools []mcp.Tool) *Popup {
 		summaries[i] = nameSummary[name]
 	}
 
-	granted := agentsexecallowtool.Load()
+	granted := agentsexecallowtool.Read()
 	all := allowAllEntry(server)
 
 	options := make([]string, 0, len(names)+1)

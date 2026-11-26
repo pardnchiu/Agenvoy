@@ -1,30 +1,28 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
+	"cmp"
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
-	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
 	agentstypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/app"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
 func prompt(args []string) {
+	os.Exit(runPrompt(args))
+}
+
+func runPrompt(args []string) int {
 	fs := flag.NewFlagSet("agen", flag.ExitOnError)
 	content := fs.String("p", "", "prompt to send; read from stdin when empty")
 	var model, reasoning string
@@ -35,11 +33,11 @@ func prompt(args []string) {
 	stream := fs.Bool("stream", false, "print the reply as it streams")
 	workDir := fs.String("work-dir", "", "working directory (default: current directory)")
 	allowEdit := fs.Bool("allow-edit", false, "allow writes and non-read-only commands")
-	skipSandbox := fs.Bool("skip-sandbox", false, "DANGEROUS: run outside the sandbox with paths outside $HOME, sudo and sandbox: false, all without confirmation; local daemon only")
+	skipSandbox := fs.Bool("skip-sandbox", false, "DANGEROUS: run outside the sandbox with paths outside $HOME, sudo and sandbox: false, all without confirmation")
 	_ = fs.Parse(args)
 	if fs.NArg() > 0 {
 		fmt.Fprintf(os.Stderr, "[Invalid] args: unexpected %q; quote the prompt after -p\n", strings.Join(fs.Args(), " "))
-		os.Exit(2)
+		return 2
 	}
 
 	text := strings.TrimSpace(*content)
@@ -51,114 +49,72 @@ func prompt(args []string) {
 	}
 	if text == "" {
 		fmt.Fprintln(os.Stderr, "[Invalid] -p: required")
-		os.Exit(2)
+		return 2
 	}
 
 	dir, err := filepath.Abs(*workDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[Invalid] --work-dir: %v\n", err)
-		os.Exit(2)
+		return 2
 	}
 
 	if err := filesystem.Init(); err != nil {
 		fmt.Fprintf(os.Stderr, "filesystem.Init: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
-	if !runtime.IsCurrent() {
-		if err := app.SpawnDaemon(); err != nil {
-			fmt.Fprintf(os.Stderr, "app.SpawnDaemon: %v\n", err)
-			os.Exit(1)
-		}
+	if err := filesystem.LoadRuntime(); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\nfix %s, or run agen to reset it\n", err, filesystem.ConfigPath)
+		return 1
 	}
-	addr := "127.0.0.1:" + filesystem.Port
-	for deadline := time.Now().Add(30 * time.Second); ; time.Sleep(100 * time.Millisecond) {
-		conn, err := net.DialTimeout("tcp", addr, time.Second)
-		if err == nil {
-			conn.Close()
-			break
-		}
-		if time.Now().After(deadline) {
-			fmt.Fprintf(os.Stderr, "[Timeout] daemon: %s not listening within 30s\n", addr)
-			os.Exit(1)
-		}
+	closeLocal, err := openLocal()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
 	}
-
-	body, _ := json.Marshal(map[string]any{
-		"content":        text,
-		"stream":         *stream,
-		"model":          model,
-		"reasoning":      reasoning,
-		"work_dir":       dir,
-		"enable_edit":    *allowEdit,
-		"enable_sandbox": !*skipSandbox,
-	})
+	defer closeLocal()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://"+addr+"/v1/send", bytes.NewReader(body))
+	_, events, err := app.Send(ctx, app.SendInput{
+		Content:     text,
+		Model:       model,
+		Reasoning:   reasoning,
+		WorkDir:     dir,
+		EnableEdit:  allowEdit,
+		SkipSandbox: *skipSandbox,
+	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "http.NewRequest: %v\n", err)
-		os.Exit(1)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		if ctx.Err() != nil {
-			fmt.Fprintln(os.Stderr, "[Canceled] /v1/send: canceled")
-			os.Exit(130)
-		}
-		fmt.Fprintf(os.Stderr, "[Unavailable] daemon: %v\n", err)
-		os.Exit(1)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<10))
-		var res struct {
-			Error string `json:"error"`
-		}
-		if json.Unmarshal(raw, &res) == nil && res.Error != "" {
-			fmt.Fprintln(os.Stderr, res.Error)
-		} else {
-			fmt.Fprintf(os.Stderr, "[Upstream] /v1/send: %d %s\n", resp.StatusCode, strings.TrimSpace(string(raw)))
-		}
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
 	}
 
 	if !*stream {
-		var res struct {
-			Text     string `json:"text"`
-			Canceled bool   `json:"canceled"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-			if ctx.Err() != nil {
-				fmt.Fprintln(os.Stderr, "[Canceled] /v1/send: canceled")
-				os.Exit(130)
+		var sb strings.Builder
+		for event := range events {
+			switch event.Type {
+			case agentstypes.EventText:
+				if sb.Len() > 0 {
+					sb.WriteByte('\n')
+				}
+				sb.WriteString(event.Text)
+			case agentstypes.EventCanceled:
+				fmt.Fprintln(os.Stderr, "[Canceled] agen -p: canceled")
+				return 130
+			case agentstypes.EventError:
+				fmt.Fprintln(os.Stderr, cmp.Or(event.Text, errText(event.Err)))
+				return 1
+			case agentstypes.EventDone:
+				fmt.Println(sb.String())
+				return 0
 			}
-			fmt.Fprintf(os.Stderr, "[Upstream] /v1/send: %v\n", err)
-			os.Exit(1)
 		}
-		if res.Canceled {
-			fmt.Fprintln(os.Stderr, "[Canceled] /v1/send: canceled")
-			os.Exit(130)
-		}
-		fmt.Println(res.Text)
-		return
+		fmt.Fprintln(os.Stderr, "[Internal] agen -p: event stream closed before done")
+		return 1
 	}
 
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 0, 64<<10), 16<<20)
 	midLine := false
-	for scanner.Scan() {
-		data, ok := strings.CutPrefix(scanner.Text(), "data: ")
-		if !ok {
-			continue
-		}
-		var event agentstypes.Event
-		if json.Unmarshal([]byte(data), &event) != nil {
-			continue
-		}
+	for event := range events {
 		trace := ""
 		switch event.Type {
 		case agentstypes.EventAgentResult:
@@ -181,19 +137,19 @@ func prompt(args []string) {
 			if midLine {
 				fmt.Println()
 			}
-			fmt.Fprintln(os.Stderr, event.Text)
-			os.Exit(1)
+			fmt.Fprintln(os.Stderr, cmp.Or(event.Text, errText(event.Err)))
+			return 1
 		case agentstypes.EventCanceled:
 			if midLine {
 				fmt.Println()
 			}
-			fmt.Fprintln(os.Stderr, "[Canceled] /v1/send: canceled")
-			os.Exit(130)
+			fmt.Fprintln(os.Stderr, "[Canceled] agen -p: canceled")
+			return 130
 		case agentstypes.EventDone:
 			if midLine {
 				fmt.Println()
 			}
-			return
+			return 0
 		case agentstypes.EventToolCall:
 			if label := strings.Join(strings.Fields(utils.FormatToolEvent(event.ToolName, event.ToolArgs)), " "); label != "" {
 				trace = "⏵ " + label
@@ -223,13 +179,16 @@ func prompt(args []string) {
 		fmt.Println()
 	}
 	if ctx.Err() != nil {
-		fmt.Fprintln(os.Stderr, "[Canceled] /v1/send: canceled")
-		os.Exit(130)
+		fmt.Fprintln(os.Stderr, "[Canceled] agen -p: canceled")
+		return 130
 	}
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "[Upstream] /v1/send: %v\n", err)
-		os.Exit(1)
+	fmt.Fprintln(os.Stderr, "[Internal] agen -p: event stream closed before done")
+	return 1
+}
+
+func errText(err error) string {
+	if err == nil {
+		return ""
 	}
-	fmt.Fprintln(os.Stderr, "[Upstream] /v1/send: stream closed before done")
-	os.Exit(1)
+	return err.Error()
 }

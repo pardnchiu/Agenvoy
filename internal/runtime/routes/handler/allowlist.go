@@ -40,7 +40,7 @@ func allowToolBlock(c *gin.Context) gin.H {
 	prefix := strings.TrimSpace(c.Query("prefix"))
 
 	entries := make([]string, 0, 16)
-	for entry := range agentsexecallowtool.Load() {
+	for entry := range agentsexecallowtool.Read() {
 		if prefix == "" || strings.HasPrefix(entry, prefix) {
 			entries = append(entries, entry)
 		}

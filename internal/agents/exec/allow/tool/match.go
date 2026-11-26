@@ -15,7 +15,7 @@ import (
 
 // check is in list or not
 func Match(workDir, toolName, toolArgs string) bool {
-	dic := Load()
+	dic := Read()
 	if len(dic) == 0 {
 		return false
 	}
@@ -37,17 +37,13 @@ func Match(workDir, toolName, toolArgs string) bool {
 }
 
 // read path and parse to dic
-func Load() map[string]bool {
-	return read(filesystem.AllowToolPath)
-}
-
-func read(path string) map[string]bool {
+func Read() map[string]bool {
 	dic := make(map[string]bool)
-	if !go_pkg_filesystem_reader.Exists(path) {
+	if !go_pkg_filesystem_reader.Exists(filesystem.AllowToolPath) {
 		return dic
 	}
 
-	text, err := go_pkg_filesystem.ReadText(path)
+	text, err := go_pkg_filesystem.ReadText(filesystem.AllowToolPath)
 	if err != nil {
 		return dic
 	}

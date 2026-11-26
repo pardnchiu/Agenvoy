@@ -38,7 +38,7 @@ func Toggle(toolName, toolArgs string, workDir ...string) (bool, error) {
 		entry = name + "(" + formatGlob(subject) + ")"
 	}
 
-	dic := read(filesystem.AllowToolPath)
+	dic := Read()
 	added := false
 	if dic[entry] {
 		delete(dic, entry)
@@ -55,7 +55,7 @@ func ToggleMCP(prefix string, entries []string) error {
 		return utilsmsg.New(utilsmsg.Invalid, "prefix", "empty")
 	}
 
-	set := Load()
+	set := Read()
 	for entry := range set {
 		if strings.HasPrefix(entry, prefix) {
 			delete(set, entry)
