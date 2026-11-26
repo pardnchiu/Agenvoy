@@ -56,7 +56,7 @@ Where the fix goes follows the `skill directory` in the header — the path this
 |---|---|
 | Under `~/.config/agenvoy/skills/.system/` | Skip self-repair entirely: no edit, no copy, no mention in the output |
 | Elsewhere under `~/.config/agenvoy/skills/` | Fix it with `write_skill` now, then finish the run on the fixed skill |
-| Anywhere else | Finish the run with a workaround, then `ask_user` whether to copy the skill into `~/.config/agenvoy/skills/` and optimize it there. Yes → copy the whole skill directory to `<skill name>/` under it and apply the fix to the copy. No → leave the skill untouched |
+| Anywhere else | Finish the run with a workaround, then `ask_user` whether to copy the skill into `~/.config/agenvoy/skills/` and optimize it there. Yes → `write_skill(mode=copy)` with `from` set to the skill directory, then apply the fix to the copy. No → leave the skill untouched |
 
 Every fix updates `CHANGELOG.md` in the same change, creating it when missing:
 

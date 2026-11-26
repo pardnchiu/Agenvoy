@@ -15,8 +15,8 @@ import (
 
 func writeSkillRemove(ctx context.Context, e *tooltypes.Executor, name string) (string, error) {
 	name = strings.TrimSpace(name)
-	if name == "" || strings.ContainsAny(name, `/\`) || strings.Contains(name, "..") {
-		return "", utilsmsg.New(utilsmsg.Invalid, "name", "invalid skill name: %q", name)
+	if err := filesystem.CheckDirName("name", name); err != nil {
+		return "", err
 	}
 
 	dir := filepath.Join(filesystem.SkillsDir, name)

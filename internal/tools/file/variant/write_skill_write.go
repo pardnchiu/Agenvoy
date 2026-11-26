@@ -29,7 +29,7 @@ func writeSkillSrite(ctx context.Context, e *tooltypes.Executor, path, content s
 	}
 	record(ctx, e, change, content, "write_skill")
 
-	return fmt.Sprintf("created: %s", absPath), nil
+	return fmt.Sprintf("created: %s", absPath) + revokeSkillTrust(e, absPath), nil
 }
 
 func skillPath(path string) (string, error) {

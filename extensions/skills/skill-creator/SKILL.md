@@ -7,13 +7,13 @@ description: Create, edit, improve, or audit AgentSkills. Use when creating a ne
 
 # Skill 建立器
 
-> **儲存位置（`--path`）**：依用途選，**不要寫死**。Skill scanner 會掃下列位置，任一處都會被載入：
+> **儲存位置**：依用途選，**不要寫死**。Skill scanner 會掃下列位置，任一處都會被載入：
 >
-> | 用途 | `--path` |
-> |---|---|
-> | Agenvoy 全域（預設）| `~/.config/agenvoy/skills` |
-> | 跨工具共用（Claude Code 也要看得到）| `~/.claude/skills` |
-> | 只服務單一專案 | `<專案根>/.skills` 或 `<專案根>/.claude/skills` —— **有前提，見下** |
+> | 用途 | 目錄 | 寫入工具 |
+> |---|---|---|
+> | Agenvoy 全域（預設）| `~/.config/agenvoy/skills` | 只能用 `write_skill`（`run_command`、`write_file` 對這裡唯讀） |
+> | 跨工具共用（Claude Code 也要看得到）| `~/.claude/skills` | `write_file` |
+> | 只服務單一專案 | `<專案根>/.skills` 或 `<專案根>/.claude/skills` —— **有前提，見下** | `write_file` |
 >
 > 使用者沒指定時問一次再決定；把只服務單一專案的 Skill 塞進全域會污染每個 session 的 Skill 清單，反之放進專案目錄則換專案就用不到。
 >
@@ -24,8 +24,8 @@ description: Create, edit, improve, or audit AgentSkills. Use when creating a ne
 > **本 Skill 自己的腳本路徑**：`run_command` 的 CWD 是使用者的工作目錄，**不是本 Skill 目錄**，相對路徑 `scripts/...` 必定找不到（實測會讓 agent 反覆 glob 找檔案，白燒數輪）。本 Skill 只服務 Agenvoy、安裝位置固定，一律用絕對路徑 `~/.config/agenvoy/skills/.system/skill-creator/scripts/`。
 
 > **⚠️ 強制執行規則（不可繞過）**：
-> - **建立全新 Skill** — 禁止直接用 `write_skill(mode=write)`／`write_file(mode=write)` 建立目錄或 SKILL.md，必須先以 `run_command` 執行 `~/.config/agenvoy/skills/.system/skill-creator/scripts/init_skill.py`初始化目錄結構，再用 `write_skill(mode=write)` 或 `write_skill(mode=patch)` 編輯產生的模板內容。跳過此步驟會導致目錄結構錯誤（生成 `skill-name.md` 而非 `skill-name/SKILL.md`）。
-> - **編輯現有 Skill** — 直接使用 `write_skill(mode=write)` 或 `write_skill(mode=patch)` 修改 `skill-name/SKILL.md` 及其資源檔案，不需要執行 `init_skill.py`。
+> - **建立全新 Skill** — 直接寫 `<skill-name>/SKILL.md`（Agenvoy 全域用 `write_skill(mode=write)`，其他位置用 `write_file`），一定是目錄加 `SKILL.md`，不可寫成 `<skill-name>.md`。
+> - **編輯現有 Skill** — 用 `write_skill(mode=write)` 或 `write_skill(mode=patch)` 修改 `<skill-name>/SKILL.md` 及其資源檔案（其他位置用 `write_file`）。
 
 此 Skill 提供建立有效 Skill 的完整指引。
 
@@ -212,7 +212,7 @@ bigquery-skill/
 1. 透過具體範例理解 Skill 的使用情境
 2. 規劃可重用的 Skill 內容（scripts、references、assets）
    - 含「工具／Skill 搭配探索」：動手寫 `scripts/` 前先確認有沒有現成的可用
-3. 初始化 Skill（執行 python3 ~/.config/agenvoy/skills/.system/skill-creator/scripts/init_skill.py）
+3. 建立 Skill（直接寫 `<skill-name>/SKILL.md`）
 4. 編輯 Skill（實作資源並撰寫 SKILL.md）
 5. 打包 Skill（執行 package_skill.py）
 6. 依實際使用回饋迭代改善
@@ -290,40 +290,36 @@ bigquery-skill/
 | 無 Skill 但有 Tool | 直接寫 Tool 名稱與參數 |
 | 兩者都無 | 寫 `scripts/<name>.py`，SKILL.md 寫執行方式與預期輸出 |
 
-### 步驟三：初始化 Skill
+### 步驟三：建立 Skill
 
-此時可以開始實際建立 Skill。
+只有在 Skill 已存在時才跳過此步驟，此時繼續下一步驟。
 
-只有在 Skill 已存在且需要迭代或打包時才跳過此步驟，此時繼續下一步驟。
+直接寫入 `<skill-name>/SKILL.md`，目錄由寫入工具自動建立，不需要先建空目錄：
 
-從零建立新 Skill 時，務必執行 `python3 ~/.config/agenvoy/skills/.system/skill-creator/scripts/init_skill.py` 腳本。此腳本會自動生成包含所有必要元素的 Skill 模板目錄。
+| 位置 | 工具 | path |
+|---|---|---|
+| Agenvoy 全域 | `write_skill(mode=write)` | `<skill-name>/SKILL.md`（相對於 skills 目錄） |
+| 其他位置 | `write_file` | `<目錄>/<skill-name>/SKILL.md`（絕對路徑） |
 
-用法：
+SKILL.md 起點：
 
-```bash
-python3 ~/.config/agenvoy/skills/.system/skill-creator/scripts/init_skill.py <skill-name> --path <output-directory> [--resources scripts,references,assets] [--examples]
+```markdown
+---
+name: <skill-name>
+description: <做什麼、何時使用：列出觸發的情境、檔案類型或任務>
+---
+
+# <Skill 標題>
+
+<步驟、工具與輸出格式>
 ```
 
-範例：
-
-```bash
-python3 ~/.config/agenvoy/skills/.system/skill-creator/scripts/init_skill.py my-skill --path ~/.config/agenvoy/skills
-python3 ~/.config/agenvoy/skills/.system/skill-creator/scripts/init_skill.py my-skill --path ~/.claude/skills --resources scripts,references
-python3 ~/.config/agenvoy/skills/.system/skill-creator/scripts/init_skill.py my-skill --path <專案根>/.skills --resources scripts --examples
-```
-
-此腳本會：
-
-- 在指定路徑建立 Skill 目錄
-- 生成含適當 Frontmatter 與 TODO 佔位符的 SKILL.md 模板
-- 根據 `--resources` 選擇性建立資源目錄
-- 設定 `--examples` 時選擇性新增範例檔案
-
-初始化後，自訂 SKILL.md 並依需求新增資源。若使用了 `--examples`，請替換或刪除佔位符檔案。
+- frontmatter 的 `name` 與目錄名相同
+- 需要 `scripts/`、`references/`、`assets/` 時，直接寫入該目錄下的檔案（例如 `<skill-name>/scripts/rotate_pdf.py`），不用的資源目錄不要建立；`write_skill` 只能寫文字檔
 
 ### 步驟四：編輯 Skill
 
-編輯新生成或現有的 Skill 時，請記住此 Skill 是為另一個 Agent 實例所建立的。納入對 Agent 有益且非顯而易見的資訊。思考哪些程序性知識、領域特定細節或可重用資源，能幫助另一個 Agent 實例更有效地執行這些任務。
+編輯新建立或現有的 Skill 時，請記住此 Skill 是為另一個 Agent 實例所建立的。納入對 Agent 有益且非顯而易見的資訊。思考哪些程序性知識、領域特定細節或可重用資源，能幫助另一個 Agent 實例更有效地執行這些任務。
 
 #### 從可重用 Skill 內容開始
 

@@ -27,5 +27,5 @@ func writeSkillPatch(ctx context.Context, e *tooltypes.Executor, path, oldString
 	}
 	record(ctx, e, change, "", "write_skill")
 
-	return fmt.Sprintf("updated: %s", absPath), nil
+	return fmt.Sprintf("updated: %s", absPath) + revokeSkillTrust(e, absPath), nil
 }

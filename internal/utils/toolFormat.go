@@ -65,7 +65,7 @@ var eventModeLabel = map[string]map[string]string{
 	"find_files":  {"list": "Files", "glob": "Search", "search": "Search"},
 	"schedules":   {"list": "Schedules", "write": "Write", "patch": "Edit", "remove": "Remove"},
 	"write_file":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
-	"write_skill": {"write": "Write", "patch": "Edit", "remove": "Remove"},
+	"write_skill": {"write": "Write", "patch": "Edit", "remove": "Remove", "copy": "Copy"},
 	"write_hook":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
 	"write_tool":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
 }
@@ -194,7 +194,7 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 		return arg("skill", "name")
 
 	case "write_skill":
-		return arg("path", "name")
+		return arg("path", "from", "name")
 
 	case "write_tool", "test_tool", "write_hook", "test_hook":
 		return arg("name")

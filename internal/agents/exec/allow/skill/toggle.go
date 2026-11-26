@@ -68,3 +68,29 @@ func write(path string, allowMap map[string]bool) error {
 	}
 	return nil
 }
+
+func Revoke(skillName, workDir string) (bool, error) {
+	name := strings.TrimSpace(skillName)
+	if name == "" {
+		return false, utilsmsg.New(utilsmsg.Invalid, "skill name", "empty")
+	}
+
+	targets := [][2]string{{globalPath(), filesystem.TrustSkillGlobalPath}}
+	if strings.TrimSpace(workDir) != "" {
+		targets = append(targets, [2]string{projectPath(workDir), filesystem.TrustSkillProjectPath(workDir)})
+	}
+
+	revoked := false
+	for _, one := range targets {
+		dic := read(one[0])
+		if !dic[name] {
+			continue
+		}
+		delete(dic, name)
+		if err := write(one[1], dic); err != nil {
+			return revoked, err
+		}
+		revoked = true
+	}
+	return revoked, nil
+}
