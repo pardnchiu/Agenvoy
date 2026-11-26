@@ -10,11 +10,15 @@ import (
 )
 
 func TrimLog() error {
-	file, err := os.OpenFile(filesystem.DaemonLogPath, os.O_RDWR, 0644)
+	file, err := os.OpenFile(filesystem.DaemonLogPath, os.O_RDWR, 0600)
 	if err != nil {
 		return utilsmsg.Wrap(utilsmsg.Internal, "os.OpenFile", filesystem.DaemonLogPath, err)
 	}
 	defer file.Close()
+
+	if err := file.Chmod(0600); err != nil {
+		return utilsmsg.Wrap(utilsmsg.Internal, "file.Chmod", filesystem.DaemonLogPath, err)
+	}
 
 	stat, err := file.Stat()
 	if err != nil {

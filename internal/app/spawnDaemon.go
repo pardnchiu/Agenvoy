@@ -16,7 +16,7 @@ func SpawnDaemon() error {
 		return utilsmsg.Wrap(utilsmsg.Internal, "os.Executable", "", err)
 	}
 
-	logFile, err := os.OpenFile(filesystem.DaemonLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile(filesystem.DaemonLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return utilsmsg.Wrap(utilsmsg.Internal, "os.OpenFile", filesystem.DaemonLogPath, err)
 	}
