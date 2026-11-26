@@ -37,6 +37,7 @@ var commands = []Command{
 	{"mcp", "list MCP servers  add  per-server login, reconnect, tools, remove"},
 	{"session", "switch / delete sessions  edit current session name / id / role  /session name|id|role opens one directly"},
 	{"new", "create / add new session"},
+	{"tool", "script tools that run without asking (allow / ask)  saved in allow_tool, tool.json untouched"},
 	{"skill", "trusted skills (reads and writes skip every prompt; only sudo asks)  install / remove official skills from github.com/agenvoy/skill-<name>"},
 	{"compact", "remove redundant / meaningless exchanges from history via LLM analysis  confirm required"},
 	{"reset", "reset / refresh current session  double-confirm  summary regen first then drop history + task history + action.log"},

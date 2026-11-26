@@ -14,8 +14,7 @@ import (
 
 func registTestHook() {
 	toolregister.Regist(toolregister.Def{
-		Name:        "test_hook",
-		AlwaysAllow: true,
+		Name: "test_hook",
 		Description: `Runs the installed hook (.py over .js) once the same way Agenvoy does, with JSON on stdin, and returns its success and debug / error, or why the run failed (crash, timeout, a last stdout line that is not the required JSON).
 Use after every write_hook write or patch, before the hook is relied on.
 It fails or returns the wrong success → fix with write_hook(mode=patch) and test again, repeating until it is right; then stop.`,
