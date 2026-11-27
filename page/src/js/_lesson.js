@@ -84,8 +84,8 @@ function renderLessonPager(dom, tool, offset, total) {
   }
 
   const last = Math.floor((total - 1) / LESSON_PAGE_SIZE) * LESSON_PAGE_SIZE;
-  const prev = _("a", { href: lessonLink(tool, Math.max(offset - LESSON_PAGE_SIZE, 0)) }, "prev");
-  const next = _("a", { href: lessonLink(tool, Math.min(offset + LESSON_PAGE_SIZE, last)) }, "next");
+  const prev = _("a", { href: lessonLink(tool, Math.max(offset - LESSON_PAGE_SIZE, 0)) }, i18n("text_prev"));
+  const next = _("a", { href: lessonLink(tool, Math.min(offset + LESSON_PAGE_SIZE, last)) }, i18n("text_next"));
   if (offset <= 0) {
     prev.dataset.disabled = "1";
   }
@@ -108,18 +108,18 @@ async function saveLessonAction(id, action) {
     if (response.ok) {
       return true;
     }
-    pushToast("ERROR", (await response.json()).error || "update failed", nowClock());
+    pushToast("ERROR", (await response.json()).error || i18n("error_update_failed"), nowClock());
   } catch (err) {
     console.error("saveLessonAction", err);
-    pushToast("ERROR", "update failed", nowClock());
+    pushToast("ERROR", i18n("error_update_failed"), nowClock());
   }
   return false;
 }
 
 function lessonActionEdit(one, head, block, view) {
-  const edit = _("button.submit", { type: "button" }, "edit");
-  const save = _("button.submit", { type: "button" }, "save");
-  const cancel = _("button", { type: "button" }, "cancel");
+  const edit = _("button.submit", { type: "button" }, i18n("text_edit"));
+  const save = _("button.submit", { type: "button" }, i18n("text_save"));
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
   const box = _("textarea");
 
   const read = () => {
@@ -174,7 +174,7 @@ function lessonRecord(one) {
   ]) {
     if (text) {
       const body = textNode("p", text);
-      const block = _("div.block", [textNode("strong", label), body]);
+      const block = _("div.block", [textNode("strong", label === "Action" ? i18n("text_action") : i18n("text_cause")), body]);
       if (label === "Action") {
         actionBlock = block;
         actionView = body;
@@ -216,7 +216,7 @@ async function renderLessonPage(pickedTool, offset) {
   }
 
   if (records.length === 0) {
-    dom.body.appendChild(textNode("p.empty", "no lesson recorded"));
+    dom.body.appendChild(textNode("p.empty", i18n("label_empty_lesson")));
     return;
   }
 
@@ -224,7 +224,7 @@ async function renderLessonPage(pickedTool, offset) {
     const count = group.records.length;
     const card = _("a.card", { href: lessonLink(group.tool, 0) }, [
       textNode("strong", group.tool),
-      textNode("p", `${count} record${count === 1 ? "" : "s"} · ${lessonClock(group.records[0].timestamp)}`),
+      textNode("p", i18n(count === 1 ? "label_record_count_one" : "label_record_count", count, lessonClock(group.records[0].timestamp))),
     ]);
     card.dataset.name = group.tool;
     card.dataset.selected = group.tool === tool ? "1" : "0";
@@ -242,7 +242,7 @@ async function renderLessonPage(pickedTool, offset) {
     (one) => (!tool || (one.tool_name || "tool") === tool) && lessonMatch(one, keyword, url.from || "", url.to || ""),
   );
   if (picked.length === 0) {
-    dom.body.appendChild(textNode("p.empty", "no lesson matched"));
+    dom.body.appendChild(textNode("p.empty", i18n("label_no_match")));
     return;
   }
 

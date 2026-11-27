@@ -20,18 +20,12 @@ func Toggle(toolName, toolArgs string, workDir ...string) (bool, error) {
 		return false, utilsmsg.New(utilsmsg.Invalid, "tool name", "empty")
 	}
 
-	// default is global, if assign path, then path
 	dir := ""
 	if len(workDir) > 0 {
 		if strings.TrimSpace(workDir[0]) == "" {
 			return false, utilsmsg.New(utilsmsg.Invalid, "work dir", "empty")
 		}
 		dir = go_pkg_utils.AbsPath("", workDir[0])
-	}
-
-	path := filesystem.AllowToolGlobalPath
-	if dir != "" {
-		path = filesystem.AllowToolPath(dir)
 	}
 
 	subject, err := formatArgs(dir, name, toolArgs)
@@ -44,7 +38,7 @@ func Toggle(toolName, toolArgs string, workDir ...string) (bool, error) {
 		entry = name + "(" + formatGlob(subject) + ")"
 	}
 
-	dic := read(path)
+	dic := Read()
 	added := false
 	if dic[entry] {
 		delete(dic, entry)
@@ -52,7 +46,7 @@ func Toggle(toolName, toolArgs string, workDir ...string) (bool, error) {
 		dic[entry] = true
 		added = true
 	}
-	return added, write(path, dic)
+	return added, write(filesystem.AllowToolPath, dic)
 }
 
 func ToggleMCP(prefix string, entries []string) error {
@@ -61,7 +55,7 @@ func ToggleMCP(prefix string, entries []string) error {
 		return utilsmsg.New(utilsmsg.Invalid, "prefix", "empty")
 	}
 
-	set := Load()
+	set := Read()
 	for entry := range set {
 		if strings.HasPrefix(entry, prefix) {
 			delete(set, entry)
@@ -73,7 +67,7 @@ func ToggleMCP(prefix string, entries []string) error {
 			set[entry] = true
 		}
 	}
-	return write(filesystem.AllowToolGlobalPath, set)
+	return write(filesystem.AllowToolPath, set)
 }
 
 func write(path string, allowMap map[string]bool) error {

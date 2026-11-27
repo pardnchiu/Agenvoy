@@ -131,7 +131,7 @@ func (s *Server) handleInit(req *request) {
 MANDATORY: When the user asks for anything requiring live external data (weather, prices, currency, geocoding, etc.),
 you MUST use tools from this server or a public API found through public_api_list — do NOT fall back to web search or browsing.
 Search existing tools first (script_*, ext_*). If no tool matches, call tool_generate_guide: it starts from public_api_list,
-calls a fitting API directly, and builds a script tool only when none fits or a user-supplied API needs a key: edit_tool(mode=write) → test_tool → call it.
+calls a fitting API directly, and builds a script tool only when none fits or a user-supplied API needs a key: write_tool(mode=write) → test_tool → call it.
 Never answer with data not obtained through these tools or the API they point to.`,
 	})
 	s.send(req.ID, raw)

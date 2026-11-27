@@ -143,7 +143,7 @@ Meta Muse、OpenAI dots 與 Grok Bot 都把你的 agent 放在廠商營運的雲
 | :-- | :-- |
 | **資料在你的硬碟** | 對話、記憶與排程存在 `~/.config/agenvoy` 下的 SQLite。不需要 Agenvoy 帳號，也沒有雲端副本 |
 | **憑證在你的 keychain** | API key 與 OAuth token 存放在作業系統 keychain，只由本機 daemon 使用；工具輸出中的密鑰在進入模型或 log 前先遮蓋 |
-| **預設沙箱執行** | 指令在 macOS 的 `sandbox-exec` 或 Linux 的 `bwrap` 中執行，預設禁網，需要連線時逐次由你確認；管理端點只回應 localhost |
+| **預設沙箱執行** | 指令在 macOS 的 `sandbox-exec` 或 Linux 的 `bwrap` 中執行，預設禁網，需要連線時逐次由你確認，也可在 `/config` → Command network 完全封鎖；管理端點只回應 localhost，除非你在 `/config` 開啟 LAN access |
 | **模型由你選** | 使用你信任的供應商，或接上 Ollama、LM Studio，讓提示內容完全不離開你的電腦 |
 
 ## 你可以用它做什麼
@@ -286,13 +286,14 @@ OpenClaw、Hermes Agent、DeepSeek Harness 與 pi 是 TypeScript 或 Python 專�
 | 三層記憶 | Context window、語意向量搜尋與全文 SQLite 封存；工具失敗與其解法跨 session 保留 |
 | 沙箱執行 | 每一條指令與腳本都在 OS 原生沙箱中執行 —— Linux 用 bubblewrap、macOS 用 sandbox-exec |
 | Skill 與子代理 | 可載入的 markdown 指令包與多 Agent 協作，完成多步驟工作 |
+| 生命週期 Hook | 在任務的七個時間點（送出前、每次工具呼叫前後、`ask_user` 之後、完成／取消）執行 Python 或 JavaScript 腳本，可擋下單次呼叫或中止任務；由 agent 撰寫並測試 |
 | 自我修正 | 工具失敗時重寫並重試；工具動過的每個檔案都有版本，可還原單一版本或整個任務 |
 | 即時語音 | Web 儀表板透過 Gemini Live 即時語音對話，可在它說話中途插話打斷 |
 | 即時輸出與豐富顯示 | 命令進度串流至 TUI 與 Web 儀表板；Web 對話渲染圖表、Mermaid 圖、數學公式與程式碼高亮 |
 | 密鑰遮罩 | 工具輸出中的金鑰與 token 在進入模型或 log 前先遮蓋 |
 | 語音轉錄與圖片 | 音訊與影片轉文字；透過已設定的 provider 生成圖片 |
 
-**37 個內建工具**：相關動作收斂成單一名稱加 `mode` 參數，每次執行只帶七個 schema，其餘按需取得，prompt cache 在整個 session 內得以保留。見[內建工具](https://agenvoy.com/zh/built-in-tools)。
+**39 個內建工具**：相關動作收斂成單一名稱加 `mode` 參數，每次執行只帶七個 schema，其餘按需取得，prompt cache 在整個 session 內得以保留。見[內建工具](https://agenvoy.com/zh/built-in-tools)。
 
 ## 隨處都能與你的 Agent 對話
 
@@ -301,9 +302,9 @@ OpenClaw、Hermes Agent、DeepSeek Harness 與 pi 是 TypeScript 或 Python 專�
 | 管道 | 使用方式 |
 | :-- | :-- |
 | TUI | 互動式終端機，支援斜線指令與 session 切換 |
-| Web 儀表板 | 內建於執行檔，位於 `http://127.0.0.1:17989`；管理 session、工具、排程與記憶 |
+| Web 儀表板 | 內建於執行檔，位於 `http://127.0.0.1:17989`；管理 session、工具、排程與記憶，介面支援 16 種語言並跟隨回覆語言切換 |
 | Telegram／Discord | 本機 daemon 以 bot token 主動向外連線，不必開放入站連接埠或架反向代理。任務執行中的新訊息會 steer 該任務；`/new <訊息>` 另開任務 |
-| REST API | 相容 OpenAI 的 chat completions 端點，另有 `agen -p` 單次執行 |
+| REST API | 相容 OpenAI 的 chat completions 端點；`agen -p` 在終端機單次執行 |
 | MCP 伺服器 | 把工具開放給 Claude Code、Codex、OpenCode 與 Cursor |
 
 <p align="center">
@@ -339,7 +340,7 @@ v1.3.4 介面改版前後的比較（old / new、淺色 / 深色）請見 [Web U
 agen -p "摘要今天的 commit" --stream
 ```
 
-`agen -p` 把一則 prompt 送給本機 daemon 並印出回覆，預設唯讀且留在沙箱；加上 `--allow-edit` 允許寫入、`--skip-sandbox` 允許離開 `$HOME`。`--skip-sandbox`（`/v1/send` 的 `enable_sandbox:false`）非常危險：不經確認即可使用 `sudo` 與 `$HOME` 外路徑，daemon 只接受本機呼叫。完整旗標見[文件](doc.zh.md#單次執行)。
+`agen -p` 在自己的程序內執行一則 prompt 並印出回覆，預設唯讀且留在沙箱；加上 `--allow-edit` 允許寫入、`--skip-sandbox` 允許離開 `$HOME`。`--skip-sandbox` 非常危險：不經確認即可使用 `sudo` 與 `$HOME` 外路徑。它只存在於命令列，`/v1/send` 無法關閉沙箱。完整旗標見[文件](doc.zh.md#單次執行)。
 
 ## 建議的模型設定
 

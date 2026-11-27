@@ -2,7 +2,7 @@ async function memoryPost(action, body, sessionId) {
   const sid = sessionId || currentSessionId;
   if (!sid) {
     console.error("memoryPost", action, "no session id", { sessionId: sessionId, currentSessionId: currentSessionId });
-    alert(`${action} failed: no session selected`);
+    alert(i18n("error_no_session", action));
     return null;
   }
 
@@ -15,28 +15,28 @@ async function memoryPost(action, body, sessionId) {
     const detail = await response.json().catch(() => ({}));
     if (!response.ok) {
       console.error("memoryPost", action, response.status, detail);
-      alert(`${action} failed: ${detail.error || response.status}`);
+      alert(i18n("error_failed_memory", action, detail.error || response.status));
       return null;
     }
     return detail;
   } catch (err) {
     console.error("memoryPost", action, err);
-    alert(`${action} failed: ${err.message || err}`);
+    alert(i18n("error_failed_memory", action, err.message || err));
     return null;
   }
 }
 
 const MEMORY_ACTIONS = [
-  { key: "summary", label: "Regenerate summary", hint: "rebuild the rolling summary of this conversation" },
-  { key: "compact", label: "Compact history", hint: "drop older messages, keep the summary" },
-  { key: "reset", label: "Reset conversation", hint: "clear every message in this session" },
+  { key: "summary", labelKey: "label_summary", hintKey: "hint_summary_memory" },
+  { key: "compact", labelKey: "label_compact", hintKey: "hint_compact" },
+  { key: "reset", labelKey: "label_reset", hintKey: "hint_reset" },
 ];
 
 function openMemoryPicker(sessionId) {
   const list = _("div.list");
 
-  const cancel = _("button", { type: "button" }, "cancel");
-  const root = _("div.popup", [_("div.panel", [_("strong", "Memory"), list, _("footer", [cancel])])]);
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+  const root = _("div.popup", [_("div.panel", [_("strong", i18n("text_memory")), list, _("footer", [cancel])])]);
   root.id = "memory-popup";
 
   const close = () => root.remove();
@@ -58,7 +58,7 @@ function openMemoryPicker(sessionId) {
       run(one.key);
       box.checked = false;
     });
-    list.appendChild(_("label", [box, _("div", [_("strong", one.label), _("p", one.hint)])]));
+    list.appendChild(_("label", [box, _("div", [_("strong", i18n(one.labelKey)), _("p", i18n(one.hintKey))])]));
   }
 
   cancel.addEventListener("click", close);
@@ -70,18 +70,18 @@ function openMemoryPicker(sessionId) {
 }
 
 async function memorySummary(sessionId) {
-  if (!confirm("Regenerate the summary for this conversation?")) {
+  if (!confirm(i18n("confirm_summary"))) {
     return;
   }
   const result = await memoryPost("summary", null, sessionId);
   if (!result) {
     return;
   }
-  alert(`summary regenerated · ${result.count || 0} entr${result.count === 1 ? "y" : "ies"}`);
+  alert(i18n(result.count === 1 ? "error_summary_done_one" : "error_summary_done_many", result.count || 0));
 }
 
 async function memoryCompact(sessionId) {
-  if (!confirm("Compact this conversation? Older messages are dropped.")) {
+  if (!confirm(i18n("confirm_compact"))) {
     return;
   }
   const result = await memoryPost("compact", null, sessionId);
@@ -89,22 +89,22 @@ async function memoryCompact(sessionId) {
     return;
   }
   if (!result.removed) {
-    alert("nothing to compact");
+    alert(i18n("error_compact_nothing"));
     return;
   }
-  alert(`compacted · ${result.removed} removed`);
+  alert(i18n("error_compacted", result.removed));
   window.location.reload();
 }
 
 async function memoryReset(sessionId) {
-  if (!confirm("Clear the whole conversation?")) {
+  if (!confirm(i18n("confirm_reset"))) {
     return;
   }
-  const wipe = confirm("Wipe the summary too? (cancel keeps it)");
+  const wipe = confirm(i18n("confirm_wipe"));
   const result = await memoryPost("reset", { mode: wipe ? "all" : "summary" }, sessionId);
   if (!result) {
     return;
   }
-  alert(`conversation cleared · ${result.removed || 0} removed${wipe ? "" : " · summary kept"}`);
+  alert(i18n(wipe ? "error_reset_done" : "error_reset_done_kept", result.removed || 0));
   window.location.reload();
 }

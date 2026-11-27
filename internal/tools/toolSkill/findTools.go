@@ -29,7 +29,7 @@ func registFindTools() {
 		Concurrent:  true,
 		Description: `Returns full parameter schemas for the tools you name or describe (search), or every tool's name and one-line description (list).
 Use before the first run_tool call to a name, and for "what tools do you have", "find a tool for ...", "is there a tool that can ...", search_tools / list_tools; a capability that looks missing is checked here before anything is built.
-Building a tool → edit_tool; testing a script tool → test_tool.`,
+Building a tool → write_tool; testing a script tool → test_tool.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

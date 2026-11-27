@@ -52,8 +52,8 @@ function newHookBox() {
   const state = _("strong", { textContent: "" });
   const content = _("p", { textContent: "" });
   const count = _("p", { textContent: "" });
-  const prev = _("button", { type: "button", title: "Previous" }, [_("span.material-symbols-outlined", "chevron_left")]);
-  const next = _("button", { type: "button", title: "Next" }, [_("span.material-symbols-outlined", "chevron_right")]);
+  const prev = _("button", { type: "button", title: i18n("text_prev") }, [_("span.material-symbols-outlined", "chevron_left")]);
+  const next = _("button", { type: "button", title: i18n("text_next") }, [_("span.material-symbols-outlined", "chevron_right")]);
   const dom = _("section.hook", [state, content, _("footer", [count, prev, next])]);
 
   const box = { dom, state, content, count, prev, next, list: [], index: 0 };
@@ -71,7 +71,7 @@ function newHookBox() {
 function renderHookBox(box) {
   const text = box.list[box.index] || "";
   const split = text.indexOf(": ");
-  box.state.textContent = split > 0 ? text.slice(0, split) : "Hook";
+  box.state.textContent = split > 0 ? text.slice(0, split) : i18n("text_hook");
   box.content.textContent = split > 0 ? text.slice(split + 2) : text;
   box.count.textContent = `${box.index + 1} / ${box.list.length}`;
   box.prev.disabled = box.index <= 0;

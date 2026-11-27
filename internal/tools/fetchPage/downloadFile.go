@@ -16,6 +16,7 @@ import (
 	go_pkg_http "github.com/pardnchiu/go-pkg/http"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	"github.com/pardnchiu/agenvoy/internal/utils"
@@ -87,6 +88,9 @@ Reading a page without saving → fetch_page; JSON or an API response → http_r
 			}
 			if !filepath.IsAbs(outputFile) {
 				outputFile = filepath.Join(filesystem.OutputDir(), outputFile)
+			}
+			if err := boundary.CheckWrite(outputFile); err != nil {
+				return "", err
 			}
 
 			// NOTE: 下載網頁頁面直接使用 fetch 搭配 save

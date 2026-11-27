@@ -9,31 +9,31 @@ async function openPersonaPopup(sessionId) {
     const response = await fetch(`${API}/v1/session/${encodeURIComponent(sid)}`);
     const detail = await response.json().catch(() => ({}));
     if (!response.ok) {
-      alert(`persona failed: ${detail.error || response.status}`);
+      alert(i18n("error_failed_persona", detail.error || response.status));
       return;
     }
     current = detail;
   } catch (err) {
     console.error("openPersonaPopup", err);
-    alert(`persona failed: ${err.message || err}`);
+    alert(i18n("error_failed_persona", err.message || err));
     return;
   }
 
-  const self = personaField(current.self_id || "", "a-z 0-9 _ - only, up to 32 characters · stored lowercase", true);
-  const name = personaField(current.name || "", "shown as the session title", true);
-  const role = personaField(current.role || "", "system prompt for this session", false);
+  const self = personaField(current.self_id || "", i18n("hint_self_id"), true);
+  const name = personaField(current.name || "", i18n("hint_name"), true);
+  const role = personaField(current.role || "", i18n("hint_role"), false);
 
-  const cancel = _("button", { type: "button" }, "cancel");
-  const save = _("button", { type: "button", class: "submit" }, "save");
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+  const save = _("button", { type: "button", class: "submit" }, i18n("text_save"));
 
   const root = _("div.popup", [
     _("div.panel", [
-      _("strong", "Bot"),
-      _("p", "name"),
+      _("strong", i18n("text_bot")),
+      _("p", i18n("text_name")),
       name.field,
-      _("p", "self id"),
+      _("p", i18n("label_self_id")),
       self.field,
-      _("p", "role"),
+      _("p", i18n("text_role")),
       role.field,
       _("footer", [cancel, save]),
     ]),
@@ -107,12 +107,12 @@ async function savePersona(sessionId, selfId, name, role) {
     });
     const detail = await response.json().catch(() => ({}));
     if (!response.ok) {
-      alert(`persona failed: ${detail.error || response.status}`);
+      alert(i18n("error_failed_persona", detail.error || response.status));
       return false;
     }
   } catch (err) {
     console.error("savePersona", err);
-    alert(`persona failed: ${err.message || err}`);
+    alert(i18n("error_failed_persona", err.message || err));
     return false;
   }
   return true;

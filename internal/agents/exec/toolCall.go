@@ -26,6 +26,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
 	"github.com/pardnchiu/agenvoy/internal/runtime/pubsub"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	"github.com/pardnchiu/agenvoy/internal/tools"
 	"github.com/pardnchiu/agenvoy/internal/tools/command"
@@ -140,6 +141,20 @@ type toolSlot struct {
 	stopErr    error
 }
 
+func isNetworkCommand(toolName, toolArgs string) bool {
+	if toolName != "run_command" && toolName != "background_command" {
+		return false
+	}
+	var p struct {
+		Network bool  `json:"network"`
+		Sandbox *bool `json:"sandbox"`
+	}
+	if json.Unmarshal([]byte(toolArgs), &p) != nil {
+		return false
+	}
+	return p.Network && (p.Sandbox == nil || *p.Sandbox)
+}
+
 func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, turnAllowAll bool) bool {
 	if turnAllowAll {
 		return false
@@ -147,7 +162,7 @@ func toolNeedsConfirmation(exec *tooltypes.Executor, toolName, toolArgs string, 
 	if toolName == "read_files" && isSensitiveReadFile(toolArgs) {
 		return true
 	}
-	if toolName == "remove_file" || toolName == "restore_file" || isDestructiveMode(toolArgs) {
+	if toolName == "restore_file" || isDestructiveMode(toolArgs) {
 		return true
 	}
 	if toolName == "open_file" && isOpenFileURL(toolArgs) {
@@ -224,9 +239,9 @@ func invalidateReadFileCache(alreadyCall map[string]string, writeArgsJSON string
 
 var isWriteLikeTool = map[string]bool{
 	"write_file":   true,
-	"edit_skill":   true,
+	"write_skill":  true,
 	"write_hook":   true,
-	"edit_tool":    true,
+	"write_tool":   true,
 	"write_result": true,
 }
 
@@ -421,6 +436,20 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]ag
 			continue
 		}
 
+		if isNetworkCommand(toolName, toolArg) {
+			if cfg, err := config.Load(); err == nil && cfg.CommandNetOff {
+				events <- agenttypes.Event{
+					Type:     agenttypes.EventToolCall,
+					ToolName: toolName,
+					ToolArgs: toolArg,
+					ToolID:   toolID,
+				}
+				slots[i].state = slotValidateFailed
+				slots[i].preMsg = fmt.Sprintf("tool=%s failed: [Denied] network: Command network is disabled by the user (/config → Command network), so network: true is not allowed and this call was not run; retry only with network: false", toolName)
+				continue
+			}
+		}
+
 		restrictedPaths := boundary.Restricted(exec.SessionID, exec.WorkDir, toolName, toolArg)
 		unsandboxed := command.RestrictedRunCommand(toolName, toolArg)
 		restrictedList := append(outsideHome(restrictedPaths), unsandboxed...)
@@ -472,7 +501,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]ag
 					missing = append(missing, "enable_edit: true (this run is read-only: writes and non-read-only commands are refused)")
 				}
 				if len(restrictedList) > 0 && mode&agenttypes.AutoModeSkipSandbox == 0 {
-					missing = append(missing, "enable_sandbox: false (paths outside $HOME, sudo, sandbox: false)")
+					missing = append(missing, "agen -p --skip-sandbox in a terminal (paths outside $HOME, sudo, sandbox: false; not available over HTTP)")
 				}
 				if len(missing) == 0 {
 					approved = true
@@ -708,7 +737,7 @@ func toolCall(ctx context.Context, exec *tooltypes.Executor, hooks map[string]ag
 			}
 		}
 
-		if (s.name == "write_file" || s.name == "remove_file" || s.name == "restore_file") && s.execErr == "" {
+		if (s.name == "write_file" || s.name == "restore_file") && s.execErr == "" {
 			invalidateReadFileCache(alreadyCall, s.args)
 		}
 		if isWriteLikeTool[s.name] && s.execErr == "" {

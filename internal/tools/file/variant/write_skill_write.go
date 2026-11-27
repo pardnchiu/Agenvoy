@@ -13,7 +13,7 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func writeSkillFile(ctx context.Context, e *tooltypes.Executor, path, content string) (string, error) {
+func writeSkillSrite(ctx context.Context, e *tooltypes.Executor, path, content string) (string, error) {
 	if strings.TrimSpace(content) == "" {
 		return "", utilsmsg.New(utilsmsg.Invalid, "content", "required when mode=write")
 	}
@@ -27,9 +27,9 @@ func writeSkillFile(ctx context.Context, e *tooltypes.Executor, path, content st
 	if err := go_pkg_filesystem.WriteFile(absPath, content, 0644); err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem: WriteFile", absPath, err)
 	}
-	record(ctx, e, change, content, "edit_skill")
+	record(ctx, e, change, content, "write_skill")
 
-	return fmt.Sprintf("created: %s", absPath), nil
+	return fmt.Sprintf("created: %s", absPath) + revokeSkillTrust(e, absPath), nil
 }
 
 func skillPath(path string) (string, error) {

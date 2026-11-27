@@ -44,6 +44,17 @@ func GetConfig() gin.HandlerFunc {
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{"enabled": !cfg.OfficialGuideOff})
+		case "security":
+			cfg, err := config.Load()
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"command_network": !cfg.CommandNetOff,
+				"hook_network":    !cfg.HookNetOff,
+				"lan_access":      cfg.LANAccess,
+			})
 		case "skill_source":
 			cfg, err := config.Load()
 			if err != nil {
@@ -72,6 +83,8 @@ func SetConfig() gin.HandlerFunc {
 			setOutputDir(c)
 		case "official_guide":
 			setOfficialGuide(c)
+		case "security":
+			setSecurity(c)
 		case "skill_source":
 			setSkillSource(c)
 		default:
@@ -254,4 +267,41 @@ func setSkillSource(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true, "disabled": disabled})
+}
+
+func setSecurity(c *gin.Context) {
+	var body struct {
+		CommandNetwork *bool `json:"command_network"`
+		HookNetwork    *bool `json:"hook_network"`
+		LANAccess      *bool `json:"lan_access"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if body.CommandNetwork == nil && body.HookNetwork == nil && body.LANAccess == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "command_network, hook_network or lan_access is required"})
+		return
+	}
+
+	dic, err := config.Get()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if body.CommandNetwork != nil {
+		dic["command_network_disabled"] = !*body.CommandNetwork
+	}
+	if body.HookNetwork != nil {
+		dic["hook_network_disabled"] = !*body.HookNetwork
+	}
+	if body.LANAccess != nil {
+		dic["lan_access_enabled"] = *body.LANAccess
+	}
+	if err := config.Write(dic); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

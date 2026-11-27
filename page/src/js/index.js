@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", async function () {
+  await loadI18n();
+  localizeTabs();
   revealIconsWhenReady();
   watchListSelection();
   watchServer();
@@ -72,6 +74,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   const app = new QUI({
     id: "app",
+    i18n: { [I18N_LANG]: I18N },
+    i18nLang: I18N_LANG,
     data: {
       params: params,
       pin: pinnedChats.map((id) => ({ id: id })),
@@ -216,6 +220,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       schedule_test: function () {
         testSchedule();
       },
+      tool_open: function () {
+        openToolFolder();
+      },
+      tool_config: function () {
+        openToolConfig();
+      },
       skill_source: function () {
         openSkillSource();
       },
@@ -323,6 +333,20 @@ document.addEventListener("DOMContentLoaded", async function () {
       },
       system_official_guide: function () {
         saveSystemOfficialGuide();
+      },
+      security_command_network: function () {
+        saveSecurity("command_network", $("#security-command-network"));
+      },
+      security_hook_network: function () {
+        saveSecurity("hook_network", $("#security-hook-network"));
+      },
+      security_lan_access: function () {
+        const select = $("#security-lan-access");
+        if (select.value === "enabled" && !confirm(i18n("confirm_lan_access"))) {
+          select.value = "disabled";
+          return;
+        }
+        saveSecurity("lan_access", select);
       },
       system_output: function () {
         saveSystemOutput();
@@ -466,6 +490,12 @@ document.addEventListener("DOMContentLoaded", async function () {
           if (params.tab === "Roles") {
             resetRole();
             renderRole();
+          }
+          if (params.tab === "Tools") {
+            renderToolTab();
+            if (!params.target) {
+              openToolConfig();
+            }
           }
           if (params.tab === "Skills") {
             renderSkillTab();

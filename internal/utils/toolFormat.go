@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -19,7 +20,6 @@ var eventLabel = map[string]string{
 	"background_command":    "Background",
 	"background_subagents":  "Background Subagents",
 	"open_file":             "Open",
-	"remove_file":           "Remove",
 	"restore_file":          "Restore",
 	"download_file":         "Download",
 	"search_web":            "Search",
@@ -62,13 +62,13 @@ var primaryArgKeys = []string{
 }
 
 var eventModeLabel = map[string]map[string]string{
-	"subagents":  {"list": "Subagents", "invoke": "Subagent"},
-	"find_files": {"list": "Files", "glob": "Search", "search": "Search"},
-	"schedules":  {"list": "Schedules", "write": "Write", "patch": "Edit", "remove": "Remove"},
-	"write_file": {"write": "Write", "patch": "Edit"},
-	"edit_skill": {"write": "Write", "patch": "Edit", "remove": "Remove"},
-	"write_hook": {"write": "Write", "patch": "Edit", "remove": "Remove"},
-	"edit_tool":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
+	"subagents":   {"list": "Subagents", "invoke": "Subagent"},
+	"find_files":  {"list": "Files", "glob": "Search", "search": "Search"},
+	"schedules":   {"list": "Schedules", "write": "Write", "patch": "Edit", "remove": "Remove"},
+	"write_file":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
+	"write_skill": {"write": "Write", "patch": "Edit", "remove": "Remove", "copy": "Copy"},
+	"write_hook":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
+	"write_tool":  {"write": "Write", "patch": "Edit", "remove": "Remove"},
 }
 
 func FormatToolEvent(name, raw string) string {
@@ -135,7 +135,7 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 	case "read_files":
 		return joinPaths(argMap)
 
-	case "write_file", "remove_file":
+	case "write_file":
 		return arg("filename")
 
 	case "restore_file":
@@ -194,10 +194,10 @@ func eventArgs(name, mode, raw string, argMap map[string]any, arg func(...string
 	case "run_skill":
 		return arg("skill", "name")
 
-	case "edit_skill":
-		return arg("path", "name")
+	case "write_skill":
+		return arg("path", "from", "name")
 
-	case "edit_tool", "test_tool", "write_hook", "test_hook":
+	case "write_tool", "test_tool", "write_hook", "test_hook":
 		return arg("name")
 
 	case "read_hook":
@@ -299,7 +299,7 @@ func eventMode(name string, argMap map[string]any) string {
 			return "write"
 		}
 
-	case "edit_skill", "edit_tool", "write_hook":
+	case "write_skill", "write_tool", "write_hook":
 		if content, _ := argMap["content"].(string); content != "" {
 			return "write"
 		}
@@ -479,7 +479,6 @@ var toolDisplayName = map[string]string{
 	"read_files":           "Read",
 	"write_result":         "Write",
 	"write_file":           "Write",
-	"remove_file":          "Remove",
 	"restore_file":         "Restore",
 	"run_command":          "Run",
 	"run_skill":            "Run",
@@ -497,12 +496,12 @@ var toolDisplayName = map[string]string{
 }
 
 func IsPlugTool(name string) bool {
-	return strings.HasPrefix(name, "script_") ||
+	return strings.HasPrefix(name, configs.SCRIPT_TOOL_PREFIX) ||
 		strings.HasPrefix(name, "ext_")
 }
 
 func PlugToolBaseName(name string) string {
-	for _, prefix := range []string{"script_", "ext_"} {
+	for _, prefix := range []string{configs.SCRIPT_TOOL_PREFIX, "ext_"} {
 		if base, ok := strings.CutPrefix(name, prefix); ok {
 			return base
 		}
@@ -534,7 +533,7 @@ func ToolName(name string) string {
 	if IsPlugTool(name) {
 		var tag string
 		switch {
-		case strings.HasPrefix(name, "script_"):
+		case strings.HasPrefix(name, configs.SCRIPT_TOOL_PREFIX):
 			tag = "Script"
 		case strings.HasPrefix(name, "ext_"):
 			tag = "Extension"

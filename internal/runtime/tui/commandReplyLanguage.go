@@ -39,7 +39,7 @@ func (t TUI) commandReplyLanguage() (TUI, tea.Cmd, bool) {
 
 	t.popup = &Popup{
 		kind:    popupSingleSelect,
-		title:   "Select reply language",
+		title:   "Select reply / WebUI language",
 		options: options,
 		values:  values,
 		cursor:  cursor,

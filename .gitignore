@@ -25,3 +25,4 @@ node_modules/
 page/package-lock.json
 .gocache/
 .wrangler/
+.scan/

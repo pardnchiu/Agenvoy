@@ -14,6 +14,9 @@ import (
 )
 
 func writeSchedule(e *tooltypes.Executor, target, when, skill string) (string, error) {
+	if err := filesystem.CheckDirName("skill", skill); err != nil {
+		return "", err
+	}
 	if !go_pkg_filesystem_reader.Exists(filesystem.ScheduleSkillPath(skill)) {
 		return "", utilsmsg.New(utilsmsg.NotFound, "skill", "%q not found under %s. mode=write is an internal binding called by the scheduler-skill-creator skill flow. Run scheduler-skill-creator skill which generates a hashed skill name and binds time in one flow. Do not call mode=write with a hand-made name", skill, filesystem.ScheduleSkillPath(skill))
 	}

@@ -109,12 +109,11 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 		"subagents",
 		"background_subagents",
 		"write_file",
-		"remove_file",
 		"restore_file",
-		"edit_tool",
+		"write_tool",
 		"test_tool",
 		"test_hook",
-		"edit_skill",
+		"write_skill",
 		"write_hook",
 		"write_result",
 		"html_template",
@@ -125,10 +124,10 @@ func Exec(ctx context.Context, task, sessionID, modelName, reasoning, systemProm
 	}
 	if topLevel {
 		baseExclude = []string{
-			"edit_tool",
+			"write_tool",
 			"test_tool",
 			"test_hook",
-			"edit_skill",
+			"write_skill",
 			"write_hook",
 			"schedules",
 			"store_secret",

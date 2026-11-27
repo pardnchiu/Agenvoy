@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
 #### Script tool checklist
 1. tool.json is valid JSON; every entry in "required" exists in "properties"
-2. "name" in tool.json matches the directory name passed to edit_tool(mode=write)
+2. "name" in tool.json matches the directory name passed to write_tool(mode=write)
 3. Script reads stdin JSON as first action: json.loads(sys.stdin.read() or "{}")
 4. All success paths output JSON via json.dumps()
 5. All error paths write stderr + exit non-zero
@@ -161,10 +161,10 @@ if __name__ == "__main__":
 
 ### Execution flow (script tool)
 
-1. `edit_tool(mode=write, name, tag="json", content)` = full tool.json
-2. `edit_tool(mode=write, name, tag="script", content)` = full script.py
+1. `write_tool(mode=write, name, tag="json", content)` = full tool.json
+2. `write_tool(mode=write, name, tag="script", content)` = full script.py
 3. `test_tool(name, input)` with a JSON string matching the tool's parameters
-4. On failure: `edit_tool(mode=patch, name, tag, old_string, new_string)` → re-test (max 3 retries)
+4. On failure: `write_tool(mode=patch, name, tag, old_string, new_string)` → re-test (max 3 retries)
 5. Call the new tool to answer the user's original request
 
 All steps are tool calls. Text output only at the final step. `name` without prefix (runtime adds it). A key the API needs: `get_key()` in the script, `store_secret` when it is missing.
@@ -173,7 +173,7 @@ All steps are tool calls. Text output only at the final step. `name` without pre
 
 ### When not to build
 
-One-off verification, testing or debugging — "測試 X 能不能用", "確認 Y 有沒有生效", probing an endpoint, a parameter or a flag — produces a finding for this turn, not a reusable capability. Write the script inline and run it with `run_command` (`python3 -c`, a heredoc, `curl`); report what came back. No `edit_tool`, no `test_tool`, no saved tool.
+One-off verification, testing or debugging — "測試 X 能不能用", "確認 Y 有沒有生效", probing an endpoint, a parameter or a flag — produces a finding for this turn, not a reusable capability. Write the script inline and run it with `run_command` (`python3 -c`, a heredoc, `curl`); report what came back. No `write_tool`, no `test_tool`, no saved tool.
 
 The build flow above starts only when Decide the path lands on step 3 and the user will want the data again.
 

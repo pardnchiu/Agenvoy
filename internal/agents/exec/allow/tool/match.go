@@ -3,7 +3,6 @@ package tool
 
 import (
 	"encoding/json"
-	"maps"
 	"strings"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
@@ -16,7 +15,7 @@ import (
 
 // check is in list or not
 func Match(workDir, toolName, toolArgs string) bool {
-	dic := Load(workDir)
+	dic := Read()
 	if len(dic) == 0 {
 		return false
 	}
@@ -37,23 +36,14 @@ func Match(workDir, toolName, toolArgs string) bool {
 	return false
 }
 
-// load global and project conbime to one
-func Load(workDir ...string) map[string]bool {
-	dic := read(filesystem.AllowToolGlobalPath)
-	if len(workDir) > 0 && strings.TrimSpace(workDir[0]) != "" {
-		maps.Copy(dic, read(filesystem.AllowToolPath(go_pkg_utils.AbsPath("", workDir[0]))))
-	}
-	return dic
-}
-
 // read path and parse to dic
-func read(path string) map[string]bool {
+func Read() map[string]bool {
 	dic := make(map[string]bool)
-	if !go_pkg_filesystem_reader.Exists(path) {
+	if !go_pkg_filesystem_reader.Exists(filesystem.AllowToolPath) {
 		return dic
 	}
 
-	text, err := go_pkg_filesystem.ReadText(path)
+	text, err := go_pkg_filesystem.ReadText(filesystem.AllowToolPath)
 	if err != nil {
 		return dic
 	}

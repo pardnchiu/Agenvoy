@@ -59,13 +59,13 @@ func usage() {
 	fmt.Println("Usage:")
 	fmt.Println("  agen                                            Attach TUI; spawn server daemon if not running")
 	fmt.Println("  agen stop [-y]                                  Stop the running server daemon; -y skips the running-task confirmation")
-	fmt.Println("  agen -p <prompt> [flags]                        Send one prompt to the daemon and print the reply")
+	fmt.Println("  agen -p <prompt> [flags]                        Run one prompt in this process and print the reply")
 	fmt.Println("      -m, --model <name>                          Model (default: auto)")
 	fmt.Println("      -r, --reasoning <level>                     Reasoning level (default: medium)")
 	fmt.Println("      --stream                                    Print the reply as it streams")
 	fmt.Println("      --work-dir <dir>                            Working directory (default: current directory)")
 	fmt.Println("      --allow-edit                                Allow writes and non-read-only commands")
-	fmt.Println("      --skip-sandbox                              DANGEROUS: leave the sandbox (paths outside $HOME, sudo, sandbox: false) with no confirmation; local only")
+	fmt.Println("      --skip-sandbox                              DANGEROUS: leave the sandbox (paths outside $HOME, sudo, sandbox: false) with no confirmation; terminal only, not over HTTP")
 	fmt.Println("  agen update [-y]                                Update agen to the latest release; -y skips the running-task confirmation")
 }
 

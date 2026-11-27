@@ -30,9 +30,9 @@ func patchContents(ctx context.Context, e *tooltypes.Executor, targetPath string
 		return "", utilsmsg.New(utilsmsg.Invalid, "patch_contents", "required when mode=patch")
 	}
 
-	absPath, err := boundary.ResolveIn(e.SessionID, e.WorkDir, targetPath)
+	absPath, err := boundary.ResolveWriteIn(e.SessionID, e.WorkDir, targetPath)
 	if err != nil {
-		return "", utilsmsg.Trace("tools/file/boundary: ResolveIn", "", err)
+		return "", utilsmsg.Trace("tools/file/boundary: ResolveWriteIn", "", err)
 	}
 
 	info, err := os.Stat(absPath)

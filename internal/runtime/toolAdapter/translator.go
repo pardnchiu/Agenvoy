@@ -1,4 +1,4 @@
-package scriptAdapter
+package toolAdapter
 
 import (
 	"encoding/json"
@@ -83,6 +83,14 @@ func (t *Translator) IsExist(name string) bool {
 	key := strings.TrimPrefix(name, t.prefix)
 	_, ok := t.scripts[key]
 	return ok
+}
+
+func (t *Translator) Lookup(name string) (ScriptDoc, string, bool) {
+	script, ok := t.scripts[strings.TrimPrefix(name, t.prefix)]
+	if !ok {
+		return ScriptDoc{}, "", false
+	}
+	return script.Doc, filepath.Dir(script.scriptPath), true
 }
 
 func (t *Translator) GetTools() []map[string]any {

@@ -36,10 +36,7 @@ func NewSkillScanner() *SkillScanner {
 		home = "."
 	}
 
-	cwd, _ := os.Getwd()
 	paths := []string{
-		filepath.Join(cwd, ".skills"),
-		filepath.Join(cwd, ".claude", "skills"),
 		filesystem.SystemSkillsDir,
 		filesystem.SystemDesignDir,
 		filesystem.SkillsDir,

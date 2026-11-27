@@ -49,7 +49,6 @@ func (s *Server) watch(ctx context.Context) {
 
 	dirs := []string{
 		filesystem.ScriptToolsDir,
-		filesystem.WorkScriptToolsDir,
 		filesystem.ExtensionScriptToolsDir,
 	}
 	for _, dir := range dirs {

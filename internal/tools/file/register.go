@@ -6,7 +6,6 @@ func Register() {
 	registReadFiles()
 	registFindFiles()
 	registWriteFile()
-	registRemoveFile()
 	registRestoreFile()
 	registWriteResult()
 	variant.Register()

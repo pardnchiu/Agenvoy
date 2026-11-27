@@ -8,7 +8,7 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func patchToolFile(ctx context.Context, e *tooltypes.Executor, name, tag, oldString, newString string, replaceAll bool) (string, error) {
+func writeToolPatch(ctx context.Context, e *tooltypes.Executor, name, tag, oldString, newString string, replaceAll bool) (string, error) {
 	if oldString == "" {
 		return "", utilsmsg.New(utilsmsg.Invalid, "old_string", "required when mode=patch")
 	}
@@ -25,7 +25,7 @@ func patchToolFile(ctx context.Context, e *tooltypes.Executor, name, tag, oldStr
 	if err := patch(target, oldString, newString, replaceAll); err != nil {
 		return "", err
 	}
-	record(ctx, e, change, "", "edit_tool")
+	record(ctx, e, change, "", "write_tool")
 
 	return fmt.Sprintf("updated: %s", target), nil
 }

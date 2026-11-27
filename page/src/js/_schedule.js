@@ -16,20 +16,32 @@ description: <what it does and when it fires>
 
 const SCHEDULE_TYPES = {
   cron: {
-    label: "Cron",
+    get label() {
+      return i18n("text_cron");
+    },
     input: "text",
-    hint: "Cron expressions · {min} {hour} {dom} {mon} {dow} · @daily · @every 30m",
+    get hint() {
+      return i18n("hint_cron");
+    },
     placeholder: "*/5 * * * *",
     value: "*/5 * * * *",
-    empty: "at least one cron expression is required",
+    get empty() {
+      return i18n("label_cron_empty");
+    },
   },
   task: {
-    label: "Task",
+    get label() {
+      return i18n("text_task");
+    },
     input: "datetime-local",
-    hint: "Fire times · local date and time",
+    get hint() {
+      return i18n("hint_task");
+    },
     placeholder: "2026-01-01 09:00",
     value: "",
-    empty: "at least one fire time is required",
+    get empty() {
+      return i18n("label_task_empty");
+    },
   },
 };
 
@@ -94,7 +106,7 @@ function markScheduleMode(editing) {
     dom.name.readOnly = Boolean(editing);
   }
   if (dom.submit) {
-    dom.submit.textContent = editing ? "save" : "add";
+    dom.submit.textContent = editing ? i18n("text_save") : i18n("text_add");
   }
 }
 
@@ -126,7 +138,7 @@ function renderScheduleSessions(picked) {
 
   dom.session.innerHTML = "";
   if (list.length === 0) {
-    dom.session.appendChild(_("option", { value: "" }, "no session available · start a chat first"));
+    dom.session.appendChild(_("option", { value: "" }, i18n("label_no_session")));
   }
   for (const one of list) {
     const option = _("option", { value: one.id }, one.name || one.id);
@@ -138,7 +150,7 @@ function renderScheduleSessions(picked) {
   if (dom.test) {
     const label = () => {
       const id = dom.session.value;
-      dom.test.textContent = id ? `test in ${id.slice(0, id.indexOf("-") + 9)}` : "test";
+      dom.test.textContent = id ? i18n("label_test_in", id.slice(0, id.indexOf("-") + 9)) : i18n("text_test");
     };
     label();
     dom.session.onchange = label;
@@ -161,7 +173,7 @@ function renderScheduleType() {
       if (scheduleType === value) {
         return;
       }
-      if (scheduleEntries.length > 0 && !confirm(`Switch to ${spec.label}? The current entries will be cleared.`)) {
+      if (scheduleEntries.length > 0 && !confirm(i18n("confirm_switch", spec.label))) {
         return;
       }
       scheduleType = value;
@@ -242,7 +254,7 @@ function renderScheduleEntries(focus) {
 
   scheduleEntries.forEach((value, index) => {
     const shown = _("input", { type: spec.input, value: scheduleInput(value), readonly: "readonly" });
-    const drop = _("button.remove", { type: "button" }, "delete");
+    const drop = _("button.remove", { type: "button" }, i18n("text_delete"));
     drop.addEventListener("click", () => {
       scheduleEntries.splice(index, 1);
       renderScheduleEntries();
@@ -251,7 +263,7 @@ function renderScheduleEntries(focus) {
   });
 
   const draft = _("input", { type: spec.input, placeholder: spec.placeholder, value: spec.value });
-  const add = _("button.submit", { type: "button" }, "add");
+  const add = _("button.submit", { type: "button" }, i18n("text_add"));
   const commit = () => {
     const value = scheduleEntry(draft.value.trim());
     if (!value) {
@@ -303,7 +315,7 @@ async function openSchedule(name) {
     renderScheduleFiles(dom, body.body || "", body.files || []);
   } catch (err) {
     console.error("openSchedule", err);
-    scheduleError(err.message || "failed");
+    scheduleError(err.message || i18n("text_failed"));
     return;
   }
 
@@ -374,11 +386,11 @@ async function saveSchedule() {
   const editing = scheduleEditing;
   const name = editing || dom.name.value.trim();
   if (!name) {
-    scheduleError("name is required");
+    scheduleError(i18n("error_name_required"));
     return null;
   }
   if (!SCHEDULE_NAME.test(name)) {
-    scheduleError("name allows only A-Z a-z 0-9 _ - and must be 1-64 characters, no spaces");
+    scheduleError(i18n("error_name_invalid"));
     return null;
   }
   if (scheduleEntries.length === 0) {
@@ -387,7 +399,7 @@ async function saveSchedule() {
   }
   const sessionID = dom.session ? dom.session.value : "";
   if (!sessionID) {
-    scheduleError("no session available · start a chat first");
+    scheduleError(i18n("label_no_session"));
     return null;
   }
 
@@ -416,7 +428,7 @@ async function saveSchedule() {
     markScheduleMode(true);
   } catch (err) {
     console.error("saveSchedule", err);
-    scheduleError(err.message || "failed");
+    scheduleError(err.message || i18n("text_failed"));
     return null;
   }
   return { name: saved.name || name, session_id: saved.session_id || "" };
@@ -436,7 +448,7 @@ async function testSchedule() {
     return;
   }
   if (!saved.session_id) {
-    scheduleError("no session bound to this schedule");
+    scheduleError(i18n("error_no_session_bound"));
     return;
   }
 
@@ -453,7 +465,7 @@ async function testSchedule() {
     }
   } catch (err) {
     console.error("testSchedule", err);
-    scheduleError(err.message || "failed");
+    scheduleError(err.message || i18n("text_failed"));
     return;
   }
 
@@ -461,7 +473,7 @@ async function testSchedule() {
 }
 
 async function deleteSchedule(name) {
-  if (!confirm(`Delete "${name}"?`)) {
+  if (!confirm(i18n("confirm_delete", name))) {
     return;
   }
 
@@ -478,7 +490,7 @@ async function deleteSchedule(name) {
     }
   } catch (err) {
     console.error("deleteSchedule", err);
-    scheduleError(err.message || "failed");
+    scheduleError(err.message || i18n("text_failed"));
     return;
   }
 

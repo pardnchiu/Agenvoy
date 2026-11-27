@@ -18,7 +18,6 @@ func warnLegacyAPITools() {
 		for _, dir := range []string{
 			filepath.Join(filesystem.ToolsDir, "api"),
 			filepath.Join(filesystem.ToolsDir, ".extension", "api"),
-			filepath.Join(filesystem.WorkAgenvoyDir, "tools", "api"),
 		} {
 			files, err := go_pkg_filesystem_reader.ListFiles(dir)
 			if err != nil {

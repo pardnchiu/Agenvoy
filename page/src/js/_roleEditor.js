@@ -40,7 +40,7 @@ function markRoleEditing(dom, editing) {
     }
   }
   if (dom.submit) {
-    dom.submit.textContent = editing ? "save" : "add";
+    dom.submit.textContent = editing ? i18n("text_save") : i18n("text_add");
   }
 }
 
@@ -119,7 +119,7 @@ async function openRole(name) {
     markRoleEditing(dom, true);
   } catch (err) {
     console.error("openRole", err);
-    roleError(err.message || "failed");
+    roleError(err.message || i18n("text_failed"));
   }
 }
 
@@ -140,7 +140,7 @@ async function saveRole() {
 
   const name = dom.title.value.trim();
   if (!name) {
-    roleError("name is required");
+    roleError(i18n("error_name_required"));
     return;
   }
 
@@ -170,12 +170,12 @@ async function saveRole() {
     window.location.href = getLink({ page: "features", tab: "Roles", target: saved });
   } catch (err) {
     console.error("saveRole", err);
-    roleError(err.message || "failed");
+    roleError(err.message || i18n("text_failed"));
   }
 }
 
 async function deleteRole(name) {
-  if (!confirm(`Delete "${name}"?`)) {
+  if (!confirm(i18n("confirm_delete", name))) {
     return;
   }
 
@@ -187,7 +187,7 @@ async function deleteRole(name) {
     }
   } catch (err) {
     console.error("deleteRole", err);
-    roleError(err.message || "failed");
+    roleError(err.message || i18n("text_failed"));
     return;
   }
 
