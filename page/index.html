@@ -612,6 +612,37 @@
                 <button type="button" class="submit" @click="system_output">{{ i18n.text_save }}</button>
               </div>
             </div>
+            <strong class="group">{{ i18n.text_security }}</strong>
+            <div class="card">
+              <div class="label">
+                <strong>{{ i18n.title_command_network }}</strong>
+                <p>{{ i18n.hint_command_network }}</p>
+              </div>
+              <select id="security-command-network" @change="security_command_network">
+                <option value="enabled">{{ i18n.text_enabled }}</option>
+                <option value="disabled">{{ i18n.text_disabled }}</option>
+              </select>
+            </div>
+            <div class="card">
+              <div class="label">
+                <strong>{{ i18n.title_hook_network }}</strong>
+                <p>{{ i18n.hint_hook_network }}</p>
+              </div>
+              <select id="security-hook-network" @change="security_hook_network">
+                <option value="enabled">{{ i18n.text_enabled }}</option>
+                <option value="disabled">{{ i18n.text_disabled }}</option>
+              </select>
+            </div>
+            <div class="card">
+              <div class="label">
+                <strong>{{ i18n.title_lan_access }}</strong>
+                <p>{{ i18n.hint_lan_access }}</p>
+              </div>
+              <select id="security-lan-access" @change="security_lan_access">
+                <option value="disabled">{{ i18n.text_disabled }}</option>
+                <option value="enabled">{{ i18n.text_enabled }}</option>
+              </select>
+            </div>
             <strong class="group">{{ i18n.text_other }}</strong>
             <div class="card" id="system-update-card" hidden>
               <div class="label">

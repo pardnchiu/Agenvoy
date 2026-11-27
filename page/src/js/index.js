@@ -328,6 +328,20 @@ document.addEventListener("DOMContentLoaded", async function () {
       system_official_guide: function () {
         saveSystemOfficialGuide();
       },
+      security_command_network: function () {
+        saveSecurity("command_network", $("#security-command-network"));
+      },
+      security_hook_network: function () {
+        saveSecurity("hook_network", $("#security-hook-network"));
+      },
+      security_lan_access: function () {
+        const select = $("#security-lan-access");
+        if (select.value === "enabled" && !confirm(i18n("confirm_lan_access"))) {
+          select.value = "disabled";
+          return;
+        }
+        saveSecurity("lan_access", select);
+      },
       system_output: function () {
         saveSystemOutput();
       },

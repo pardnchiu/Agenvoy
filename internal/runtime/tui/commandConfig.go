@@ -60,7 +60,7 @@ func (t TUI) openConfig(focus string) TUI {
 		}
 	}
 
-	names := []string{"Startup on login", "Reply language", "Output dir", "Admin Channel", "Official guide", "Command network", "Hook network", "LAN access"}
+	names := []string{"Startup on login", "Reply / WebUI language", "Output dir", "Admin Channel", "Official guide", "Command network", "Hook network", "LAN access"}
 	settings := []string{
 		startupValue,
 		whiteStyle.Render(filesystem.CanonicalReplyLang(filesystem.GetReplyLang())),

@@ -32,7 +32,7 @@ const leftTab = {
   },
 };
 
-for (const name of Object.keys(feature)) {
+for (const name of ["Roles", "Schedule"]) {
   leftTab[name] = {
     icon: feature[name].icon,
     href: getLink({ page: "features", tab: name }),

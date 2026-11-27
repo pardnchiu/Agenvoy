@@ -57,6 +57,40 @@ async function saveSystemOfficialGuide() {
   renderSystem();
 }
 
+async function securityConfig() {
+  try {
+    const response = await fetch(`${API}/v1/config/security`);
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (err) {
+    console.error("securityConfig", err);
+  }
+  return null;
+}
+
+async function saveSecurity(key, select) {
+  if (!select) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API}/v1/config/security`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: select.value === "enabled" }),
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      alert(detail.error || `HTTP ${response.status}`);
+    }
+  } catch (err) {
+    console.error("saveSecurity", err);
+    alert(err.message || i18n("text_failed"));
+  }
+  renderSystem();
+}
+
 async function saveSystemStartup() {
   const select = $("#system-startup");
   if (!select) {
@@ -107,6 +141,18 @@ async function renderSystem() {
   const official = $("#system-official-guide");
   if (official) {
     official.value = (await officialGuideConfig()) ? "enabled" : "disabled";
+  }
+
+  const security = await securityConfig();
+  for (const [id, key] of [
+    ["#security-command-network", "command_network"],
+    ["#security-hook-network", "hook_network"],
+    ["#security-lan-access", "lan_access"],
+  ]) {
+    const select = $(id);
+    if (select && security) {
+      select.value = security[key] ? "enabled" : "disabled";
+    }
   }
 
   const output = $("#system-output");
