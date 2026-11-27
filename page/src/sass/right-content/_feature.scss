@@ -19,7 +19,7 @@ body[data-rendered="1"] section.right-content section.feature {
     overflow: scroll;
 
     header {
-      @include mixin.contentNav((Roles, Skills, Schedule, Hooks));
+      @include mixin.contentNav((Roles, Tools, Skills, Schedule, Hooks));
     }
 
     section.editor {
@@ -27,7 +27,8 @@ body[data-rendered="1"] section.right-content section.feature {
 
       @include mixin.sideList;
 
-      form#skill-form > p.empty {
+      form#skill-form > p.empty,
+      form#tool-form > p.empty {
         font-size: small;
         font-weight: 400;
         color: var(--gray-3);
@@ -35,7 +36,9 @@ body[data-rendered="1"] section.right-content section.feature {
 
       form#skill-form[data-editing="1"] > p.empty,
       form#skill-form[data-view="config"] > p.empty,
-      form#skill-form[data-view="source"] > p.empty {
+      form#skill-form[data-view="source"] > p.empty,
+      form#tool-form[data-editing="1"] > p.empty,
+      form#tool-form[data-view="config"] > p.empty {
         display: none;
       }
 
@@ -147,7 +150,11 @@ body[data-rendered="1"] section.right-content section.feature {
       form#skill-form:not([data-editing="1"]) > textarea,
       form#skill-form:not([data-editing="1"]) > nav,
       form#skill-form:not([data-editing="1"]) > footer,
-      form#skill-form > footer.source {
+      form#skill-form > footer.source,
+      form#tool-form:not([data-editing="1"]) > label,
+      form#tool-form:not([data-editing="1"]) > textarea,
+      form#tool-form:not([data-editing="1"]) > nav,
+      form#tool-form:not([data-editing="1"]) > footer {
         display: none;
       }
 
@@ -156,6 +163,7 @@ body[data-rendered="1"] section.right-content section.feature {
       }
 
       form#skill-form > nav.tab,
+      form#tool-form > nav.tab,
       form#schedule-form > nav.tab,
       form#hook-form > nav.tab {
         flex-flow: row wrap;

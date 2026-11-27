@@ -1,6 +1,7 @@
 const feature = {
   Roles: { icon: "contract" },
   Schedule: { icon: "schedule" },
+  Tools: { icon: "build" },
   Skills: { icon: "lightbulb_2" },
   Hooks: { icon: "webhook" },
 };
@@ -44,6 +45,7 @@ function localizeTabs() {
     "New Chat": i18n("label_new_chat"),
     Roles: i18n("text_roles"),
     Schedule: i18n("text_schedule"),
+    Tools: i18n("text_tools"),
     Skills: i18n("text_skills"),
     Hooks: i18n("text_hooks"),
     Model: i18n("text_model"),

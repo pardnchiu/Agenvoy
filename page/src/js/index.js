@@ -220,6 +220,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       schedule_test: function () {
         testSchedule();
       },
+      tool_open: function () {
+        openToolFolder();
+      },
+      tool_config: function () {
+        openToolConfig();
+      },
       skill_source: function () {
         openSkillSource();
       },
@@ -484,6 +490,12 @@ document.addEventListener("DOMContentLoaded", async function () {
           if (params.tab === "Roles") {
             resetRole();
             renderRole();
+          }
+          if (params.tab === "Tools") {
+            renderToolTab();
+            if (!params.target) {
+              openToolConfig();
+            }
           }
           if (params.tab === "Skills") {
             renderSkillTab();

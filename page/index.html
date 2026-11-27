@@ -265,6 +265,35 @@
           </form>
         </section>
 
+        <section :elif="params.tab == Tools" class="editor">
+          <div class="side">
+            <button type="button" class="new" @click="tool_config">
+              <span class="material-symbols-outlined"> checklist </span>
+              <p>{{ i18n.label_setting_tools }}</p>
+            </button>
+            <details class="group" open>
+              <summary>
+                {{ i18n.text_tools }}
+                <span class="material-symbols-outlined"> keyboard_arrow_down </span>
+              </summary>
+              <div class="list" id="tool-list"></div>
+            </details>
+          </div>
+          <form id="tool-form">
+            <p class="empty">{{ i18n.label_select_tools }}</p>
+            <section class="tools" id="tool-allow-list"></section>
+            <label for="tool-name">
+              <span>{{ i18n.text_name }}</span>
+              <input id="tool-name" type="text" disabled />
+            </label>
+            <nav class="tab" id="tool-files"></nav>
+            <textarea id="tool-content" rows="20" disabled></textarea>
+            <footer>
+              <button type="button" class="submit" @click="tool_open">{{ i18n.text_open }}</button>
+            </footer>
+          </form>
+        </section>
+
         <section :elif="params.tab == Skills" class="editor">
           <div class="side">
             <button type="button" class="new" @click="skill_source">
