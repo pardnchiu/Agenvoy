@@ -1,19 +1,21 @@
 const CONFIRM_OPTIONS = [
-  { key: "yes", label: "Yes", body: { approve: true }, style: "approve" },
-  { key: "remember", label: "Yes, don't ask again", body: { approve: true, remember: true }, style: "approve" },
-  { key: "allow_turn", label: "Yes, allow this turn", body: { approve: true, allow_turn: true }, style: "approve" },
-  { key: "skip", label: "No, skip this", body: { approve: false }, style: "reject", reason: true },
-  { key: "abort", label: "Abort, keep for resume", body: { approve: false, abort: true }, style: "abort" },
-  { key: "cancel", label: "Cancel, delete task", body: { approve: false, cancel: true }, style: "abort" },
+  { key: "yes", labelKey: "text_yes", body: { approve: true }, style: "approve" },
+  { key: "remember", labelKey: "label_remember", body: { approve: true, remember: true }, style: "approve" },
+  { key: "allow_turn", labelKey: "label_allow_turn", body: { approve: true, allow_turn: true }, style: "approve" },
+  { key: "skip", labelKey: "label_skip_confirm", body: { approve: false }, style: "reject", reason: true },
+  { key: "abort", labelKey: "label_abort", body: { approve: false, abort: true }, style: "abort" },
+  { key: "cancel", labelKey: "label_cancel", body: { approve: false, cancel: true }, style: "abort" },
 ];
 
-const CONFIRM_TEXT = {
-  password: "System password",
-  password_empty: "type your system password first",
-  password_rejected: "password rejected",
-  reason: "Why not? Tell it what to do instead (enter to skip)",
-  send: "send",
-};
+function confirmText() {
+  return {
+    password: i18n("label_password"),
+    password_empty: i18n("label_password_empty"),
+    password_rejected: i18n("error_password_rejected"),
+    reason: i18n("label_reason"),
+    send: i18n("text_send"),
+  };
+}
 
 async function resolveToolConfirm(sessionId, requestId, body, dom, text) {
   const note = dom.querySelector("p.note");
@@ -120,12 +122,12 @@ function renderToolConfirm(event, sessionId) {
   let primary = null;
   const card = _("div.tool-confirm", { "data-id": requestId }, [...body, action]);
   const labels = event.confirm_options || {};
-  const text = Object.assign({}, CONFIRM_TEXT, event.confirm_text || {});
+  const text = Object.assign({}, confirmText(), event.confirm_text || {});
   for (const option of CONFIRM_OPTIONS) {
     if (restricted.length > 0 && (option.body.remember || option.body.allow_turn)) {
       continue;
     }
-    const button = _("button", { type: "button", class: option.style }, [_("p", labels[option.key] || option.label)]);
+    const button = _("button", { type: "button", class: option.style }, [_("p", labels[option.key] || i18n(option.labelKey))]);
     button.addEventListener("click", () => {
       const payload = Object.assign({}, option.body);
       if (password && option.body.approve) {
@@ -171,11 +173,13 @@ function renderToolConfirm(event, sessionId) {
   }
 }
 
-const ASK_TEXT = {
-  placeholder: "Type your answer...",
-  send: "Send",
-  skip: "Skip",
-};
+function askText() {
+  return {
+    placeholder: i18n("placeholder_answer"),
+    send: i18n("text_send"),
+    skip: i18n("text_skip"),
+  };
+}
 
 function renderAskPrompt(event, sessionId) {
   const requestId = event.confirm_hash || "";
@@ -189,10 +193,10 @@ function renderAskPrompt(event, sessionId) {
     return;
   }
 
-  const text = Object.assign({}, ASK_TEXT, event.ask_text || {});
+  const text = Object.assign({}, askText(), event.ask_text || {});
   const answers = questions.map((q) => (q.multi_select ? [] : ""));
   const card = _("div.tool-confirm", { "data-id": requestId });
-  const submit = () => resolveToolConfirm(sessionId, requestId, { answers: answers }, card, CONFIRM_TEXT);
+  const submit = () => resolveToolConfirm(sessionId, requestId, { answers: answers }, card, confirmText());
   const direct = questions.length === 1 && (questions[0].options || []).length > 0 && !questions[0].multi_select;
 
   questions.forEach((question, index) => {

@@ -95,7 +95,7 @@ function renderDaemonMore(dom, more) {
     return;
   }
   if (!button) {
-    button = _("button.more", { type: "button" }, "load more");
+    button = _("button.more", { type: "button" }, i18n("button_load_more"));
     button.addEventListener("click", loadMoreDaemon);
     dom.prepend(button);
   }
@@ -148,7 +148,7 @@ function daemonSubmit() {
   if (agoText) {
     const ago = daemonDuration(agoText);
     if (!ago) {
-      pushToast("WARN", `"${agoText}" is not a duration · use 30m / 12h / 2d / 1w`, nowClock());
+      pushToast("WARN", i18n("error_not_duration", agoText), nowClock());
       return;
     }
 
@@ -157,11 +157,11 @@ function daemonSubmit() {
     if (spanText) {
       span = daemonDuration(spanText);
       if (!span) {
-        pushToast("WARN", `"${spanText}" is not a duration · use 30m / 12h / 2d / 1w`, nowClock());
+        pushToast("WARN", i18n("error_not_duration", spanText), nowClock());
         return;
       }
       if (span > ago) {
-        pushToast("WARN", `window ${spanText} is wider than ${agoText} ago · it would run past now`, nowClock());
+        pushToast("WARN", i18n("error_span_too_wide", spanText, agoText), nowClock());
         return;
       }
     }

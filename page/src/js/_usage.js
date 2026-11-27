@@ -1,7 +1,7 @@
 const USAGE_SERIES = [
-  { key: "input", label: "input", color: "--chart-input" },
-  { key: "output", label: "output", color: "--chart-output" },
-  { key: "hit", label: "cache read", color: "--chart-cache" },
+  { key: "input", label: "text_input", color: "--chart-input" },
+  { key: "output", label: "text_output", color: "--chart-output" },
+  { key: "hit", label: "label_cache_read", color: "--chart-cache" },
 ];
 
 const USAGE_BAR_HEIGHT = 22;
@@ -153,11 +153,11 @@ function renderUsageSummary(rows, totals, period) {
   }
 
   const cells = [
-    { label: "total tokens · " + period, value: usageNumber(totals.total) },
-    { label: "input", value: usageNumber(totals.input) },
-    { label: "output", value: usageNumber(totals.output) },
-    { label: "cache read", value: usageNumber(totals.hit) + " (" + usageHitRate(totals.input, totals.hit) + "%)" },
-    { label: "models", value: String(rows.length) },
+    { label: i18n("label_total_tokens", period), value: usageNumber(totals.total) },
+    { label: i18n("text_input"), value: usageNumber(totals.input) },
+    { label: i18n("text_output"), value: usageNumber(totals.output) },
+    { label: i18n("label_cache_read"), value: usageNumber(totals.hit) + " (" + usageHitRate(totals.input, totals.hit) + "%)" },
+    { label: i18n("text_models"), value: String(rows.length) },
   ];
 
   dom.summary.innerHTML = "";
@@ -174,16 +174,16 @@ function renderUsageTable(rows, period) {
 
   dom.table.innerHTML = "";
   if (rows.length === 0) {
-    dom.table.appendChild(_("p.empty", "no usage in " + period));
+    dom.table.appendChild(_("p.empty", i18n("label_empty_usage", period)));
     return;
   }
 
   const head = _("tr", [
-    _("th", "model"),
-    _("th.num", "input"),
-    _("th.num", "output"),
-    _("th.num", "cache read"),
-    _("th.num", "total"),
+    _("th", i18n("text_model")),
+    _("th.num", i18n("text_input")),
+    _("th.num", i18n("text_output")),
+    _("th.num", i18n("label_cache_read")),
+    _("th.num", i18n("text_total")),
   ]);
 
   const body = [];
@@ -261,7 +261,7 @@ function renderUsageChart(rows) {
       axisLine: { lineStyle: { color: color("--chart-axis") } },
     },
     series: USAGE_SERIES.map((one) => ({
-      name: one.label,
+      name: i18n(one.label),
       type: "bar",
       stack: "token",
       itemStyle: { color: color(one.color) },

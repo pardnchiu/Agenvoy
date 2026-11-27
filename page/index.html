@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body[data-rendered="0"] :is([\:for], [\:if], [\:elif], [\:else], [\:name], [\:href], [\:data-collapsed], [\:data-hint], [\:data-id], [\:data-index], [\:data-selected], [\:data-tab]) {
+        opacity: 0 !important;
+      }
+    </style>
     <title>Agenvoy</title>
     <link rel="icon" type="image/svg+xml" href="public/logo-min.svg" />
     <link rel="manifest" href="public/manifest.json" />
@@ -26,7 +31,7 @@
     <section class="left-tab" :data-collapsed="{{collapsed}}">
       <!---->
       <header>
-        <img src="public/logo-min.svg" alt="Logo" />
+        <img src="public/logo-min.svg" alt="i18n.text_logo" />
         <a href="https://github.com/agenvoy/Agenvoy" target="_blank" rel="noreferrer">Agenvoy</a>
         <button type="button" @click="show_tab">
           <span class="material-symbols-outlined"> right_panel_close </span>
@@ -34,9 +39,9 @@
       </header>
       <!---->
       <section>
-        <a :for="(k, v) in left_tab" :href="{{v.href}}" :name="{{k}}">
+        <a :for="(k, v) in left_tab" :href="{{v.href}}" :name="{{v.label}}" :data-tab="{{k}}">
           <span class="material-symbols-outlined"> {{v.icon}} </span>
-          <p>{{k}}</p>
+          <p>{{v.label}}</p>
         </a>
       </section>
       <!---->
@@ -45,27 +50,27 @@
         <div class="group" id="left-tab-chats">
           <div class="chat-filter">
             <div id="left-tab-chat-mode">
-              <button type="button" data-mode="all" @click="chat_mode">All</button>
-              <button type="button" data-mode="chat" @click="chat_mode">Chat</button>
+              <button type="button" data-mode="all" @click="chat_mode">{{ i18n.text_all }}</button>
+              <button type="button" data-mode="chat" @click="chat_mode">{{ i18n.text_chat }}</button>
             </div>
-            <input id="left-tab-chat-search" type="search" placeholder="Search" @input="chat_search" />
+            <input id="left-tab-chat-search" type="search" placeholder="i18n.text_search" @input="chat_search" />
           </div>
           <section id="left-tab-chat-list"></section>
         </div>
       </section>
       <!---->
       <footer>
-        <a id="left-tab-update" name="See update" target="_blank" rel="noreferrer" hidden>
+        <a id="left-tab-update" name="i18n.tooltip_see_update" target="_blank" rel="noreferrer" hidden>
           <span class="material-symbols-outlined"> arrow_circle_up </span>
-          <p>See update</p>
+          <p>{{ i18n.tooltip_see_update }}</p>
         </a>
-        <a href="/?page=monitor&tab=Usage" name="Monitor">
+        <a href="/?page=monitor&tab=Usage" name="i18n.text_monitor" data-tab="Monitor">
           <span class="material-symbols-outlined"> desktop_windows </span>
-          <p>Monitor</p>
+          <p>{{ i18n.text_monitor }}</p>
         </a>
-        <a href="/?page=config&tab=Model" name="Config">
+        <a href="/?page=config&tab=Model" name="i18n.text_config" data-tab="Config">
           <span class="material-symbols-outlined"> settings </span>
-          <p>Config</p>
+          <p>{{ i18n.text_config }}</p>
         </a>
       </footer>
     </section>
@@ -77,32 +82,32 @@
           <header>
             <!--<p></p>
             <div></div>-->
-            <button class="pin" type="button" @click="pin_add" name="Pin" data-hide="1" data-desktop="1">
+            <button class="pin" type="button" @click="pin_add" name="i18n.text_pin" data-hide="1" data-desktop="1">
               <span class="material-symbols-outlined"> keep </span>
             </button>
-            <button type="button" @click="persona_edit" name="Bot persona" data-hide="1">
+            <button type="button" @click="persona_edit" name="i18n.tooltip_bot_persona" data-hide="1">
               <span class="material-symbols-outlined"> for_you </span>
             </button>
-            <button type="button" @click="memory_pick" name="Memory" data-hide="1">
+            <button type="button" @click="memory_pick" name="i18n.text_memory" data-hide="1">
               <span class="material-symbols-outlined"> cognition_2 </span>
             </button>
-            <button type="button" @click="usage_open" name="Usage" data-hide="1">
+            <button type="button" @click="usage_open" name="i18n.text_usage" data-hide="1">
               <span class="material-symbols-outlined"> bar_chart </span>
             </button>
-            <button type="button" @click="history_open" name="History" data-hide="1">
+            <button type="button" @click="history_open" name="i18n.text_history" data-hide="1">
               <span class="material-symbols-outlined"> history </span>
             </button>
-            <button class="task" type="button" @click="task_pick" name="Live task" data-hide="1">
+            <button class="task" type="button" @click="task_pick" name="i18n.tooltip_live_task" data-hide="1">
               <span class="material-symbols-outlined"> pending_actions </span>
             </button>
           </header>
           <!---->
           <div class="logo">
             <section>
-              <img src="public/logo-min.svg" alt="Logo" />
+              <img src="public/logo-min.svg" alt="i18n.text_logo" />
               <p>Agenvoy</p>
             </section>
-            <span>Add a model in <a href="/?page=config&tab=Model">Config > Model</a> to get started</span>
+            <span>{{ i18n.label_add_prefix }} <a href="/?page=config&tab=Model">{{ i18n.link_config_model }}</a> {{ i18n.link_add_suffix }}</span>
           </div>
           <!---->
           <section class="messages">
@@ -115,17 +120,17 @@
           <div class="input" data-voice="0">
             <span></span>
             <label dir="auto">
-              <textarea id="chat-input" placeholder="How can I help you today?" @input="chat_input" @keydown="chat_keydown"></textarea>
+              <textarea id="chat-input" placeholder="i18n.placeholder_input" @input="chat_input" @keydown="chat_keydown"></textarea>
               <pre></pre>
             </label>
             <section>
-              <button class="role left" type="button" @click="role_pick" name="Use role">
+              <button class="role left" type="button" @click="role_pick" name="i18n.tooltip_use">
                 <span class="material-symbols-outlined"> contract </span>
               </button>
-              <button class="skill left" type="button" @click="skill_pick" name="Use skill">
+              <button class="skill left" type="button" @click="skill_pick" name="i18n.tooltip_use_skill">
                 <span class="material-symbols-outlined"> lightbulb_2 </span>
               </button>
-              <button class="work-dir left" type="button" @click="workdir_pick" name="Working directory">
+              <button class="work-dir left" type="button" @click="workdir_pick" name="i18n.tooltip_working_directory">
                 <span class="material-symbols-outlined"> folder </span>
               </button>
               <div></div>
@@ -136,10 +141,10 @@
               <button id="chat-reasoning" class="reasoning right" type="button" @click="reasoning_pick" name="medium">
                 <span class="material-symbols-outlined"> signal_cellular_2_bar </span>
               </button>
-              <button class="harness right" type="button" @click="harness_click" name="Voice mode">
+              <button class="harness right" type="button" @click="harness_click" name="i18n.tooltip_voice_mode">
                 <span class="material-symbols-outlined"> robot_2 </span>
               </button>
-              <button class="send" type="button" @click="send_click" name="Send">
+              <button class="send" type="button" @click="send_click" name="i18n.text_send">
                 <span class="material-symbols-outlined"> send </span>
               </button>
             </section>
@@ -150,29 +155,29 @@
           <header>
             <!--<p></p>
             <div></div>-->
-            <button class="unpin" type="button" @click="pin_remove" name="Unpin">
+            <button class="unpin" type="button" @click="pin_remove" name="i18n.text_unpin">
               <span class="material-symbols-outlined"> keep_off </span>
             </button>
-            <button type="button" @click="persona_edit" name="Bot persona" data-hide="1">
+            <button type="button" @click="persona_edit" name="i18n.tooltip_bot_persona" data-hide="1">
               <span class="material-symbols-outlined"> for_you </span>
             </button>
-            <button type="button" @click="memory_pick" name="Memory" data-hide="1">
+            <button type="button" @click="memory_pick" name="i18n.text_memory" data-hide="1">
               <span class="material-symbols-outlined"> cognition_2 </span>
             </button>
-            <button type="button" @click="usage_open" name="Usage" data-hide="1">
+            <button type="button" @click="usage_open" name="i18n.text_usage" data-hide="1">
               <span class="material-symbols-outlined"> bar_chart </span>
             </button>
-            <button type="button" @click="history_open" name="History" data-hide="1">
+            <button type="button" @click="history_open" name="i18n.text_history" data-hide="1">
               <span class="material-symbols-outlined"> history </span>
             </button>
-            <button class="task" type="button" @click="task_pick" name="Live task" data-hide="1">
+            <button class="task" type="button" @click="task_pick" name="i18n.tooltip_live_task" data-hide="1">
               <span class="material-symbols-outlined"> pending_actions </span>
             </button>
           </header>
           <!---->
           <div class="logo">
             <section>
-              <img src="public/logo-min.svg" alt="Logo" />
+              <img src="public/logo-min.svg" alt="i18n.text_logo" />
               <p>Agenvoy</p>
             </section>
           </div>
@@ -187,17 +192,17 @@
           <div class="input" data-voice="0">
             <span></span>
             <label dir="auto">
-              <textarea id="chat-input" placeholder="How can I help you today?" @input="chat_input" @keydown="chat_keydown"></textarea>
+              <textarea id="chat-input" placeholder="i18n.placeholder_input" @input="chat_input" @keydown="chat_keydown"></textarea>
               <pre></pre>
             </label>
             <section>
-              <button class="role left" type="button" @click="role_pick" name="Use role">
+              <button class="role left" type="button" @click="role_pick" name="i18n.tooltip_use">
                 <span class="material-symbols-outlined"> contract </span>
               </button>
-              <button class="skill left" type="button" @click="skill_pick" name="Use skill">
+              <button class="skill left" type="button" @click="skill_pick" name="i18n.tooltip_use_skill">
                 <span class="material-symbols-outlined"> lightbulb_2 </span>
               </button>
-              <button class="work-dir left" type="button" @click="workdir_pick" name="Working directory">
+              <button class="work-dir left" type="button" @click="workdir_pick" name="i18n.tooltip_working_directory">
                 <span class="material-symbols-outlined"> folder </span>
               </button>
               <div></div>
@@ -208,7 +213,7 @@
               <button id="chat-reasoning" class="reasoning right" type="button" @click="reasoning_pick" name="medium">
                 <span class="material-symbols-outlined"> signal_cellular_2_bar </span>
               </button>
-              <button class="send" type="button" @click="send_click" name="Send">
+              <button class="send" type="button" @click="send_click" name="i18n.text_send">
                 <span class="material-symbols-outlined"> send </span>
               </button>
             </section>
@@ -223,8 +228,8 @@
       <section :elif="params.page == features" class="feature">
         <header :data-selected="{{params.tab}}">
           <a :for="(k, v) in feature" :href="?page=features&tab={{k}}" :name="{{k}}">
-            <span class="material-symbols-outlined"> {{v}} </span>
-            <p>{{k}}</p>
+            <span class="material-symbols-outlined"> {{v.icon}} </span>
+            <p>{{v.label}}</p>
           </a>
           <div></div>
         </header>
@@ -233,11 +238,11 @@
           <div class="side">
             <button type="button" class="new" @click="role_reset">
               <span class="material-symbols-outlined"> add_2 </span>
-              <p>Add Role</p>
+              <p>{{ i18n.label_add_role }}</p>
             </button>
             <details class="group" open>
               <summary>
-                Roles
+                {{ i18n.text_roles }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list" id="role-list"></div>
@@ -245,16 +250,16 @@
           </div>
           <form id="role-form">
             <label for="role-title">
-              <span>Name</span>
-              <input id="role-title" type="text" placeholder="Name this role" />
+              <span>{{ i18n.text_name }}</span>
+              <input id="role-title" type="text" placeholder="i18n.placeholder_name_role" />
             </label>
             <label for="role-content">
-              <span>Content</span>
-              <textarea id="role-content" rows="12" placeholder="The system prompt this role applies"></textarea>
+              <span>{{ i18n.text_content }}</span>
+              <textarea id="role-content" rows="12" placeholder="i18n.placeholder_content_role"></textarea>
             </label>
             <footer>
-              <button type="button" class="remove" @click="role_delete">delete</button>
-              <button type="button" class="submit" @click="role_save">add</button>
+              <button type="button" class="remove" @click="role_delete">{{ i18n.text_delete }}</button>
+              <button type="button" class="submit" @click="role_save">{{ i18n.text_add }}</button>
             </footer>
           </form>
         </section>
@@ -263,36 +268,36 @@
           <div class="side">
             <button type="button" class="new" @click="skill_source">
               <span class="material-symbols-outlined"> source </span>
-              <p>Skill Source</p>
+              <p>{{ i18n.label_skill_source }}</p>
             </button>
             <button type="button" class="new" @click="skill_config">
               <span class="material-symbols-outlined"> checklist </span>
-              <p>Setting Skills</p>
+              <p>{{ i18n.label_setting_skills }}</p>
             </button>
             <details class="group" open>
               <summary>
-                Skills
+                {{ i18n.text_skills }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list" id="skill-list"></div>
             </details>
           </div>
           <form id="skill-form">
-            <p class="empty">select skills</p>
+            <p class="empty">{{ i18n.label_select_skills }}</p>
             <section class="tools" id="skill-source-list"></section>
             <section class="tools" id="skill-allow-list"></section>
             <label for="skill-name">
-              <span>Name</span>
+              <span>{{ i18n.text_name }}</span>
               <input id="skill-name" type="text" disabled />
             </label>
             <nav class="tab" id="skill-files"></nav>
             <textarea id="skill-content" rows="20" disabled></textarea>
             <footer class="source">
-              <button type="button" class="submit" @click="skill_source_save">save</button>
+              <button type="button" class="submit" @click="skill_source_save">{{ i18n.text_save }}</button>
             </footer>
             <footer>
-              <button type="button" class="remove" @click="skill_delete">delete</button>
-              <button type="button" class="submit" @click="skill_open">open</button>
+              <button type="button" class="remove" @click="skill_delete">{{ i18n.text_delete }}</button>
+              <button type="button" class="submit" @click="skill_open">{{ i18n.text_open }}</button>
             </footer>
           </form>
         </section>
@@ -301,11 +306,11 @@
           <div class="side">
             <button type="button" class="new" @click="schedule_reset">
               <span class="material-symbols-outlined"> add_2 </span>
-              <p>Add Schedule</p>
+              <p>{{ i18n.label_add_schedule }}</p>
             </button>
             <details class="group" open>
               <summary>
-                Schedule
+                {{ i18n.text_schedule }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list" id="schedule-list"></div>
@@ -313,21 +318,21 @@
           </div>
           <form id="schedule-form">
             <label for="schedule-name">
-              <span>Name</span>
-              <input id="schedule-name" type="text" maxlength="64" placeholder="Skill folder name · A-Z a-z 0-9 _ - only, e.g. daily-hn-digest" />
+              <span>{{ i18n.text_name }}</span>
+              <input id="schedule-name" type="text" maxlength="64" placeholder="i18n.placeholder_name_schedule" />
             </label>
             <nav class="tab" id="schedule-files"></nav>
-            <textarea id="schedule-content" rows="16" placeholder="SKILL.md · frontmatter + body"></textarea>
+            <textarea id="schedule-content" rows="16" placeholder="i18n.placeholder_content_schedule"></textarea>
             <label for="schedule-session">
-              <span>Session</span>
+              <span>{{ i18n.text_session }}</span>
               <select id="schedule-session"></select>
             </label>
             <nav class="tab" id="schedule-type"></nav>
             <section class="tools" id="schedule-entries"></section>
             <footer>
-              <button type="button" class="remove" @click="schedule_delete">delete</button>
-              <button type="button" class="test" @click="schedule_test">test</button>
-              <button type="button" class="submit" @click="schedule_save">add</button>
+              <button type="button" class="remove" @click="schedule_delete">{{ i18n.text_delete }}</button>
+              <button type="button" class="test" @click="schedule_test">{{ i18n.text_test }}</button>
+              <button type="button" class="submit" @click="schedule_save">{{ i18n.text_add }}</button>
             </footer>
           </form>
         </section>
@@ -336,7 +341,7 @@
           <div class="side">
             <details class="group" open>
               <summary>
-                Hooks
+                {{ i18n.text_hooks }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list" id="hook-list"></div>
@@ -344,15 +349,15 @@
           </div>
           <form id="hook-form">
             <label for="hook-name">
-              <span>Name</span>
+              <span>{{ i18n.text_name }}</span>
               <input id="hook-name" type="text" disabled />
             </label>
             <nav class="tab" id="hook-files"></nav>
             <textarea id="hook-content" rows="20" spellcheck="false"></textarea>
             <footer>
-              <button type="button" class="remove" @click="hook_delete">delete</button>
-              <button type="button" class="test" @click="hook_open">open</button>
-              <button type="button" class="submit" @click="hook_save">save</button>
+              <button type="button" class="remove" @click="hook_delete">{{ i18n.text_delete }}</button>
+              <button type="button" class="test" @click="hook_open">{{ i18n.text_open }}</button>
+              <button type="button" class="submit" @click="hook_save">{{ i18n.text_save }}</button>
             </footer>
           </form>
         </section>
@@ -361,8 +366,8 @@
       <section :elif="params.page == config" class="config">
         <header :data-selected="{{params.tab}}">
           <a :for="(k, v) in configTab" :href="?page=config&tab={{k}}" :name="{{k}}">
-            <span class="material-symbols-outlined"> {{v}} </span>
-            <p>{{k}}</p>
+            <span class="material-symbols-outlined"> {{v.icon}} </span>
+            <p>{{v.label}}</p>
           </a>
           <div></div>
         </header>
@@ -371,11 +376,11 @@
           <div class="side">
             <button type="button" class="new" name="add-provider" @click="model_add">
               <span class="material-symbols-outlined"> add_2 </span>
-              <p>Add provider</p>
+              <p>{{ i18n.label_add_provider }}</p>
             </button>
             <details class="group" open>
               <summary>
-                Providers
+                {{ i18n.text_providers }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list quota" id="model-list"></div>
@@ -384,66 +389,66 @@
           <form id="model-form" data-view="add">
             <nav class="tab" id="model-filter" @click="model_filter">
               <button type="button" name="oauth" data-selected="1">OAuth</button>
-              <button type="button" name="api_key">API Key</button>
-              <button type="button" name="custom">Custom</button>
+              <button type="button" name="api_key">{{ i18n.button_api_key }}</button>
+              <button type="button" name="custom">{{ i18n.text_custom }}</button>
             </nav>
             <section class="tools" id="model-catalog"></section>
             <section class="tools" id="model-routing" data-open="1">
-              <strong class="group">Setting Model</strong>
+              <strong class="group">{{ i18n.title_setting }}</strong>
               <section>
                 <div class="routing">
                   <div class="label">
-                    <strong>Dispatcher</strong>
-                    <p>smart routing · follow-ups · command explanations</p>
+                    <strong>{{ i18n.text_dispatcher }}</strong>
+                    <p>{{ i18n.hint_dispatcher }}</p>
                   </div>
                   <select data-kind="dispatcher" @change="routing_change"></select>
                 </div>
                 <div class="routing">
                   <div class="label">
-                    <strong>Summary</strong>
-                    <p>summary memory</p>
+                    <strong>{{ i18n.text_summary }}</strong>
+                    <p>{{ i18n.hint_summary_model }}</p>
                   </div>
                   <select data-kind="summary" @change="routing_change"></select>
                 </div>
                 <div class="routing">
                   <div class="label">
-                    <strong>Decision</strong>
-                    <p>interval checks</p>
+                    <strong>{{ i18n.text_decision }}</strong>
+                    <p>{{ i18n.hint_decision }}</p>
                   </div>
                   <select data-kind="decision" @change="routing_change"></select>
                 </div>
                 <div class="routing">
                   <div class="label">
-                    <strong>Image</strong>
-                    <p>image generation</p>
+                    <strong>{{ i18n.text_image }}</strong>
+                    <p>{{ i18n.hint_image }}</p>
                   </div>
                   <select data-kind="image" @change="routing_change"></select>
                 </div>
                 <div class="routing">
                   <div class="label">
-                    <strong>Speech to text</strong>
-                    <p>audio analysis</p>
+                    <strong>{{ i18n.title_speech_to_text }}</strong>
+                    <p>{{ i18n.hint_speech_to_text }}</p>
                   </div>
                   <select data-kind="stt" @change="routing_change"></select>
                 </div>
                 <div class="routing">
                   <div class="label">
-                    <strong>Text to speech</strong>
-                    <p>speech generation</p>
+                    <strong>{{ i18n.title_text_to_speech }}</strong>
+                    <p>{{ i18n.hint_text_to_speech }}</p>
                   </div>
                   <select data-kind="tts" @change="routing_change"></select>
                 </div>
               </section>
             </section>
             <section class="tools" id="model-priority" data-open="1">
-              <strong class="group">Fallback Priority</strong>
+              <strong class="group">{{ i18n.title_fallback_priority }}</strong>
               <div class="note">
                 <p>
-                  Fallback under auto only — this order does not change which agent gets selected; after it fails, every other entry is tried top to bottom,
-                  <code>pass</code> included.
+                  {{ i18n.hint_priority_note_auto }}
+                  <code>pass</code> {{ i18n.hint_priority_note_auto_tail }}
                 </p>
-                <p>A hand-off walks downward and never back up, so the last entry is your final line of defense.</p>
-                <p>Cache never carries across providers, but keep copies of the same model adjacent anyway: capability then steps down instead of jumping.</p>
+                <p>{{ i18n.hint_priority_note_handoff }}</p>
+                <p>{{ i18n.hint_priority_note_cache }}</p>
               </div>
               <section></section>
             </section>
@@ -455,11 +460,11 @@
           <div class="side">
             <button type="button" class="new" @click="mcp_reset">
               <span class="material-symbols-outlined"> add_2 </span>
-              <p>Add MCP</p>
+              <p>{{ i18n.label_add_mcp }}</p>
             </button>
             <details class="group" open>
               <summary>
-                Servers
+                {{ i18n.text_servers }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list status" id="mcp-list"></div>
@@ -467,29 +472,29 @@
           </div>
           <form id="mcp-form" data-transport="stdio">
             <label for="mcp-name">
-              <span>Name</span>
-              <input id="mcp-name" type="text" maxlength="64" placeholder="Server name" />
+              <span>{{ i18n.text_name }}</span>
+              <input id="mcp-name" type="text" maxlength="64" placeholder="i18n.placeholder_name_mcp" />
             </label>
             <nav class="tab" id="mcp-transport" @click="mcp_transport">
-              <button type="button" name="stdio" data-selected="1">stdio · local command</button>
-              <button type="button" name="http">http · remote endpoint</button>
+              <button type="button" name="stdio" data-selected="1">{{ i18n.button_transport_stdio }}</button>
+              <button type="button" name="http">{{ i18n.button_transport_http }}</button>
             </nav>
             <select id="mcp-auth" @change="mcp_auth">
-              <option value="">header auth · or none</option>
+              <option value="">{{ i18n.label_auth_header }}</option>
               <option value="oauth">oauth</option>
             </select>
             <div class="field" data-transport="stdio">
               <label for="mcp-command">
-                <span>Command</span>
-                <input id="mcp-command" type="text" placeholder="Command, e.g. npx" />
+                <span>{{ i18n.text_command }}</span>
+                <input id="mcp-command" type="text" placeholder="i18n.placeholder_command" />
               </label>
               <label for="mcp-args">
-                <span>Arguments</span>
-                <textarea id="mcp-args" rows="3" placeholder="Arguments · one per line"></textarea>
+                <span>{{ i18n.text_arguments }}</span>
+                <textarea id="mcp-args" rows="3" placeholder="i18n.placeholder_arguments"></textarea>
               </label>
               <label for="mcp-env">
-                <span>Environment</span>
-                <textarea id="mcp-env" rows="3" placeholder="Environment · KEY=value per line"></textarea>
+                <span>{{ i18n.text_environment }}</span>
+                <textarea id="mcp-env" rows="3" placeholder="i18n.placeholder_environment"></textarea>
               </label>
             </div>
             <div class="field" data-transport="http">
@@ -498,18 +503,18 @@
                 <input id="mcp-url" type="text" placeholder="https://example.com/mcp" />
               </label>
               <label for="mcp-headers">
-                <span>Headers</span>
-                <textarea id="mcp-headers" rows="3" placeholder="Headers · Key: value per line · a bare Authorization value gets a Bearer prefix"></textarea>
+                <span>{{ i18n.text_headers }}</span>
+                <textarea id="mcp-headers" rows="3" placeholder="i18n.placeholder_headers"></textarea>
               </label>
             </div>
             <section class="oauth" id="mcp-oauth"></section>
             <section class="tools" id="mcp-tools"></section>
             <footer>
-              <button type="button" class="remove" @click="mcp_delete">delete</button>
-              <button type="button" id="mcp-reconnect" @click="mcp_reconnect">reconnect</button>
-              <button type="button" id="mcp-login" @click="mcp_login">login</button>
-              <button type="button" id="mcp-logout" @click="mcp_logout">logout</button>
-              <button type="button" class="submit" @click="mcp_save">add</button>
+              <button type="button" class="remove" @click="mcp_delete">{{ i18n.text_delete }}</button>
+              <button type="button" id="mcp-reconnect" @click="mcp_reconnect">{{ i18n.text_reconnect }}</button>
+              <button type="button" id="mcp-login" @click="mcp_login">{{ i18n.text_login }}</button>
+              <button type="button" id="mcp-logout" @click="mcp_logout">{{ i18n.text_logout }}</button>
+              <button type="button" class="submit" @click="mcp_save">{{ i18n.text_add }}</button>
             </footer>
           </form>
         </section>
@@ -518,11 +523,11 @@
           <div class="side">
             <button type="button" class="new" @click="keychain_reset">
               <span class="material-symbols-outlined"> add_2 </span>
-              <p>Add Key</p>
+              <p>{{ i18n.label_add_key }}</p>
             </button>
             <details class="group" open>
               <summary>
-                Keys
+                {{ i18n.text_keys }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list" id="keychain-list"></div>
@@ -530,114 +535,114 @@
           </div>
           <form id="keychain-form" autocomplete="off">
             <label for="keychain-name">
-              <span>Name</span>
-              <input id="keychain-name" type="text" maxlength="128" autocomplete="off" placeholder="Key name, e.g. GEMINI_API_KEY" />
+              <span>{{ i18n.text_name }}</span>
+              <input id="keychain-name" type="text" maxlength="128" autocomplete="off" placeholder="i18n.placeholder_key_name" />
             </label>
             <label for="keychain-value">
-              <span>Value</span>
-              <input id="keychain-value" type="password" autocomplete="new-password" placeholder="Value · stored in the OS keychain, never shown again" />
+              <span>{{ i18n.text_value }}</span>
+              <input id="keychain-value" type="password" autocomplete="new-password" placeholder="i18n.placeholder_value" />
             </label>
             <footer>
-              <button type="button" class="remove" @click="keychain_delete">delete</button>
-              <button type="button" class="submit" @click="keychain_save">add</button>
+              <button type="button" class="remove" @click="keychain_delete">{{ i18n.text_delete }}</button>
+              <button type="button" class="submit" @click="keychain_save">{{ i18n.text_add }}</button>
             </footer>
           </form>
         </section>
 
         <section :elif="params.tab == System" class="editor system">
           <form id="system-form">
-            <strong class="group">Channel</strong>
+            <strong class="group">{{ i18n.text_channel }}</strong>
             <div class="card" id="telegram-card">
               <div class="label">
-                <strong>Telegram Channel</strong>
-                <p>relays chats through your Telegram bot</p>
+                <strong>{{ i18n.title_telegram_channel }}</strong>
+                <p>{{ i18n.hint_telegram_channel }}</p>
               </div>
               <div class="row" id="telegram-row"></div>
             </div>
             <div class="card" id="discord-card">
               <div class="label">
-                <strong>Discord Channel</strong>
-                <p>relays chats through your Discord bot</p>
+                <strong>{{ i18n.title_discord_channel }}</strong>
+                <p>{{ i18n.hint_discord_channel }}</p>
               </div>
               <div class="row" id="discord-row"></div>
             </div>
             <div class="card" id="admin-card" hidden>
               <div class="label">
-                <strong>Admin Channel</strong>
-                <p>where new-chat verification codes are relayed</p>
+                <strong>{{ i18n.title_admin_channel }}</strong>
+                <p>{{ i18n.hint_admin_channel }}</p>
               </div>
               <select id="admin-channel" @change="admin_channel"></select>
             </div>
-            <strong class="group">System</strong>
+            <strong class="group">{{ i18n.text_system }}</strong>
             <div class="card">
               <div class="label">
-                <strong>Launch on login</strong>
-                <p>writes a launch agent · applies at your next login, never touches the running daemon</p>
+                <strong>{{ i18n.title_launch_on_login }}</strong>
+                <p>{{ i18n.hint_launch_on_login }}</p>
               </div>
               <select id="system-startup" @change="system_startup">
-                <option value="disabled">disabled</option>
-                <option value="enabled">enabled</option>
+                <option value="disabled">{{ i18n.text_disabled }}</option>
+                <option value="enabled">{{ i18n.text_enabled }}</option>
               </select>
             </div>
             <div class="card">
               <div class="label">
-                <strong>Reply language</strong>
-                <p>auto follows each message · any other value fixes every reply</p>
+                <strong>{{ i18n.title_reply_language }}</strong>
+                <p>{{ i18n.hint_reply_language }}</p>
               </div>
               <select id="system-lang" @change="system_lang"></select>
             </div>
             <div class="card">
               <div class="label">
-                <strong>Official guide</strong>
-                <p>injects the vendor prompting guide for the active model · applies from the next message</p>
+                <strong>{{ i18n.title_official_guide }}</strong>
+                <p>{{ i18n.hint_official_guide }}</p>
               </div>
               <select id="system-official-guide" @change="system_official_guide">
-                <option value="enabled">enabled</option>
-                <option value="disabled">disabled</option>
+                <option value="enabled">{{ i18n.text_enabled }}</option>
+                <option value="disabled">{{ i18n.text_disabled }}</option>
               </select>
             </div>
             <div class="card">
               <div class="label">
-                <strong>Output Dir</strong>
-                <p>where generated files land</p>
-                <a id="system-output-open" @click="system_output_open">open dir</a>
+                <strong>{{ i18n.title_output_dir }}</strong>
+                <p>{{ i18n.hint_output_dir }}</p>
+                <a id="system-output-open" @click="system_output_open">{{ i18n.link_open_dir }}</a>
               </div>
               <div class="row">
                 <input id="system-output" type="text" placeholder="~/Downloads" @keydown="system_output_keydown" />
-                <button type="button" class="submit" @click="system_output">save</button>
+                <button type="button" class="submit" @click="system_output">{{ i18n.text_save }}</button>
               </div>
             </div>
-            <strong class="group">Other</strong>
+            <strong class="group">{{ i18n.text_other }}</strong>
             <div class="card" id="system-update-card" hidden>
               <div class="label">
-                <strong id="system-update-title">Update</strong>
-                <p>opens a terminal to install the latest release</p>
-                <a id="system-release" target="_blank" rel="noreferrer" hidden>release notes</a>
+                <strong id="system-update-title">{{ i18n.text_update }}</strong>
+                <p>{{ i18n.hint_update }}</p>
+                <a id="system-release" target="_blank" rel="noreferrer" hidden>{{ i18n.link_release_notes }}</a>
               </div>
               <div class="row">
                 <span id="system-version"></span>
-                <button id="system-update" type="button" class="submit" @click="system_update" hidden>update</button>
+                <button id="system-update" type="button" class="submit" @click="system_update" hidden>{{ i18n.text_update }}</button>
               </div>
             </div>
             <div class="card">
               <div class="label">
-                <strong>Doc</strong>
-                <p>setup and usage guide</p>
+                <strong>{{ i18n.text_doc }}</strong>
+                <p>{{ i18n.hint_doc }}</p>
               </div>
               <div class="row">
                 <span>agenvoy.com</span>
-                <a class="submit" href="https://agenvoy.com/docs/" target="_blank" rel="noreferrer">open</a>
+                <a class="submit" href="https://agenvoy.com/docs/" target="_blank" rel="noreferrer">{{ i18n.text_open }}</a>
               </div>
             </div>
             <div class="card">
               <div class="label">
-                <strong>License</strong>
-                <p>&copy; 2026<a href="https://pardn.io/" target="_blank" rel="noreferrer">Pardn Chiu</a>· AGPL-3.0 · no warranty</p>
-                <a href="https://github.com/agenvoy/Agenvoy" target="_blank" rel="noreferrer">source</a>
+                <strong>{{ i18n.text_license }}</strong>
+                <p>&copy; 2026<a href="https://pardn.io/" target="_blank" rel="noreferrer">Pardn Chiu</a>· AGPL-3.0 · {{ i18n.link_no_warranty }}</p>
+                <a href="https://github.com/agenvoy/Agenvoy" target="_blank" rel="noreferrer">{{ i18n.text_source }}</a>
               </div>
               <div class="row">
                 <span>AGPL-3.0</span>
-                <a class="submit" href="https://agenvoy.com/docs/license" target="_blank" rel="noreferrer">open</a>
+                <a class="submit" href="https://agenvoy.com/docs/license" target="_blank" rel="noreferrer">{{ i18n.text_open }}</a>
               </div>
             </div>
           </form>
@@ -647,8 +652,8 @@
       <section :elif="params.page == monitor" class="config monitor">
         <header :data-selected="{{params.tab}}">
           <a :for="(k, v) in monitorTab" :href="?page=monitor&tab={{k}}" :name="{{k}}">
-            <span class="material-symbols-outlined"> {{v}} </span>
-            <p>{{k}}</p>
+            <span class="material-symbols-outlined"> {{v.icon}} </span>
+            <p>{{v.label}}</p>
           </a>
           <div></div>
         </header>
@@ -657,11 +662,11 @@
           <div class="side">
             <a class="new" id="usage-all">
               <span class="material-symbols-outlined"> stacks </span>
-              <p>All</p>
+              <p>{{ i18n.text_all }}</p>
             </a>
             <details class="group" open>
               <summary>
-                Sessions
+                {{ i18n.text_sessions }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list" id="usage-list"></div>
@@ -681,11 +686,11 @@
           <div class="side">
             <a class="new" id="history-all">
               <span class="material-symbols-outlined"> stacks </span>
-              <p>All</p>
+              <p>{{ i18n.text_all }}</p>
             </a>
             <details class="group" open>
               <summary>
-                Sessions
+                {{ i18n.text_sessions }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list" id="history-list"></div>
@@ -693,10 +698,10 @@
           </div>
           <form>
             <div class="range">
-              <input id="history-keyword" type="search" placeholder="keyword" @keydown="history_keydown" />
-              <input id="history-ago" type="text" placeholder="2d ago" @keydown="history_keydown" />
-              <input id="history-span" type="text" placeholder="12h wide" @keydown="history_keydown" />
-              <button type="button" class="submit" @click="history_range">search</button>
+              <input id="history-keyword" type="search" placeholder="i18n.text_keyword" @keydown="history_keydown" />
+              <input id="history-ago" type="text" placeholder="i18n.placeholder_ago" @keydown="history_keydown" />
+              <input id="history-span" type="text" placeholder="i18n.placeholder_span" @keydown="history_keydown" />
+              <button type="button" class="submit" @click="history_range">{{ i18n.text_search }}</button>
               <nav class="tab pager" id="history-pager"></nav>
             </div>
             <section class="entries" id="history-entries"></section>
@@ -707,11 +712,11 @@
           <div class="side">
             <a class="new" id="lesson-all">
               <span class="material-symbols-outlined"> stacks </span>
-              <p>All</p>
+              <p>{{ i18n.text_all }}</p>
             </a>
             <details class="group" open>
               <summary>
-                Tools
+                {{ i18n.text_tools }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list" id="lesson-list"></div>
@@ -719,10 +724,10 @@
           </div>
           <form>
             <div class="range">
-              <input id="lesson-keyword" type="search" placeholder="keyword" @keydown="lesson_keydown" />
-              <input id="lesson-ago" type="text" placeholder="2d ago" @keydown="lesson_keydown" />
-              <input id="lesson-span" type="text" placeholder="12h wide" @keydown="lesson_keydown" />
-              <button type="button" class="submit" @click="lesson_range">search</button>
+              <input id="lesson-keyword" type="search" placeholder="i18n.text_keyword" @keydown="lesson_keydown" />
+              <input id="lesson-ago" type="text" placeholder="i18n.placeholder_ago" @keydown="lesson_keydown" />
+              <input id="lesson-span" type="text" placeholder="i18n.placeholder_span" @keydown="lesson_keydown" />
+              <button type="button" class="submit" @click="lesson_range">{{ i18n.text_search }}</button>
               <nav class="tab pager" id="lesson-pager"></nav>
             </div>
             <section class="entries" id="lesson-body"></section>
@@ -733,11 +738,11 @@
           <div class="side">
             <a class="new" id="details-back">
               <span class="material-symbols-outlined"> arrow_back </span>
-              <p>Back</p>
+              <p>{{ i18n.text_back }}</p>
             </a>
             <details class="group" open>
               <summary>
-                Sections
+                {{ i18n.text_sections }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list" id="details-list"></div>
@@ -752,39 +757,39 @@
           <div class="side">
             <a class="new" :href="?page=monitor&tab=Daemon" name="all">
               <span class="material-symbols-outlined"> stacks </span>
-              <p>All</p>
+              <p>{{ i18n.text_all }}</p>
             </a>
             <details class="group" open>
               <summary>
-                Levels
+                {{ i18n.text_levels }}
                 <span class="material-symbols-outlined"> keyboard_arrow_down </span>
               </summary>
               <div class="list">
                 <a class="card" :href="?page=monitor&tab=Daemon&target=error" name="error">
-                  <strong>Error</strong>
-                  <p>failures only</p>
+                  <strong>{{ i18n.text_error }}</strong>
+                  <p>{{ i18n.hint_error }}</p>
                 </a>
                 <a class="card" :href="?page=monitor&tab=Daemon&target=warn" name="warn">
-                  <strong>Warn</strong>
-                  <p>recoverable issues</p>
+                  <strong>{{ i18n.text_warn }}</strong>
+                  <p>{{ i18n.hint_warn }}</p>
                 </a>
                 <a class="card" :href="?page=monitor&tab=Daemon&target=debug" name="debug">
-                  <strong>Debug</strong>
-                  <p>verbose traces</p>
+                  <strong>{{ i18n.text_debug }}</strong>
+                  <p>{{ i18n.hint_debug }}</p>
                 </a>
                 <a class="card" :href="?page=monitor&tab=Daemon&target=info" name="info">
-                  <strong>Info</strong>
-                  <p>normal activity</p>
+                  <strong>{{ i18n.text_info }}</strong>
+                  <p>{{ i18n.hint_info }}</p>
                 </a>
               </div>
             </details>
           </div>
           <form>
             <div class="range">
-              <input id="daemon-keyword" type="search" placeholder="keyword" @keydown="daemon_keydown" />
-              <input id="daemon-ago" type="text" placeholder="2d ago" @keydown="daemon_keydown" />
-              <input id="daemon-span" type="text" placeholder="12h wide" @keydown="daemon_keydown" />
-              <button type="button" class="submit" @click="daemon_range">search</button>
+              <input id="daemon-keyword" type="search" placeholder="i18n.text_keyword" @keydown="daemon_keydown" />
+              <input id="daemon-ago" type="text" placeholder="i18n.placeholder_ago" @keydown="daemon_keydown" />
+              <input id="daemon-span" type="text" placeholder="i18n.placeholder_span" @keydown="daemon_keydown" />
+              <button type="button" class="submit" @click="daemon_range">{{ i18n.text_search }}</button>
             </div>
             <pre id="daemon-log"></pre>
           </form>
@@ -796,9 +801,9 @@
     <!---->
     <section class="hint" data-hide="1">
       <div>
-        <img src="public/logo-min.svg" alt="Logo" />
-        <p>Cannot reach the server</p>
-        <p id="hint-retry">check that the daemon is running</p>
+        <img src="public/logo-min.svg" alt="i18n.text_logo" />
+        <p>{{ i18n.error_unreachable }}</p>
+        <p id="hint-retry">{{ i18n.hint_unreachable }}</p>
       </div>
     </section>
   </body>

@@ -273,7 +273,7 @@ function composeTurns(turns, prompts, current, open, settled) {
     return current;
   }
   const blocks = kept.map(([text, raw]) => {
-    const prompt = Array.from((raw || "Background").replace(/\s+/g, " ").trim());
+    const prompt = Array.from((raw || i18n("text_background")).replace(/\s+/g, " ").trim());
     const summary = prompt.length > 64 ? prompt.slice(0, 64).join("") + "..." : prompt.join("");
     return `<details${open ? " open" : ""}>\n<summary>${escapeSubviewText(summary)}</summary>\n\n${text}\n\n</details>`;
   });

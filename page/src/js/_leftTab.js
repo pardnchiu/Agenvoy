@@ -1,22 +1,22 @@
 const feature = {
-  Roles: "contract",
-  Schedule: "schedule",
-  Skills: "lightbulb_2",
-  Hooks: "webhook",
+  Roles: { icon: "contract" },
+  Schedule: { icon: "schedule" },
+  Skills: { icon: "lightbulb_2" },
+  Hooks: { icon: "webhook" },
 };
 
 const configTab = {
-  Model: "deployed_code",
-  MCP: "electrical_services",
-  Keychain: "key",
-  System: "tune",
+  Model: { icon: "deployed_code" },
+  MCP: { icon: "electrical_services" },
+  Keychain: { icon: "key" },
+  System: { icon: "tune" },
 };
 
 const monitorTab = {
-  Usage: "bar_chart",
-  History: "history",
-  Lessons: "cognition_2",
-  Daemon: "terminal",
+  Usage: { icon: "bar_chart" },
+  History: { icon: "history" },
+  Lessons: { icon: "cognition_2" },
+  Daemon: { icon: "terminal" },
 };
 
 const usageTab = {
@@ -34,9 +34,31 @@ const leftTab = {
 
 for (const name of Object.keys(feature)) {
   leftTab[name] = {
-    icon: feature[name],
+    icon: feature[name].icon,
     href: getLink({ page: "features", tab: name }),
   };
+}
+
+function localizeTabs() {
+  const labels = {
+    "New Chat": i18n("label_new_chat"),
+    Roles: i18n("text_roles"),
+    Schedule: i18n("text_schedule"),
+    Skills: i18n("text_skills"),
+    Hooks: i18n("text_hooks"),
+    Model: i18n("text_model"),
+    Keychain: i18n("text_keychain"),
+    System: i18n("text_system"),
+    Usage: i18n("text_usage"),
+    History: i18n("text_history"),
+    Lessons: i18n("text_lessons"),
+    Daemon: i18n("text_daemon"),
+  };
+  for (const tabs of [leftTab, feature, configTab, monitorTab]) {
+    for (const name of Object.keys(tabs)) {
+      tabs[name].label = labels[name] || name;
+    }
+  }
 }
 
 function markLeftTab(params) {
@@ -45,7 +67,7 @@ function markLeftTab(params) {
   document
     .querySelectorAll("section.left-tab > section:not(.chats) > a[name], section.left-tab > footer > a[name]")
     .forEach((link) => {
-      link.dataset.selected = name && link.getAttribute("name") === name ? "1" : "0";
+      link.dataset.selected = name && link.dataset.tab === name ? "1" : "0";
     });
 }
 

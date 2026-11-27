@@ -29,7 +29,7 @@ function markRole(name) {
   }
   delete dom.dataset.selected;
   dom.removeAttribute("title");
-  dom.name = "Use role";
+  dom.name = i18n("tooltip_use");
 }
 
 async function selectRole(name) {
@@ -68,8 +68,8 @@ async function selectRole(name) {
 function openRolePicker() {
   const list = _("div.list");
 
-  const cancel = _("button", { type: "button" }, "cancel");
-  const root = _("div.popup", [_("div.panel", [_("strong", "Role"), list, _("footer", [cancel])])]);
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+  const root = _("div.popup", [_("div.panel", [_("strong", i18n("text_role")), list, _("footer", [cancel])])]);
   root.id = "role-popup";
 
   const close = () => root.remove();
@@ -83,7 +83,7 @@ function openRolePicker() {
     list.appendChild(_("label", [box, _("div", body)]));
   };
 
-  add("", [_("strong", "default")]);
+  add("", [_("strong", i18n("text_default"))]);
   for (const item of roleList) {
     if (!item.name) continue;
     add(item.name, [_("strong", item.name)]);

@@ -103,10 +103,10 @@ async function renderMcp() {
       detail.push(state.Error);
       flag = "error";
     } else {
-      detail.push("not connected");
+      detail.push(i18n("label_not_connected"));
     }
     if (server.auth === "oauth") {
-      detail.push(`oauth ${oauth[name] ? "authorized" : "pending"}`);
+      detail.push(oauth[name] ? i18n("label_oauth_authorized") : i18n("label_oauth_pending"));
     }
 
     const remove = _("button", { type: "button" }, [_("span.material-symbols-outlined", "delete")]);
@@ -155,7 +155,7 @@ function fillMcpForm(name, server, authorized) {
     delete dom.form.dataset.editing;
   }
   if (dom.submit) {
-    dom.submit.textContent = name ? "save" : "add";
+    dom.submit.textContent = name ? i18n("text_save") : i18n("text_add");
   }
   renderMcpOAuth(authorized);
   renderMcpTools(name);
@@ -165,7 +165,7 @@ async function openMcp(name) {
   const { servers, oauth } = await mcpServers();
   const server = servers[name];
   if (!server) {
-    mcpError(`${name} not found`);
+    mcpError(i18n("error_not_found_mcp", name));
     return;
   }
   fillMcpForm(name, server, oauth[name] === true);
@@ -220,7 +220,7 @@ async function saveMcp() {
 
   const name = dom.name.value.trim();
   if (!name) {
-    mcpError("name is required");
+    mcpError(i18n("error_name_required"));
     return;
   }
 
@@ -228,7 +228,7 @@ async function saveMcp() {
   if (mcpTransport() === "http") {
     const url = dom.url.value.trim();
     if (!url) {
-      mcpError("url is required for an http server");
+      mcpError(i18n("error_url_required"));
       return;
     }
     server.url = url;
@@ -242,7 +242,7 @@ async function saveMcp() {
   } else {
     const command = dom.command.value.trim();
     if (!command) {
-      mcpError("command is required for a stdio server");
+      mcpError(i18n("error_command_required"));
       return;
     }
     server.command = command;
@@ -269,7 +269,7 @@ async function saveMcp() {
     }
   } catch (err) {
     console.error("saveMcp", err);
-    mcpError(err.message || "failed");
+    mcpError(err.message || i18n("text_failed"));
     return;
   }
 
@@ -289,7 +289,7 @@ async function removeMcpServer(name) {
 }
 
 async function deleteMcp(name) {
-  if (!name || !confirm(`Remove "${name}"?`)) {
+  if (!name || !confirm(i18n("confirm_remove_mcp", name))) {
     return;
   }
 
@@ -297,7 +297,7 @@ async function deleteMcp(name) {
     await removeMcpServer(name);
   } catch (err) {
     console.error("deleteMcp", err);
-    mcpError(err.message || "failed");
+    mcpError(err.message || i18n("text_failed"));
     return;
   }
 
@@ -320,7 +320,7 @@ async function reconnectMcp() {
     }
   } catch (err) {
     console.error("reconnectMcp", err);
-    mcpError(err.message || "failed");
+    mcpError(err.message || i18n("text_failed"));
     return;
   }
   renderMcp();
@@ -399,7 +399,7 @@ async function saveMcpPermission(prefix, entries) {
     }
   } catch (err) {
     console.error("saveMcpPermission", err);
-    mcpError(err.message || "failed");
+    mcpError(err.message || i18n("text_failed"));
   }
 }
 
@@ -428,16 +428,16 @@ async function renderMcpTools(name) {
   const [tools, granted] = await Promise.all([mcpToolList(prefix), mcpGranted(prefix)]);
   const all = granted.includes(`${prefix}*`);
 
-  dom.tools.appendChild(_("strong", "Always allow · pick the tools that skip the confirmation prompt"));
+  dom.tools.appendChild(_("strong", i18n("label_always_allow")));
 
   dom.tools.appendChild(
-    mcpToolRow("all", "every tool of this server", all, (checked) => {
+    mcpToolRow(i18n("text_all"), i18n("hint_all"), all, (checked) => {
       saveMcpPermission(prefix, checked ? [`${prefix}*`] : []).then(() => renderMcpTools(name));
     }),
   );
 
   if (tools.length === 0) {
-    dom.tools.appendChild(_("p.empty", "no tools · connect the server to see them"));
+    dom.tools.appendChild(_("p.empty", i18n("label_no_tools")));
     return;
   }
 
@@ -467,7 +467,7 @@ function closeMcpLogin() {
 
 function startMcpLogin(name) {
   closeMcpLogin();
-  renderMcpOAuth(false, "waiting for the provider...");
+  renderMcpOAuth(false, i18n("label_waiting_provider"));
 
   mcpStream = new EventSource(`${API}/v1/mcp/oauth?name=${encodeURIComponent(name)}`);
   mcpStream.onmessage = function (e) {
@@ -490,14 +490,14 @@ function startMcpLogin(name) {
 
     closeMcpLogin();
     if (!event.ok) {
-      mcpError(event.error || "oauth failed");
+      mcpError(event.error || i18n("error_oauth_failed"));
     }
     openMcp(name);
     renderMcp();
   };
   mcpStream.onerror = function () {
     closeMcpLogin();
-    renderMcpOAuth(false, "stream closed");
+    renderMcpOAuth(false, i18n("label_stream_closed"));
   };
 }
 
@@ -507,9 +507,9 @@ function renderMcpLoginPaste(name, url) {
     return;
   }
 
-  const open = _("a", { href: url, target: "_blank", rel: "noreferrer" }, "open authorization page");
-  const input = _("input", { type: "text", placeholder: "Paste the redirect URL if the browser cannot reach it" });
-  const submit = _("button", { type: "button" }, "submit");
+  const open = _("a", { href: url, target: "_blank", rel: "noreferrer" }, i18n("label_open_authorization"));
+  const input = _("input", { type: "text", placeholder: i18n("placeholder_redirect") });
+  const submit = _("button", { type: "button" }, i18n("text_submit"));
   submit.addEventListener("click", () => submitMcpCallback(name, input.value.trim()));
 
   dom.oauth.innerHTML = "";
@@ -523,7 +523,7 @@ function renderMcpLoginPaste(name, url) {
 
 async function submitMcpCallback(name, url) {
   if (!url) {
-    mcpError("redirect URL is required");
+    mcpError(i18n("error_redirect_required"));
     return;
   }
 
@@ -539,12 +539,12 @@ async function submitMcpCallback(name, url) {
     }
   } catch (err) {
     console.error("submitMcpCallback", err);
-    mcpError(err.message || "failed");
+    mcpError(err.message || i18n("text_failed"));
   }
 }
 
 async function clearMcpOAuth(name) {
-  if (!confirm(`Clear the stored token and client for "${name}"?`)) {
+  if (!confirm(i18n("confirm_clear_oauth", name))) {
     return;
   }
 
@@ -561,7 +561,7 @@ async function clearMcpOAuth(name) {
     }
   } catch (err) {
     console.error("clearMcpOAuth", err);
-    mcpError(err.message || "failed");
+    mcpError(err.message || i18n("text_failed"));
     return;
   }
   openMcp(name);

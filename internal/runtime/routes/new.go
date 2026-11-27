@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	"github.com/pardnchiu/agenvoy/internal/runtime/routes/handler"
 	completionshandler "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/chatCompletions"
 	runtimerouteshandlerhook "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/hook"
@@ -50,6 +51,10 @@ func New() *gin.Engine {
 	r.POST("/v1/send", jsonOnly(), handler.Send())
 	r.GET("/v1/log", handler.StreamMultiLog())
 	r.GET("/v1/info/version", handler.GetVersion())
+	r.GET("/v1/i18n", func(c *gin.Context) {
+		lang, dic := locale.WebUI(c.Query("lang"))
+		c.JSON(http.StatusOK, gin.H{"lang": lang, "dict": dic})
+	})
 	r.GET("/v1/daemon", localhostOnly(), handler.GetDaemonLog())
 	r.GET("/v1/system/update", localhostOnly(), handler.GetSystemUpdate())
 	r.POST("/v1/system/update", localhostOnly(), handler.SystemUpdate())

@@ -52,7 +52,7 @@ async function saveSystemOfficialGuide() {
     }
   } catch (err) {
     console.error("saveSystemOfficialGuide", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
   }
   renderSystem();
 }
@@ -75,7 +75,7 @@ async function saveSystemStartup() {
     }
   } catch (err) {
     console.error("saveSystemStartup", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
   }
   renderSystem();
 }
@@ -138,7 +138,7 @@ function renderUpdateEntry(available, latest) {
 
   entry.hidden = !available;
   entry.href = latest ? RELEASE_TAG_URL + encodeURIComponent(latest) : RELEASE_URL;
-  const label = latest ? `See update (${latest})` : "See update";
+  const label = latest ? i18n("label_see_update_version", latest) : i18n("tooltip_see_update");
   const text = entry.querySelector("p");
   if (text) {
     text.textContent = label;
@@ -186,7 +186,7 @@ async function renderSystemVersion() {
     card.hidden = !hasNewVersion(detail);
   }
   if (!detail.ok) {
-    label.textContent = `${detail.version || "unknown"} (latest unavailable)`;
+    label.textContent = i18n("label_latest_unavailable", detail.version || i18n("text_unknown"));
     button.hidden = true;
     if (release) {
       release.hidden = true;
@@ -196,7 +196,7 @@ async function renderSystemVersion() {
   label.textContent = detail.version;
   const title = $("#system-update-title");
   if (title && detail.latest) {
-    title.textContent = `Update (${detail.latest})`;
+    title.textContent = i18n("title_update_version", detail.latest);
   }
   button.hidden = !hasNewVersion(detail);
   if (release && detail.latest) {
@@ -233,7 +233,7 @@ async function openOutputDir() {
     }
   } catch (err) {
     console.error("openOutputDir", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
   }
 }
 
@@ -255,7 +255,7 @@ async function saveSystemOutput() {
     }
   } catch (err) {
     console.error("saveSystemOutput", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
   }
   renderSystem();
 }
@@ -270,8 +270,8 @@ async function runSystemUpdate() {
     renderUpdateEntry(false, detail.latest);
     return;
   }
-  const target = detail.ok ? `${detail.version} → ${detail.latest}` : "the latest release";
-  if (!confirm(`Install ${target}?\nThis overwrites the installed binary.`)) {
+  const target = detail.ok ? `${detail.version} → ${detail.latest}` : i18n("label_latest_release");
+  if (!confirm(i18n("confirm_install", target))) {
     return;
   }
 
@@ -284,7 +284,7 @@ async function runSystemUpdate() {
     const response = await fetch(`${API}/v1/system/update`, { method: "POST" });
     if (response.ok) {
       if (button) {
-        button.textContent = "opened in Terminal";
+        button.textContent = i18n("button_opened_in_terminal");
       }
       return;
     }
@@ -292,7 +292,7 @@ async function runSystemUpdate() {
     alert(detail.error || `HTTP ${response.status}`);
   } catch (err) {
     console.error("runSystemUpdate", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
   }
 
   if (button) {
@@ -315,10 +315,13 @@ async function saveSystemLang() {
     if (!response.ok) {
       const detail = await response.json().catch(() => ({}));
       alert(detail.error || `HTTP ${response.status}`);
+    } else {
+      window.location.reload();
+      return;
     }
   } catch (err) {
     console.error("saveSystemLang", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
   }
   renderSystem();
 }

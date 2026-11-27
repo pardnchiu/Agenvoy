@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", async function () {
+  await loadI18n();
+  localizeTabs();
   revealIconsWhenReady();
   watchListSelection();
   watchServer();
@@ -72,6 +74,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   const app = new QUI({
     id: "app",
+    i18n: { [I18N_LANG]: I18N },
+    i18nLang: I18N_LANG,
     data: {
       params: params,
       pin: pinnedChats.map((id) => ({ id: id })),

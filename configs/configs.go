@@ -329,6 +329,9 @@ var ConfirmAskUser []byte
 //go:embed jsons/locale/chatbot_notice.json
 var ConfirmChatbotNotice []byte
 
+//go:embed jsons/locale/i18n/*.json
+var I18nFS embed.FS
+
 // * Official Guide
 
 //go:embed prompts/system_prompt/official_guides/*.md
