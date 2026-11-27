@@ -15,6 +15,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/routes/handler"
 	completionshandler "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/chatCompletions"
 	runtimerouteshandlerhook "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/hook"
+	runtimerouteshandlertool "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/tool"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
 
@@ -127,6 +128,10 @@ func New() *gin.Engine {
 	r.POST("/v1/role", localhostOnly(), handler.CreateRole())
 	r.PATCH("/v1/role", localhostOnly(), handler.UpdateRole())
 	r.DELETE("/v1/role", localhostOnly(), handler.DeleteRole())
+
+	r.GET("/v1/tools", localhostOnly(), runtimerouteshandlertool.List())
+	r.GET("/v1/tool/*name", localhostOnly(), runtimerouteshandlertool.Get())
+	r.POST("/v1/tool/allow", localhostOnly(), runtimerouteshandlertool.Toggle())
 
 	r.GET("/v1/skills", localhostOnly(), handler.ListSkills())
 	r.GET("/v1/skill/*name", localhostOnly(), handler.GetSkill())

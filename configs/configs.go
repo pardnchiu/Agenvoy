@@ -15,6 +15,7 @@ const (
 	REASONING_AUTO     = "auto"
 	BAN_TAG            = "[KARAPPO]"
 	DAEMON_LOG_CHANNEL = "daemon"
+	SCRIPT_TOOL_PREFIX = "script_"
 
 	// * Context
 	COMPACT_THRESHOLD_RATIO     = 0.8

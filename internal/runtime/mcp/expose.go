@@ -8,7 +8,7 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	scriptadapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter/script"
+	runtimetooladapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
@@ -16,8 +16,8 @@ import (
 type builtinHandler func(ctx context.Context, args json.RawMessage) (string, error)
 
 type toolbox struct {
-	scriptBox *scriptadapter.Translator
-	extScript *scriptadapter.Translator
+	scriptBox *runtimetooladapter.Translator
+	extScript *runtimetooladapter.Translator
 	tools     []Tool
 	builtin   map[string]builtinHandler
 }
@@ -25,9 +25,8 @@ type toolbox struct {
 func scanTools() *toolbox {
 	box := &toolbox{builtin: make(map[string]builtinHandler)}
 
-	box.scriptBox = scriptadapter.New("script_")
+	box.scriptBox = runtimetooladapter.New(configs.SCRIPT_TOOL_PREFIX)
 	for _, dir := range []string{
-		filesystem.SystemToolsDir,
 		filesystem.ScriptToolsDir,
 	} {
 		if err := box.scriptBox.Scan(dir); err != nil {
@@ -37,7 +36,7 @@ func scanTools() *toolbox {
 		}
 	}
 
-	box.extScript = scriptadapter.New("ext_")
+	box.extScript = runtimetooladapter.New("ext_")
 	if err := box.extScript.Scan(filesystem.ExtensionScriptToolsDir); err != nil {
 		slog.Warn("extScript.Scan",
 			slog.String("error", err.Error()))

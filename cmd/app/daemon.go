@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -170,6 +171,13 @@ func Daemon() {
 	stopWatcher := app.WatchConfig(context.Background(), func() {
 		if agents.Reload() {
 			slog.Debug("host reloaded: config change")
+		}
+		if dic, err := config.Get(); err == nil {
+			lang, _ := dic["reply_lang"].(string)
+			if lang = strings.TrimSpace(lang); lang == "" {
+				lang = filesystem.ReplyLangAuto
+			}
+			filesystem.SetReplyLang(lang)
 		}
 		app.ReloadDiscord(0)
 		app.ReloadTelegram(0)

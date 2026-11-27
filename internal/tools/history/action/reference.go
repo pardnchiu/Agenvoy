@@ -1,6 +1,10 @@
 package actionHistory
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/pardnchiu/agenvoy/configs"
+)
 
 var referenceTool = map[string]bool{
 	"fetch_page":     true,
@@ -16,6 +20,6 @@ func isReference(name string) bool {
 		return true
 	}
 	return strings.HasPrefix(name, "mcp__") ||
-		strings.HasPrefix(name, "script_") ||
+		strings.HasPrefix(name, configs.SCRIPT_TOOL_PREFIX) ||
 		strings.HasPrefix(name, "ext_")
 }

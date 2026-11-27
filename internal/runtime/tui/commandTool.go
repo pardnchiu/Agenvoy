@@ -6,9 +6,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	agentsexecallowtool "github.com/pardnchiu/agenvoy/internal/agents/exec/allow/tool"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
-	scriptadapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter/script"
+	runtimetooladapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter"
 )
 
 func (t TUI) commandTool() (TUI, tea.Cmd, bool) {
@@ -23,7 +24,9 @@ func toolPopup() *Popup {
 		enterAction: "toggle",
 	}
 	popup.onEnter = func(p *Popup, chosen string) tea.Cmd {
-		if slices.Contains(scriptToolbox().AlwaysAllowNames(), chosen) {
+		translator := runtimetooladapter.New(configs.SCRIPT_TOOL_PREFIX)
+		translator.Scan(filesystem.ScriptToolsDir)
+		if slices.Contains(translator.AlwaysAllowNames(), chosen) {
 			p.subtitle = warnStyle.Render(chosen + " sets always_allow in its tool.json; edit that file to change it")
 			return nil
 		}
@@ -38,24 +41,14 @@ func toolPopup() *Popup {
 	return popup
 }
 
-func scriptToolbox() *scriptadapter.Translator {
-	box := scriptadapter.New("script_")
-	for _, dir := range []string{
-		filesystem.SystemToolsDir,
-		filesystem.ScriptToolsDir,
-	} {
-		box.Scan(dir)
-	}
-	return box
-}
-
 func fillAllowTools(p *Popup) {
-	box := scriptToolbox()
-	fixed := box.AlwaysAllowNames()
+	translator := runtimetooladapter.New(configs.SCRIPT_TOOL_PREFIX)
+	translator.Scan(filesystem.ScriptToolsDir)
+	fixed := translator.AlwaysAllowNames()
 	allowed := agentsexecallowtool.Read()
 
 	var names []string
-	for _, tool := range box.GetTools() {
+	for _, tool := range translator.GetTools() {
 		if fn, ok := tool["function"].(map[string]any); ok {
 			if name, ok := fn["name"].(string); ok {
 				names = append(names, name)

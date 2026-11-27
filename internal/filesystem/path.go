@@ -32,7 +32,6 @@ var (
 	ToolsDir                string
 	HooksDir                string
 	ScriptToolsDir          string
-	SystemToolsDir          string
 	ExtensionScriptToolsDir string
 	ScriptToolTrashDir      string
 	ErrorsDir               string
@@ -84,7 +83,6 @@ func Init() error {
 		HooksDir = filepath.Join(AgenvoyDir, "hooks")
 		HookTrashDir = filepath.Join(HooksDir, ".Trash")
 		ScriptToolsDir = filepath.Join(ToolsDir, "script")
-		SystemToolsDir = filepath.Join(ToolsDir, ".system")
 		ExtensionScriptToolsDir = filepath.Join(ToolsDir, ".extension", "script")
 		ScriptToolTrashDir = filepath.Join(ScriptToolsDir, ".Trash")
 		ErrorsDir = filepath.Join(AgenvoyDir, "errors")

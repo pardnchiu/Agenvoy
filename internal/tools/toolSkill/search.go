@@ -9,6 +9,7 @@ import (
 
 	go_llm_router "github.com/pardnchiu/go-llm-router/core"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -81,7 +82,7 @@ func toolCategory(name string) string {
 	switch {
 	case strings.HasPrefix(name, "mcp__"):
 		return "mcp"
-	case strings.HasPrefix(name, "script_"):
+	case strings.HasPrefix(name, configs.SCRIPT_TOOL_PREFIX):
 		return "script"
 	case strings.HasPrefix(name, "ext_"):
 		return "extension"

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 )
@@ -495,12 +496,12 @@ var toolDisplayName = map[string]string{
 }
 
 func IsPlugTool(name string) bool {
-	return strings.HasPrefix(name, "script_") ||
+	return strings.HasPrefix(name, configs.SCRIPT_TOOL_PREFIX) ||
 		strings.HasPrefix(name, "ext_")
 }
 
 func PlugToolBaseName(name string) string {
-	for _, prefix := range []string{"script_", "ext_"} {
+	for _, prefix := range []string{configs.SCRIPT_TOOL_PREFIX, "ext_"} {
 		if base, ok := strings.CutPrefix(name, prefix); ok {
 			return base
 		}
@@ -532,7 +533,7 @@ func ToolName(name string) string {
 	if IsPlugTool(name) {
 		var tag string
 		switch {
-		case strings.HasPrefix(name, "script_"):
+		case strings.HasPrefix(name, configs.SCRIPT_TOOL_PREFIX):
 			tag = "Script"
 		case strings.HasPrefix(name, "ext_"):
 			tag = "Extension"
