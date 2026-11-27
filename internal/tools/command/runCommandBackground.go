@@ -111,11 +111,11 @@ func startBackgroundCommand(ctx context.Context, e *tooltypes.Executor, argv, bi
 		case ctx.Err() == context.DeadlineExceeded:
 			return fmt.Sprintf("failed: [Timeout] %s: exceeded %d minutes\n%s", argv[0], timeoutMin, output)
 		case err != nil:
-			return fmt.Sprintf("failed: %s\n%s%s", err.Error(), output, sandboxWriteHint(output, binds, sandboxOpt.AllowAll))
+			return fmt.Sprintf("failed: %s\n%s%s", err.Error(), output, failureHint(output, binds, sandboxOpt.AllowAll, sandboxOpt.Network == go_pkg_sandbox.NetworkAllow))
 		case strings.TrimSpace(output) == "":
 			return "done: exit 0, printed nothing"
 		default:
-			return "done: exit 0\n" + output
+			return "done: exit 0\n" + output + outputHint(output, binds, sandboxOpt.AllowAll, sandboxOpt.Network == go_pkg_sandbox.NetworkAllow)
 		}
 	})
 	if err != nil {

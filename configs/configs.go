@@ -73,7 +73,6 @@ const (
 
 	// * Endpoint
 	ENDPOINT_LLM_WINDOW      = "https://llm-io.agenvoy.com/"
-	ENDPOINT_UPDATE_SHELL    = "https://agenvoy.com/scripts/update.sh"
 	ENDPOINT_HTML_TEMPLATE   = "https://view.agenvoy.com"
 	ENDPOINT_PUBLIC_API_LIST = "https://public-api-list.agenvoy.com/"
 )
@@ -315,6 +314,9 @@ var SecretPatterns []byte
 
 //go:embed jsons/network_error.json
 var NetworkError []byte
+
+//go:embed scripts/update.sh
+var UpdateShell []byte
 
 // * Confirm
 

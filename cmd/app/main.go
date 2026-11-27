@@ -114,10 +114,11 @@ func update(yes bool) {
 
 	f, err := os.CreateTemp("", "agenvoy-update-*.sh")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "create temp: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[Internal] os: CreateTemp: %v\n", err)
 		os.Exit(1)
 	}
 	tmpPath := f.Name()
+	_, err = f.Write(configs.UpdateShell)
 	f.Close()
 
 	cleanup := func() { _ = os.Remove(tmpPath) }
@@ -131,12 +132,9 @@ func update(yes bool) {
 		os.Exit(130)
 	}()
 
-	fmt.Printf("Fetching updater from %s -> %s\n", configs.ENDPOINT_UPDATE_SHELL, tmpPath)
-	curl := osexec.Command("curl", "-fsSL", configs.ENDPOINT_UPDATE_SHELL, "-o", tmpPath)
-	curl.Stdout = os.Stdout
-	curl.Stderr = os.Stderr
-	if err := curl.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "download failed: %v\n", err)
+	if err != nil {
+		cleanup()
+		fmt.Fprintf(os.Stderr, "[Internal] os: Write: %v\n", err)
 		os.Exit(1)
 	}
 

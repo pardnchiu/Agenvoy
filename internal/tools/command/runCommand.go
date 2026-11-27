@@ -213,18 +213,13 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 	err = go_pkg_sandbox.Run(cmd)
 	output := sink.text()
 	if err != nil {
-		if !unsandboxed && !network && utils.IsNetworkError(output) {
-			if cfg, cfgErr := config.Load(); cfgErr == nil && cfg.CommandNetOff {
-				return fmt.Sprintf("%s\nError: %s\n\n[agenvoy] this failed because it needs the network and Command network is disabled by the user (/config → Command network); network: true is not allowed, so do not retry it. Tell the user this step needs network.", output, err.Error()), nil
-			}
-		}
-		return fmt.Sprintf("%s\nError: %s%s", output, err.Error(), sandboxWriteHint(output, binds, unsandboxed)), nil
+		return fmt.Sprintf("%s\nError: %s%s", output, err.Error(), failureHint(output, binds, unsandboxed, network)), nil
 	}
 
 	if strings.TrimSpace(output) == "" {
 		return "[exit 0] the command succeeded and printed nothing", nil
 	}
-	return output, nil
+	return output + outputHint(output, binds, unsandboxed, network), nil
 }
 
 const progressInterval = 500 * time.Millisecond
@@ -287,13 +282,40 @@ const sandboxWriteAdvice = `
 
 [agenvoy] the sandbox only allows writes under %s, which is why these read as unwritable: %s. They are writable outside the sandbox, so ownership is not the problem — do not run chown or chmod and do not ask the user to. Re-run this exact command with write_paths: [%s] and the user gets one prompt to approve those paths.`
 
-const sandboxEscalateAdvice = `
+const networkRetryAdvice = `
 
-[agenvoy] the output reports a permission error; the sandbox may have caused it. Leaving the sandbox is the last resort, not the default retry:
-- a connection or auth failure (e.g. Permission denied (publickey), could not resolve host) → network: true, or report the credential problem; sandbox: false does not fix it
-- a write → a path under the work directory, or write_paths for the path that failed
-- the task genuinely needs a system socket, device or service, or a root-owned target → sandbox: false or argv ['sudo', ...]; the user approves it with the system password
-Otherwise report what was blocked and stop.`
+[agenvoy] if this is a network problem, re-run this exact command with network: true; do not answer or end the task before that retry.`
+
+const networkOffAdvice = `
+
+[agenvoy] if this is a network problem: this step needs the network, and Command network is disabled by the user, so network: true is refused. Tell the user to enable it (/config → Command network).`
+
+const sandboxRetryAdvice = `
+
+[agenvoy] if the sandbox caused this, re-run this exact command with sandbox: false; that call asks the user for the system password. Do not answer or end the task before that retry.`
+
+func outputHint(output string, bound []string, unsandboxed, network bool) string {
+	lower := strings.ToLower(output)
+	if !utils.IsNetworkError(output) && !slices.ContainsFunc(permissionMarkers, func(m string) bool { return strings.Contains(lower, m) }) {
+		return ""
+	}
+	return failureHint(output, bound, unsandboxed, network)
+}
+
+func failureHint(output string, bound []string, unsandboxed, network bool) string {
+	if unsandboxed {
+		return ""
+	}
+	hint := ""
+	if !network {
+		if cfg, err := config.Load(); err == nil && cfg.CommandNetOff {
+			hint = networkOffAdvice
+		} else {
+			hint = networkRetryAdvice
+		}
+	}
+	return hint + sandboxWriteHint(output, bound) + sandboxRetryAdvice
+}
 
 var permissionMarkers = []string{
 	"not writable", "permission denied", "operation not permitted",
@@ -302,10 +324,7 @@ var permissionMarkers = []string{
 
 var absPathPattern = regexp.MustCompile(`(^|[\s"'(])(/[A-Za-z0-9._@+\-/]{2,})`)
 
-func sandboxWriteHint(output string, bound []string, unsandboxed bool) string {
-	if unsandboxed {
-		return ""
-	}
+func sandboxWriteHint(output string, bound []string) string {
 	lower := strings.ToLower(output)
 	if !slices.ContainsFunc(permissionMarkers, func(m string) bool { return strings.Contains(lower, m) }) {
 		return ""
@@ -335,7 +354,7 @@ func sandboxWriteHint(output string, bound []string, unsandboxed bool) string {
 
 	list = shortestRoots(list)
 	if len(list) == 0 {
-		return sandboxEscalateAdvice
+		return ""
 	}
 
 	quoted := make([]string, 0, len(list))
