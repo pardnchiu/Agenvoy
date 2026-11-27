@@ -74,7 +74,7 @@ func Generate(ctx context.Context, req Request) (string, error) {
 	if err := go_pkg_filesystem.CheckDir(filepath.Dir(path), true); err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.CheckDir", filepath.Dir(path), err)
 	}
-	if err := os.WriteFile(path, raw, 0644); err != nil {
+	if err := os.WriteFile(path, raw, 0600); err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "os.WriteFile", path, err)
 	}
 

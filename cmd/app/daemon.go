@@ -13,6 +13,7 @@ import (
 
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -200,8 +201,9 @@ func Daemon() {
 
 	route := routes.New()
 	server := &http.Server{
-		Addr:    "127.0.0.1:" + filesystem.Port,
-		Handler: route,
+		Addr:              "127.0.0.1:" + filesystem.Port,
+		Handler:           route,
+		ReadHeaderTimeout: configs.HTTP_READ_HEADER_TIMEOUT,
 	}
 
 	listeners, err := app.LoopbackListeners(filesystem.Port)

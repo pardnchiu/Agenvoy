@@ -52,9 +52,10 @@ const (
 	CONFIRM_EXPLAIN_RUNES   = 240
 	DEFAULT_TOOL_TIMEOUT    = 15 * time.Minute
 	// NOTE: not for heave task design, so use 30s for test
-	HOOK_TIMEOUT           = 30 * time.Second
-	RUN_COMMAND_TIMEOUT    = 30 * time.Minute
-	MAX_WATCH_SCRIPT_DEPTH = 4
+	HOOK_TIMEOUT             = 30 * time.Second
+	HTTP_READ_HEADER_TIMEOUT = 10 * time.Second
+	RUN_COMMAND_TIMEOUT      = 30 * time.Minute
+	MAX_WATCH_SCRIPT_DEPTH   = 4
 
 	// * Followup
 	FOLLOWUP_TIMEOUT        = 30 * time.Second
