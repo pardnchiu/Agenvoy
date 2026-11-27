@@ -13,11 +13,10 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func HasSchedule(name string) bool {
-	return go_pkg_filesystem_reader.IsDir(filesystem.ScheduleSkillDir(name))
-}
-
 func ReadSchedule(name string) (string, error) {
+	if err := filesystem.CheckDirName("schedule skill name", name); err != nil {
+		return "", err
+	}
 	path := filesystem.ScheduleSkillPath(name)
 	if !go_pkg_filesystem_reader.Exists(path) {
 		return "", utilsmsg.New(utilsmsg.NotFound, "schedule skill", "%s", name)

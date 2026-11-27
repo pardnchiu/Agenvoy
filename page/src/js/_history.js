@@ -45,7 +45,7 @@ function rangeSubmit(tab, prefix) {
   if (agoText) {
     const ago = daemonDuration(agoText);
     if (!ago) {
-      pushToast("WARN", `"${agoText}" is not a duration · use 30m / 12h / 2d / 1w`, nowClock());
+      pushToast("WARN", i18n("error_not_duration", agoText), nowClock());
       return;
     }
 
@@ -54,11 +54,11 @@ function rangeSubmit(tab, prefix) {
     if (spanText) {
       span = daemonDuration(spanText);
       if (!span) {
-        pushToast("WARN", `"${spanText}" is not a duration · use 30m / 12h / 2d / 1w`, nowClock());
+        pushToast("WARN", i18n("error_not_duration", spanText), nowClock());
         return;
       }
       if (span > ago) {
-        pushToast("WARN", `window ${spanText} is wider than ${agoText} ago · it would run past now`, nowClock());
+        pushToast("WARN", i18n("error_span_too_wide", spanText, agoText), nowClock());
         return;
       }
     }
@@ -103,7 +103,7 @@ function textNode(tag, text) {
 }
 
 function copyButton(read) {
-  const button = _("button.copy", { type: "button", name: "Copy content" }, [
+  const button = _("button.copy", { type: "button", name: i18n("button_copy_content") }, [
     _("span.material-symbols-outlined", "content_copy"),
   ]);
   button.addEventListener("click", function () {
@@ -208,8 +208,8 @@ function renderHistoryPager(dom, sessionId, offset, total) {
   }
 
   const last = Math.floor((total - 1) / HISTORY_PAGE_SIZE) * HISTORY_PAGE_SIZE;
-  const prev = _("a", { href: historyLink(sessionId, Math.max(offset - HISTORY_PAGE_SIZE, 0)) }, "prev");
-  const next = _("a", { href: historyLink(sessionId, Math.min(offset + HISTORY_PAGE_SIZE, last)) }, "next");
+  const prev = _("a", { href: historyLink(sessionId, Math.max(offset - HISTORY_PAGE_SIZE, 0)) }, i18n("text_prev"));
+  const next = _("a", { href: historyLink(sessionId, Math.min(offset + HISTORY_PAGE_SIZE, last)) }, i18n("text_next"));
   if (offset <= 0) {
     prev.dataset.disabled = "1";
   }
@@ -251,7 +251,7 @@ async function renderHistoryPage(sessionId, offset) {
     search.value = url.keyword;
   }
   if (tasks.length === 0) {
-    dom.entries.appendChild(textNode("p.empty", "no action recorded"));
+    dom.entries.appendChild(textNode("p.empty", i18n("label_empty_history")));
     return;
   }
 
@@ -289,13 +289,13 @@ async function renderDetailsPage(sessionId, hash, item) {
   }
 
   if (!sessionId || !hash) {
-    dom.body.appendChild(textNode("p.empty", "no action selected"));
+    dom.body.appendChild(textNode("p.empty", i18n("label_no_selection")));
     return;
   }
 
   const detail = await historyDetail(sessionId, hash);
   if (!detail) {
-    dom.body.appendChild(textNode("p.empty", "failed to load"));
+    dom.body.appendChild(textNode("p.empty", i18n("error_failed_to_load")));
     return;
   }
 
@@ -305,7 +305,7 @@ async function renderDetailsPage(sessionId, hash, item) {
 
   dom.detail.appendChild(
     detailsCard(
-      "Result",
+      i18n("text_result"),
       `${detail.model || "auto"} · ${detail.reasoning || "medium"}`,
       detailsLink(sessionId, hash, ""),
       picked < 0,
@@ -313,16 +313,16 @@ async function renderDetailsPage(sessionId, hash, item) {
   );
   tools.forEach((one, index) => {
     dom.detail.appendChild(
-      detailsCard(one.name || "tool", `tool call ${index + 1}`, detailsLink(sessionId, hash, String(index)), picked === index),
+      detailsCard(one.name || i18n("text_tool"), i18n("label_tool_call", index + 1), detailsLink(sessionId, hash, String(index)), picked === index),
     );
   });
 
   if (picked >= 0) {
-    dom.body.appendChild(_("div.head", [textNode("strong", tools[picked].name || "tool"), textNode("p", tools[picked].id || "")]));
+    dom.body.appendChild(_("div.head", [textNode("strong", tools[picked].name || i18n("text_tool")), textNode("p", tools[picked].id || "")]));
     if (tools[picked].args) {
-      dom.body.appendChild(labeledBlock("args", historyText(tools[picked].args)));
+      dom.body.appendChild(labeledBlock(i18n("text_args"), historyText(tools[picked].args)));
     }
-    dom.body.appendChild(labeledBlock("result", historyText(tools[picked].result)));
+    dom.body.appendChild(labeledBlock(i18n("text_result"), historyText(tools[picked].result)));
     return;
   }
 

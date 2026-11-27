@@ -18,8 +18,8 @@ async function openSkillPicker() {
 
   const list = _("div.list");
 
-  const cancel = _("button", { type: "button" }, "cancel");
-  const root = _("div.popup", [_("div.panel", [_("strong", "Skill"), list, _("footer", [cancel])])]);
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+  const root = _("div.popup", [_("div.panel", [_("strong", i18n("text_skill")), list, _("footer", [cancel])])]);
   root.id = "skill-popup";
 
   const close = () => root.remove();
@@ -35,7 +35,7 @@ async function openSkillPicker() {
     list.appendChild(_("label", [box, _("div", body)]));
   };
 
-  add("", [_("strong", "none")]);
+  add("", [_("strong", i18n("text_none"))]);
   for (const item of items) {
     if (!item.name) continue;
     add(item.name, item.description ? [_("strong", item.name), _("p", item.description)] : [_("strong", item.name)]);
@@ -123,8 +123,8 @@ async function renderSkillTab() {
   const picked = praseURL().target || "";
 
   for (const name of skills) {
-    const mark = allowed[name] ? "trust" : "ask each time";
-    const card = _("div.card", [_("strong", name), _("p", `${source[name] || "unknown"} · ${mark}`)]);
+    const mark = allowed[name] ? i18n("text_trust") : i18n("label_ask_each_time");
+    const card = _("div.card", [_("strong", name), _("p", `${source[name] || i18n("text_unknown")} · ${mark}`)]);
     card.dataset.name = name;
     card.dataset.selected = name === picked ? "1" : "0";
     card.addEventListener("click", () => {
@@ -155,7 +155,7 @@ async function openSkillTab(name) {
     body = await response.json();
   } catch (err) {
     console.error("openSkillTab", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
     return;
   }
 
@@ -239,7 +239,7 @@ async function openSkillSource() {
     body = await response.json();
   } catch (err) {
     console.error("openSkillSource", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
     return;
   }
 
@@ -247,7 +247,7 @@ async function openSkillSource() {
   skillSourceBoxes = {};
   dom.sourceList.innerHTML = "";
   dom.sourceList.dataset.open = "1";
-  dom.sourceList.appendChild(_("strong", "Skill source · unchecked sources are not scanned"));
+  dom.sourceList.appendChild(_("strong", i18n("title_source")));
   for (const name of body.sources || []) {
     const box = _("input", { type: "checkbox" });
     box.checked = !disabled.includes(name);
@@ -272,7 +272,7 @@ async function saveSkillSource() {
     }
   } catch (err) {
     console.error("saveSkillSource", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
     return;
   }
   renderSkillTab();
@@ -288,7 +288,7 @@ async function renderSkillAllowList() {
 
   dom.allowList.innerHTML = "";
   dom.allowList.dataset.open = "1";
-  dom.allowList.appendChild(_("strong", "Trust · picked skills pass every read and write without asking; only sudo still asks"));
+  dom.allowList.appendChild(_("strong", i18n("title_trust")));
 
   for (const name of skills) {
     const box = _("input", { type: "checkbox" });
@@ -316,14 +316,14 @@ async function toggleSkillAllow(name) {
     }
   } catch (err) {
     console.error("toggleSkillAllow", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
     return;
   }
   renderSkillTab();
 }
 
 async function deleteSkillTab() {
-  if (!skillTabName || !confirm(`Delete "${skillTabName}"?`)) {
+  if (!skillTabName || !confirm(i18n("confirm_delete", skillTabName))) {
     return;
   }
 
@@ -336,7 +336,7 @@ async function deleteSkillTab() {
     }
   } catch (err) {
     console.error("deleteSkillTab", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
     return;
   }
 
@@ -357,6 +357,6 @@ async function openSkillFolder() {
     }
   } catch (err) {
     console.error("openSkillFolder", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
   }
 }

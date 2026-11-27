@@ -63,10 +63,14 @@ func Run(ctx context.Context, scriptDic map[string]Script, state State, meta Met
 	}
 
 	if err != nil {
-		slog.Debug("[Denied] hook "+state.String()+": "+err.Error(), details...)
-		isPass = false
-		debug = err.Error()
-	} else if !isPass {
+		// NOTE: 不是用戶自定的錯誤，直接忽略 hook (避免後續對話全部卡死)
+		slog.Debug("hook "+state.String()+": skipped", append(details, "error", err.Error())...)
+		if meta.Events != nil {
+			meta.Events <- agenttypes.Event{Type: agenttypes.EventHookLog, Text: state.String() + ": skipped: " + err.Error()}
+		}
+		return true, err.Error()
+	}
+	if !isPass {
 		slog.Debug("[Denied] hook "+state.String()+": stop action", details...)
 	} else if debug != "" {
 		slog.Debug("hook "+state.String()+": passed", append(details, "debug", debug)...)

@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/agents"
 	"github.com/pardnchiu/agenvoy/internal/agents/audio"
 	agenttypes "github.com/pardnchiu/agenvoy/internal/agents/types"
@@ -30,6 +32,7 @@ import (
 	"github.com/pardnchiu/agenvoy/internal/runtime/torii"
 	"github.com/pardnchiu/agenvoy/internal/runtime/webapp"
 	"github.com/pardnchiu/agenvoy/internal/session"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	sessionlog "github.com/pardnchiu/agenvoy/internal/session/log"
 	sessiontui "github.com/pardnchiu/agenvoy/internal/session/tui"
 	usagelog "github.com/pardnchiu/agenvoy/internal/session/usage"
@@ -169,6 +172,13 @@ func Daemon() {
 		if agents.Reload() {
 			slog.Debug("host reloaded: config change")
 		}
+		if dic, err := config.Get(); err == nil {
+			lang, _ := dic["reply_lang"].(string)
+			if lang = strings.TrimSpace(lang); lang == "" {
+				lang = filesystem.ReplyLangAuto
+			}
+			filesystem.SetReplyLang(lang)
+		}
 		app.ReloadDiscord(0)
 		app.ReloadTelegram(0)
 	})
@@ -199,8 +209,9 @@ func Daemon() {
 
 	route := routes.New()
 	server := &http.Server{
-		Addr:    "127.0.0.1:" + filesystem.Port,
-		Handler: route,
+		Addr:              "127.0.0.1:" + filesystem.Port,
+		Handler:           route,
+		ReadHeaderTimeout: configs.HTTP_READ_HEADER_TIMEOUT,
 	}
 
 	listeners, err := app.LoopbackListeners(filesystem.Port)
@@ -225,6 +236,15 @@ func Daemon() {
 			serveErr <- nil
 		}(listener)
 	}
+
+	syncLAN := func() {
+		cfg, err := config.Load()
+		lan := err == nil && cfg.LANAccess
+		routes.SetLAN(app.SyncLANListeners(server, filesystem.Port, lan))
+	}
+	syncLAN()
+	stopLANWatcher := app.WatchConfig(context.Background(), syncLAN)
+	defer stopLANWatcher()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

@@ -18,10 +18,10 @@ function hookTabDom() {
 function hookFileLabel(name, files, one) {
   let label = `${name}.${one.ext}`;
   if (one.primary && files.filter((file) => file.exists).length > 1) {
-    label += " (primary)";
+    label += i18n("label_file_primary_suffix");
   }
   if (!one.exists) {
-    label += " (new)";
+    label += i18n("label_file_new_suffix");
   }
   return label;
 }
@@ -52,8 +52,8 @@ async function renderHookTab() {
     const installed = files.filter((one) => one.exists);
     const summary =
       installed.length === 0
-        ? "not added"
-        : installed.map((one) => (one.primary && installed.length > 1 ? `${one.ext} (primary)` : one.ext)).join(" · ");
+        ? i18n("label_not_added")
+        : installed.map((one) => (one.primary && installed.length > 1 ? i18n("label_ext_primary", one.ext) : one.ext)).join(" · ");
     const card = _("div.card", [_("strong", hook.label || hook.name), _("p", summary)]);
     card.dataset.name = hook.name;
     card.dataset.selected = hook.name === picked ? "1" : "0";
@@ -85,7 +85,7 @@ async function loadHookTab(name) {
     body = await response.json();
   } catch (err) {
     console.error("loadHookTab", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
     return;
   }
 
@@ -150,7 +150,7 @@ async function saveHookTab() {
     }
   } catch (err) {
     console.error("saveHookTab", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
     return;
   }
 
@@ -159,7 +159,7 @@ async function saveHookTab() {
 
 async function deleteHookTab() {
   const one = currentHookFile();
-  if (!one || !one.exists || !confirm(`Delete "${hookTabName}.${one.ext}"?`)) {
+  if (!one || !one.exists || !confirm(i18n("confirm_delete", `${hookTabName}.${one.ext}`))) {
     return;
   }
 
@@ -176,7 +176,7 @@ async function deleteHookTab() {
     }
   } catch (err) {
     console.error("deleteHookTab", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
     return;
   }
 
@@ -198,6 +198,6 @@ async function openHookFile() {
     }
   } catch (err) {
     console.error("openHookFile", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
   }
 }

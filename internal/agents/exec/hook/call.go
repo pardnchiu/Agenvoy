@@ -11,6 +11,8 @@ import (
 	go_pkg_sandbox "github.com/pardnchiu/go-pkg/sandbox"
 
 	"github.com/pardnchiu/agenvoy/configs"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -32,7 +34,14 @@ func call(ctx context.Context, script Script, meta any) (bool, string, error) {
 	hookCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), configs.HOOK_TIMEOUT)
 	defer cancel()
 
-	cmd, err := go_pkg_sandbox.Wrap(hookCtx, script.Runtime, []string{script.Path}, script.WorkDir, nil)
+	var sandboxOpt *go_pkg_sandbox.Option
+	netOff := false
+	if cfg, cfgErr := config.Load(); cfgErr == nil && cfg.HookNetOff {
+		netOff = true
+		sandboxOpt = &go_pkg_sandbox.Option{Network: go_pkg_sandbox.NetworkDeny}
+	}
+
+	cmd, err := go_pkg_sandbox.Wrap(hookCtx, script.Runtime, []string{script.Path}, script.WorkDir, sandboxOpt)
 	if err != nil {
 		return false, "", utilsmsg.Wrap(utilsmsg.Denied, "go_pkg_sandbox: Wrap", script.Path, err)
 	}
@@ -64,6 +73,9 @@ func call(ctx context.Context, script Script, meta any) (bool, string, error) {
 		reason := strings.TrimSpace(stderr.String())
 		if reason == "" {
 			reason = err.Error()
+		}
+		if netOff && utils.IsNetworkError(stdout.String()+"\n"+stderr.String()) {
+			return false, "", utilsmsg.New(utilsmsg.Unavailable, "hook "+script.Path, "%s; Hook network is disabled, enable it in /config → Hook network if this hook needs network", reason)
 		}
 		return false, "", utilsmsg.New(utilsmsg.Upstream, "hook "+script.Path, "%s", reason)
 	}

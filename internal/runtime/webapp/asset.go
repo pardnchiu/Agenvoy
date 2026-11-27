@@ -2,6 +2,8 @@ package webapp
 
 import (
 	"context"
+	"crypto/sha512"
+	"encoding/base64"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -19,8 +21,9 @@ import (
 )
 
 type asset struct {
-	Path string `json:"path"`
-	URL  string `json:"url"`
+	Path   string `json:"path"`
+	URL    string `json:"url"`
+	SHA384 string `json:"sha384"`
 }
 
 func SyncAsset(ctx context.Context) error {
@@ -48,6 +51,10 @@ func SyncAsset(ctx context.Context) error {
 		body, _, err := go_pkg_http.GET[string](ctx, client, item.URL, nil)
 		if err != nil {
 			return utilsmsg.Wrap(utilsmsg.Upstream, "download", item.Path, err)
+		}
+		sum := sha512.Sum384([]byte(body))
+		if got := "sha384-" + base64.StdEncoding.EncodeToString(sum[:]); got != item.SHA384 {
+			return utilsmsg.New(utilsmsg.Upstream, "download "+item.Path, "sha384 mismatch: want %q, got %q", item.SHA384, got)
 		}
 		if err := go_pkg_filesystem.WriteFile(filepath.Join(filesystem.VendorDir, item.Path), body, 0644); err != nil {
 			return utilsmsg.Wrap(utilsmsg.Internal, "write", item.Path, err)

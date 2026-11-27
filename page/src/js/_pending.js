@@ -1,12 +1,14 @@
 let pendingTask = null;
 let pendingAnswers = [];
 
-const PENDING_TEXT = {
-  placeholder: "Type your answer...",
-  next: "Next",
-  send: "Send",
-  skip: "Skip",
-};
+function pendingText() {
+  return {
+    placeholder: i18n("placeholder_answer"),
+    next: i18n("text_next"),
+    send: i18n("text_send"),
+    skip: i18n("text_skip"),
+  };
+}
 
 async function loadPending(sessionId, taskHash, ownerId) {
   const dom = chatPart("pending", sessionId);
@@ -41,7 +43,7 @@ async function loadPending(sessionId, taskHash, ownerId) {
     owner: owner,
     taskHash: taskHash,
     questions: questions,
-    text: Object.assign({}, PENDING_TEXT, text),
+    text: Object.assign({}, pendingText(), text),
   };
   pendingAnswers = questions.map((q) => (q.multi_select ? [] : ""));
 
@@ -108,7 +110,7 @@ function pendingCard(question, index, total) {
     }
   }
 
-  const text = pendingTask ? pendingTask.text : PENDING_TEXT;
+  const text = pendingTask ? pendingTask.text : pendingText();
   const last = index === total - 1;
   const submit = _("button", { type: "button", class: "submit" }, last ? text.send : text.next);
   submit.addEventListener("click", () => answerPending(index, total));
@@ -124,7 +126,7 @@ function pendingCard(question, index, total) {
 }
 
 function pendingInput(question, index) {
-  const placeholder = (pendingTask ? pendingTask.text : PENDING_TEXT).placeholder;
+  const placeholder = (pendingTask ? pendingTask.text : pendingText()).placeholder;
   if (question.secret) {
     const dom = _("input", { type: "password", placeholder: placeholder });
     dom.addEventListener("input", () => (pendingAnswers[index] = dom.value));
@@ -189,7 +191,7 @@ async function cancelPending(sessionId) {
     return;
   }
   const taskHash = pendingTask.taskHash;
-  if (!confirm("Cancel this task?")) {
+  if (!confirm(i18n("confirm_cancel"))) {
     return;
   }
   const owner = pendingTask.owner || sessionId;
@@ -244,7 +246,7 @@ async function deletePending(sessionId, taskHash) {
     }
   } catch (err) {
     console.error("deletePending", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
     return false;
   }
   if (pendingTask && pendingTask.sessionId === sessionId && pendingTask.taskHash === taskHash) {
@@ -295,12 +297,12 @@ async function renderPendingHint(sessionId) {
       _("span.material-symbols-outlined", "live_help"),
       _("p", title),
     ]);
-    const remove = _("button", { type: "button", class: "remove", title: "Delete", "aria-label": "Delete" }, [
+    const remove = _("button", { type: "button", class: "remove", title: i18n("text_delete"), "aria-label": i18n("text_delete") }, [
       _("span.material-symbols-outlined", "delete"),
     ]);
     const hint = _("div", { class: "hint", "data-task": one.task_hash }, [open, remove]);
     remove.addEventListener("click", async () => {
-      if (!confirm(`Delete this task?\n\n${title}`)) {
+      if (!confirm(i18n("confirm_delete_chat", title))) {
         return;
       }
       if (!(await deletePending(sessionId, one.task_hash))) {
@@ -318,7 +320,7 @@ async function renderPendingHint(sessionId) {
         loadPending(sessionId, one.task_hash);
         return;
       }
-      if (!confirm(`Resume in this chat?\n\n${title}`)) {
+      if (!confirm(i18n("confirm_resume", title))) {
         return;
       }
       startResume(sessionId, one.task_hash);
@@ -352,12 +354,12 @@ async function stopLiveTask(sessionId, taskHash) {
   try {
     const response = await fetch(`${API}/v1/session/${encodeURIComponent(sessionId)}/cancel/${encodeURIComponent(taskHash)}`, { method: "POST" });
     if (!response.ok) {
-      pushToast(TOAST_LEVEL.ERROR, `cancel failed: ${response.status}`, nowClock());
+      pushToast(TOAST_LEVEL.ERROR, i18n("error_cancel_failed", response.status), nowClock());
       return false;
     }
   } catch (err) {
     console.error("stopLiveTask", err);
-    pushToast(TOAST_LEVEL.ERROR, `cancel failed: ${err?.message || err}`, nowClock());
+    pushToast(TOAST_LEVEL.ERROR, i18n("error_cancel_failed", err?.message || err), nowClock());
     return false;
   }
   return true;
@@ -380,14 +382,14 @@ async function openTaskPicker(sessionId) {
   const tasks = await listLiveTasks(sessionId);
   const list = _("div.list");
 
-  const cancel = _("button", { type: "button" }, "cancel");
-  const root = _("div.popup", [_("div.panel", [_("strong", "Live task"), list, _("footer", [cancel])])]);
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+  const root = _("div.popup", [_("div.panel", [_("strong", i18n("tooltip_live_task")), list, _("footer", [cancel])])]);
   root.id = "task-popup";
 
   const close = () => root.remove();
 
   if (tasks.length === 0) {
-    list.appendChild(_("p.empty", "No running task"));
+    list.appendChild(_("p.empty", i18n("label_no_running_task")));
   }
   for (const one of tasks) {
     const title = String(one.objective || "").replace(/\s+/g, " ").trim() || one.task_hash;
@@ -395,13 +397,13 @@ async function openTaskPicker(sessionId) {
     const row = _("label", [box, _("div", [_("strong", title), _("p", one.task_hash)])]);
     box.addEventListener("change", async () => {
       box.checked = false;
-      if (!confirm(`Stop this task?\n\n${title}`)) {
+      if (!confirm(i18n("confirm_stop", title))) {
         return;
       }
       if (await stopLiveTask(sessionId, one.task_hash)) {
         row.remove();
         if (!list.querySelector("label")) {
-          list.appendChild(_("p.empty", "No running task"));
+          list.appendChild(_("p.empty", i18n("label_no_running_task")));
         }
       }
     });

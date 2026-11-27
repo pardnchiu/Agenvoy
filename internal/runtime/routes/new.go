@@ -1,24 +1,44 @@
 package routes
 
 import (
+	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/pardnchiu/agenvoy/internal/locale"
 	"github.com/pardnchiu/agenvoy/internal/runtime/routes/handler"
 	completionshandler "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/chatCompletions"
 	runtimerouteshandlerhook "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/hook"
+	runtimerouteshandlertool "github.com/pardnchiu/agenvoy/internal/runtime/routes/handler/tool"
 	"github.com/pardnchiu/agenvoy/internal/utils"
 )
+
+var lanNets atomic.Pointer[[]*net.IPNet]
+
+func SetLAN(nets []*net.IPNet) {
+	lanNets.Store(&nets)
+}
+
+func inLAN(ip net.IP) bool {
+	nets := lanNets.Load()
+	if ip == nil || nets == nil {
+		return false
+	}
+	return slices.ContainsFunc(*nets, func(n *net.IPNet) bool { return n.Contains(ip) })
+}
 
 func New() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(hostOnly())
 	r.Use(cors())
 
 	pageIndex := registPage(r)
@@ -32,6 +52,10 @@ func New() *gin.Engine {
 	r.POST("/v1/send", jsonOnly(), handler.Send())
 	r.GET("/v1/log", handler.StreamMultiLog())
 	r.GET("/v1/info/version", handler.GetVersion())
+	r.GET("/v1/i18n", func(c *gin.Context) {
+		lang, dic := locale.WebUI(c.Query("lang"))
+		c.JSON(http.StatusOK, gin.H{"lang": lang, "dict": dic})
+	})
 	r.GET("/v1/daemon", localhostOnly(), handler.GetDaemonLog())
 	r.GET("/v1/system/update", localhostOnly(), handler.GetSystemUpdate())
 	r.POST("/v1/system/update", localhostOnly(), handler.SystemUpdate())
@@ -105,6 +129,10 @@ func New() *gin.Engine {
 	r.PATCH("/v1/role", localhostOnly(), handler.UpdateRole())
 	r.DELETE("/v1/role", localhostOnly(), handler.DeleteRole())
 
+	r.GET("/v1/tools", localhostOnly(), runtimerouteshandlertool.List())
+	r.GET("/v1/tool/*name", localhostOnly(), runtimerouteshandlertool.Get())
+	r.POST("/v1/tool/allow", localhostOnly(), runtimerouteshandlertool.Toggle())
+
 	r.GET("/v1/skills", localhostOnly(), handler.ListSkills())
 	r.GET("/v1/skill/*name", localhostOnly(), handler.GetSkill())
 	r.DELETE("/v1/skill", localhostOnly(), handler.DeleteSkill())
@@ -163,11 +191,29 @@ func allowOrigin(origin string) bool {
 	if err != nil {
 		return false
 	}
-	switch parsed.Hostname() {
+	return isLocalName(parsed.Hostname())
+}
+
+func isLocalName(name string) bool {
+	switch name {
 	case "localhost", "127.0.0.1", "::1":
 		return true
 	}
-	return false
+	return inLAN(net.ParseIP(name))
+}
+
+func hostOnly() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		host := c.Request.Host
+		if name, _, err := net.SplitHostPort(host); err == nil {
+			host = name
+		}
+		if !isLocalName(strings.Trim(host, "[]")) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": gin.H{"message": "[Denied] host: " + strconv.Quote(c.Request.Host) + " is not a local name", "type": "forbidden"}})
+			return
+		}
+		c.Next()
+	}
 }
 
 func cors() gin.HandlerFunc {
@@ -212,7 +258,11 @@ func jsonOnly() gin.HandlerFunc {
 
 func localhostOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !utils.IsLoopback(c.Request.RemoteAddr) {
+		host, _, err := net.SplitHostPort(c.Request.RemoteAddr)
+		if err != nil {
+			host = c.Request.RemoteAddr
+		}
+		if !utils.IsLoopback(c.Request.RemoteAddr) && !inLAN(net.ParseIP(host)) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": gin.H{"message": "localhost only", "type": "forbidden"}})
 			return
 		}

@@ -13,22 +13,13 @@ import (
 )
 
 // add/remove form list
-func Toggle(skillName string, workDir ...string) (bool, error) {
+func Toggle(skillName string) (bool, error) {
 	name := strings.TrimSpace(skillName)
 	if name == "" {
 		return false, utilsmsg.New(utilsmsg.Invalid, "skill name", "empty")
 	}
 
-	// default is global, if assign path, then path
-	src, path := globalPath(), filesystem.TrustSkillGlobalPath
-	if len(workDir) > 0 {
-		if strings.TrimSpace(workDir[0]) == "" {
-			return false, utilsmsg.New(utilsmsg.Invalid, "work dir", "empty")
-		}
-		src, path = projectPath(workDir[0]), filesystem.TrustSkillProjectPath(workDir[0])
-	}
-
-	dic := read(src)
+	dic := read(trustSkillPath())
 	added := false
 	if dic[name] {
 		delete(dic, name)
@@ -36,7 +27,7 @@ func Toggle(skillName string, workDir ...string) (bool, error) {
 		dic[name] = true
 		added = true
 	}
-	return added, write(path, dic)
+	return added, write(filesystem.TrustSkillPath, dic)
 }
 
 // update list in local
@@ -67,4 +58,18 @@ func write(path string, allowMap map[string]bool) error {
 		return utilsmsg.Wrap(utilsmsg.Internal, "github.com/pardnchiu/go-pkg/filesystem > WriteFile", path, err)
 	}
 	return nil
+}
+
+func Revoke(skillName string) (bool, error) {
+	name := strings.TrimSpace(skillName)
+	if name == "" {
+		return false, utilsmsg.New(utilsmsg.Invalid, "skill name", "empty")
+	}
+
+	dic := read(trustSkillPath())
+	if !dic[name] {
+		return false, nil
+	}
+	delete(dic, name)
+	return true, write(filesystem.TrustSkillPath, dic)
 }

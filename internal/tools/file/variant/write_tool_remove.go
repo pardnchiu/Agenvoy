@@ -13,7 +13,7 @@ import (
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
-func removeToolDir(ctx context.Context, e *tooltypes.Executor, name string) (string, error) {
+func writeToolRemove(ctx context.Context, e *tooltypes.Executor, name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || strings.ContainsAny(name, `/\`) || strings.Contains(name, "..") {
 		return "", utilsmsg.New(utilsmsg.Invalid, "name", "invalid tool name: %q", name)
@@ -28,7 +28,7 @@ func removeToolDir(ctx context.Context, e *tooltypes.Executor, name string) (str
 	if err != nil {
 		return "", err
 	}
-	recordRemoval(ctx, e, dir, trashPath, "edit_tool")
+	recordRemoval(ctx, e, dir, trashPath, "write_tool")
 
 	return fmt.Sprintf("trashed: %s", dir), nil
 }

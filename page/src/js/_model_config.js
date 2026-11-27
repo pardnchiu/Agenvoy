@@ -43,27 +43,27 @@ function providerFailure(id, method, error, pages) {
 
   if (/credit|spending limit|quota|insufficient|billing|payment/i.test(text)) {
     return {
-      text: "This account is out of credits or has hit its spending limit. Top it up, then reload.",
+      text: i18n("error_out_of_credits"),
       link: billing,
-      linkLabel: "open billing",
+      linkLabel: i18n("label_open_billing"),
     };
   }
   if (method === "oauth") {
-    return { text: "The login expired or was revoked. Sign in again to restore access.", login: true };
+    return { text: i18n("error_login_expired"), login: true };
   }
   if (status === "401" || status === "403") {
     return {
-      text: "The stored key was rejected. Delete it and paste a new one.",
+      text: i18n("error_key_rejected"),
       remove: true,
       link: billing,
-      linkLabel: "open console",
+      linkLabel: i18n("label_open_console"),
     };
   }
   return {
-    text: `The provider answered ${status ? `HTTP ${status}` : "an error"} instead of a model list.`,
+    text: i18n("error_answered_error", status ? `HTTP ${status}` : i18n("error_an_error")),
     remove: true,
     link: billing,
-    linkLabel: "open console",
+    linkLabel: i18n("label_open_console"),
   };
 }
 
@@ -107,8 +107,8 @@ async function deleteKey(key) {
 async function deleteProvider(prefix) {
   const catalog = await providerCatalog();
   const method = providerMethod(catalog, prefix);
-  const target = method === "oauth" ? "its stored login" : providerKeyNames(prefix).join(", ");
-  if (!confirm(`Remove ${prefix}? Its registered models and ${target} are deleted.`)) {
+  const target = method === "oauth" ? i18n("label_stored_login") : providerKeyNames(prefix).join(", ");
+  if (!confirm(i18n("confirm_remove_model", prefix, target))) {
     return;
   }
 
@@ -137,7 +137,7 @@ async function deleteProvider(prefix) {
 
 async function removeProviderKey(id) {
   const keys = providerKeyNames(id);
-  if (!confirm(`Delete ${keys.join(", ")}?`)) {
+  if (!confirm(i18n("confirm_delete", keys.join(", ")))) {
     return;
   }
 
@@ -326,7 +326,7 @@ async function renderModel() {
 
   const providerCard = (prefix) => {
     const total = count(prefix);
-    const children = [_("strong", label[prefix] || prefix), _("p", `${total} model${total === 1 ? "" : "s"}`)];
+    const children = [_("strong", label[prefix] || prefix), _("p", total === 1 ? i18n("label_count_one", total) : i18n("label_count", total))];
 
     const quota = quotaLabel((quotas || {})[prefix]);
     if (quota) {
@@ -355,7 +355,7 @@ async function renderModel() {
 
   const empty = sideIds.filter((id) => count(id) === 0);
   if (empty.length > 0) {
-    dom.list.appendChild(_("span.group", "No models"));
+    dom.list.appendChild(_("span.group", i18n("label_no_models_group")));
     for (const prefix of empty) {
       dom.list.appendChild(providerCard(prefix));
     }
@@ -403,23 +403,23 @@ async function saveModelTier(model, tier) {
     }
   } catch (err) {
     console.error("saveModelTier", err);
-    modelError(err.message || "failed");
+    modelError(err.message || i18n("text_failed"));
   }
   renderModelPriority();
 }
 
 function tierLabel(tier) {
   if (!tier) {
-    return "none";
+    return i18n("text_none");
   }
-  return tier === "pass" ? "pass" : `${tier}-tier`;
+  return tier === "pass" ? i18n("text_pass") : i18n("label_named", tier);
 }
 
 function openTierPicker(name, current, options) {
   const list = _("div.list");
 
-  const cancel = _("button", { type: "button" }, "cancel");
-  const root = _("div.popup", [_("div.panel", [_("strong", `Tier · ${name}`), list, _("footer", [cancel])])]);
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+  const root = _("div.popup", [_("div.panel", [_("strong", i18n("title_tier", name)), list, _("footer", [cancel])])]);
   root.id = "tier-popup";
 
   const close = () => root.remove();
@@ -462,7 +462,7 @@ async function saveModelPriority(names) {
     }
   } catch (err) {
     console.error("saveModelPriority", err);
-    modelError(err.message || "failed");
+    modelError(err.message || i18n("text_failed"));
   }
   renderModelPriority();
 }
@@ -472,7 +472,7 @@ let priorityDrag = -1;
 function priorityRow(name, rank, total, move, tier) {
   const rankText = `#${rank + 1}`;
   const label = _("div.label", [
-    _("p", rank === total - 1 && total > 1 ? `${rankText} · final` : rankText),
+    _("p", rank === total - 1 && total > 1 ? i18n("label_final", rankText) : rankText),
     _("strong", name),
   ]);
   const row = _("div.routing", [_("span.material-symbols-outlined.grip", "drag_indicator"), label, tier]);
@@ -585,7 +585,7 @@ async function saveRouting(body) {
     }
   } catch (err) {
     console.error("saveRouting", err);
-    modelError(err.message || "failed");
+    modelError(err.message || i18n("text_failed"));
   }
   renderModel();
 }
@@ -621,8 +621,8 @@ async function fillAudioOptions(stt, tts) {
     return;
   }
 
-  fillRoutingSelect("stt", stt, body.stt_options || [], "off");
-  fillRoutingSelect("tts", tts, body.tts_options || [], "off");
+  fillRoutingSelect("stt", stt, body.stt_options || [], i18n("text_off"));
+  fillRoutingSelect("tts", tts, body.tts_options || [], i18n("text_off"));
 }
 
 async function renderModelRouting(registered) {
@@ -636,10 +636,10 @@ async function renderModelRouting(registered) {
     return;
   }
 
-  fillRoutingSelect("dispatcher", routing.dispatcher, registered, "auto · first registered model");
-  fillRoutingSelect("summary", routing.summary, registered, "auto · first registered model");
-  fillRoutingSelect("image", routing.image, routing.imageOptions, "off");
-  fillRoutingSelect("decision", routing.decision, routing.decisionOptions, "off");
+  fillRoutingSelect("dispatcher", routing.dispatcher, registered, i18n("label_auto_first"));
+  fillRoutingSelect("summary", routing.summary, registered, i18n("label_auto_first"));
+  fillRoutingSelect("image", routing.image, routing.imageOptions, i18n("text_off"));
+  fillRoutingSelect("decision", routing.decision, routing.decisionOptions, i18n("text_off"));
   fillAudioOptions(routing.stt, routing.tts);
 }
 
@@ -657,23 +657,23 @@ function providerDetails(provider, method, added) {
   if (method !== "oauth" && pages.includes("key")) {
     head.appendChild(
       _("p", [
-        `Create one in the ${provider.label} `,
-        _("a", { href: providerConsoleLink(provider.id, "key"), target: "_blank", rel: "noreferrer" }, "Console"),
-        ".",
+        i18n("label_create_key_prefix", provider.label),
+        _("a", { href: providerConsoleLink(provider.id, "key"), target: "_blank", rel: "noreferrer" }, i18n("text_console")),
+        i18n("label_create_key_suffix"),
       ]),
     );
   }
   if (method === "oauth" && pages.includes("plan")) {
     head.appendChild(
       _("p", [
-        `Subscribe on the ${provider.label} `,
-        _("a", { href: providerConsoleLink(provider.id, "plan"), target: "_blank", rel: "noreferrer" }, "Plans"),
-        " page.",
+        i18n("label_subscribe_prefix", provider.label),
+        _("a", { href: providerConsoleLink(provider.id, "plan"), target: "_blank", rel: "noreferrer" }, i18n("text_plans")),
+        i18n("label_subscribe_suffix"),
       ]),
     );
   }
   if (method === "custom") {
-    head.appendChild(_("p", "Any OpenAI-compatible endpoint."));
+    head.appendChild(_("p", i18n("hint_custom")));
   }
   const card = _("section.provider", [head, providerCredentialForm(provider, method, added)]);
   card.dataset.added = added ? "1" : "0";
@@ -749,20 +749,20 @@ function renderProviderCatalog(catalog, added) {
 }
 
 function providerCredentialForm(provider, method, added) {
-  const submitLabel = added ? "renew" : method === "oauth" ? "login" : "add";
+  const submitLabel = added ? i18n("text_renew") : method === "oauth" ? i18n("text_login") : i18n("text_add");
 
   if (provider.id === "claude-code") {
     if (added) {
       return _("div.row.end");
     }
-    const start = _("button.submit", { type: "button" }, "add");
+    const start = _("button.submit", { type: "button" }, i18n("text_add"));
     start.addEventListener("click", () => selectProvider(provider.id));
     return _("div.row.end", [start]);
   }
 
   if (method === "oauth") {
     if (modelOAuth.id === provider.id) {
-      return _("div.row", [_("p", "waiting for the browser...")]);
+      return _("div.row", [_("p", i18n("label_waiting"))]);
     }
     const start = _("button.submit", { type: "button" }, submitLabel);
     start.addEventListener("click", () => startProviderOAuth(provider.id));
@@ -770,9 +770,9 @@ function providerCredentialForm(provider, method, added) {
   }
 
   if (method === "custom") {
-    const name = _("input", { type: "text", placeholder: "Name, e.g. ollama" });
+    const name = _("input", { type: "text", placeholder: i18n("placeholder_compat_name") });
     const url = _("input", { type: "text", placeholder: "http://127.0.0.1:11434/v1" });
-    const key = _("input", { type: "password", placeholder: "API key · optional" });
+    const key = _("input", { type: "password", placeholder: i18n("placeholder_api_key_optional") });
     const save = _("button.submit", { type: "button" }, submitLabel);
     save.addEventListener("click", () =>
       saveProviderKey(provider.id, { name: name.value.trim(), url: url.value.trim(), api_key: key.value.trim() }),
@@ -780,11 +780,11 @@ function providerCredentialForm(provider, method, added) {
     return _("div.field", [name, url, _("div.row", [key, save])]);
   }
 
-  const key = _("input", { type: "password", placeholder: "API key" });
+  const key = _("input", { type: "password", placeholder: i18n("button_api_key") });
 
   if (provider.id === "cloudflare") {
-    const account = _("input", { type: "text", placeholder: "Account ID" });
-    const gateway = _("input", { type: "text", placeholder: "AI Gateway ID · optional" });
+    const account = _("input", { type: "text", placeholder: i18n("placeholder_account_id") });
+    const gateway = _("input", { type: "text", placeholder: i18n("placeholder_gateway_id") });
     const saveCf = _("button.submit", { type: "button" }, submitLabel);
     saveCf.addEventListener("click", () =>
       saveProviderKey(provider.id, {
@@ -803,15 +803,15 @@ function providerCredentialForm(provider, method, added) {
 
 async function saveProviderKey(id, body) {
   if (!body.api_key && id !== "compat") {
-    modelError("api key is required");
+    modelError(i18n("error_api_key_required"));
     return;
   }
   if (id === "compat" && (!body.name || !body.url)) {
-    modelError("name and url are required");
+    modelError(i18n("error_name_url_required"));
     return;
   }
   if (id === "cloudflare" && !body.account_id) {
-    modelError("account ID is required for Cloudflare");
+    modelError(i18n("error_cloudflare_account_required"));
     return;
   }
 
@@ -828,17 +828,12 @@ async function saveProviderKey(id, body) {
     }
   } catch (err) {
     console.error("saveProviderKey", err);
-    modelError(err.message || "failed");
+    modelError(err.message || i18n("text_failed"));
     return;
   }
 
   if (id === "openai") {
-    alert(
-      "OpenAI key saved.\n\n" +
-        "Vector storage needs a daemon restart before it works:\n" +
-        "    agen stop && agen\n\n" +
-        "Entries written before the restart keep no vector.",
-    );
+    alert(i18n("error_key_saved_restart", "agen stop && agen"));
   }
 
   const prefix = id === "compat" ? body.name.toLowerCase() : id;
@@ -854,13 +849,13 @@ async function saveProviderKey(id, body) {
 function codeButton(code) {
   const button = _("button.code", { type: "button" }, [
     _("span.material-symbols-outlined", "content_copy"),
-    _("p", `code: ${code}`),
+    _("p", i18n("button_code", code)),
   ]);
   button.addEventListener("click", () => {
     navigator.clipboard.writeText(code).catch((err) => console.error("codeButton", err));
     const label = button.querySelector("p");
-    label.textContent = "copied";
-    setTimeout(() => (label.textContent = `code: ${code}`), 1000);
+    label.textContent = i18n("text_copied");
+    setTimeout(() => (label.textContent = i18n("button_code", code)), 1000);
   });
   return button;
 }
@@ -873,14 +868,14 @@ function closeProviderOAuth() {
   $("#oauth-popup")?.remove();
 }
 
-function openOAuthPopup(id, url = modelOAuth.url, hint = "enter this code in the browser") {
+function openOAuthPopup(id, url = modelOAuth.url, hint = i18n("label_enter_code")) {
   $("#oauth-popup")?.remove();
 
-  const cancel = _("button", { type: "button" }, "cancel");
-  const open = _("button.submit", { type: "button" }, "open website");
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+  const open = _("button.submit", { type: "button" }, i18n("button_open_website"));
   const root = _("div.popup", [
     _("div.panel", [
-      _("strong", `Sign in · ${id}`),
+      _("strong", i18n("title_sign_in", id)),
       _("p", hint),
       codeButton(modelOAuth.code),
       _("footer", [cancel, open]),
@@ -906,15 +901,15 @@ function openOAuthPastePopup(id) {
     type: "text",
     autocomplete: "off",
     spellcheck: "false",
-    placeholder: "code, or the full callback URL",
+    placeholder: i18n("placeholder_paste"),
   });
-  const status = _("p", "after signing in, paste the code xAI shows here");
-  const cancel = _("button", { type: "button" }, "cancel");
-  const open = _("button", { type: "button" }, "open website");
-  const send = _("button.submit", { type: "button" }, "submit");
+  const status = _("p", i18n("hint_paste"));
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+  const open = _("button", { type: "button" }, i18n("button_open_website"));
+  const send = _("button.submit", { type: "button" }, i18n("text_submit"));
   const root = _("div.popup", [
     _("div.panel", [
-      _("strong", `Sign in · ${id}`),
+      _("strong", i18n("title_sign_in", id)),
       status,
       field,
       _("footer", [cancel, open, send]),
@@ -936,14 +931,14 @@ function openOAuthPastePopup(id) {
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        status.textContent = body.error || "code rejected";
+        status.textContent = body.error || i18n("error_code_rejected");
         send.disabled = false;
         return;
       }
-      status.textContent = "signing in...";
+      status.textContent = i18n("label_signing_in");
     } catch (err) {
       console.error("openOAuthPastePopup", err);
-      status.textContent = "request failed";
+      status.textContent = i18n("text_failed");
       send.disabled = false;
     }
   };
@@ -987,7 +982,7 @@ function startProviderOAuth(id) {
 
     if (event.device_url) {
       modelOAuth.code = event.user_code || "";
-      openOAuthPopup(id, event.device_url, "browser sign-in opened; or open this page on another device and enter the code");
+      openOAuthPopup(id, event.device_url, i18n("hint_device"));
       return;
     }
     if (event.url) {
@@ -1012,7 +1007,7 @@ function startProviderOAuth(id) {
     modelOAuth.id = "";
     modelOAuth.code = "";
     if (!event.ok) {
-      modelError(event.error || "oauth failed");
+      modelError(event.error || i18n("error_oauth_failed"));
       renderModel();
       return;
     }
@@ -1076,7 +1071,7 @@ async function saveProviderModels(prefix, models) {
     }
   } catch (err) {
     console.error("saveProviderModels", err);
-    modelError(err.message || "failed");
+    modelError(err.message || i18n("text_failed"));
   }
   renderModel();
 }
@@ -1123,12 +1118,12 @@ async function renderProviderModels(prefix, registered) {
     return;
   }
 
-  const remove = _("button.remove", { type: "button" }, "delete");
+  const remove = _("button.remove", { type: "button" }, i18n("text_delete"));
   remove.addEventListener("click", () => deleteProvider(prefix));
 
   dom.models.innerHTML = "";
   dom.models.dataset.open = "1";
-  dom.models.appendChild(_("div.row", [_("strong", `${prefix} · pick the models this agent can use`), remove]));
+  dom.models.appendChild(_("div.row", [_("strong", i18n("label_pick_models", prefix)), remove]));
 
   const probe = await probeProvider(prefix);
   if (probe.aborted) {
@@ -1143,12 +1138,12 @@ async function renderProviderModels(prefix, registered) {
 
     const actions = [];
     if (failure.login) {
-      const login = _("button.submit", { type: "button" }, "sign in again");
+      const login = _("button.submit", { type: "button" }, i18n("button_sign_in_again"));
       login.addEventListener("click", () => startProviderOAuth(prefix));
       actions.push(login);
     }
     if (failure.remove) {
-      const remove = _("button.remove", { type: "button" }, "delete key");
+      const remove = _("button.remove", { type: "button" }, i18n("button_delete_key"));
       remove.addEventListener("click", () => removeProviderKey(prefix));
       actions.push(remove);
     }
@@ -1172,11 +1167,11 @@ async function renderProviderModels(prefix, registered) {
   }
 
   if (names.length === 0) {
-    dom.models.appendChild(_("p.empty", "no models returned by this provider"));
+    dom.models.appendChild(_("p.empty", i18n("label_no_models_returned")));
     return;
   }
 
-  const filter = _("input", { type: "text", placeholder: `Filter ${names.length} models` });
+  const filter = _("input", { type: "text", placeholder: i18n("placeholder_filter_models", names.length) });
   filter.addEventListener("input", () => {
     const query = filter.value.trim().toLowerCase();
     for (const row of dom.models.querySelectorAll("label.tool")) {

@@ -15,6 +15,7 @@ const (
 	REASONING_AUTO     = "auto"
 	BAN_TAG            = "[KARAPPO]"
 	DAEMON_LOG_CHANNEL = "daemon"
+	SCRIPT_TOOL_PREFIX = "script_"
 
 	// * Context
 	COMPACT_THRESHOLD_RATIO     = 0.8
@@ -52,9 +53,10 @@ const (
 	CONFIRM_EXPLAIN_RUNES   = 240
 	DEFAULT_TOOL_TIMEOUT    = 15 * time.Minute
 	// NOTE: not for heave task design, so use 30s for test
-	HOOK_TIMEOUT           = 30 * time.Second
-	RUN_COMMAND_TIMEOUT    = 30 * time.Minute
-	MAX_WATCH_SCRIPT_DEPTH = 4
+	HOOK_TIMEOUT             = 30 * time.Second
+	HTTP_READ_HEADER_TIMEOUT = 10 * time.Second
+	RUN_COMMAND_TIMEOUT      = 30 * time.Minute
+	MAX_WATCH_SCRIPT_DEPTH   = 4
 
 	// * Followup
 	FOLLOWUP_TIMEOUT        = 30 * time.Second
@@ -290,6 +292,9 @@ var ReadOnlyCommand []byte
 //go:embed jsons/denied_path.json
 var DeniedPath []byte
 
+//go:embed jsons/writable_path.json
+var WritablePath []byte
+
 //go:embed jsons/tui_tools.json
 var TUITools []byte
 
@@ -308,6 +313,9 @@ var RefusalMessages []byte
 //go:embed jsons/secret_patterns.json
 var SecretPatterns []byte
 
+//go:embed jsons/network_error.json
+var NetworkError []byte
+
 // * Confirm
 
 //go:embed jsons/locale/fetch_challenge.json
@@ -321,6 +329,9 @@ var ConfirmAskUser []byte
 
 //go:embed jsons/locale/chatbot_notice.json
 var ConfirmChatbotNotice []byte
+
+//go:embed jsons/locale/i18n/*.json
+var I18nFS embed.FS
 
 // * Official Guide
 

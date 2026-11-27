@@ -29,6 +29,9 @@ type Config struct {
 	AdminChannel     string            `json:"admin_channel"`
 	OutputDir        string            `json:"output_dir"`
 	OfficialGuideOff bool              `json:"official_guide_disabled"`
+	CommandNetOff    bool              `json:"command_network_disabled"`
+	HookNetOff       bool              `json:"hook_network_disabled"`
+	LANAccess        bool              `json:"lan_access_enabled"`
 	SkillSourceOff   []string          `json:"skill_source_disabled"`
 	ModelTag         map[string]string `json:"model_tag"`
 }

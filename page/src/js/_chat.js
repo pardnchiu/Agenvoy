@@ -118,9 +118,9 @@ function pinListItem(sessionId, title, tag) {
   const body = [
     _("a", { href: getLink({ page: "chat", chat: sessionId }) }, [_("span.tag.pin", "PIN"), _("span", title)]),
     _("div.actions", [
-      rowActionItem("keep_off", "Unpin", "", () => removePinChat(sessionId)),
-      rowActionItem("delete", "Delete", "remove", function () {
-        if (confirm(`Delete "${title}"?`)) {
+      rowActionItem("keep_off", i18n("text_unpin"), "", () => removePinChat(sessionId)),
+      rowActionItem("delete", i18n("text_delete"), "remove", function () {
+        if (confirm(i18n("confirm_delete", title))) {
           deleteChat(sessionId);
         }
       }),
@@ -142,9 +142,9 @@ function pinListItem(sessionId, title, tag) {
 
 function chatListItem(sessionId, title, tag) {
   const actions = _("div.actions", [
-    rowActionItem("keep", "Pin", "", () => addPinChat(sessionId)),
-    rowActionItem("delete", "Delete", "remove", function () {
-      if (confirm(`Delete "${title}"?`)) {
+    rowActionItem("keep", i18n("text_pin"), "", () => addPinChat(sessionId)),
+    rowActionItem("delete", i18n("text_delete"), "remove", function () {
+      if (confirm(i18n("confirm_delete", title))) {
         deleteChat(sessionId);
       }
     }),
@@ -181,7 +181,7 @@ async function deleteChat(sessionId) {
     }
   } catch (err) {
     console.error("deleteChat", err);
-    alert(err.message || "failed");
+    alert(err.message || i18n("text_failed"));
     return;
   }
 
@@ -327,7 +327,7 @@ function assistantFooter(meta, sessionId, task) {
   }
   const children = [];
   if (meta.canceled) {
-    children.push(_("p.canceled", "canceled"));
+    children.push(_("p.canceled", i18n("text_canceled")));
   }
   if (meta.error) {
     children.push(_("p.canceled", meta.error));
@@ -414,7 +414,7 @@ function newAssisatantItem(item, sessionId) {
   if (item.Reasoning) {
     body.push(
       _("details.reasoning", [
-        _("summary", ["Reasoning", _("span.material-symbols-outlined", "keyboard_arrow_down")]),
+        _("summary", [i18n("text_reasoning"), _("span.material-symbols-outlined", "keyboard_arrow_down")]),
         pendingMarkdownSection(channelText(item.Reasoning, sessionId)),
       ]),
     );

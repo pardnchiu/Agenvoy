@@ -56,7 +56,7 @@ func StartBackground(ctx context.Context, sessionID, taskHash, group, workDir st
 
 	id := prefix + "_" + strings.ReplaceAll(go_pkg_utils.UUID(), "-", "")[:8]
 	logDir := filesystem.BackgroundDir(sessionID)
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
+	if err := os.MkdirAll(logDir, 0o700); err != nil {
 		ReleaseBackgroundSlot(sessionID)
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "os.MkdirAll", logDir, err)
 	}

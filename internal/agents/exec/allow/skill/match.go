@@ -3,7 +3,6 @@ package skill
 
 import (
 	"log/slog"
-	"maps"
 	"os"
 	"strings"
 
@@ -14,32 +13,20 @@ import (
 )
 
 // check is in list or not
-func Match(workDir, skillName string) bool {
+func Match(skillName string) bool {
 	name := strings.TrimSpace(skillName)
 	if name == "" {
 		return false
 	}
-	return Load(workDir)[name]
+	return Load()[name]
 }
 
-// load global and project conbime to one
-func Load(workDir ...string) map[string]bool {
-	dic := read(globalPath())
-	if len(workDir) > 0 && strings.TrimSpace(workDir[0]) != "" {
-		maps.Copy(dic, read(projectPath(workDir[0])))
-	}
-	return dic
+func Load() map[string]bool {
+	return read(trustSkillPath())
 }
 
-func globalPath() string {
-	return migrate(filesystem.TrustSkillGlobalPath, filesystem.LegacyAllowSkillPath)
-}
-
-func projectPath(workDir string) string {
-	return migrate(filesystem.TrustSkillProjectPath(workDir), filesystem.LegacyAllowSkillProjectPath(workDir))
-}
-
-func migrate(path, legacy string) string {
+func trustSkillPath() string {
+	path, legacy := filesystem.TrustSkillPath, filesystem.LegacyAllowSkillPath
 	if go_pkg_filesystem_reader.Exists(path) || !go_pkg_filesystem_reader.Exists(legacy) {
 		return path
 	}

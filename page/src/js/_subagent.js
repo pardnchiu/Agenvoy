@@ -11,13 +11,13 @@ const subagentParent = new Map();
 const subagentPinnedAt = new Map();
 
 function subagentPanel(sessionId) {
-  const unpin = _("button", { class: "unpin", type: "button", name: "Unpin" }, [
+  const unpin = _("button", { class: "unpin", type: "button", name: i18n("text_unpin") }, [
     _("span.material-symbols-outlined", "keep_off"),
   ]);
   unpin.addEventListener("click", () => unpinSubagent(sessionId));
   return _("section", [
     _("header", [unpin]),
-    _("div.logo", [_("section", [_("img", { src: "public/logo-min.svg", alt: "Logo" }), _("p", "Agenvoy")])]),
+    _("div.logo", [_("section", [_("img", { src: "public/logo-min.svg", alt: i18n("text_logo") }), _("p", "Agenvoy")])]),
     _("section.messages", [_("section.pending", { "data-index": "0" }), _("section.confirm")]),
   ]);
 }

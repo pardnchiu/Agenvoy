@@ -12,7 +12,7 @@ async function openWorkDirPrompt() {
     return;
   }
   if (!path.startsWith("/") && !path.startsWith("~/")) {
-    alert("Absolute path only: start with / or ~/");
+    alert(i18n("error_absolute_only"));
     return;
   }
 
@@ -23,7 +23,7 @@ async function openWorkDirPrompt() {
       error = ((await response.json().catch(() => ({}))).error || `HTTP ${response.status}`).toString();
     }
   } catch (err) {
-    error = err.message || "cannot reach the daemon";
+    error = err.message || i18n("error_unreachable");
   }
   if (error) {
     alert(error);
@@ -36,19 +36,19 @@ async function openWorkDirPrompt() {
 
 function workDirPopup(value) {
   return new Promise(function (resolve) {
-    const box = _("textarea", { placeholder: "~/... or /..." });
+    const box = _("textarea", { placeholder: i18n("placeholder_path") });
     box.value = value || "";
 
     const mirror = _("pre");
     mirror.textContent = box.value + "\n";
 
-    const cancel = _("button", { type: "button" }, "cancel");
-    const save = _("button", { type: "button", class: "submit" }, "save");
+    const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+    const save = _("button", { type: "button", class: "submit" }, i18n("text_save"));
 
     const root = _("div.popup", [
       _("div.panel", [
-        _("strong", "Working directory"),
-        _("p", "Absolute path only: start with / or ~/"),
+        _("strong", i18n("tooltip_working_directory")),
+        _("p", i18n("error_absolute_only")),
         _("label.input", [box, mirror]),
         _("footer", [cancel, save]),
       ]),

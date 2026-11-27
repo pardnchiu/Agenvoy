@@ -148,8 +148,8 @@ func TestBuildDeniedPayloadDarwin(t *testing.T) {
 //
 // Runtime sockets/PID files (daemon.sock, runtime.uid), script fallback secrets
 // (.secrets), and legacy migration files (allow_skill) must stay excluded so
-// normal daemon, sandbox, and script_* execution are not blocked, while core
-// state and permission paths remain protected.
+// normal daemon, sandbox, and script_* execution are not blocked, while the
+// store and channel credentials remain unreadable.
 func TestEmbeddedDeniedPathJSON(t *testing.T) {
 	var paths []string
 	if err := json.Unmarshal(configs.DeniedPath, &paths); err != nil {
@@ -168,13 +168,9 @@ func TestEmbeddedDeniedPathJSON(t *testing.T) {
 		}
 	}
 
-	// core store, permission, schedule, and channel state paths must stay protected
+	// store and channel credential paths must stay unreadable
 	for _, required := range []string{
 		"~/.config/agenvoy/.store",
-		"~/.config/agenvoy/allow_tool",
-		"~/.config/agenvoy/trust_skill",
-		"~/.config/agenvoy/crons.json",
-		"~/.config/agenvoy/tasks.json",
 		"~/.config/agenvoy/.telegram",
 		"~/.config/agenvoy/.discord",
 	} {

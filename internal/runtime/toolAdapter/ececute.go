@@ -1,4 +1,4 @@
-package scriptAdapter
+package toolAdapter
 
 import (
 	"context"

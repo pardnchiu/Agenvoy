@@ -21,7 +21,7 @@ func registRunSkill() {
 		AlwaysAllow: true,
 		Description: `Loads a named skill's reference material and its directory path into this turn; an unknown name returns the available skills instead. What comes back is reference, not a script to execute line by line: take the parts that fit.
 Use when a skill in the available-skills list fits the task, or the user names one ("use the X skill", "/X").
-Changing a skill → edit_skill.`,
+Changing a skill → write_skill.`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{

@@ -1,9 +1,5 @@
 [
   "~/.config/agenvoy/.store",
-  "~/.config/agenvoy/allow_tool",
-  "~/.config/agenvoy/trust_skill",
-  "~/.config/agenvoy/crons.json",
-  "~/.config/agenvoy/tasks.json",
   "~/.config/agenvoy/.telegram",
   "~/.config/agenvoy/.discord",
   "~/Library/Application Support/Google/Chrome",

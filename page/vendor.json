@@ -1,34 +1,42 @@
 [
   {
     "path": "quickui/QuickUI.js",
-    "url": "https://cdn.jsdelivr.net/npm/@pardnchiu/quickui@v0.6.21/dist/QuickUI.js"
+    "url": "https://cdn.jsdelivr.net/npm/@pardnchiu/quickui@v0.6.21/dist/QuickUI.js",
+    "sha384": "sha384-SY84AfNlaq96IJU9JoD4KDmZJ8ypCxAld9nXLHdv1nKhCn7ooeIKPP5dgcp9emnI"
   },
   {
     "path": "fontawesome/css/fontawesome.min.css",
-    "url": "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/fontawesome.min.css"
+    "url": "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/fontawesome.min.css",
+    "sha384": "sha384-AGSGRaBRodcsy1n0F2zMm+LfXuZry/ZJ6nfio36UgMuNBs/AOC8ciJ7py4SgkpoY"
   },
   {
     "path": "fontawesome/css/brands.min.css",
-    "url": "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/brands.min.css"
+    "url": "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/brands.min.css",
+    "sha384": "sha384-CNhPUG5cpX8UuKLY0BCb+gzedmWkhHPKATz919jTKgOXajXjkEY99Qr51B5V2wOQ"
   },
   {
     "path": "fontawesome/webfonts/fa-brands-400.woff2",
-    "url": "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/webfonts/fa-brands-400.woff2"
+    "url": "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/webfonts/fa-brands-400.woff2",
+    "sha384": "sha384-5bQWftm2RhZySCFP7cLHM9Q0J7z6ky5sbicvUH56HGBRUDIGyAj52Py3qqJcISlb"
   },
   {
     "path": "material-symbols/material-symbols-outlined.woff2",
-    "url": "https://fonts.gstatic.com/s/materialsymbolsoutlined/v374/kJEhBvYX7BgnkSrUwT8OhrdQw4oELdPIeeII9v6oFsLjBuVY.woff2"
+    "url": "https://fonts.gstatic.com/s/materialsymbolsoutlined/v374/kJEhBvYX7BgnkSrUwT8OhrdQw4oELdPIeeII9v6oFsLjBuVY.woff2",
+    "sha384": "sha384-k2dbW9eXfsChyeyNKx522yL99pl2AA/ByjqoedA9GRW4ZgwfXRYm0YSyP8KGOs+n"
   },
   {
     "path": "nanomd/parser.min.js",
-    "url": "https://cdn.jsdelivr.net/npm/@pardnchiu/nanomd@2.0.14/dist/parser.min.js"
+    "url": "https://cdn.jsdelivr.net/npm/@pardnchiu/nanomd@2.0.14/dist/parser.min.js",
+    "sha384": "sha384-6z1mb2COUYSsGPBF5Rc43OoMrJ1EP+aWz0baxt9sgMkGp0V33HNfjjSdwPJ6z2+R"
   },
   {
     "path": "nanomd/parser.css",
-    "url": "https://cdn.jsdelivr.net/npm/@pardnchiu/nanomd@2.0.14/dist/parser.css"
+    "url": "https://cdn.jsdelivr.net/npm/@pardnchiu/nanomd@2.0.14/dist/parser.css",
+    "sha384": "sha384-aC5m+auz2aLKonWNxbMnPcIL9vpWsob872EkCSlIRguEvw/XLLQrMXPXwXzIO3FU"
   },
   {
     "path": "cloud.pardn.io/voice-realtime.js",
-    "url": "https://cloud.pardn.io/voice-realtime.js"
+    "url": "https://cloud.pardn.io/voice-realtime.js",
+    "sha384": "sha384-RiStQjvzNGDoJViZ3J5OjbaCtGYQiQrhB6bohYt+Jx+xG4bgGT9w5ifEKif1c0SN"
   }
 ]

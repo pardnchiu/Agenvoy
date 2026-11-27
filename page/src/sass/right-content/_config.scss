@@ -780,6 +780,10 @@ body section.right-content section.config section.editor.system {
     > div.card {
       @include settingCard;
       @include gridItem;
+
+      > select:has(option[value="enabled"]:checked) {
+        color: var(--okay);
+      }
     }
   }
 }

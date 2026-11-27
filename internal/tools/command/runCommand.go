@@ -21,10 +21,12 @@ import (
 
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/session/config"
 	toolsfile "github.com/pardnchiu/agenvoy/internal/tools/file"
 	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
+	"github.com/pardnchiu/agenvoy/internal/utils"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 	"github.com/pardnchiu/agenvoy/internal/utils/secret"
 )
@@ -76,7 +78,7 @@ func commandProperties() map[string]any {
 		},
 		"write_paths": map[string]any{
 			"type":        "array",
-			"description": "Absolute paths outside $HOME this command writes to, e.g. ['/usr/local'] for a system install; paths under $HOME are always writable and need not be listed. The sandbox only allows writes under $HOME, so a missing entry fails with a permission error that looks like file ownership and is not one: list the path here instead of running chown or chmod. A path still denied while listed is root-owned → argv ['sudo', ...]. Ignored when argv starts with sudo.",
+			"description": "Absolute paths outside $HOME this command writes to, e.g. ['/usr/local'] for a system install; paths under $HOME are writable and need not be listed, except ~/.config/agenvoy, which is read-only (its download/ stays writable; skills go through write_skill) and cannot be listed. The sandbox only allows writes under $HOME, so a missing entry fails with a permission error that looks like file ownership and is not one: list the path here instead of running chown or chmod. A path still denied while listed is root-owned → argv ['sudo', ...]. Ignored when argv starts with sudo.",
 			"items":       map[string]any{"type": "string"},
 		},
 		"sandbox": map[string]any{
@@ -211,6 +213,11 @@ func runCommand(ctx context.Context, e *tooltypes.Executor, argv, writePaths []s
 	err = go_pkg_sandbox.Run(cmd)
 	output := sink.text()
 	if err != nil {
+		if !unsandboxed && !network && utils.IsNetworkError(output) {
+			if cfg, cfgErr := config.Load(); cfgErr == nil && cfg.CommandNetOff {
+				return fmt.Sprintf("%s\nError: %s\n\n[agenvoy] this failed because it needs the network and Command network is disabled by the user (/config → Command network); network: true is not allowed, so do not retry it. Tell the user this step needs network.", output, err.Error()), nil
+			}
+		}
 		return fmt.Sprintf("%s\nError: %s%s", output, err.Error(), sandboxWriteHint(output, binds, unsandboxed)), nil
 	}
 

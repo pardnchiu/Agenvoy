@@ -8,6 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	go_pkg_filesystem_reader "github.com/pardnchiu/go-pkg/filesystem/reader"
+
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/filesystem/skill"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
@@ -220,11 +222,11 @@ func writeSchedule(c *gin.Context, exists bool) {
 	if !ok {
 		return
 	}
-	if exists && !skill.HasSchedule(body.Name) {
+	if exists && !go_pkg_filesystem_reader.IsDir(filesystem.ScheduleSkillDir(body.Name)) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "schedule skill not found: " + body.Name})
 		return
 	}
-	if !exists && skill.HasSchedule(body.Name) {
+	if !exists && go_pkg_filesystem_reader.IsDir(filesystem.ScheduleSkillDir(body.Name)) {
 		c.JSON(http.StatusConflict, gin.H{"error": "name already taken: " + body.Name})
 		return
 	}

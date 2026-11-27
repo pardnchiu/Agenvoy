@@ -160,7 +160,7 @@ function renderSendMode(sessionId) {
   const box = input.querySelector("textarea");
   const stop = hash !== "" && (!box || box.value.trim() === "");
   dom.dataset.mode = stop ? "stop" : "send";
-  dom.setAttribute("name", stop ? "Cancel" : "Send");
+  dom.setAttribute("name", stop ? i18n("text_cancel") : i18n("text_send"));
   dom.querySelector("span").textContent = stop ? "stop" : "send";
 }
 
@@ -247,17 +247,17 @@ function takeEcho(sessionId, text) {
 async function stopRunning(sessionId) {
   const sid = sessionId || currentSessionId;
   if (!sid) return;
-  if (!confirm("Cancel this task?")) return;
+  if (!confirm(i18n("confirm_cancel"))) return;
 
   const taskId = taskOf(sid) || "current";
   try {
     const response = await fetch(`${API}/v1/session/${encodeURIComponent(sid)}/cancel/${encodeURIComponent(taskId)}`, { method: "POST" });
     if (!response.ok) {
-      pushToast(TOAST_LEVEL.ERROR, `cancel failed: ${response.status}`, nowClock());
+      pushToast(TOAST_LEVEL.ERROR, i18n("error_cancel_failed", response.status), nowClock());
     }
   } catch (err) {
     console.error("stopRunning", err);
-    pushToast(TOAST_LEVEL.ERROR, `cancel failed: ${err?.message || err}`, nowClock());
+    pushToast(TOAST_LEVEL.ERROR, i18n("error_cancel_failed", err?.message || err), nowClock());
   }
 }
 
@@ -343,7 +343,7 @@ async function send(content, target) {
   } catch (err) {
     const view = streamOf(sessionId);
     if (view) {
-      renderEvent(view, { type: "EventError", trace: `⚠ ${err.message || "unknown error"}` });
+      renderEvent(view, { type: "EventError", trace: `⚠ ${err.message || i18n("error_unknown_error")}` });
     }
   }
 }
@@ -507,7 +507,7 @@ function newStreamItem(init, sessionId) {
   const sid = sessionId || currentSessionId;
 
   const reasoning = _("section.md-render.nanomd", { "data-mode": "light" });
-  const think = _("details.reasoning", [_("summary", ["Reasoning", _("span.material-symbols-outlined", "keyboard_arrow_down")]), reasoning]);
+  const think = _("details.reasoning", [_("summary", [i18n("text_reasoning"), _("span.material-symbols-outlined", "keyboard_arrow_down")]), reasoning]);
   think.hidden = !init.trace;
   think.open = true;
   think.dataset.streaming = "1";

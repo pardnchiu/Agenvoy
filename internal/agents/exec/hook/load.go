@@ -32,38 +32,33 @@ var (
 )
 
 func Load(workDir string) map[string]Script {
-	dirs := []string{filesystem.HooksDir}
 	if strings.TrimSpace(workDir) == "" {
 		workDir = filesystem.HomeDir
-	} else {
-		dirs = append(dirs, filesystem.WorkHooksDir(workDir))
 	}
 
 	dic := map[string]Script{}
-	for _, dir := range dirs {
-		entries, err := os.ReadDir(dir)
-		if err != nil {
+	entries, err := os.ReadDir(filesystem.HooksDir)
+	if err != nil {
+		return dic
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+		ext := filepath.Ext(name)
+		key := strings.TrimSuffix(name, ext)
+		runtime, ok := hookRuntimes[ext]
+		// NOTE: 只讀規範的 hookStateKey 檔案
+		if !ok || !slices.Contains(hookStateKey[:], key) || entry.IsDir() {
 			continue
 		}
-
-		for _, entry := range entries {
-			name := entry.Name()
-			ext := filepath.Ext(name)
-			key := strings.TrimSuffix(name, ext)
-			runtime, ok := hookRuntimes[ext]
-			// NOTE: 只讀規範的 hookStateKey 檔案
-			if !ok || !slices.Contains(hookStateKey[:], key) || entry.IsDir() {
-				continue
-			}
-			// NOTE: 如果 py 版本已存在 dic 則跳過 (py > js)
-			if script, ok := dic[key]; ok && filepath.Dir(script.Path) == dir && script.Runtime == "python3" {
-				continue
-			}
-			dic[key] = Script{
-				Path:    filepath.Join(dir, name),
-				WorkDir: workDir,
-				Runtime: runtime,
-			}
+		// NOTE: 如果 py 版本已存在 dic 則跳過 (py > js)
+		if script, ok := dic[key]; ok && script.Runtime == "python3" {
+			continue
+		}
+		dic[key] = Script{
+			Path:    filepath.Join(filesystem.HooksDir, name),
+			WorkDir: workDir,
+			Runtime: runtime,
 		}
 	}
 	return dic

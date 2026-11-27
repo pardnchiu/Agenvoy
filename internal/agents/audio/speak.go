@@ -13,6 +13,7 @@ import (
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
 
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
+	"github.com/pardnchiu/agenvoy/internal/tools/file/boundary"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
@@ -53,10 +54,13 @@ func Speak(ctx context.Context, req TTSRequest) (string, error) {
 	}
 
 	path := outputPath(req, result.MimeType)
+	if err := boundary.CheckWrite(path); err != nil {
+		return "", err
+	}
 	if err := go_pkg_filesystem.CheckDir(filepath.Dir(path), true); err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem.CheckDir", filepath.Dir(path), err)
 	}
-	if err := os.WriteFile(path, result.Audio, 0644); err != nil {
+	if err := os.WriteFile(path, result.Audio, 0600); err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "os.WriteFile", path, err)
 	}
 	return fmt.Sprintf("saved: %s\nmodel: %s\nbytes: %d", path, modelName, len(result.Audio)), nil

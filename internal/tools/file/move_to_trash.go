@@ -25,7 +25,7 @@ func MoveToTrash(ctx context.Context, e *tooltypes.Executor, paths []string, too
 			continue
 		}
 
-		src, err := boundary.Resolve(e.SessionID, e.WorkDir, one)
+		src, err := boundary.ResolveWrite(e.SessionID, e.WorkDir, one)
 		if err != nil {
 			failed = append(failed, fmt.Sprintf("%s (%v)", one, err))
 			errs = append(errs, err)

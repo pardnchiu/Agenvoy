@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/tools/calculate"
 	"github.com/pardnchiu/agenvoy/internal/tools/command"
 	toolcron "github.com/pardnchiu/agenvoy/internal/tools/cron"
@@ -39,7 +40,7 @@ func init() {
 	registImage()
 	registAudio()
 
-	toolregister.RegistGroup("script_", func(ctx context.Context, e *tooltypes.Executor, name string, args json.RawMessage) (string, error) {
+	toolregister.RegistGroup(configs.SCRIPT_TOOL_PREFIX, func(ctx context.Context, e *tooltypes.Executor, name string, args json.RawMessage) (string, error) {
 		if e.ScriptToolbox == nil || !e.ScriptToolbox.IsExist(name) {
 			return "", utilsmsg.New(utilsmsg.NotFound, "tool", "not exist: %s", name)
 		}

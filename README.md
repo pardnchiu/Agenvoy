@@ -143,7 +143,7 @@ Meta Muse, OpenAI dots and Grok Bot each run your agent on a cloud VM the vendor
 | :-- | :-- |
 | **Data on your disk** | Sessions, memory and schedules live in SQLite under `~/.config/agenvoy`. No Agenvoy account, no hosted copy |
 | **Credentials in your keychain** | API keys and OAuth tokens sit in the OS keychain and are used only by the local daemon; secrets in tool output are masked before the model or logs see them |
-| **Sandboxed by default** | Commands run under `sandbox-exec` on macOS or `bwrap` on Linux with network off unless you approve it for that call; management endpoints answer localhost only |
+| **Sandboxed by default** | Commands run under `sandbox-exec` on macOS or `bwrap` on Linux with network off unless you approve it for that call, and `/config` → Command network can block it altogether; management endpoints answer localhost only unless you turn on LAN access in `/config` |
 | **Your choice of model** | Use the provider you trust, or point Agenvoy at Ollama or LM Studio so prompts never leave your machine |
 
 ## What you can do with it
@@ -293,7 +293,7 @@ OpenClaw, Hermes Agent, DeepSeek Harness and pi are TypeScript or Python project
 | Secret masking | Keys and tokens in tool output are masked before the model or logs see them |
 | Transcription & images | Audio and video to text; image generation through a configured provider |
 
-**40 built-in tools**: related actions sit behind one name and a `mode` argument, and only seven schemas ride along with every run — the rest are fetched on demand, so the prompt cache survives the whole session. See [Built-in Tools](https://agenvoy.com/built-in-tools).
+**39 built-in tools**: related actions sit behind one name and a `mode` argument, and only seven schemas ride along with every run — the rest are fetched on demand, so the prompt cache survives the whole session. See [Built-in Tools](https://agenvoy.com/built-in-tools).
 
 ## Talk to your agent anywhere
 
@@ -302,9 +302,9 @@ Same agent, same tools, same memory — from the terminal, chat apps, HTTP or ot
 | Channel | How you use it |
 | :-- | :-- |
 | TUI | Interactive terminal with slash commands and session switching |
-| Web dashboard | Ships inside the binary at `http://127.0.0.1:17989`; manage sessions, tools, schedules and memory |
+| Web dashboard | Ships inside the binary at `http://127.0.0.1:17989`; manage sessions, tools, schedules and memory, with the interface in 16 languages that follows your reply language |
 | Telegram / Discord | The local daemon connects outward with a bot token — no inbound port, no reverse proxy. New messages steer a running task; `/new <message>` starts a separate one |
-| REST API | OpenAI-compatible chat completions endpoint, plus `agen -p` for one-shot prompts |
+| REST API | OpenAI-compatible chat completions endpoint; `agen -p` runs one-shot prompts from the shell |
 | MCP server | Expose tools to Claude Code, Codex, OpenCode and Cursor |
 
 <p align="center">
@@ -340,7 +340,7 @@ Eleven model providers behind one interface, plus as many OpenAI-compatible endp
 agen -p "Summarize today's commits" --stream
 ```
 
-`agen -p` sends one prompt to the local daemon and prints the reply. It is read-only and sandboxed by default; add `--allow-edit` to let it write and `--skip-sandbox` to let it leave `$HOME`. `--skip-sandbox` (`enable_sandbox:false` on `/v1/send`) is very dangerous: it allows `sudo` and paths outside `$HOME` with no confirmation, and the daemon accepts it only from this machine. See the [docs](doc/doc.md#one-shot-prompt) for every flag.
+`agen -p` runs one prompt in its own process and prints the reply. It is read-only and sandboxed by default; add `--allow-edit` to let it write and `--skip-sandbox` to let it leave `$HOME`. `--skip-sandbox` is very dangerous: it allows `sudo` and paths outside `$HOME` with no confirmation. It exists only on the command line; `/v1/send` cannot turn the sandbox off. See the [docs](doc/doc.md#one-shot-prompt) for every flag.
 
 ## Recommended setup
 

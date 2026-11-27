@@ -175,9 +175,7 @@ function addPinChat(sessionId) {
     return;
   }
   if (config.pin_chat.length >= PIN_CHAT_MAX) {
-    alert(
-      `Pinned panels are limited to ${PIN_CHAT_MAX}.\n\nUnpin one from its panel header, then pin this chat again.`,
-    );
+    alert(i18n("error_pin_limit", PIN_CHAT_MAX));
     return;
   }
 
@@ -265,9 +263,9 @@ async function openFileInSubview(path) {
   }
 
   const frame = _("iframe.body", { title: path });
-  const close = _("button", { name: "Close" }, [_("span.material-symbols-outlined", "right_panel_open")]);
+  const close = _("button", { name: i18n("text_close") }, [_("span.material-symbols-outlined", "right_panel_open")]);
   close.addEventListener("click", closeSubview);
-  const open = _("button", { name: "Open with system app" }, [_("span.material-symbols-outlined", "open_in_new")]);
+  const open = _("button", { name: i18n("button_open_system") }, [_("span.material-symbols-outlined", "open_in_new")]);
   open.addEventListener("click", () => openAgenvoyFile(path));
   box.innerHTML = "";
   box.appendChild(_("article", [_("header", [close, _("p", `\u200E${path}`), open]), frame]));
@@ -292,7 +290,7 @@ async function openFileInSubview(path) {
   } catch (err) {
     console.error("openFileInSubview", err);
     frame.srcdoc = subviewDocument(
-      `<p>Failed to open "${escapeSubviewText(path)}": ${escapeSubviewText(err.message)}</p>`,
+      `<p>${escapeSubviewText(i18n("error_open_failed", path, err.message))}</p>`,
     );
   }
 }
@@ -363,7 +361,7 @@ function bindFileLink() {
 function fileBox(files) {
   const list = _("ul");
   const box = _("details.files", [
-    _("summary", ["Files", _("span.material-symbols-outlined", "keyboard_arrow_down")]),
+    _("summary", [i18n("text_files"), _("span.material-symbols-outlined", "keyboard_arrow_down")]),
     list,
   ]);
   box.open = true;
@@ -395,7 +393,7 @@ function renderFileBox(box, files) {
 }
 
 function copyBtn() {
-  const dom = _("button", { name: "Copy content" }, [_("span.material-symbols-outlined", "content_copy")]);
+  const dom = _("button", { name: i18n("button_copy_content") }, [_("span.material-symbols-outlined", "content_copy")]);
   dom.addEventListener("click", function () {
     const bubble = dom.closest("div.assistant, div.user");
     const source = bubble && bubble.querySelector("pre.source");
@@ -416,7 +414,7 @@ function copyBtn() {
 }
 
 function historyBtn(sessionId, task) {
-  const dom = _("button", { name: "Task history" }, [_("span.material-symbols-outlined", "history")]);
+  const dom = _("button", { name: i18n("button_history") }, [_("span.material-symbols-outlined", "history")]);
   dom.addEventListener("click", function () {
     window.location.href = detailsLink(sessionId, task, "");
   });
@@ -517,7 +515,7 @@ function bindInputDrop() {
       try {
         const found = await locateDropped(entry);
         if (found.length === 0) {
-          alert(`can not find where [${entry.name}] lives on this machine`);
+          alert(i18n("error_not_found_file", entry.name));
           continue;
         }
         const path = found.length === 1 ? found[0] : pickPath(entry.name, found);
@@ -526,7 +524,7 @@ function bindInputDrop() {
         }
       } catch (err) {
         console.error("locateDropped", err);
-        alert(`failed to locate [${entry.name}]：${err.message}`);
+        alert(i18n("error_locate_failed", entry.name, err.message));
       }
     }
     if (paths.length === 0) {
@@ -621,7 +619,7 @@ async function locateDropped(entry) {
 
 function pickPath(name, list) {
   const menu = list.map((p, i) => `${i + 1}. ${p}`).join("\n");
-  const answer = prompt(`${list.length} matches for [${name}], enter a number:\n${menu}`, "1");
+  const answer = prompt(i18n("label_pick", list.length, name, menu), "1");
   return list[Number(answer) - 1] || "";
 }
 

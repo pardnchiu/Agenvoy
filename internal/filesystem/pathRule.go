@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	go_pkg_filesystem "github.com/pardnchiu/go-pkg/filesystem"
+
+	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
 )
 
 func IsDeniedPath(absPath string) bool {
@@ -18,6 +20,25 @@ func IsDeniedPath(absPath string) bool {
 	return slices.ContainsFunc(DeniedPath, func(one string) bool {
 		return absPath == one || strings.HasPrefix(absPath, one+sep)
 	})
+}
+
+func IsReadOnlyPath(absPath string) bool {
+	absPath = filepath.Clean(strings.TrimSpace(absPath))
+	if absPath == "" || absPath == "." {
+		return false
+	}
+	sep := string(filepath.Separator)
+	deepest := func(list []string) int {
+		depth := -1
+		for _, one := range list {
+			if absPath == one || strings.HasPrefix(absPath, one+sep) {
+				depth = max(depth, len(one))
+			}
+		}
+		return depth
+	}
+	readOnly := deepest(ReadOnlyPath)
+	return readOnly >= 0 && readOnly > deepest(WritablePath)
 }
 
 func IsReadablePath(absPath string) bool {
@@ -101,5 +122,17 @@ func WorkDirAllowsAll(workDir string) bool {
 	if err != nil {
 		return false
 	}
-	return IsWithin(home, dir) && dir != filepath.Clean(home) && !IsDeniedPath(dir) && !IsSensitivePath(dir)
+	return IsWithin(home, dir) && dir != filepath.Clean(home) && !IsDeniedPath(dir) && !IsReadOnlyPath(dir) && !IsSensitivePath(dir)
+}
+
+func CheckDirName(field, name string) error {
+	switch {
+	case strings.TrimSpace(name) == "":
+		return utilsmsg.New(utilsmsg.Invalid, field, "is required")
+	case strings.ContainsAny(name, `/\`):
+		return utilsmsg.New(utilsmsg.Invalid, field, "%q cannot contain a path separator", name)
+	case strings.HasPrefix(name, "."):
+		return utilsmsg.New(utilsmsg.Invalid, field, "%q cannot start with a dot", name)
+	}
+	return nil
 }

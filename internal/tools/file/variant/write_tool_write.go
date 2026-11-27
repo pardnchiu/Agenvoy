@@ -34,7 +34,7 @@ func toolTarget(name, tag string, mustExist bool) (string, error) {
 	return "", utilsmsg.New(utilsmsg.Invalid, "tag", "must be 'json' or 'script', got %q", tag)
 }
 
-func writeToolFile(ctx context.Context, e *tooltypes.Executor, name, tag, content string) (string, error) {
+func writeToolWrite(ctx context.Context, e *tooltypes.Executor, name, tag, content string) (string, error) {
 	if strings.TrimSpace(content) == "" {
 		return "", utilsmsg.New(utilsmsg.Invalid, "content", "required when mode=write")
 	}
@@ -48,7 +48,7 @@ func writeToolFile(ctx context.Context, e *tooltypes.Executor, name, tag, conten
 	if err := go_pkg_filesystem.WriteFile(target, content, 0644); err != nil {
 		return "", utilsmsg.Wrap(utilsmsg.Internal, "go_pkg_filesystem: WriteFile", target, err)
 	}
-	record(ctx, e, change, content, "edit_tool")
+	record(ctx, e, change, content, "write_tool")
 
 	return fmt.Sprintf("created: %s", target), nil
 }

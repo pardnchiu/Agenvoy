@@ -13,7 +13,7 @@ import (
 	"github.com/pardnchiu/agenvoy/configs"
 	"github.com/pardnchiu/agenvoy/internal/filesystem"
 	"github.com/pardnchiu/agenvoy/internal/runtime"
-	scriptadapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter/script"
+	runtimetooladapter "github.com/pardnchiu/agenvoy/internal/runtime/toolAdapter"
 	toolregister "github.com/pardnchiu/agenvoy/internal/tools/register"
 	tooltypes "github.com/pardnchiu/agenvoy/internal/tools/types"
 	utilsmsg "github.com/pardnchiu/agenvoy/internal/utils/msg"
@@ -27,19 +27,13 @@ func NewExecutor(workPath, sessionID string, scanner *runtime.SkillScanner) (*to
 
 	warnLegacyAPITools()
 
-	scriptToolbox := scriptadapter.New("script_")
-	for _, dir := range []string{
-		filesystem.SystemToolsDir,
-		filesystem.ScriptToolsDir,
-		filesystem.WorkScriptToolsDir,
-	} {
-		scriptToolbox.Scan(dir)
-	}
+	scriptToolbox := runtimetooladapter.New(configs.SCRIPT_TOOL_PREFIX)
+	scriptToolbox.Scan(filesystem.ScriptToolsDir)
 
-	extScriptToolbox := scriptadapter.New("ext_")
+	extScriptToolbox := runtimetooladapter.New("ext_")
 	extScriptToolbox.Scan(filesystem.ExtensionScriptToolsDir)
 
-	for _, tb := range []*scriptadapter.Translator{scriptToolbox, extScriptToolbox} {
+	for _, tb := range []*runtimetooladapter.Translator{scriptToolbox, extScriptToolbox} {
 		for _, tool := range tb.GetTools() {
 			raw, err := json.Marshal(tool)
 			if err != nil {

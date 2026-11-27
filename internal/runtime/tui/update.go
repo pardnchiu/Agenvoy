@@ -947,6 +947,9 @@ func (t TUI) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ConfigSelect:
 		return t.runConfigSelect(msg.key)
 
+	case ConfigLANChoice:
+		return t.runLANChoice(msg.choice)
+
 	case StartupDone:
 		t = t.openConfig(configStartup)
 		if msg.err != nil {

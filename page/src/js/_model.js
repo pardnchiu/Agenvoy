@@ -103,8 +103,8 @@ function openModelPicker() {
   const names = modelList.length > 0 ? modelList : [ensureModel()];
   const list = _("div.list");
 
-  const cancel = _("button", { type: "button" }, "cancel");
-  const root = _("div.popup", [_("div.panel", [_("strong", "Model"), list, _("footer", [cancel])])]);
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+  const root = _("div.popup", [_("div.panel", [_("strong", i18n("text_model")), list, _("footer", [cancel])])]);
   root.id = "model-popup";
 
   const close = () => root.remove();
@@ -221,8 +221,8 @@ function openReasoningPicker() {
   const levels = reasoningList.length > 0 ? reasoningList : Object.keys(REASONING_ICON);
   const list = _("div.list");
 
-  const cancel = _("button", { type: "button" }, "cancel");
-  const root = _("div.popup", [_("div.panel", [_("strong", "Reasoning"), list, _("footer", [cancel])])]);
+  const cancel = _("button", { type: "button" }, i18n("text_cancel"));
+  const root = _("div.popup", [_("div.panel", [_("strong", i18n("text_reasoning")), list, _("footer", [cancel])])]);
   root.id = "reasoning-popup";
 
   const close = () => root.remove();
