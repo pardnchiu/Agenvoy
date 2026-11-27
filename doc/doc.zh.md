@@ -1,12 +1,12 @@
 # Agenvoy - 技術文件
 
-最後更新：2026-11-19
+最後更新：2026-11-28
 
 > 返回 [README](./README.zh.md)
 
 ## 前置需求
 
-- Go 1.26.10 或更新版本
+- Go 1.26.11 或更新版本
 - macOS 或 Linux；Windows 請先安裝 WSL Linux 發行版，並在 WSL 終端機內執行 Agenvoy；Android 請在內建 Terminal（Android 15 QPR2／16 以上）或 Termux 以 `proot-distro` 安裝的 Ubuntu 內執行 Agenvoy
 - 至少一組模型供應商憑證；Telegram 與 Discord 需要各自的 bot token。語音轉文字、文字轉語音與圖片生成各需選定對應模型／provider 及其憑證
 
@@ -70,11 +70,11 @@ make build
 agen
 ```
 
-`make build` 會將二進位檔安裝至 `/usr/local/bin/agen`（因此需要 `sudo`），並以 `extensions/` 的內容重建 `~/.config/agenvoy/skills/.system` 與 `~/.config/agenvoy/tools/.system`。
+`make build` 會將二進位檔安裝至 `/usr/local/bin/agen`（因此需要 `sudo`），並以 `extensions/skills` 的內容重建 `~/.config/agenvoy/skills/.system`。script 工具沒有內建副本，只從 `~/.config/agenvoy/tools` 載入，不讀工作目錄。
 
 | Target                                  | 作用                                                                          |
 | --------------------------------------- | ----------------------------------------------------------------------------- |
-| `make build`                            | 建置（`HEAD` 剛好落在 tag 上時以該 tag 為版本，否則為 `(dev)`）、安裝到 `/usr/local/bin/agen`、更新內建 skill／工具 |
+| `make build`                            | 建置（`HEAD` 剛好落在 tag 上時以該 tag 為版本，否則為 `(dev)`）、安裝到 `/usr/local/bin/agen`、更新內建 skill |
 | `make app`                              | `stop` → `build` → 啟動 TUI                                                   |
 | `make dev`                              | `stop` → `build` → 以 `--enable-claude-code` 啟動 TUI，`page/` 直接讀磁碟（`AGENVOY_PAGE_DIR`），前端改動免重建 |
 | `make stop`                             | 停止 daemon                                                                   |
@@ -140,10 +140,15 @@ Agenvoy 目前支援 Telegram 與 Discord。兩者都由本機 daemon 主動向�
 | `readable_path`                     |      `[]` | `read_files` 與 `find_files` 可免確認讀取的 `$HOME` 外絕對路徑，加進內建的系統與套件位置（`/usr`、`/bin`、`/etc`、`/opt`、`/Library`、`/Applications` 等）；項目須為絕對路徑或以 `~/` 開頭。被拒絕或屬敏感的路徑仍受限 |
 | `decision_model`                    |      `""` | 供分派、監看檢查與內容過濾使用的 decision model，寫成 `typesafe@<model>` 或 `openrouter@<model>`；空字串或 `off` 為關閉。見 [Decision model](#decision-model) |
 | `read_only_command`                 |      `[]` | 追加到內建唯讀白名單的指令，比對 `bin`、`bin subcommand` 或 `bin subcommand subcommand`（最長優先）；`run_command` 執行時不需確認 |
+| `command_network_disabled`          |   `false` | `true` 時 `run_command` 與 `background_command` 的 `network: true` 在確認前即拒絕，並要求模型只用 `network: false` 重試；在沙箱內以 `network: false` 執行後出現網路錯誤（`configs/jsons/network_error.json`）時，結果註明該步驟需要網路、不可改用 `network: true` 重試。`/config` → **Command network** |
+| `hook_network_disabled`             |   `false` | `true` 時 hook 以禁網方式執行；hook 因網路錯誤失敗時，錯誤提示到 `/config` → **Hook network** 開啟 |
+| `lan_access_enabled`                |   `false` | `true` 時另在每個私有或 IPv4 link-local 網卡位址的 `17989` 提供 API；見 [HTTP API 參考](#http-api-參考)。`/config` → **LAN access** |
 
-`reply_lang` 可填 `auto`、`configs/jsons/reply_lang.json` 內建的語言代碼（`en`、`zh-TW`、`zh-HK`、`zh-CN`、`ja`、`ko`、`es`、`fr`、`de`、`pt`、`it`、`ru`、`vi`、`th`、`id`、`ar`），或任意語言名稱（未列在內建清單時原字串交給模型）。`zh-TW` 與 `zh-HK` 分開：台灣與香港的繁體中文用詞與語法不同。作用範圍包含 agent system prompt、`/v1/chat/completions` system prompt、後續問題建議與 session 摘要。由 **Config › System** 設定會立即套用到執行中的 daemon；直接手改 `config.json` 則需重啟 daemon 才生效。
+`reply_lang` 可填 `auto`、`configs/jsons/reply_lang.json` 內建的語言代碼（`en`、`zh-TW`、`zh-HK`、`zh-CN`、`ja`、`ko`、`es`、`fr`、`de`、`pt`、`it`、`ru`、`vi`、`th`、`id`、`ar`），或任意語言名稱（未列在內建清單時原字串交給模型）。`zh-TW` 與 `zh-HK` 分開：台灣與香港的繁體中文用詞與語法不同。作用範圍包含 agent system prompt、`/v1/chat/completions` system prompt、後續問題建議與 session 摘要。也決定 Web UI 的介面語言（見 `GET /v1/i18n`）。由 **Config › System** 設定會立即套用到執行中的 daemon；daemon 也會監看 `config.json`，手改存檔後即生效。
 
-`output_dir` 儲存時會展開 `~` 並建立資料夾；建立不了的路徑會被拒絕，之後變得無法使用時則退回預設值。由 **Config › System** 設定會立即套用到執行中的 daemon。同一分頁會並列目前版本與最新 release，只有兩者不同時才顯示 **update** 按鈕，按下後開啟終端機執行 `agen update`。License 卡片附上 GitHub 原始碼連結。TUI 的 `/config`（回覆語言、輸出資料夾）寫入 `config.json` 的方式與手改相同。
+`output_dir` 儲存時會展開 `~` 並建立資料夾；建立不了的路徑會被拒絕，之後變得無法使用時則退回預設值。由 **Config › System** 設定會立即套用到執行中的 daemon。同一分頁會並列目前版本與最新 release，只有兩者不同時才顯示 **update** 按鈕，按下後開啟終端機執行 `agen update`。License 卡片附上 GitHub 原始碼連結。TUI 的 `/config`（回覆語言、輸出資料夾、網路與 LAN 開關）寫入 `config.json` 的方式與手改相同。同一分頁的 **Security** 區塊可切換 Command network、Hook network 與 LAN access（`/v1/config/security`）。
+
+`config.json` 無法解析時，內建的路徑規則（denied path、唯讀的 `~/.config/agenvoy`）照常生效。TUI 啟動時會詢問是否重置：`y` 把原檔改名為 `config.json.corrupt` 並寫入新的初始設定，其他答案直接離開；`agen -p` 則直接報錯結束。`denied_path` 不是字串陣列時會記一筆 warning 並略過使用者項目，內建清單照常套用。
 
 套件內建預設值（目前不會從 `config.json` 讀取）：
 
@@ -246,13 +251,13 @@ TUI、Web、Telegram 與 Discord 的回覆 footer 以 `model/reasoning` 顯示�
 
 | 層級 | 何時套用 | 行為 |
 | --- | --- | --- |
-| `⏸ safe` | 工作目錄是 `$HOME` 本身、在 `$HOME` 以外或為敏感路徑 | 寫入、指令、非唯讀工具與敏感路徑的讀取都先詢問 |
+| `⏸ safe` | 工作目錄是 `$HOME` 本身、在 `$HOME` 以外、位於 `~/.config/agenvoy` 內或為敏感路徑 | 寫入、指令、非唯讀工具與敏感路徑的讀取都先詢問 |
 | `⏵⏵ auto`／Yes, allow this turn | 工作目錄是 `$HOME` 底下的非敏感子目錄；或在確認框選 **Yes, allow this turn** | 專案內直接執行；超出專案的呼叫由安全規則擋下並詢問，有設定 decision model 時由它減少規則誤擋 |
 | Trusted skill（原 allow skill） | 以標為 `trust` 的 skill 執行 | 所有讀寫與 `sandbox: false` 都放行，只有 `sudo` 仍會詢問 |
 
 **safe／auto 切換**：TUI 啟動時依工作目錄決定預設模式（`filesystem.WorkDirAllowsAll`），之後隨時可用 `Shift+Tab` 切換；auto 只在工作目錄符合條件時生效。**Yes, allow this turn** 讓該任務剩下的部分套用 auto 的規則，不受工作目錄限制，並寫進 pending 供接續時沿用。
 
-**Trusted skill**：在 `/skill` → `permission`（TUI）或 **Skills** → **Trust**（Web）調整，清單存於 `~/.config/agenvoy/trust_skill`（全域）與 `<workDir>/.agenvoy/trust_skill`（專案）；舊版的 `allow_skill` 檔在第一次讀取時改名為 `trust_skill`。請求以該 skill 執行時套用：`/<skill>`、`/v1/send` 的 `skill` 欄位、排程 skill；回合中以 `run_skill` 載入的 skill 不套用，其中啟動的 subagent 會繼承。**只對內容已逐一確認過的 skill 開啟**：它的指令會在不詢問的情況下寫入任意路徑、執行不可逆指令。
+**Trusted skill**：在 `/skill` → `permission`（TUI）或 **Skills** → **Trust**（Web）調整，清單只存於 `~/.config/agenvoy/trust_skill`（不讀工作目錄的 `.agenvoy/trust_skill`）；舊版的 `allow_skill` 檔在第一次讀取時改名為 `trust_skill`。`write_skill` 改到已 trust 的 skill（以目錄名與 frontmatter `name` 判斷，該 skill 的 `.doc/` 除外）時照常寫入，但會把它從清單移除，並在結果中提示需重新 trust。請求以該 skill 執行時套用：`/<skill>`、`/v1/send` 的 `skill` 欄位、排程 skill；回合中以 `run_skill` 載入的 skill 不套用，其中啟動的 subagent 會繼承。**只對內容已逐一確認過的 skill 開啟**：它的指令會在不詢問的情況下寫入任意路徑、執行不可逆指令。
 
 | 呼叫 | `⏸ safe` | `⏵⏵ auto`／本輪放行 | Trusted skill |
 | --- | --- | --- | --- |
@@ -273,7 +278,9 @@ auto 欄的「確認」來自寫死的安全規則（工作目錄外的目標、
 
 ### 受限路徑與受限指令
 
-`$HOME` 以外的路徑與敏感清單內的路徑（go-pkg `filesystem/jsons/sensitive_path.json`，可由 `config.json` 的 `sensitive_path` 擴充；涵蓋金鑰與憑證檔、`.git`、`.claude`、shell 啟動檔與 `.mcp.json`）不會直接被拒絕：`boundary.Restricted` 會收集它們並發出確認。`$HOME` 以外的路徑另要求作業系統密碼（TUI 與 Web 確認框皆為密碼欄，由 daemon 驗證），`$HOME` 內的敏感路徑只需確認；`run_command`、`background_command` 以 argv `['sudo', ...]` 或 `sandbox: false` 執行時也走同一道關卡，任何權限模式都一樣；驗證通過後 `sudo` 以 `sudo -n` 沿用驗證留下的授權執行。TUI 的 `!` shell 指令含 `sudo` 且沒有有效授權時，會先跳出密碼框。核准綁定該 session 與該路徑，於 daemon 存續期間有效；密碼欄是否出現依 sudo 自己的 timestamp（`sudo -n -v`），該 ticket 仍有效時彈窗不會再出現密碼欄。密碼錯誤時彈窗保留並顯示錯誤，可重新輸入，驗證成功才關閉。需要密碼的確認不提供 **Yes, don't ask again** 與 **Yes, allow this turn**。`config.json` 的 `denied_path` 與 `denied_command` 為硬拒，任何核准都解不開；另有內建清單（`configs/jsons/denied_path.json`）固定併入 `denied_path`：`~/.config/agenvoy` 底下 Agenvoy 自身的狀態（`.store`、`.secrets`、`daemon.sock`、allow／trust 清單、排程、頻道授權、`runtime.uid`）、瀏覽器設定檔與 cookie、Mail 與 Messages、密碼管理器，以及其他 CLI 的憑證檔；不在 `denied_command` 的指令一律可執行，但仍會經過 `run_command` 的一般確認。
+`$HOME` 以外的路徑與敏感清單內的路徑（go-pkg `filesystem/jsons/sensitive_path.json`，可由 `config.json` 的 `sensitive_path` 擴充；涵蓋金鑰與憑證檔、`.git`、`.claude`、shell 啟動檔與 `.mcp.json`）不會直接被拒絕：`boundary.Restricted` 會收集它們並發出確認。`$HOME` 以外的路徑另要求作業系統密碼（TUI 與 Web 確認框皆為密碼欄，由 daemon 驗證），`$HOME` 內的敏感路徑只需確認；`run_command`、`background_command` 以 argv `['sudo', ...]` 或 `sandbox: false` 執行時也走同一道關卡，任何權限模式都一樣；驗證通過後 `sudo` 以 `sudo -n` 沿用驗證留下的授權執行。TUI 的 `!` shell 指令含 `sudo` 且沒有有效授權時，會先跳出密碼框。核准綁定該 session 與該路徑，於 daemon 存續期間有效；密碼欄是否出現依 sudo 自己的 timestamp（`sudo -n -v`），該 ticket 仍有效時彈窗不會再出現密碼欄。密碼錯誤時彈窗保留並顯示錯誤，可重新輸入，驗證成功才關閉。需要密碼的確認不提供 **Yes, don't ask again** 與 **Yes, allow this turn**。`config.json` 的 `denied_path` 與 `denied_command` 為硬拒，任何核准都解不開；另有內建清單（`configs/jsons/denied_path.json`）固定併入 `denied_path`：Agenvoy 的歷史儲存與頻道授權（`~/.config/agenvoy/.store`、`.telegram`、`.discord`）、瀏覽器設定檔與 cookie、Mail 與 Messages、密碼管理器，以及其他 CLI 的憑證檔；不在 `denied_command` 的指令一律可執行，但仍會經過 `run_command` 的一般確認。Linux 上不存在或為 symlink 的 denied path 不會套進沙箱。
+
+`~/.config/agenvoy` 其餘部分對 agent 唯讀：檔案工具可讀，但 `write_file`（含 `mode=remove`）、`download_file`、`generate_image`、`generate_audio`、`rm`、`write_paths` 與 `run_command` 沙箱（macOS `deny file-write*`、Linux 唯讀 bind）都拒絕在其中寫入、搬移或刪除，任何核准都解不開。只有 `~/.config/agenvoy/download` 維持可寫；skill 只能經 `write_skill` 修改，`write_hook`、`write_tool`、`write_skill` 在程序內寫入，不經這些檢查。此規則為內建、不開放設定，避免沙箱內的指令改寫 `mcp.json`、`config.json`、hook 或權限清單來放寬自己的閘門。
 
 自動化之前要知道的事項：
 
@@ -282,7 +289,7 @@ auto 欄的「確認」來自寫死的安全規則（工作目錄外的目標、
 - `run_command` 的沙箱只約束寫入不約束讀取，因此指令只有在作業系統本身拒絕時才會在某個路徑上失敗；檔案工具（`read_files`、`find_files`、`open_file`、`file_history`）讀取 `$HOME` 以外或敏感路徑時仍需確認，`denied_path` 讀寫皆拒。`read_files` 與 `find_files` 讀取可讀清單內的系統與套件位置及 `readable_path` 項目時不需確認；`run_command` 的 argv 中存在、位於 `$HOME` 外且不在該清單的絕對路徑，會取消唯讀白名單的放行。
 - 工具輸出中的密鑰不會進入模型、log 與歷史：工具結果與錯誤、指令串流輸出與背景報告，都依 `configs/jsons/secret_patterns.json` 的格式規則比對，命中的值保留前後三字元、中間換成 `********`（短於 9 字元只留前三字元；3 字元以內整段遮蓋；私鑰區塊整段視為一個值）。需要金鑰的指令在同一次 `run_command` 內讀取並使用（`set -a; . ./.env; set +a; curl ...`）。`write_file` 與 `run_command` 的參數含本 daemon 產生過的遮罩值時直接拒絕，避免把遮罩值當成金鑰寫回。
 
-`$HOME` 一律可寫，不需要任何設定。指令要寫到 `$HOME` 以外時，agent 會在**那一次呼叫**自己附上 `write_paths`，你會看到確認框並輸入系統密碼，核准後那幾個路徑才額外綁進沙箱。
+`$HOME` 可寫（上述 `~/.config/agenvoy` 除外），不需要任何設定，也沒有額外可寫路徑的使用者設定。指令要寫到 `$HOME` 以外時，agent 會在**那一次呼叫**自己附上 `write_paths`，你會看到確認框並輸入系統密碼，核准後那幾個路徑才額外綁進沙箱。
 
 ### MCP Client
 
@@ -320,7 +327,7 @@ command = "agen"
 
 ### 生命週期 Hook
 
-Hook 是在任務固定時間點執行的 Python 或 JavaScript 腳本，可以中止任務。檔名為 `<state>.py` 或 `<state>.js`，放在 `~/.config/agenvoy/hooks/`（全域）或 `<workDir>/.config/agenvoy/hooks/`（專案，同一個 state 時覆蓋全域）；同一目錄兩者都有時執行 `.py`。可直接請 agent 新增或修改（以 `read_hook` 讀取該 state、`write_hook` 寫入、`test_hook` 驗證），或在 TUI 的 `/hook`、Web UI 的 **Hooks** 管理檔案。Release 壓縮檔在 `hooks/demo` 附上每個 state 的範例，`make build` 會複製到 `~/.config/agenvoy/hooks/demo`；範例不會執行，只用來說明各 state 收到的欄位。
+Hook 是在任務固定時間點執行的 Python 或 JavaScript 腳本，可以中止任務。檔名為 `<state>.py` 或 `<state>.js`，只從 `~/.config/agenvoy/hooks/` 讀取（不讀工作目錄的 `.config/agenvoy/hooks/`，clone 下來的 repo 無法帶入會自動執行的 hook）；兩者都有時執行 `.py`。可直接請 agent 新增或修改（以 `read_hook` 讀取該 state、`write_hook` 寫入、`test_hook` 驗證），或在 TUI 的 `/hook`、Web UI 的 **Hooks** 管理檔案。Release 壓縮檔在 `hooks/demo` 附上每個 state 的範例，`make build` 會複製到 `~/.config/agenvoy/hooks/demo`；範例不會執行，只用來說明各 state 收到的欄位。
 
 | State | 執行時機 | stdin 欄位 | `success: 0` 時 |
 | --- | --- | --- | --- |
@@ -332,7 +339,7 @@ Hook 是在任務固定時間點執行的 Python 或 JavaScript 腳本，可以�
 | `after_task_done` | 任務完成後 | `session`、`task_hash`、`input`、`result`、`input_totals`、`output_totals`、`hit_totals`、`during_ms`、`time` | 忽略 |
 | `after_task_cancel` | 使用者取消任務後 | `session`、`task_hash`、`input`、`error`、`input_totals`、`output_totals`、`hit_totals`、`time` | 忽略 |
 
-腳本從 stdin 讀取上述 JSON，在 `run_command` 的沙箱中執行（允許網路），工作目錄為任務的工作目錄（沒有時為 `$HOME`），時限 30 秒（`HOOK_TIMEOUT`）。stdout 最後一行必須是 `{"success": 1|0, "debug": "...", "error": "..."}`；`error` 非空同樣中止。崩潰、逾時或最後一行格式不符，都視為 `success: 0`，以該錯誤為原因。之前的 stdout 行與 stderr 以 `DEBUG` 寫入 daemon log。通過的 hook 若有 `debug`，會以 hook 行顯示在 TUI 與 Web 對話中，並保存在 session log。沒有腳本或檔案已移除的 state 一律通過。
+腳本從 stdin 讀取上述 JSON，在 `run_command` 的沙箱中執行，工作目錄為任務的工作目錄（沒有時為 `$HOME`），時限 30 秒（`HOOK_TIMEOUT`）；未設 `hook_network_disabled` 時允許網路。stdout 最後一行必須是 `{"success": 1|0, "debug": "...", "error": "..."}`；只有 `success: 0` 或 `error` 非空才會中止。崩潰、逾時、沙箱失敗或最後一行格式不符時略過該 hook：任務照通過繼續，並顯示 `<state>: skipped: <錯誤>` 的 hook 行。之前的 stdout 行與 stderr 以 `DEBUG` 寫入 daemon log。通過的 hook 若有 `debug`，會以 hook 行顯示在 TUI 與 Web 對話中，並保存在 session log。沒有腳本或檔案已移除的 state 一律通過。
 
 ### Session 分類
 
@@ -356,10 +363,11 @@ agen
 | `/mcp`                     | 列出 MCP server（`d` 移除）並 `add` 新增；單一 server 可登入、設定 OAuth client、以 `tools` 多選設定免確認工具（第一列為 `all`）、重連                                                                                                                                                              |
 | `/session` `/new`          | 以 self id 切換 session（`d` 刪除）或建立新的；清單橫跨兩種以上前綴時依 `all`／`cli-`／`tg-`／`dc-`／`chat-`／`temp-` 分頁；`/session` 清單下方可編輯當前 session 的 `name`／`self id`／`role`（`/session name\|id\|role` 直接開啟） |
 | `/compact` `/reset`        | 同一個彈窗含三個分頁：`summary` 唯讀檢視目前滾動摘要；`compact` 以 LLM 分析移除冗餘對話；`reset` 重設 session（需二次確認）：`summary` 先重建摘要並保留，`all` 連摘要一併清除。`/compact` 開在 compact 分頁、`/reset` 開在 reset 分頁 |
+| `/tool`                    | `~/.config/agenvoy/tools/script` 底下的 script 工具；`enter` 切換游標所在工具為 `allow`（免確認執行）或 `ask`，存於 `~/.config/agenvoy/allow_tool`。`tool.json` 設了 `always_allow` 的工具顯示 `allow  tool.json`，只能改該檔 |
 | `/skill`                   | 三個 tab。`permission`：Enter 切換目前這個 skill 的 `trust`／`ask`（見[信任層級](#權限模式)），`o` 開啟該 skill 所在資料夾；`system`：多選官方 skill，勾選將 `github.com/agenvoy/skill-<name>` clone 至 `~/.config/agenvoy/skills/.system_design/<name>`，取消勾選則刪除；`source`：多選要讀取的外部 skill 來源（`claude`、`codex`、`copilot`、`opencode`、`agents`，即 `~/.<source>/skills`），取消勾選則略過 |
 | `/role`                    | 列出、新增或編輯 role（標題＋描述）                                                                                                                                                                                                                                                                 |
 | `/channel`                 | 兩個分頁 `telegram`／`discord`：啟用（token 先驗證再存入）或停用該頻道，`d` 撤銷已授權對話                                                                                                                                                                                                          |
-| `/config`                  | 可搜尋的設定清單，`enter` 修改游標所在項目：登入時自動啟動 daemon（macOS 走 launchd agent，Linux 走 systemd user unit）、回覆語言（`auto` 跟隨每則訊息）、輸出資料夾（產生的檔案存放位置；留空為 `~/Downloads`）、channel admin（接收新對話驗證碼的已授權對話；留空則只寫 log）與 official guide（是否注入官方模型指引） |
+| `/config`                  | 可搜尋的設定清單，`enter` 修改游標所在項目：登入時自動啟動 daemon（macOS 走 launchd agent，Linux 走 systemd user unit）、回覆／WebUI 語言（`auto` 跟隨每則訊息，Web UI 則跟隨瀏覽器語言）、輸出資料夾（產生的檔案存放位置；留空為 `~/Downloads`）、channel admin（接收新對話驗證碼的已授權對話；留空則只寫 log）、official guide（是否注入官方模型指引）、command network（`command_network_disabled`）、hook network（`hook_network_disabled`）與 LAN access（`lan_access_enabled`；開啟前會先跳確認） |
 | `/schedule`                | 週期（cron）與單次（task）排程合併為一個清單；`enter` 立即執行、`d` 刪除；新增或編輯請直接交代 agent                                                                                                                                                                                                |
 | `/pending`                 | 列出並恢復中斷的任務（`ask_user`、錯誤復原）；`d` 經確認後移除                                                                                                                                                                                                                                      |
 | `/hook`                    | 列出已安裝的 hook 腳本（`.py` 與 `.js`；同一 state 兩者都有時，以 `(primary)` 標出實際執行的 `.py`）；`enter` 開啟檔案，`d` 移到 `~/.config/agenvoy/hooks/.Trash`；尚未安裝任何 hook 時，`enter` 開啟 hooks 資料夾。見[生命週期 Hook](#生命週期-hook) |
@@ -400,7 +408,7 @@ agen -p "摘要這次 diff" --stream
 git diff | agen -p "" --allow-edit -m auto -r high
 ```
 
-`agen -p` 以新的 `temp-` session 把一則 prompt 送到 `/v1/send`（必要時自動啟動 daemon）並印出回覆；`-p` 為空時從 stdin 讀取。一律以 auto mode 執行，不會跳出確認。
+`agen -p` 以新的 `temp-` session 在自己的程序內執行一則 prompt（與 `/v1/send` 共用同一段程式，不經 HTTP；必要時仍會自動啟動 daemon）並印出回覆；`-p` 為空時從 stdin 讀取。一律以 auto mode 執行，不會跳出確認。`config.json` 無法解析時直接報錯結束，請執行 `agen` 重置。
 
 | 旗標 | `/v1/send` 欄位 | 預設 |
 | --- | --- | --- |
@@ -409,9 +417,9 @@ git diff | agen -p "" --allow-edit -m auto -r high
 | `--stream` | `stream` | 關閉 |
 | `--work-dir` | `work_dir` | 當前目錄（相對路徑以此解析） |
 | `--allow-edit` | `enable_edit` | 關閉（唯讀） |
-| `--skip-sandbox` | `enable_sandbox`（取反） | 關閉（留在沙箱）；非常危險，只能呼叫本機 daemon |
+| `--skip-sandbox` | 無；僅限 `agen -p` | 關閉（留在沙箱）；非常危險：agent 可不經確認使用 `sudo`、`$HOME` 外路徑與 `sandbox: false` |
 
-加上 `--stream` 時，model、工具呼叫與 thinking 以 `⏵ Model(...)`、`⏵ Tool(...)`、`✻ ...` 印到 stderr，回覆串流到 stdout。錯誤 exit 1，取消 exit 130（daemon 端仍會把任務跑完）；`-p <prompt>` 之後若有多餘參數會直接報錯，prompt 請加引號。
+加上 `--stream` 時，model、工具呼叫與 thinking 以 `⏵ Model(...)`、`⏵ Tool(...)`、`✻ ...` 印到 stderr，回覆串流到 stdout。錯誤 exit 1，取消 exit 130；`-p <prompt>` 之後若有多餘參數會直接報錯，prompt 請加引號。
 
 ### stdin MCP Server
 
@@ -431,11 +439,13 @@ printf '%s\n' \
 
 Web 對話以豐富格式渲染回覆：```` ```chartjs ```` 區塊顯示為圖表（bar、line、pie、doughnut、radar、polarArea、scatter、bubble），```` ```mermaid ```` 區塊顯示為圖（flowchart、sequenceDiagram、stateDiagram-v2、classDiagram、erDiagram、gantt、timeline），```` ```math ```` 區塊與行內 `$...$` 以 KaTeX 顯示數學公式，其餘程式碼區塊套用語法高亮；無法解析的區塊改顯示原始碼。Telegram 與 Discord 只收到純 markdown。Web 對話的模型與 reasoning 選擇存在瀏覽器 cookie（`agenvoy_model`、`agenvoy_reasoning`），每次 `/v1/send` 隨請求送出，不寫入 session；載入時顯示 session 的預設值，cookie 內的值仍可選時以 cookie 為準。
 
+Web UI 文字取自 `configs/jsons/locale/i18n/<lang>.json`（16 種語言），經 `GET /v1/i18n` 載入。第三方 script、樣式與字型列在 `page/vendor.json`，每個版本下載一次到 `~/.config/agenvoy/vendor`；每個檔案都須符合其 `sha384`，不符時中止同步、不寫入該檔。
+
 v1.3.4 介面改版的逐頁比較見 [Web UI 介面差異比較](diff/README.zh.md)。
 
 ### HTTP API
 
-Daemon 監聽 `127.0.0.1:17989` 與 `[::1]:17989`，連接埠固定不可調整：
+Daemon 監聽 `127.0.0.1:17989` 與 `[::1]:17989`（`lan_access_enabled` 開啟時另加 LAN 位址），連接埠固定不可調整：
 
 ```bash
 curl --fail-with-body -sS \
@@ -453,21 +463,24 @@ curl --fail-with-body -sS \
 | TUI    | `agen`                 | 開啟或連接本機 daemon 的互動式 TUI |
 | 停止   | `agen stop`            | 停止 daemon                        |
 | 更新   | `agen update`          | 執行官方更新腳本                   |
-| 單次執行 | `agen -p <prompt> [flags]` | 經 `/v1/send` 送出一則 prompt 並印出回覆（見[單次執行](#單次執行)） |
+| 單次執行 | `agen -p <prompt> [flags]` | 在本程序內執行一則 prompt 並印出回覆（見[單次執行](#單次執行)） |
 | Daemon | `agen --daemon`        | 直接啟動 daemon                    |
 | MCP    | 非 TTY stdin 的 `agen` | 從 stdin 提供 MCP JSON-RPC         |
 
 ## HTTP API 參考
 
-Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 endpoint 另外要求請求來源必須是 `127.0.0.1`／`::1`（`localhostOnly()` 守衛）——這些會動到 credential、設定檔或行程生命週期，設計上是給同機器的 dashboard 用，不是給遠端 client 呼叫。帶非 loopback `Origin` 標頭的 `POST`、`PUT`、`PATCH`、`DELETE` 一律回 403；`/v1/send` 與 `/v1/chat/completions` 只接受 `Content-Type: application/json`（否則回 415），網頁無法用表單或 `text/plain` 請求觸發執行。
+Daemon 綁定 loopback（`127.0.0.1` 與 `[::1]`），讀取 header 逾時 10 秒。所有路由先檢查 `Host`：只收 `localhost`、`127.0.0.1` 或 `::1`（任意 port），其餘一律 403，DNS rebinding 的網頁無法透過自己的網域連到 API。標示 **local** 的 endpoint 另外要求請求來源必須是 `127.0.0.1`／`::1`（`localhostOnly()` 守衛）——這些會動到 credential、設定檔或行程生命週期，設計上是給同機器的 dashboard 用，不是給遠端 client 呼叫。帶非 loopback `Origin` 標頭的 `POST`、`PUT`、`PATCH`、`DELETE` 一律回 403；`/v1/send` 與 `/v1/chat/completions` 只接受 `Content-Type: application/json`（否則回 415），網頁無法用表單或 `text/plain` 請求觸發執行。
+
+開啟 `lan_access_enabled`（`/config` → **LAN access**，預設關閉；daemon 免重啟即套用）時，daemon 另在各私有或 IPv4 link-local 網卡位址聽 `17989`，`Host`、`Origin` 與 **local** 守衛另收落在這些網卡子網內的 IP 字面值（不收網域名稱）。此時同網段任何裝置都能免密碼使用 API，含 **local** endpoint，只應短暫開啟。核准受限確認（`password`）仍只接受本機來源。
 
 **Agent 執行**
 
 | Method | Path                   | 說明                                                                                                                                                                                                                                                                                         |
 | ------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/v1/send`             | 執行 Agent：`{content, stream?, session_id?, persist?, model?, reasoning?, work_dir?, skill?, rule?, task_hash?, exclude_tools?, enable_edit?, enable_sandbox?, enable_markdown?}`。`model` 與 `reasoning` 只作用於這次請求，不改 session 預設：未帶 `model` 用 session 模型，`auto` 即使 session 已固定模型仍交給 dispatcher，未帶 `reasoning` 用 session 等級。`stream:true` 回 SSE 事件；`rule` 附加額外系統指示；`task_hash` 在該 pending 任務仍有背景 job 時接續它。未帶 `session_id` 時建立 `temp-`（`persist:true` 則 `chat-`）session；該 session 已在執行時改為 steer，回 `{session_id}`；`content` 為空回 400。帶 `enable_edit` 或 `enable_sandbox`，或沒有網頁確認 listener 時以 auto mode 執行：一律不跳確認；未設 `enable_edit:true` 時唯讀（擋寫入與非唯讀指令），未設 `enable_sandbox:false` 時留在沙箱（擋 `$HOME` 外路徑、`sudo`、`sandbox:false`）；不提供 `ask_user`、`store_secret` 與背景工具，開始時清除該 session 的路徑授權；被擋的呼叫回傳可放行的參數。`enable_sandbox:false` 非常危險：agent 可不經確認使用 `sudo`、`$HOME` 外路徑與 `sandbox:false`，因此只接受本機（loopback）呼叫，其他來源一律 403。`enable_markdown:false`（預設 `true`）要求不含 markdown 語法的純文字回覆。舊參數 `sse`、`system_prompt`、`pending_task` 仍視為 `stream`、`rule`、`task_hash` 的別名，之後會移除 |
+| `POST` | `/v1/send`             | 執行 Agent：`{content, stream?, session_id?, persist?, model?, reasoning?, work_dir?, skill?, rule?, task_hash?, exclude_tools?, enable_edit?, enable_markdown?}`。`model` 與 `reasoning` 只作用於這次請求，不改 session 預設：未帶 `model` 用 session 模型，`auto` 即使 session 已固定模型仍交給 dispatcher，未帶 `reasoning` 用 session 等級。`stream:true` 回 SSE 事件；`rule` 附加額外系統指示；`task_hash` 在該 pending 任務仍有背景 job 時接續它。未帶 `session_id` 時建立 `temp-`（`persist:true` 則 `chat-`）session；該 session 已在執行時改為 steer，回 `{session_id}`；`content` 為空回 400。帶 `enable_edit`，或沒有網頁確認 listener 時以 auto mode 執行：一律不跳確認；未設 `enable_edit:true` 時唯讀（擋寫入與非唯讀指令），且一律留在沙箱（拒絕 `$HOME` 外路徑、`sudo`、`sandbox:false`）；不提供 `ask_user`、`store_secret` 與背景工具，開始時清除該 session 的路徑授權；被擋的呼叫回傳放行所需的方式。HTTP 沒有離開沙箱的欄位（不再接受 `enable_sandbox`）：沙箱內的 hook、script 工具或 `network: true` 指令都能從 loopback 呼叫 API，因此只有在終端機執行 `agen -p --skip-sandbox` 才能離開沙箱。`enable_markdown:false`（預設 `true`）要求不含 markdown 語法的純文字回覆。舊參數 `sse`、`system_prompt`、`pending_task` 仍視為 `stream`、`rule`、`task_hash` 的別名，之後會移除 |
 | `POST` | `/v1/chat/completions` | OpenAI 相容且 stateless 的 chat completions                                                                                                                                                                                                                                                  |
 | `GET`  | `/v1/info/version`     | 編譯時寫入的版本（`{version, dev}`）；未帶 tag 的建置 `dev` 為 true                                                                                                                                                                                                                          |
+| `GET`  | `/v1/i18n`             | Web UI 字典，回 `{lang, dict}`。語言依 `reply_lang`；`auto` 時取 `?lang=`（瀏覽器語言，空值或未知時為 `en`）。該語言缺少的 key 以英文補上 |
 | `GET`  | `/v1/log`              | SSE：不帶參數時只送 daemon `slog`（`EventDaemonLog`，`source` 為層級），與 TUI 標題列同一份來源；內含新對話驗證碼，故 daemon frame 僅對 loopback 來源附加。`?sessions=a,b` 於同一條連線加上該些 session 的事件，`replay=0` 略過回放，`daemon=0` 去掉 daemon frame。遠端來源必須帶 `sessions`。session 事件附後端格式化好的文字：`trace`（思考或工具呼叫行）、`tool_display`（工具呼叫與確認），確認事件另附 `confirm_title`、`restricted_lines`、`restricted_note`，各介面顯示的用詞一致 |
 | `GET`  | `/v1/voice/live`       | **local** — WebSocket，轉接 Gemini Live 即時語音（需 `GEMINI_API_KEY`，缺少時以 close code 4401 關閉）；模型可透過 `send_to_chat`、`read_history`、`read_task` 與主對話互動 |
 | `GET`  | `/v1/mcp/tools`        | 列出已連線 MCP server 註冊的工具（`mcp__*`）                                                                                                                                                                                                                                                 |
@@ -551,7 +564,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | `POST`       | `/v1/mcp/oauth/client`   | **local** — `{name, client_id, client_secret?, redirect_uri?}`。給拒絕動態註冊的 server 用的預先註冊 client;`redirect_uri` 預設 `http://localhost:17988/callback`,須與 provider console 完全一致。寫入前先清掉既有 token        |
 | `DELETE`     | `/v1/mcp/oauth`          | **local** — `{name}`。同時清除該 server 的 token 與 client 註冊                                                                                                                                                                 |
 
-**Rule 與 Skill**
+**Rule、工具與 Skill**
 
 | Method                  | Path              | 說明                                                            |
 | ----------------------- | ----------------- | --------------------------------------------------------------- |
@@ -559,6 +572,9 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | `GET`                   | `/v1/role/*name`  | **local** — 讀取單一 role                                                                                     |
 | `POST` `PATCH` `DELETE` | `/v1/role`        | **local** — 建立／更新（可帶 `rename`）／刪除 role                                                            |
 | —                       | `/v1/rule[s]`     | **local** — 上述五條路由的舊名稱，仍指向同一組 handler |
+| `GET`                   | `/v1/tools`       | **local** — `~/.config/agenvoy/tools/script` 底下的 script 工具，回 `{tools:[{name, description, allowed, always_allow, files}], allow_path}`；`files` 為各工具的檔案路徑，工具在 `allow_tool` 內或其 `tool.json` 設了 `always_allow` 時 `allowed` 為 true，`allow_path` 為 `allow_tool` 檔案路徑 |
+| `GET`                   | `/v1/tool/*name`  | **local** — 單一 script 工具（`script_<name>`），回 `{name, description, path, allowed, always_allow, files:[{path, content}]}`，`tool.json` 排第一；略過 dotfile、symlink、denied 或敏感路徑、非 UTF-8 與超過 1 MiB 的檔案。未帶名稱回 400，工具不存在回 404 |
+| `POST`                  | `/v1/tool/allow`  | **local** — `{name}` 在 `allow_tool` 切換單一 script 工具，回 `{ok, allowed}`；工具不存在回 404，其 `tool.json` 設了 `always_allow` 時回 409 |
 | `GET`                   | `/v1/skills`      | **local** — 列出已安裝的 skill                                  |
 | `GET`                   | `/v1/skill/*name` | **local** — 讀取單一已安裝的 skill                              |
 | `DELETE`                | `/v1/skill`       | **local** — 移除單一已安裝的 skill                              |
@@ -583,7 +599,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 
 | Method       | Path            | 說明                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET` `POST` | `/v1/allowlist` | **local** — 兩份白名單合在同一個物件，鍵為 `skill` 與 `tool`。`GET` 以 `?scope=global\|project`（`project` 需另帶 `?work_dir=`）決定 skill 區塊，`?prefix=` 縮小 tool 區塊。`POST` 收 `{skill: {name, scope?, work_dir?}}` 切換單一 skill，與／或 `{tool: {prefix, entries}}` 只替換該前綴底下的免確認項目（與 TUI `/mcp` → tools 同一支），其餘規則不受影響；每個 entry 必須以 `prefix` 開頭，出現 `prefix*` 時收斂成單一項。未帶的區塊不動 |
+| `GET` `POST` | `/v1/allowlist` | **local** — 兩份白名單合在同一個物件，鍵為 `skill` 與 `tool`。skill 區塊為全域 `trust_skill` 的 `{skills, allowed, source}`；`GET` 以 `?prefix=` 縮小 tool 區塊。`POST` 收 `{skill: {name}}` 切換單一 skill，與／或 `{tool: {prefix, entries}}` 只替換該前綴底下的免確認項目（與 TUI `/mcp` → tools 同一支），其餘規則不受影響；每個 entry 必須以 `prefix` 開頭，出現 `prefix*` 時收斂成單一項。未帶的區塊不動 |
 
 **設定**
 
@@ -595,6 +611,7 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 | `GET` `POST` | `/v1/config/output_dir` | **local** — 讀取／設定 `output_dir`。`GET` 回 `{output_dir, resolved}`，`resolved` 為實際使用中的資料夾。`POST` `{output_dir}` 會展開 `~`、建立資料夾、寫入 `config.json` 並立即套用到執行中的 daemon，回 `{ok, output_dir, resolved}`；空字串恢復預設值，建立不了的路徑回 400                                                                                                                                                                                                                                                                                                 |
 | `GET` `POST` | `/v1/config/official_guide` | **local** — 讀取／設定是否注入官方模型指引。`GET` 回 `{enabled}`；`POST` `{enable}` 寫入 `config.json` 的 `official_guide_disabled` |
 | `GET` `POST` | `/v1/config/skill_source` | **local** — 讀取／設定外部 skill 來源。`GET` 回 `{sources, disabled}`；`POST` `{disabled:[...]}`，未知來源回 400，儲存後重新掃描 skill |
+| `GET` `POST` | `/v1/config/security` | **local** — 讀取／設定 Security 開關。`GET` 回 `{command_network, hook_network, lan_access}`（`true` 表示允許網路／開啟 LAN）。`POST` 可帶三個布林值中的任意幾個，寫入 `config.json` 的 `command_network_disabled`、`hook_network_disabled`、`lan_access_enabled`，回 `{ok}`；三者皆未帶時回 400 |
 | `GET` `POST` | `/v1/system/update`     | **local** — `GET` 回 `{version, latest, update_available}`，`latest` 為 GitHub latest release 轉址指向的 tag，兩者不同即 `update_available` 為 true；取不到 release 時回 502 `{version, error}`。`POST` 開啟終端機執行 `agen update`，回 202 `{status:"opened"}`：macOS 透過 `osascript` 開 Terminal.app，WSL 以 `cmd.exe start wsl.exe` 進入目前的 distro，Linux 使用第一個可用的終端機模擬器（需要 `DISPLAY` 或 `WAYLAND_DISPLAY`，daemon 環境缺少時從 systemd user environment 取得）。更新失敗時視窗保持開啟直到按 Enter。無法開啟終端機時回 501，請手動執行 `agen update` |
 
 設定路由實際為單一的 `GET`／`POST /v1/config/:target`；未知的 target 回 404 `{"error":"unknown config target"}`，`reply_lang` 只能讀取。
@@ -609,27 +626,26 @@ Daemon 只綁定 loopback（`127.0.0.1` 與 `[::1]`）。標示 **local** 的 en
 
 ## 工具參考
 
-註冊表有 34 個工具固定可用（含內部用的 `run_tool`），另有 6 個依前置條件註冊或從執行中排除。涵蓋多種相關動作的工具以 `mode` 參數區分，而不是拆成多個名稱。
+註冊表有 33 個工具固定可用（含內部用的 `run_tool`），另有 6 個依前置條件註冊或從執行中排除。涵蓋多種相關動作的工具以 `mode` 參數區分，而不是拆成多個名稱。
 
 | 分類       | 工具                              | 用途                                                                                                                                                                                                                                                                                      |
 | ---------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 工具系統   | `find_tools`                      | 發現既有工具並以工具回傳交付其 schema（`mode=search\|list`） |
 |            | `run_tool`                        | 依名稱與 args 執行 TurnContext 工具清單中的工具（呼叫前先以 `find_tools` 取 schema）；`claude-code` provider 不提供 |
-|            | `edit_tool`                       | 建立、修正或丟棄工具定義（`mode=write\|patch\|remove`）                                                                                                                                                                                                                                   |
+|            | `write_tool`                      | 在 `~/.config/agenvoy/tools/script` 建立、修正或丟棄 script 工具的 `tool.json`／`script.py`（`mode=write\|patch\|remove`）。`⏸ safe` 下需確認 |
 |            | `test_tool`                       | 上線前在沙箱內執行 script 工具                                                                                                                                                                                                                                                            |
 | Skill      | `run_skill`                       | 載入具名 skill 的參考素材                                                                                                                                                                                                                                                                 |
-|            | `edit_skill`                      | 編寫 skills 目錄底下的檔案（`mode=write\|patch\|remove`）                                                                                                                                                                                                                                 |
+|            | `write_skill`                     | 修改 `~/.config/agenvoy/skills` 的唯一途徑：寫入、修改或丟棄 skill（`mode=write\|patch\|remove`），或從其他位置整個複製含 `SKILL.md` 的 skill 目錄進來，含二進位檔（`mode=copy`；略過 symlink 與敏感檔，名稱已存在時拒絕）。改到已 trust 的 skill 會撤銷其 trust。`⏸ safe` 下需確認 |
 | Hook       | `read_hook`                       | 回傳單一 state 的範例腳本（列出所有 stdin 欄位）與目前安裝的 hook，沒有時為 `(none)` |
-|            | `write_hook`                      | 在 `~/.config/agenvoy/hooks/` 建立、修改或移除 hook 腳本（`mode=write\|patch\|remove`）；新 hook 預設為 Python，指定時才用 JavaScript |
+|            | `write_hook`                      | 在 `~/.config/agenvoy/hooks/` 建立、修改或移除 hook 腳本（`mode=write\|patch\|remove`）；新 hook 預設為 Python，指定時才用 JavaScript。`⏸ safe` 下需確認 |
 |            | `test_hook`                       | 以指定的 stdin JSON 照任務實際方式執行一次已安裝的 hook，回傳 `success` 與 `debug`／`error` |
 | 排程       | `schedules`                       | 查詢、改期或取消定時與週期任務（`mode=list\|patch\|remove\|write`）                                                                                                                                                                                                                       |
 | 檔案       | `find_files`                      | 以目錄、檔名樣式或內容定位（`mode=list\|glob\|search`）；glob 依修改時間由新到舊排列；search 以 `offset`／`limit` 分頁（每頁 256），回傳符合的路徑、次數與前 5 個命中行號（`output=files`），或帶行號的符合行，可加 `context_lines` 前後文（`output=content`）；`multiline` 讓 regex 可跨行比對 |
 |            | `read_files`                      | 批次讀取文字、PDF、DOCX、PPTX、CSV／TSV、圖片與音訊／影片（回傳逐字稿）；預設 2048 行，文字檔被截斷時結尾會標示下一個 `offset`；`lines` 讀取文字檔指定行號前後各 `context_lines` 行（預設 64）；`full: true` 回傳完整檔案，不經 decision model 篩選；同一路徑可在一次呼叫中重複出現 |
-|            | `write_file`                      | 建立或修改檔案（`filename` 與 `mode=write\|patch` 必填；整份內容放 `write_content`，修改放 `patch_contents`）；覆寫或修改既有檔案前，必須在同一次執行中先以 `read_files` 讀過，且檔案之後未在磁碟上被改動；仍含 `read_files` 行號範圍標記的內容會被拒絕 |
-|            | `remove_file`                     | 把單一檔案（`filename`）移到暫存而非直接刪除，可用 `restore_file` 找回；一律要求確認 |
+|            | `write_file`                      | 建立、修改或移除檔案（`filename` 與 `mode=write\|patch\|remove` 必填；整份內容放 `write_content`，修改放 `patch_contents`）；覆寫或修改既有檔案前，必須在同一次執行中先以 `read_files` 讀過，且檔案之後未在磁碟上被改動；仍含 `read_files` 行號範圍標記的內容會被拒絕。`mode=remove` 把檔案移到暫存而非直接刪除（可用 `restore_file` 找回），一律要求確認；一次移除多個檔案改用 `run_command` 的 `rm` |
 |            | `restore_file`                    | 還原紀錄中的某個版本（`file_history` 的 `version`），或把某個 task 動過的檔案全部還原到執行前（`task_id`，可用 `filename` 限定單檔；以 `version` 還原時忽略 `filename`）；一律要求確認 |
 |            | `file_history`                    | 工具改過的每個檔案的版本紀錄（`mode=list\|read`）                                                                                                                                                                                                                                         |
-|            | `write_result`                    | 將長篇成果存為 `report-<時間>.md` 或 `.html`，放在輸出資料夾（`output_dir`；預設 `~/Downloads`，不存在時為 `~/.config/agenvoy/download`）；模型只提供內容，內容以 `<!DOCTYPE html>` 或 `<html>` 開頭時存成 `.html`，其餘存成 `.md`；同一秒內檔名已存在時依序加上 `-1`、`-2`... 流水號。`html` 寫入前會先檢查：須掛載 QuickUI（`new QUI(`）、inline script 須可解析、script 不得直接寫 markup（`innerHTML`、`createElement` 等）、`T.init` 目標 id 須存在、`{{ }}` 與 `:if` 不得含運算式；任一不符即不寫入並回傳問題清單（未掛 QuickUI 時另附 `html_render` 規則） |
+|            | `write_result`                    | 將長篇成果存為 `report-<時間>.md` 或 `.html`，放在輸出資料夾（`output_dir`；預設 `~/Downloads`，不存在時為 `~/.config/agenvoy/download`）；模型只提供內容，內容以 `<!DOCTYPE html>` 或 `<html>` 開頭時存成 `.html`，其餘存成 `.md`；同一秒內檔名已存在時依序加上 `-1`、`-2`... 流水號。`html` 寫入前會先檢查：inline script 須可解析、每個 `T.init` 目標 id 須存在；有載入 QuickUI（`@pardnchiu/quickui@`）的頁面，`{{ }}` 與 `:if` 不得含運算式（`&&`、`||`、`=>`、三元運算、`.toFixed(`）；任一不符即不寫入並回傳問題清單 |
 | 執行環境   | `run_command`                     | 在工作目錄以沙箱約束執行二進位並等待結束；watcher（`--watch`、`chokidar`，或會啟動 watcher 的 package script，含經 `sh -c` 與 `package.json` 展開者）在啟動前即拒絕，改由 `background_command` 執行。argv 命中唯讀白名單（`configs/jsons/read_only_command.json`，532 條，可用 `read_only_command` 追加）時不需確認，並與其他唯讀呼叫並行執行；`sh -c`／`bash -c` 腳本須每個內層指令都命中，且不含變數賦值、`export`、`printf -v`、算術與參數展開；版本查詢條目（`--version`、`-v`）須整個 argv 相符，git 全域旗標只收明列項；其餘除非命中使用者的 allow 規則、本輪全部允許，或處於 [auto 模式](#權限模式)，否則跳確認。argv 任一參數落在敏感路徑（`sensitive_path.json`）即取消命中，所以 `cat` 雖在清單內，`cat ~/.aws/credentials` 仍會跳確認。條目以 `bin`、`bin sub`、`bin sub sub` 三種形式比對，第四段永不參與比對，更長的形式只能收斂成這三種。沙箱禁網，`git clone`／`fetch`／`push`、`npm install`、`pip install`、`go mod download`、`curl`、`wget` 都會解析不到主機，除非該次呼叫帶 `network: true`；在 `⏸ safe` 下帶了就跳確認，也不再比對唯讀白名單。沙箱只允許寫入 `$HOME`，需寫入其外的絕對路徑時於 `write_paths` 宣告；root 擁有的目標以 argv `['sudo', '<binary>', ...]` 執行（不接受 sudo 參數，也不可放在 `sh -c` 內），會以 `sudo -n` 在沙箱外執行，取消時由 `sudo` 轉送 SIGTERM，root 程序會一併結束；`sandbox: false` 以使用者身分在沙箱外執行（Homebrew 需要，且不可加 sudo）。三者都須經使用者以系統密碼核准。權限錯誤找不到可放行的路徑時，回傳內容會提示改用 `sandbox: false` 重跑。`rm` 改為移至垃圾桶（`sudo rm` 會直接刪除）；macOS 的 `open` 改走 `open_file`。單純抓 URL 走 `fetch_page`／`http_request`；裝系統套件用 `sudo` 加 system prompt Host OS 行列出的套件管理器（該行也列出作業系統版本），或以 `sandbox: false` 執行 `brew` |
 |            | `open_file`                       | 以系統預設處理程式開啟檔案、URL 或系統設定（如 `x-apple.systempreferences:`）；本機檔案免確認，URL 一律跳確認 |
 |            | `download_file`                   | 將 URL 存到 `output_file`（相對路徑放在輸出目錄下）。預設把原始回應串流寫入暫存檔再改名就位（`timeout` 預設 120 秒，上限 600），回傳 `url`、`output_file`、`size_bytes`，伺服器有送 `X-Sha256` 時另附 `sha256`；`render=true` 以帶使用者 Chrome 登入的瀏覽器渲染頁面，依 `output_type`（markdown／html／json）整頁存檔，不限大小                                                                                                                                                                                                                                                                      |
